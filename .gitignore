@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local app data / secrets
+data/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+.local_secret_key
+email_runtime_config.json
+
+# Local temp / test folders
+_tmp_lang_test/
+_tmp_pycache/
+
+# Local backups / exports / archives
+LOCKS/
+RENDER_MIGRATION_EXPORT_*/
+*.zip
+
+# Old local project copies not needed in GitHub
+_elite_visual_stage/
+_review_step_26/
+ClearLedger_STEP_25_business_suggestions_to_admin_only/
+ClearLedger_STEP_26_elite_visual_lock/
+
+# Windows launchers / desktop-only files
+*.lnk
+
+# Misc local artifacts
+_tmp_app_compile.pyc.*
+

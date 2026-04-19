@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Administrator Calendar</div>
+    <div class='page-title'>{{ month_name }} {{ year }}</div>
+    <div class='page-subtitle'>Automatic IRS dates, EFTPS reminders, and federal holidays are built into this month view. Add only the reminders that are unique to your operations.</div>
+  </div>
+  <div class='inline-form'>
+    <a class='btn btn-secondary' href='{{ url_for("admin_calendar", year=prev_year, month=prev_month) }}'>&lsaquo; Prev</a>
+    <a class='btn btn-secondary' href='{{ url_for("admin_calendar", year=next_year, month=next_month) }}'>Next &rsaquo;</a>
+  </div>
+</div>
+
+<div class='card section-frame calendar-main-card'>
+  <div class='card-head'>
+    <div>
+      <h3 style='margin:0'>{{ month_name }} {{ year }}</h3>
+      <div class='small' style='margin-top:6px'>Federal holidays, IRS deadlines, and EFTPS reminders appear automatically inside the calendar.</div>
+    </div>
+    <div class='calendar-source-links'>
+      <a class='btn btn-secondary btn-sm' href='https://www.irs.gov/taxcalendar' target='_blank' rel='noopener'>IRS Tax Calendar</a>
+      <a class='btn btn-secondary btn-sm' href='https://piv.opm.gov/policy-data-oversight/pay-leave/federal-holidays/' target='_blank' rel='noopener'>Federal Holidays</a>
+    </div>
+  </div>
+  <div class='calendar-legend compact' style='margin-bottom:12px'>
+    <span class='calendar-legend-item holiday'>Holiday</span>
+    <span class='calendar-legend-item irs'>IRS</span>
+    <span class='calendar-legend-item payment'>EFTPS / Payment</span>
+    <span class='calendar-legend-item reminder'>Reminder</span>
+  </div>
+  <div class='scroll-x'><table class='table calendar-table'><thead><tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead><tbody>
+  {% for week in weeks %}<tr>
+    {% for d in week %}
+    {% set dkey = d.isoformat() %}
+    <td class='cal-day {% if dkey==today %}cal-today{% endif %}'>
+      <div class='cal-num'>{{ d.day }}</div>
+      {% for item in (system_events_by_day.get(dkey) or []) %}
+      <div class='cal-item cal-system-item cal-{{ item.tone }}'><strong>{{ item.title }}</strong>{% if item.detail %}<div class='small'>{{ item.detail }}</div>{% endif %}</div>
+      {% endfor %}
+      {% for r in (reminders_by_day.get(dkey) or []) %}
+      <div class='cal-item cal-reminder-item'><strong>{{ r.reminder_type }}</strong>{% if r.note %}<div class='small'>{{ r.note }}</div>{% endif %}</div>
+      {% endfor %}
+    </td>
+    {% endfor %}
+  </tr>{% endfor %}
+  </tbody></table></div>
+</div>
+
+<div class='card section-frame calendar-add-card' style='margin-top:18px'>
+  <details class='compact-details'>
+    <summary>Add Custom Reminder</summary>
+    <form method='post' class='form-grid' style='margin-top:12px'>
+      <div><label>Type</label><select name='reminder_type' required>{% for t in reminder_types %}<option value='{{ t }}'>{{ t }}</option>{% endfor %}</select></div>
+      <div><label>Date</label><input type='date' name='reminder_date' required value='{{ today }}'></div>
+      <div style='grid-column:1 / -1'><label>Note (optional)</label><input name='note' placeholder='Short note'></div>
+      <div style='grid-column:1 / -1'><button type='submit'>Add Reminder</button></div>
+    </form>
+  </details>
+</div>
+{% endblock %}

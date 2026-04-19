@@ -1,0 +1,36 @@
+{% extends 'worker_portal_base.html' %}
+{% block body %}
+<div class='toolbar'>
+  <div class='small'><strong>Time-Off Request</strong> · Restricted team member request area</div>
+</div>
+<div class='grid cards-2'>
+  <div class='card'>
+    <div class='card-head'><h3>Request Time Off</h3><div class='small'>Send a simple request to your manager</div></div>
+    <form method='post' class='form-grid'>
+      <div><label>Request Type</label><select name='request_type'><option>Day Off</option><option>Vacation</option><option>Sick Day</option><option>Personal Day</option></select></div>
+      <div><label>Start Date</label><input name='start_date' type='date' required></div>
+      <div><label>End Date</label><input name='end_date' type='date'></div>
+      <div style='grid-column:1/-1'><label>Note</label><textarea name='note' placeholder='Add a short note for your manager if needed'></textarea></div>
+      <div><button type='submit'>Submit Request</button></div>
+    </form>
+  </div>
+  <div class='card'>
+  <div class='card-head'><h3>Recent Requests</h3><div class='small'>Team member request history</div></div>
+    {% if requests %}
+      <table class='table'>
+        <tr><th>Type</th><th>Dates</th><th>Status</th><th>Note</th></tr>
+        {% for row in requests %}
+        <tr>
+          <td>{{ row.request_type }}</td>
+          <td>{{ row.start_date }}{% if row.end_date and row.end_date != row.start_date %} to {{ row.end_date }}{% endif %}</td>
+          <td style='text-transform:capitalize'>{{ row.status }}</td>
+          <td>{{ row.note or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <div class='empty-state'><strong>No requests yet.</strong><span>Your submitted time-off requests will appear here.</span></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

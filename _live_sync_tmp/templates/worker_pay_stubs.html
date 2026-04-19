@@ -1,0 +1,29 @@
+{% extends 'worker_portal_base.html' %}
+{% block body %}
+<div class='toolbar'>
+  <div class='small'><strong>Pay Stubs</strong> · {{ worker.business_name }}</div>
+</div>
+<div class='summary-strip'>
+  <div class='summary-pill'>Lifetime Paid: ${{ '%.2f'|format(pay_summary.lifetime_total or 0) }}</div>
+  <div class='summary-pill'>Year-to-Date: ${{ '%.2f'|format(pay_summary.year_total or 0) }}</div>
+  {% if pay_summary.latest_payment %}<div class='summary-pill'>Latest Payment: {{ pay_summary.latest_payment.payment_date }} · ${{ '%.2f'|format(pay_summary.latest_payment.amount or 0) }}</div>{% endif %}
+</div>
+<div class='card'>
+  <div class='card-head'><h3>Payment History</h3><div class='small'>Restricted worker view</div></div>
+  {% if payments %}
+  <table class='table'>
+    <tr><th>Date</th><th>Amount</th><th>Note</th><th>Stub</th></tr>
+    {% for row in payments %}
+    <tr>
+      <td>{{ row.payment_date or '—' }}</td>
+      <td>${{ '%.2f'|format(row.amount or 0) }}</td>
+      <td>{{ row.note or '—' }}</td>
+      <td><a class='btn btn-secondary btn-sm' href='{{ url_for("worker_pay_stub_detail", payment_id=row.id) }}'>Open</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class='empty-state'><strong>No pay stubs yet.</strong><span>When worker payments are saved, they will appear here.</span></div>
+  {% endif %}
+</div>
+{% endblock %}

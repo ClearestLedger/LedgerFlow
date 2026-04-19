@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% block body %}
+{% set active_count = clients|length %}
+{% set archived_count = archived_clients|length if archived_clients is defined else 0 %}
+<div class='grid cards-2'>
+  {% if is_admin %}
+  <div class='card'>
+    <details class='compact-details'>
+      <summary>New Business Profile</summary>
+      <div class='small' style='margin:12px 0'>New business records are now saved inside LedgerFlow with a permanent profile history once created.</div>
+      <form method='post' class='form-grid'>
+      <div><label>Business Name</label><input name='business_name' required></div>
+      <div><label>Business Type</label><select name='business_type' required>{% for option in business_types %}<option value='{{ option }}'>{{ option }}</option>{% endfor %}</select></div>
+      <div><label>EIN</label><input name='ein'></div>
+      <div><label>Business Address</label><input name='address'></div>
+
+      <div><label>Service Level / Pricing Tier</label><select name='service_level'>{% for value, label in service_level_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Primary Contact Person</label><input name='contact_name'></div>
+      <div><label>Phone Number</label><input name='phone'></div>
+      <div><label>Email</label><input name='email'></div>
+      <div><label>State Tax ID</label><input name='state_tax_id'></div>
+
+      <div style='grid-column:1 / -1;margin-top:8px'><strong>Subscription Billing Foundation</strong><div class='small'>Structural only in this phase. This stores plan and payment-method status for future recurring billing, but it does not charge automatically yet.</div></div>
+      <div><label>Subscription Plan / Tier Code</label><input name='subscription_plan_code' placeholder='self-service-monthly'></div>
+      <div><label>Subscription Status</label><select name='subscription_status'>{% for value, label in subscription_status_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Monthly Subscription Amount</label><input name='subscription_amount' type='number' step='0.01' min='0'></div>
+      <div><label>Next Billing Date</label><input name='subscription_next_billing_date' type='date'></div>
+      <div><label><input type='checkbox' name='subscription_autopay_enabled' value='1'> Autopay enrollment recorded</label></div>
+      <div><label>Default Payment Method Label</label><input name='default_payment_method_label' placeholder='Visa ending in 4242'></div>
+      <div><label>Payment Method Status</label><select name='default_payment_method_status'><option value='missing'>Missing</option><option value='on_file'>On File</option><option value='needs_update'>Needs Update</option></select></div>
+      <div><label>Backup Payment Method Label</label><input name='backup_payment_method_label' placeholder='Optional backup method'></div>
+      <div style='grid-column:1 / -1'><label>Billing Notes</label><input name='billing_notes' placeholder='Internal subscription billing note'></div>
+
+      <div><label>EFTPS Enrollment Status</label><select name='eftps_status'>{% for option in eftps_statuses %}<option value='{{ option }}'>{{ option }}</option>{% endfor %}</select></div>
+      <div><label>EFTPS Login Reference</label><input name='eftps_login_reference' placeholder='Reference only'></div>
+      <div><label>Filing Type</label><select name='filing_type'>{% for option in filing_types %}<option value='{{ option }}'>{{ option }}</option>{% endfor %}</select></div>
+      <div></div>
+
+      <div><label>Bank Name</label><input name='bank_name'></div>
+      <div><label>Bank Account Nickname</label><input name='bank_account_nickname' placeholder='Operating'></div>
+      <div><label>Bank Account Holder Name</label><input name='bank_account_holder_name'></div>
+      <div><label>Full Account Number</label><input name='bank_account_number' inputmode='numeric'></div>
+
+      <div><label>Full Routing Number</label><input name='bank_routing_number' inputmode='numeric'></div>
+      <div><label>Credit Card Nickname</label><input name='credit_card_nickname' placeholder='Business Card'></div>
+      <div><label>Credit Card Holder Name</label><input name='credit_card_holder_name'></div>
+      <div><label>Full Credit Card Number</label><input name='credit_card_number' inputmode='numeric'></div>
+
+      <div><label>Payroll Contact Name</label><input name='payroll_contact_name'></div>
+      <div><label>Payroll Contact Phone</label><input name='payroll_contact_phone'></div>
+      <div><label>Payroll Contact Email</label><input name='payroll_contact_email'></div>
+        <div><button>Create Business Profile</button></div>
+      </form>
+    </details>
+  </div>
+  {% endif %}
+
+  <div class='card'>
+    <div class='card-head'><h3>{{ 'Business Profiles' if is_admin else 'Business Profile' }}</h3>{% if is_admin %}<a class='btn btn-secondary btn-sm' href='{{ url_for("cpa_dashboard") }}'>Back to Administrator Dashboard</a>{% else %}<a class='btn btn-secondary btn-sm' href='{{ url_for("dashboard", client_id=clients[0].id if clients else request.args.get("client_id", type=int)) }}'>Back to Dashboard</a>{% endif %}</div>
+    {% if is_admin %}
+    <div class='card' style='margin-bottom:14px;box-shadow:none;border:1px solid #E6ECF2'>
+      <div class='small-label'>PHASE A TESTING</div>
+      <div class='small' style='margin-top:6px'>Set the business tier here first, then fill in the new <strong>Subscription Billing Foundation</strong> fields if needed. After that, use <strong>Open Fee Setup</strong> to test one-time administrator extra fees separately.</div>
+    </div>
+    <div class='business-directory-tools'>
+      <div>
+        <div class='small-label'>BUSINESS DIRECTORY</div>
+        <div class='small'>Search and open one business profile at a time so the page stays clean.</div>
+      </div>
+      <div class='business-directory-controls'>
+        <input id='business-search-input' type='search' placeholder='Search business, contact, email, EIN, or type'>
+        <span class='summary-pill'>{{ active_count }} business{{ '' if active_count == 1 else 'es' }}</span>
+        {% if archived_count %}
+        <span class='summary-pill'>{{ archived_count }} archived</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% for c in clients %}
+    {% set business_search_blob = (
+      (c.business_name or '') ~ ' ' ~
+      (c.business_type or '') ~ ' ' ~
+      (service_level_labels.get(c.service_level or 'self_service', 'Self-Service')) ~ ' ' ~
+      (c.contact_name or '') ~ ' ' ~
+      (c.email or '') ~ ' ' ~
+      (c.phone or '') ~ ' ' ~
+      (c.ein or '') ~ ' ' ~
+      (c.address or '')
+    )|lower %}
+    {% if is_admin %}
+    <details class='compact-details business-directory-item' data-business-card data-search='{{ business_search_blob|e }}' style='margin-bottom:14px;'>
+      <summary class='business-directory-summary'>
+        <div>
+          <strong>{{ c.business_name }}</strong>
+          <div class='small'>{{ c.business_type or 'Type missing' }} | {{ service_level_labels.get(c.service_level or 'self_service', 'Self-Service') }} | EIN {{ c.ein or '-' }}</div>
+          <div class='small'>{{ c.contact_name or 'Contact missing' }}{% if c.email %} | {{ c.email }}{% endif %}</div>
+          <div class='small'>Subscription: {{ subscription_status_labels.get(c.subscription_status or 'inactive', 'Inactive') }}{% if c.subscription_amount %} | ${{ '%.2f'|format(c.subscription_amount or 0) }}/mo{% endif %}{% if c.default_payment_method_label %} | {{ c.default_payment_method_label }}{% endif %}</div>
+        </div>
+      </summary>
+      <div class='business-directory-actions'>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("cpa_dashboard", client_id=c.id) }}'>Open Billing Setup</a>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("dashboard", client_id=c.id) }}'>Open Workspace</a>
+      </div>
+      <form method='post' class='form-grid'>
+    {% else %}
+    <div class='card' style='margin-bottom:14px;'>
+      <div class='card-head'>
+        <div>
+          <strong>{{ c.business_name }}</strong>
+          <div class='small'>{{ c.business_type or 'Type missing' }} | {{ service_level_labels.get(c.service_level or 'self_service', 'Self-Service') }} | EIN {{ c.ein or '-' }}</div>
+          <div class='small'>{{ c.address or 'Address missing' }}</div>
+          <div class='small'>Subscription: {{ subscription_status_labels.get(c.subscription_status or 'inactive', 'Inactive') }}{% if c.subscription_amount %} | ${{ '%.2f'|format(c.subscription_amount or 0) }}/mo{% endif %}{% if c.default_payment_method_label %} | {{ c.default_payment_method_label }}{% endif %}</div>
+        </div>
+      </div>
+      <form method='post' class='form-grid'>
+    {% endif %}
+        <input type='hidden' name='action' value='edit'>
+        <input type='hidden' name='client_id' value='{{ c.id }}'>
+
+        <div><label>Business Name</label><input name='business_name' value='{{ c.business_name }}' required></div>
+        <div><label>Business Type</label><select name='business_type'>{% for option in business_types %}<option value='{{ option }}' {% if c.business_type == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+        <div><label>EIN</label><input name='ein' value='{{ c.ein or "" }}'></div>
+        <div><label>Business Address</label><input name='address' value='{{ c.address or "" }}'></div>
+
+        <div><label>Service Level / Pricing Tier</label><select name='service_level'>{% for value, label in service_level_options %}<option value='{{ value }}' {% if (c.service_level or 'self_service') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div><label>Primary Contact Person</label><input name='contact_name' value='{{ c.contact_name or "" }}'></div>
+        <div><label>Phone Number</label><input name='phone' value='{{ c.phone or "" }}'></div>
+        <div><label>Email</label><input name='email' value='{{ c.email or "" }}'></div>
+        <div><label>State Tax ID</label><input name='state_tax_id' value='{{ c.state_tax_id or "" }}'></div>
+
+        <div style='grid-column:1 / -1;margin-top:8px'><strong>Subscription Billing Foundation</strong><div class='small'>Keeps recurring subscription details separate from one-time administrator extra fees. No live charging is performed in this phase.</div></div>
+        <div><label>Subscription Plan / Tier Code</label><input name='subscription_plan_code' value='{{ c.subscription_plan_code or "" }}'></div>
+        <div><label>Subscription Status</label><select name='subscription_status'>{% for value, label in subscription_status_options %}<option value='{{ value }}' {% if (c.subscription_status or 'inactive') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div><label>Monthly Subscription Amount</label><input name='subscription_amount' type='number' step='0.01' min='0' value='{{ '%.2f'|format(c.subscription_amount or 0) }}'></div>
+        <div><label>Next Billing Date</label><input name='subscription_next_billing_date' type='date' value='{{ c.subscription_next_billing_date or "" }}'></div>
+        <div><label><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if c.subscription_autopay_enabled %}checked{% endif %}> Autopay enrollment recorded</label></div>
+        <div><label>Default Payment Method Label</label><input name='default_payment_method_label' value='{{ c.default_payment_method_label or "" }}' placeholder='Visa ending in 4242'></div>
+        <div><label>Payment Method Status</label><select name='default_payment_method_status'><option value='missing' {% if (c.default_payment_method_status or 'missing') == 'missing' %}selected{% endif %}>Missing</option><option value='on_file' {% if c.default_payment_method_status == 'on_file' %}selected{% endif %}>On File</option><option value='needs_update' {% if c.default_payment_method_status == 'needs_update' %}selected{% endif %}>Needs Update</option></select></div>
+        <div><label>Backup Payment Method Label</label><input name='backup_payment_method_label' value='{{ c.backup_payment_method_label or "" }}' placeholder='Optional backup method'></div>
+        <div style='grid-column:1 / -1'><label>Billing Notes</label><input name='billing_notes' value='{{ c.billing_notes or "" }}' placeholder='Internal subscription billing note'></div>
+        <input type='hidden' name='subscription_started_at' value='{{ c.subscription_started_at or "" }}'>
+        <input type='hidden' name='subscription_canceled_at' value='{{ c.subscription_canceled_at or "" }}'>
+        <input type='hidden' name='subscription_paused_at' value='{{ c.subscription_paused_at or "" }}'>
+
+        <div><label>EFTPS Enrollment Status</label><select name='eftps_status'>{% for option in eftps_statuses %}<option value='{{ option }}' {% if c.eftps_status == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+        <div><label>EFTPS Login Reference</label><input name='eftps_login_reference' value='{{ c.eftps_login_reference or "" }}'></div>
+        <div><label>Filing Type</label><select name='filing_type'>{% for option in filing_types %}<option value='{{ option }}' {% if c.filing_type == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+        <div></div>
+
+        <div><label>Bank Name</label><input name='bank_name' value='{{ c.bank_name or "" }}'></div>
+        <div><label>Bank Account Nickname</label><input name='bank_account_nickname' value='{{ c.bank_account_nickname or "" }}'></div>
+        <div><label>Bank Account Holder Name</label><input name='bank_account_holder_name' value='{{ c.bank_account_holder_name or "" }}'></div>
+        <div><label>Full Account Number</label><input name='bank_account_number' value='{{ mask_account_number(c.bank_account_number or c.bank_account_last4 or "") }}' data-sensitive='true' data-mask='{{ mask_account_number(c.bank_account_number or c.bank_account_last4 or "") }}' data-full='{{ c.bank_account_number or c.bank_account_last4 or "" }}' inputmode='numeric' autocomplete='off'></div>
+
+        <div><label>Full Routing Number</label><input name='bank_routing_number' value='{{ mask_account_number(c.bank_routing_number or "", visible_digits=3, min_mask=5) }}' data-sensitive='true' data-mask='{{ mask_account_number(c.bank_routing_number or "", visible_digits=3, min_mask=5) }}' data-full='{{ c.bank_routing_number or "" }}' inputmode='numeric' autocomplete='off'></div>
+        <div><label>Credit Card Nickname</label><input name='credit_card_nickname' value='{{ c.credit_card_nickname or "" }}'></div>
+        <div><label>Credit Card Holder Name</label><input name='credit_card_holder_name' value='{{ c.credit_card_holder_name or "" }}'></div>
+        <div><label>Full Credit Card Number</label><input name='credit_card_number' value='{{ mask_card_number(c.credit_card_number or c.credit_card_last4 or "") }}' data-sensitive='true' data-mask='{{ mask_card_number(c.credit_card_number or c.credit_card_last4 or "") }}' data-full='{{ c.credit_card_number or c.credit_card_last4 or "" }}' inputmode='numeric' autocomplete='off'></div>
+
+        <div><label>Payroll Contact Name</label><input name='payroll_contact_name' value='{{ c.payroll_contact_name or "" }}'></div>
+        <div><label>Payroll Contact Phone</label><input name='payroll_contact_phone' value='{{ c.payroll_contact_phone or "" }}'></div>
+        <div><label>Payroll Contact Email</label><input name='payroll_contact_email' value='{{ c.payroll_contact_email or "" }}'></div>
+        <div class='small' style='grid-column:1 / -1;padding:12px 14px;border:1px solid #e3ebf4;border-radius:16px;background:#f8fbff'>
+          <strong>Saved in LedgerFlow</strong>
+          <div style='margin-top:4px'>Created {{ c.created_at or 'Not recorded yet' }}{% if c.created_by_name %} by {{ c.created_by_name }}{% endif %}</div>
+          <div>Last updated {{ c.updated_at or c.created_at or 'Not recorded yet' }}{% if c.updated_by_name %} by {{ c.updated_by_name }}{% endif %}</div>
+        </div>
+        <div class='business-form-actions' style='grid-column:1 / -1'>
+          <button class='btn' type='submit'>Save Business Profile</button>
+          <span class='small'>Save changes here first, then archive only when the business should leave the active workspace list.</span>
+        </div>
+      </form>
+      {% if is_admin %}
+      <div class='archive-business-bar'>
+        <form method='post' class='archive-business-form' onsubmit="return confirm('Archive this business and move it out of the active list?');">
+          <input type='hidden' name='action' value='archive'>
+          <input type='hidden' name='client_id' value='{{ c.id }}'>
+          <div>
+            <label>Archive Reason</label>
+            <select name='archive_reason' required>
+              {% for value, label in archive_reason_options %}
+              <option value='{{ value }}'>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div><button class='btn btn-secondary btn-sm' type='submit'>Archive Business</button></div>
+        </form>
+      </div>
+      {% endif %}
+      {% if is_admin %}
+    </details>
+      {% else %}
+    </div>
+      {% endif %}
+    {% endfor %}
+
+    {% if is_admin and archived_clients %}
+    <details class='compact-details archived-businesses-panel' style='margin-top:16px'>
+      <summary>Open Archived Businesses</summary>
+      <div class='small' style='margin:12px 0'>Inactive businesses are preserved here for compliance, future reactivation, and later re-engagement marketing.</div>
+      <div class='stack-list'>
+        {% for c in archived_clients %}
+        <div class='stack-item'>
+          <div class='card-head'>
+            <div>
+              <strong>{{ c.business_name }}</strong>
+              <div class='small'>{{ c.business_type or 'Type missing' }} | {{ c.contact_name or 'Contact missing' }}{% if c.email %} | {{ c.email }}{% endif %}</div>
+              <div class='small'>Archived: {{ c.archived_at or 'Unknown date' }} | Reason: {{ archive_reason_labels.get(c.archive_reason or 'other', 'Other') }}</div>
+              {% if c.last_rejoin_sent_at %}
+              <div class='small'>Last rejoin email: <span class='status-chip {{ c.last_rejoin_status or "sent" }}'>{{ c.last_rejoin_status or 'sent' }}</span> | {{ c.last_rejoin_sent_at }}</div>
+              {% else %}
+              <div class='small'>No rejoin outreach sent yet.</div>
+              {% endif %}
+            </div>
+            <div class='archived-business-actions'>
+              {% if c.email %}
+              <form method='post'>
+                <input type='hidden' name='action' value='send_rejoin_invite'>
+                <input type='hidden' name='client_id' value='{{ c.id }}'>
+                <button class='btn btn-secondary btn-sm' type='submit'>Send Rejoin Invite</button>
+              </form>
+              {% else %}
+              <div class='small'>Add an email before sending a rejoin invite.</div>
+              {% endif %}
+              {% if c.last_rejoin_email_id %}
+              <a class='btn btn-secondary btn-sm' href='{{ url_for("client_user_email_preview", email_id=c.last_rejoin_email_id) }}' target='_blank' rel='noopener'>View Last Rejoin Email</a>
+              {% endif %}
+              <form method='post' onsubmit="return confirm('Reactivate this business and return it to the active list?');">
+                <input type='hidden' name='action' value='reactivate'>
+                <input type='hidden' name='client_id' value='{{ c.id }}'>
+                <button class='btn btn-secondary btn-sm' type='submit'>Reactivate</button>
+              </form>
+              {% set blockers = archived_delete_blockers.get(c.id, {}) if archived_delete_blockers is defined else {} %}
+              {% if not blockers %}
+              <form method='post' onsubmit="return confirm('Delete this archived business permanently? This cannot be undone.');">
+                <input type='hidden' name='action' value='delete_permanently'>
+                <input type='hidden' name='client_id' value='{{ c.id }}'>
+                <button class='btn btn-secondary btn-sm' type='submit'>Delete Permanently</button>
+              </form>
+              {% else %}
+              <div class='small'>Permanent delete unavailable because history exists.</div>
+              {% endif %}
+            </div>
+          </div>
+          {% if blockers %}
+          <div class='small' style='margin-top:8px'>Connected history: {% for table_name, count in blockers.items() %}{{ table_name|replace('_', ' ') }} ({{ count }}){% if not loop.last %}, {% endif %}{% endfor %}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('input[data-sensitive="true"]').forEach(function (input) {
+    const masked = input.dataset.mask || '';
+    const full = input.dataset.full || '';
+    input.dataset.revealed = 'false';
+    input.addEventListener('focus', function () {
+      if (input.dataset.revealed === 'true') return;
+      input.value = full;
+      input.dataset.revealed = 'true';
+      requestAnimationFrame(function () {
+        try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
+      });
+    });
+    input.addEventListener('blur', function () {
+      if ((input.value || '') === full) {
+        input.value = masked;
+        input.dataset.revealed = 'false';
+      }
+    });
+    const form = input.closest('form');
+    if (form && !form.dataset.sensitiveBound) {
+      form.addEventListener('submit', function () {
+        form.querySelectorAll('input[data-sensitive="true"]').forEach(function (field) {
+          if ((field.value || '') === (field.dataset.mask || '')) {
+            field.value = field.dataset.full || '';
+          }
+        });
+      });
+      form.dataset.sensitiveBound = 'true';
+    }
+  });
+
+  const searchInput = document.getElementById('business-search-input');
+  const businessCards = Array.from(document.querySelectorAll('[data-business-card]'));
+  if (searchInput && businessCards.length) {
+    searchInput.addEventListener('input', function () {
+      const query = (searchInput.value || '').trim().toLowerCase();
+      businessCards.forEach(function (card) {
+        const haystack = (card.getAttribute('data-search') || '').toLowerCase();
+        const match = !query || haystack.includes(query);
+        card.style.display = match ? '' : 'none';
+        if (!match) {
+          card.open = false;
+        }
+      });
+    });
+    businessCards.forEach(function (card) {
+      card.addEventListener('toggle', function () {
+        if (!card.open) return;
+        businessCards.forEach(function (other) {
+          if (other !== card) {
+            other.open = false;
+          }
+        });
+      });
+    });
+  }
+});
+</script>
+{% endblock %}

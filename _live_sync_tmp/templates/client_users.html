@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% block body %}
+{% set invite_sent_count = invites|selectattr('status', 'equalto', 'sent')|list|length %}
+{% set invite_failed_count = invites|selectattr('status', 'equalto', 'failed')|list|length %}
+{% set invite_pending_count = invites|selectattr('status', 'equalto', 'pending')|list|length %}
+{% set invite_accepted_count = invites|selectattr('status', 'equalto', 'accepted')|list|length %}
+{% set invite_expired_count = invites|selectattr('status', 'equalto', 'expired')|list|length %}
+<div data-business-users-console>
+<div class='business-directory-tools users-console-tools'>
+  <div>
+    <div class='page-kicker'>Admin Console</div>
+    <div class='page-title users-console-title'>Business Users</div>
+    <div class='small'>Search user logins, invites, prospects, and business email history from one place.</div>
+  </div>
+  <div class='business-directory-controls'>
+    <input type='search' data-business-users-search placeholder='Search business users, prospects, emails, and invites'>
+  </div>
+  <div class='invite-metrics users-console-metrics'>
+    <span class='status-chip processing'>Active Logins {{ users|length }}</span>
+    <span class='status-chip pending'>Prospects {{ prospect_clients|length }}</span>
+    <span class='status-chip sent'>Recent Emails {{ email_logs|length }}</span>
+  </div>
+</div>
+<div class='grid cards-2'>
+  <div class='card'>
+    <details class='compact-details users-console-panel'>
+      <summary><span>Send Business Invite</span></summary>
+      <div class='small' style='margin:12px 0'>Invite a business that already exists in LedgerFlow.</div>
+      <form method='post' class='form-grid'>
+      <input type='hidden' name='action' value='send_invite'>
+      <div><label>Business</label><select name='client_id' required>{% for c in clients %}<option value='{{ c.id }}'>{{ c.business_name }}</option>{% endfor %}</select></div>
+      <div><label>Invitee Name</label><input name='full_name' required></div>
+      <div><label>Invitee Email</label><input name='email' required></div>
+      <div><button>Send Invite Email</button></div>
+    </form>
+    </details>
+    <details class='compact-details users-console-panel' style='margin-top:12px'>
+      <summary><span>Invite New Customer</span></summary>
+      <div class='small' style='margin:12px 0'>Use this when the business is not built in the system yet. LedgerFlow will create a protected prospect record, send the invite, and move them into full business setup only after they accept.</div>
+      <form method='post' class='form-grid'>
+      <input type='hidden' name='action' value='send_prospect_invite'>
+      <div><label>New Customer / Business Name</label><input name='business_name' required></div>
+      <div><label>Primary Contact Name</label><input name='full_name' required></div>
+      <div><label>Primary Contact Email</label><input name='email' required></div>
+      <div><button>Send New Customer Invite</button></div>
+    </form>
+    </details>
+    <details class='compact-details users-console-panel' style='margin-top:12px'>
+      <summary><span>Create Business Login Directly</span></summary>
+      <div class='small' style='margin:12px 0'>Use only when you want to create the login immediately instead of sending an invite first.</div>
+      <form method='post' class='form-grid'>
+      <input type='hidden' name='action' value='create_login'>
+      <div><label>Business</label><select name='client_id' required>{% for c in clients %}<option value='{{ c.id }}'>{{ c.business_name }}</option>{% endfor %}</select></div>
+      <div><label>Full Name</label><input name='full_name' required></div>
+      <div><label>Email</label><input name='email' required></div>
+      <div><label>Password</label><div class='password-field'><input name='password' type='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>👁</span><span class='toggle-hide'>🙈</span></button></div></div>
+      <div><button>Create Login</button></div>
+    </form>
+    </details>
+  </div>
+
+  <div class='card'>
+    <details class='compact-details users-console-panel' data-filter-details>
+      <summary>
+        <span>Open Business User Logins</span>
+      </summary>
+      <div class='small' style='margin:12px 0'>Review active client login accounts without keeping the full list expanded.</div>
+      <table class='table'>
+        <tr><th>Email</th><th>Name</th><th>Business</th></tr>
+        {% for u in users %}
+        <tr data-search-text='{{ (u.email or "")|lower }} {{ (u.full_name or "")|lower }} {{ (u.business_name or "")|lower }}'>
+          <td>{{ u.email }}</td>
+          <td>{{ u.full_name }}</td>
+          <td>{{ u.business_name }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </details>
+    <hr>
+    <details class='compact-details users-console-panel' data-filter-details>
+      <summary>
+        <span>Open Invite Delivery History</span>
+      </summary>
+      <div class='invite-history-head'>
+        <div class='small'>Review invite results without keeping the full log open on the page.</div>
+        <div class='invite-metrics'>
+          <span class='status-chip sent'>Sent {{ invite_sent_count }}</span>
+          <span class='status-chip failed'>Failed {{ invite_failed_count }}</span>
+          <span class='status-chip pending'>Pending {{ invite_pending_count }}</span>
+          <span class='status-chip accepted'>Accepted {{ invite_accepted_count }}</span>
+          {% if invite_expired_count %}
+          <span class='status-chip skipped'>Expired {{ invite_expired_count }}</span>
+          {% endif %}
+        </div>
+      </div>
+      {% if invites %}
+      <table class='table'>
+        <tr><th>Business</th><th>Email</th><th>Status</th><th>Invite Link</th><th>Action</th><th>Error</th></tr>
+        {% for invite in invites %}
+        <tr data-search-text='{{ (invite.business_name or "")|lower }} {{ (invite.invited_email or "")|lower }} {{ (invite.status or "")|lower }} {{ (invite.invited_name or "")|lower }} {{ (invite.invite_error or "")|lower }}'>
+          <td>{{ invite.business_name }}</td>
+          <td>{{ invite.invited_email }}</td>
+          <td><span class='status-chip {{ invite.status or "pending" }}'>{{ invite.status or 'pending' }}</span></td>
+          <td><input value='{{ build_invite_link(invite.token) if app_base_url else "Set APP_BASE_URL in Email Settings" }}' readonly></td>
+          <td>
+            <form method='post' style='margin:0'>
+              <input type='hidden' name='action' value='resend_invite'>
+              <input type='hidden' name='invite_id' value='{{ invite.id }}'>
+              <button class='btn btn-secondary btn-sm' type='submit'>Resend</button>
+            </form>
+          </td>
+          <td class='small'>{{ invite.invite_error or '' }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <div class='small' style='margin-top:12px'>No invite history yet.</div>
+      {% endif %}
+    </details>
+  </div>
+</div>
+
+{% if prospect_clients %}
+<div class='card section-frame' style='margin-top:16px'>
+  <details class='compact-details users-console-panel' data-filter-details>
+    <summary>Open Prospect Invite Pipeline</summary>
+    <div class='small' style='margin:12px 0'>These are invited prospects waiting to finish LedgerFlow setup before they become active businesses.</div>
+    <div class='invite-metrics prospect-stage-metrics'>
+      <span class='status-chip invite_sent'>Invite Sent {{ prospect_stage_counts.invite_sent or 0 }}</span>
+      <span class='status-chip login_created'>Login Created {{ prospect_stage_counts.login_created or 0 }}</span>
+      <span class='status-chip setup_in_progress'>Setup In Progress {{ prospect_stage_counts.setup_in_progress or 0 }}</span>
+      <span class='status-chip failed'>Delivery Failed {{ prospect_stage_counts.delivery_failed or 0 }}</span>
+      {% if prospect_stage_counts.invite_expired %}
+      <span class='status-chip skipped'>Expired {{ prospect_stage_counts.invite_expired }}</span>
+      {% endif %}
+    </div>
+    <div class='stack-list'>
+      {% for c in prospect_clients %}
+      <div class='stack-item' data-search-text='{{ (c.business_name or "")|lower }} {{ (c.contact_name or "")|lower }} {{ (c.email or "")|lower }} {{ (c.invite_status or "")|lower }} {{ (c.invite_error or "")|lower }}'>
+        <div class='card-head'>
+          <div>
+            <strong>{{ c.business_name }}</strong>
+            <div class='small'>{{ c.contact_name or 'Contact missing' }}{% if c.email %} | {{ c.email }}{% endif %}</div>
+            <div class='small'>Pipeline Stage: <span class='status-chip {{ c.pipeline_stage.key }}'>{{ c.pipeline_stage.label }}</span></div>
+            <div class='small'>{{ c.pipeline_stage.detail }}</div>
+            {% if c.invite_created_at %}
+            <div class='small'>Last invite sent: {{ c.invite_created_at }}</div>
+            {% endif %}
+            {% if c.invite_used_at %}
+            <div class='small'>Invite accepted: {{ c.invite_used_at }}</div>
+            {% endif %}
+            {% if c.onboarding_started_at %}
+            <div class='small'>Setup started: {{ c.onboarding_started_at }}</div>
+            {% endif %}
+            {% if c.last_invite_email_sent_at %}
+            <div class='small'>Last email log: <span class='status-chip {{ c.last_invite_email_status or "sent" }}'>{{ c.last_invite_email_status or 'sent' }}</span> | {{ c.last_invite_email_sent_at }}</div>
+            {% endif %}
+            {% if c.invite_error %}
+            <div class='small' style='color:#a4342b'>Last delivery issue: {{ c.invite_error }}</div>
+            {% endif %}
+          </div>
+          <div class='prospect-pipeline-actions'>
+            <span class='status-chip {{ c.pipeline_stage.key }}'>{{ c.pipeline_stage.label }}</span>
+            {% if c.last_invite_email_id %}
+            <a class='btn btn-secondary btn-sm' href='{{ url_for("client_user_email_preview", email_id=c.last_invite_email_id) }}' target='_blank' rel='noopener'>View Last Invite Email</a>
+            {% endif %}
+            {% if c.invite_id and c.invite_status != 'accepted' %}
+            <form method='post' style='margin:0'>
+              <input type='hidden' name='action' value='resend_invite'>
+              <input type='hidden' name='invite_id' value='{{ c.invite_id }}'>
+              <button class='btn btn-secondary btn-sm' type='submit'>Resend Invite</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </details>
+</div>
+{% endif %}
+
+<div class='card section-frame' style='margin-top:16px'>
+  <details class='compact-details users-console-panel' data-filter-details>
+    <summary>Open Recent Business Emails</summary>
+    <div class='small' style='margin:12px 0'>Every invite and welcome email sent to a business is logged here so you can confirm what went out and open the exact email preview.</div>
+    {% if email_logs %}
+    <table class='table'>
+      <tr><th>Business</th><th>Type</th><th>Recipient</th><th>Status</th><th>Sent</th><th>Action</th></tr>
+      {% for row in email_logs %}
+      <tr data-search-text='{{ (row.business_name or "system")|lower }} {{ (row.email_type or "")|lower }} {{ (row.recipient_email or "")|lower }} {{ (row.status or "")|lower }} {{ (row.error_message or "")|lower }}'>
+        <td>{{ row.business_name or 'System' }}</td>
+        <td>{{ (row.email_type or 'email')|replace('_', ' ')|title }}</td>
+        <td>{{ row.recipient_email }}</td>
+        <td><span class='status-chip {{ row.status or "sent" }}'>{{ row.status or 'sent' }}</span></td>
+        <td>{{ row.created_at }}</td>
+        <td style='display:flex;gap:8px;flex-wrap:wrap'>
+          {% if row.body_html or row.body_text %}
+          <a class='btn btn-secondary btn-sm' href='{{ url_for("client_user_email_preview", email_id=row.id) }}' target='_blank' rel='noopener'>View Email</a>
+          {% endif %}
+          {% if row.error_message %}<span class='small'>{{ row.error_message }}</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <div class='small'>No business emails have been logged yet.</div>
+    {% endif %}
+  </details>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var shell = document.querySelector('[data-business-users-console]');
+  if (!shell) return;
+  var search = shell.querySelector('[data-business-users-search]');
+  if (!search) return;
+
+  function normalize(value) {
+    return (value || '').toLowerCase().trim();
+  }
+
+  function applyFilter() {
+    var query = normalize(search.value);
+    shell.querySelectorAll('[data-search-text]').forEach(function (item) {
+      var haystack = normalize(item.getAttribute('data-search-text'));
+      var match = !query || haystack.indexOf(query) !== -1;
+      item.classList.toggle('is-filter-hidden', !match);
+    });
+
+    shell.querySelectorAll('[data-filter-details]').forEach(function (block) {
+      if (!query) return;
+      var visibleMatches = block.querySelectorAll('[data-search-text]:not(.is-filter-hidden)').length;
+      block.open = visibleMatches > 0;
+    });
+  }
+
+  search.addEventListener('input', applyFilter);
+});
+</script>
+</div>
+{% endblock %}

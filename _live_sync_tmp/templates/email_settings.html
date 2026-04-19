@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='card' style='max-width:980px;margin:0 auto;'>
+  <div class='card-head'>
+    <h3>Email Delivery Settings</h3>
+    <a class='btn btn-secondary btn-sm' href='{{ url_for("client_users") }}'>Back to Invites</a>
+  </div>
+  <div class='grid cards-4' style='margin-bottom:14px'>
+    <div class='card stat-card premium-stat'>
+      <h3>Saved In Software</h3>
+      <div class='metric'>{{ 'Yes' if settings_profile else 'Pending' }}</div>
+      <div class='small'>Settings now persist inside LedgerFlow, not only in runtime files.</div>
+    </div>
+    <div class='card stat-card premium-stat'>
+      <h3>Last Saved</h3>
+      <div class='metric'>{{ settings_profile.updated_at or '&mdash;' }}</div>
+      <div class='small'>By {{ settings_profile.updated_by_name or 'System / migration' }}</div>
+    </div>
+    <div class='card stat-card premium-stat'>
+      <h3>Password Stored</h3>
+      <div class='metric'>{{ 'Secured' if password_configured else 'Not saved yet' }}</div>
+      <div class='small'>Encrypted inside the software configuration record.</div>
+    </div>
+    <div class='card stat-card premium-stat'>
+      <h3>Last Test</h3>
+      <div class='metric'>{{ (settings_profile.last_test_status or 'Not tested')|replace('_',' ')|title }}</div>
+      <div class='small'>
+        {% if settings_profile.last_tested_at %}{{ settings_profile.last_tested_at }}{% else %}No test sent yet{% endif %}
+        {% if settings_profile.last_test_recipient %}<br>{{ settings_profile.last_test_recipient }}{% endif %}
+      </div>
+    </div>
+  </div>
+  <details class='compact-details'>
+    <summary>Open Email Settings</summary>
+    <form method='post' class='form-grid' style='margin-top:12px'>
+      <input type='hidden' name='action' value='save_settings'>
+      <div><label>Sender Email</label><input name='smtp_email' value='{{ smtp_email or "" }}' placeholder='name@yourdomain.com'></div>
+      <div><label>Sender Name</label><input name='sender_name' value='{{ sender_name or "" }}' placeholder='Ledger Upgrades'></div>
+      <div><label>SMTP Host</label><input name='smtp_host' value='{{ smtp_host or "smtp.gmail.com" }}' placeholder='smtp.gmail.com'></div>
+      <div><label>SMTP Port</label><input name='smtp_port' value='{{ smtp_port or "587" }}' placeholder='587'></div>
+      <div><label>SMTP Username</label><input name='smtp_username' value='{{ smtp_username or "" }}' placeholder='name@yourdomain.com'></div>
+      <div><label>SMTP Password</label><div class='password-field'><input name='smtp_password' type='password' autocomplete='new-password' placeholder='{% if password_configured %}Enter new password only if changing{% else %}Enter app password{% endif %}'><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
+      <div><label>App Base URL</label><input name='app_base_url' value='{{ app_base_url or "" }}' placeholder='https://yourdomain.com'></div>
+      <div style='display:flex;align-items:end;'><button type='submit'>Save Settings</button></div>
+    </form>
+  </details>
+  <div class='small' style='margin-top:10px'>Phase 1 lock: these email settings are now saved inside the software database and mirrored to runtime storage for compatibility. You can paste the main portal URL here and LedgerFlow will normalize it to the correct public base.</div>
+</div>
+
+<div class='card' style='max-width:980px;margin:16px auto 0;'>
+  <details class='compact-details'>
+    <summary>Send Test Email</summary>
+    <form method='post' class='form-grid' style='margin-top:12px'>
+      <input type='hidden' name='action' value='send_test_email'>
+      <div><label>Sender Email</label><input name='smtp_email' value='{{ smtp_email or "" }}' placeholder='name@yourdomain.com'></div>
+      <div><label>Sender Name</label><input name='sender_name' value='{{ sender_name or "" }}' placeholder='Ledger Upgrades'></div>
+      <div><label>SMTP Host</label><input name='smtp_host' value='{{ smtp_host or "smtp.gmail.com" }}' placeholder='smtp.gmail.com'></div>
+      <div><label>SMTP Port</label><input name='smtp_port' value='{{ smtp_port or "587" }}' placeholder='587'></div>
+      <div><label>SMTP Username</label><input name='smtp_username' value='{{ smtp_username or "" }}' placeholder='name@yourdomain.com'></div>
+      <div><label>SMTP Password</label><div class='password-field'><input name='smtp_password' type='password' autocomplete='new-password' placeholder='{% if password_configured %}Leave blank to keep current password{% else %}Enter app password{% endif %}'><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
+      <div><label>App Base URL</label><input name='app_base_url' value='{{ app_base_url or "" }}' placeholder='https://yourdomain.com'></div>
+      <div><label>Test Email Address</label><input name='test_email' value='' placeholder='you@example.com'></div>
+      <div style='display:flex;align-items:end;'><button type='submit'>Send Test Email</button></div>
+    </form>
+  </details>
+  <div class='small' style='margin-top:10px'>Use your Gmail app password. The password field is always blank by design.</div>
+  {% if settings_profile.last_test_status == 'failed' and settings_profile.last_test_error %}
+  <div class='flash error' style='margin-top:12px'>Last test error: {{ settings_profile.last_test_error }}</div>
+  {% endif %}
+</div>
+
+<div class='card' style='max-width:980px;margin:16px auto 0;'>
+  <details class='compact-details'>
+    <summary>Recent Failures</summary>
+    <table class='table' style='margin-top:12px'>
+      <tr><th>Business</th><th>Email</th><th>When</th><th>Error</th></tr>
+      {% for f in failures %}
+      <tr>
+        <td>{{ f.business_name }}</td>
+        <td>{{ f.invited_email }}</td>
+        <td>{{ f.created_at }}</td>
+        <td>{{ f.invite_error }}</td>
+      </tr>
+      {% endfor %}
+      {% if failures|length == 0 %}
+      <tr><td colspan='4' class='small'>No failures.</td></tr>
+      {% endif %}
+    </table>
+  </details>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'worker_portal_base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Team Member Dashboard</div>
+    <div class='page-title'>{{ worker.name }}</div>
+    <div class='page-subtitle'>Your hours, pay summary, and recent time records in one clear team member view.</div>
+  </div>
+</div>
+<div class='expense-summary-grid'>
+  <div class='expense-summary-chip'><div class='label'>This Week</div><div class='value'>{{ '%.2f'|format(summary.week_hours or 0) }} hrs</div></div>
+  <div class='expense-summary-chip'><div class='label'>This Month</div><div class='value'>{{ '%.2f'|format(summary.month_hours or 0) }} hrs</div></div>
+  <div class='expense-summary-chip'><div class='label'>Year to Date</div><div class='value'>{{ '%.2f'|format(summary.year_hours or 0) }} hrs</div></div>
+  <div class='expense-summary-chip'><div class='label'>Year-to-Date Pay</div><div class='value'>${{ '%.2f'|format(pay_summary.year_total or 0) }}</div></div>
+</div>
+<div class='card' style='margin-top:16px'>
+  <div class='card-head'><h3>Recent Time Entries</h3><div class='small'>Read-only team member view</div></div>
+  {% if summary.entries %}
+    <table class='table'>
+      <tr><th>Date</th><th>Hours</th><th>Note</th></tr>
+      {% for row in summary.entries %}
+      <tr><td>{{ row.entry_date }}</td><td>{{ '%.2f'|format(row.hours or 0) }}</td><td>{{ row.note or '?' }}</td></tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <div class='empty-state'><strong>No time entries yet.</strong><span>Your manager can add time records later. This team member portal keeps the time summary area visible and restricted.</span></div>
+  {% endif %}
+</div>
+{% endblock %}

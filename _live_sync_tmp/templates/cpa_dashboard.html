@@ -1,0 +1,453 @@
+{% extends 'base.html' %}
+{% block body %}
+
+<div class='welcome-panel welcome-panel-large'>
+  <div class='welcome-kicker'>Welcome Administrator</div>
+  <div class='welcome-inline'>{{ ((current_user.full_name or 'Danielle').split()[0]|title) if current_user and current_user.full_name else 'Danielle' }}</div>
+</div>
+
+
+
+<div class='grid' style='margin-bottom:16px;align-items:start'>
+  <div class='card'>
+    <div class='card-head'><h3>Pending Administrator Review Alerts</h3><span class='badge'>{{ review_alerts|length }} pending</span></div>
+    {% if review_alerts %}
+    <table class='table'>
+      <tr><th>Business</th><th>Submitted By</th><th>Status</th><th>Submitted</th><th>Actions</th></tr>
+      {% for row in review_alerts %}
+      <tr>
+        <td>{{ row.business_name }}</td>
+        <td>{{ row.submitted_by_name }}</td>
+        <td>Pending Review</td>
+        <td>{{ row.submitted_at }}</td>
+        <td style='white-space:nowrap'>
+          <a class='btn btn-secondary btn-sm' href='{{ url_for("dashboard", client_id=row.client_id) }}'>Review</a>
+          <form method='post' action='{{ url_for("review_request_action", request_id=row.id, action="approved") }}' style='display:inline-block'><button class='btn btn-sm' type='submit'>Approve</button></form>
+          <form method='post' action='{{ url_for("review_request_action", request_id=row.id, action="needs_correction") }}' style='display:inline-block'><button class='btn btn-red btn-sm' type='submit'>Needs Correction</button></form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+      <div class='small'>No pending review requests.</div>
+    {% endif %}
+  </div>
+</div>
+<div class='grid cards-4'>
+  <div class='card stat-card'><h3>Businesses</h3><div class='metric big'>{{ totals.business_count }}</div><div class='small'>Active businesses managed</div></div>
+  <div class='card stat-card'><h3>Total Logins / Accounts</h3><div class='metric big'>{{ totals.total_login_count }}</div><div class='small'>Admin + business logins + team member portals</div></div>
+  <div class='card stat-card'><h3>Business Logins</h3><div class='metric big'>{{ totals.business_login_count }}</div><div class='small'>Full business user accounts</div></div>
+  <div class='card stat-card'><h3>Team Member Portal Requests</h3><div class='metric big'>{{ totals.pending_worker_approvals }}</div><div class='small'>Pending administrator approval</div></div>
+</div>
+<div data-admin-scale-console style='margin-top:16px'>
+  <div class='business-directory-tools admin-scale-tools'>
+    <div>
+      <div class='page-kicker'>Administrator Operations</div>
+      <div class='page-title admin-scale-title'>Scale View</div>
+      <div class='small'>Search high-volume sections without keeping every table open on the dashboard.</div>
+    </div>
+    <div class='business-directory-controls'>
+      <input type='search' data-admin-scale-search placeholder='Search logins, workspaces, businesses, payment activity'>
+    </div>
+    <div class='invite-metrics admin-scale-metrics'>
+      <span class='status-chip processing'>Login Alerts {{ totals.new_login_notifications }}</span>
+      <span class='status-chip sent'>Payments {{ all_payment_items|length }}</span>
+      <span class='status-chip pending'>Workspaces {{ businesses|length }}</span>
+    </div>
+  </div>
+<div class='grid cards-2'>
+  <div class='card'>
+    <details class='compact-details admin-scale-panel' data-admin-scale-details>
+      <summary><span>Open New Login Notifications</span></summary>
+      {% if account_activity_rows %}
+        <div class='small' style='margin:12px 0'>Review recent business and team member account creation without keeping the full log open.</div>
+        <table class='table'>
+          <tr><th>Business</th><th>Account</th><th>Type</th><th>Status</th><th>Created</th></tr>
+          {% for row in account_activity_rows[:10] %}
+          <tr data-admin-scale-search-text='{{ (row.business_name or "system")|lower }} {{ (row.account_name or "")|lower }} {{ (row.account_email or "")|lower }} {{ (row.account_type or "")|lower }} {{ (row.status or "")|lower }} {{ (row.created_at or "")|lower }}'>
+            <td><strong>{{ row.business_name or 'System' }}</strong></td>
+            <td>{{ row.account_name or row.account_email or '&mdash;' }}<div class='small'>{{ row.account_email or '' }}</div></td>
+            <td style='text-transform:capitalize'>{{ (row.account_type or 'login')|replace('_',' ') }}</td>
+            <td style='text-transform:capitalize'>{{ (row.status or 'created')|replace('_',' ') }}</td>
+            <td>{{ row.created_at }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <div class='small'>No login/account creation activity yet.</div>
+      {% endif %}
+    </details>
+  </div>
+  <div class='card'>
+    <details class='compact-details admin-scale-panel' data-admin-scale-details>
+      <summary><span>Open User Count Per Business</span></summary>
+      {% if business_login_counts %}
+        <div class='small' style='margin:12px 0'>Track total business and team member access by workspace without keeping the full count table expanded.</div>
+        <table class='table'>
+          <tr><th>Business</th><th>Business Logins</th><th>Team Member Portals</th><th>Total</th></tr>
+          {% for row in business_login_counts %}
+          <tr data-admin-scale-search-text='{{ (row.business_name or "")|lower }} {{ row.business_login_count }} {{ row.worker_portal_count }} {{ row.total_login_count }}'>
+            <td><strong>{{ row.business_name }}</strong></td>
+            <td>{{ row.business_login_count }}</td>
+            <td>{{ row.worker_portal_count }}</td>
+            <td><strong>{{ row.total_login_count }}</strong></td>
+          </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <div class='small'>No business login accounts yet.</div>
+      {% endif %}
+    </details>
+  </div>
+</div>
+</div>
+{% if totals.pending_worker_approvals and pending_worker_requests_all %}
+<div class='card' style='margin-top:16px'>
+  <div class='card-head'><h3>Pending Team Member Portal Approvals (All Businesses)</h3><span class='badge'>Action Required</span></div>
+  <table class='table'>
+    <tr><th>Business</th><th>Team Member</th><th>Email</th><th>Requested</th><th>Action</th></tr>
+    {% for row in pending_worker_requests_all %}
+    <tr>
+      <td><strong>{{ row.business_name }}</strong></td>
+      <td>{{ row.name }}</td>
+      <td>{{ row.email or '&mdash;' }}</td>
+      <td>{{ row.portal_requested_at or '&mdash;' }}</td>
+      <td>
+        <form method='post' action='{{ url_for("admin_worker_portal_approval") }}' style='display:inline-flex;gap:8px;flex-wrap:wrap'>
+          <input type='hidden' name='worker_id' value='{{ row.id }}'>
+          <button type='submit' name='decision' value='approve' class='btn btn-secondary btn-sm'>Approve</button>
+          <button type='submit' name='decision' value='needs_correction' class='btn btn-secondary btn-sm'>Needs Correction</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <div class='small'>You can also open a specific business workspace to review team member details.</div>
+</div>
+{% endif %}
+{% if selected_business %}
+<div class='card' style='margin-top:16px'>
+  <div class='card-head'><h3>Team Member Portal Approvals &middot; {{ selected_business.business_name }}</h3><span class='badge'>Restricted Access Control</span></div>
+  {% if pending_worker_requests %}
+    <table class='table'>
+      <tr><th>Team Member</th><th>Email</th><th>Requested</th><th>Status</th><th>Action</th></tr>
+      {% for row in pending_worker_requests %}
+      <tr>
+        <td><strong>{{ row.name }}</strong></td>
+        <td>{{ row.email or '&mdash;' }}</td>
+        <td>{{ row.portal_requested_at or '&mdash;' }}</td>
+        <td style='text-transform:capitalize'>{{ row.portal_approval_status or 'pending' }}</td>
+        <td>
+          <form method='post' action='{{ url_for("admin_worker_portal_approval") }}' style='display:inline-flex;gap:8px;flex-wrap:wrap'>
+            <input type='hidden' name='worker_id' value='{{ row.id }}'>
+            <button type='submit' name='decision' value='approve' class='btn btn-secondary btn-sm'>Approve</button>
+            <button type='submit' name='decision' value='needs_correction' class='btn btn-secondary btn-sm'>Needs Correction</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <div class='small'>No pending team member portal approvals for this business.</div>
+  {% endif %}
+</div>
+{% endif %}
+{% if selected_business %}
+<div class='card hero-surface' style='margin-top:16px'>
+  <div class='card-head'><h3>Billing Setup Center &middot; {{ selected_business.business_name }}</h3><span class='badge'>Subscription + Method On File</span></div>
+  <div class='summary-strip' style='margin-bottom:12px'>
+    <span class='summary-pill'>Recurring subscription settings</span>
+    <span class='summary-pill'>Default + backup method on file</span>
+    <span class='summary-pill'>One-time fees managed separately below</span>
+  </div>
+  <div class='grid cards-4' style='margin-bottom:12px'>
+    <div class='card stat-card premium-stat'><h3>Status</h3><div class='metric'>{{ subscription_status_labels.get(selected_business.subscription_status or 'inactive', 'Inactive') }}</div></div>
+    <div class='card stat-card premium-stat'><h3>Subscription</h3><div class='metric'>${{ '%.2f'|format(selected_business.subscription_amount or 0) }}/mo</div></div>
+    <div class='card stat-card premium-stat'><h3>Next Billing</h3><div class='metric'>{{ selected_business.subscription_next_billing_date or 'Not scheduled' }}</div></div>
+    <div class='card stat-card premium-stat premium-stat-accent'><h3>Default Method</h3><div class='metric'>{{ selected_payment_method_summary.default_label or 'Not on file' }}<br><span class='small'>{{ (selected_payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}</span></div></div>
+  </div>
+  <details class='compact-details'>
+    <summary>Subscription Settings</summary>
+    <form method='post' class='form-grid' style='margin-top:12px'>
+      <input type='hidden' name='action' value='update_subscription_profile'>
+      <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
+      <input type='hidden' name='client_id' value='{{ selected_business.id }}'>
+      <div><label>Subscription Plan / Tier Code</label><input name='subscription_plan_code' value='{{ selected_business.subscription_plan_code or "" }}' placeholder='self-service-monthly'></div>
+      <div><label>Subscription Status</label><select name='subscription_status'>{% for value, label in subscription_status_options %}<option value='{{ value }}' {% if (selected_business.subscription_status or 'inactive') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Monthly Subscription Amount</label><input name='subscription_amount' type='number' min='0' step='0.01' value='{{ '%.2f'|format(selected_business.subscription_amount or 0) }}'></div>
+      <div><label>Next Billing Date</label><input name='subscription_next_billing_date' type='date' value='{{ selected_business.subscription_next_billing_date or "" }}'></div>
+      <div><label><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if selected_business.subscription_autopay_enabled %}checked{% endif %}> Payment-method enrollment recorded</label></div>
+      <div><label>Default Payment Method Label</label><input name='default_payment_method_label' value='{{ selected_business.default_payment_method_label or "" }}' placeholder='Visa ending in 4242'></div>
+      <div><label>Payment Method Status</label><select name='default_payment_method_status'><option value='missing' {% if (selected_business.default_payment_method_status or 'missing') == 'missing' %}selected{% endif %}>Missing</option><option value='on_file' {% if selected_business.default_payment_method_status == 'on_file' %}selected{% endif %}>On File</option><option value='needs_update' {% if selected_business.default_payment_method_status == 'needs_update' %}selected{% endif %}>Needs Update</option></select></div>
+      <div><label>Backup Payment Method Label</label><input name='backup_payment_method_label' value='{{ selected_business.backup_payment_method_label or "" }}' placeholder='Optional backup method'></div>
+      <div style='grid-column:1 / -1'><label>Billing Notes</label><input name='billing_notes' value='{{ selected_business.billing_notes or "" }}' placeholder='Internal recurring billing note'></div>
+      <div><button type='submit' class='btn btn-secondary'>Save Subscription Billing</button></div>
+    </form>
+  </details>
+
+  <details class='compact-details' style='margin-top:14px'>
+    <summary>Payment Methods On File{% if selected_payment_methods %} ({{ selected_payment_methods|length }}){% endif %}</summary>
+    <div class='small' style='margin:12px 0'>Keep one clear default method and one optional backup. Enter safe setup details only.</div>
+    <form method='post' class='form-grid payment-method-form card' style='margin-bottom:12px;box-shadow:none;border:1px solid #E6ECF2'>
+      <input type='hidden' name='action' value='add_payment_method'>
+      <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
+      <input type='hidden' name='client_id' value='{{ selected_business.id }}'>
+      <div><label>Method Type</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Method Label</label><input name='label' placeholder='Primary business Visa or Operating ACH' maxlength='120' required></div>
+      <div><label>Status</label><select name='status'>{% for value, label in payment_method_status_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+      <div class='pm-field pm-card pm-ach pm-zelle'><label>Card Brand / Bank Name</label><input name='brand_name' placeholder='Visa or Chase Business Checking' maxlength='80'></div>
+      <div class='pm-field pm-card pm-ach pm-zelle'><label>Account Holder Name</label><input name='holder_name' placeholder='Business legal name' maxlength='120'></div>
+      <div class='pm-field pm-card pm-ach pm-zelle'><label>Last 4 Digits</label><input name='account_last4' inputmode='numeric' maxlength='4' placeholder='4242'></div>
+      <div class='pm-field pm-card'><label>Expiration (MM/YY)</label><input name='expiry_display' maxlength='5' placeholder='08/28'></div>
+      <div class='pm-field pm-ach'><label>Account Type</label><select name='account_type'><option value='checking'>Checking</option><option value='savings'>Savings</option></select></div>
+      <div class='pm-field pm-ach'><label>Routing Number</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='9 digits'></div>
+      <div class='pm-field pm-ach'><label>Account Number</label><input name='account_number' inputmode='numeric' placeholder='Enter account number'></div>
+      <div class='pm-field pm-ach'><label>Confirm Account Number</label><input name='confirm_account_number' inputmode='numeric' placeholder='Re-enter account number'></div>
+      <div><label><input type='checkbox' name='is_default' value='1'> Set as default</label></div>
+      <div><label><input type='checkbox' name='is_backup' value='1'> Set as backup</label></div>
+      <div style='grid-column:1 / -1'><label>Note (optional)</label><input name='details_note' placeholder='Billing contact note or internal method note' maxlength='300'></div>
+      <div><button type='submit' class='btn btn-secondary'>Save Payment Method</button></div>
+    </form>
+    {% if selected_payment_methods %}
+      <details class='compact-details' style='margin-top:8px'>
+        <summary>Review Existing Methods</summary>
+        <div style='margin-top:12px'>
+        {% for method in selected_payment_methods %}
+        <form method='post' class='form-grid card payment-method-form' style='margin-bottom:10px;box-shadow:none;border:1px solid #E6ECF2'>
+          <input type='hidden' name='action' value='update_payment_method'>
+          <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
+          <input type='hidden' name='payment_method_id' value='{{ method.id }}'>
+          <div><label>Method Type</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if (method.method_type or 'other') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+          <div><label>Method Label</label><input name='label' value='{{ method.label or "" }}' maxlength='120' required></div>
+          <div><label>Status</label><select name='status'>{% for value, label in payment_method_status_options %}<option value='{{ value }}' {% if (method.status or 'active') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+          <div class='pm-field pm-card pm-ach pm-zelle'><label>Card Brand / Bank Name</label><input name='brand_name' value='{{ method.brand_name or "" }}' maxlength='80'></div>
+          <div class='pm-field pm-card pm-ach pm-zelle'><label>Account Holder Name</label><input name='holder_name' value='{{ method.holder_name or "" }}' maxlength='120'></div>
+          <div class='pm-field pm-card pm-ach pm-zelle'><label>Last 4 Digits</label><input name='account_last4' value='{{ method.account_last4 or "" }}' inputmode='numeric' maxlength='4'></div>
+          <div class='pm-field pm-card'><label>Expiration (MM/YY)</label><input name='expiry_display' value='{{ method.expiry_display or "" }}' maxlength='5' placeholder='08/28'></div>
+          <div class='pm-field pm-ach'><label>Account Type</label><select name='account_type'><option value='checking' {% if (method.account_type or 'checking') == 'checking' %}selected{% endif %}>Checking</option><option value='savings' {% if method.account_type == 'savings' %}selected{% endif %}>Savings</option></select></div>
+          <div class='pm-field pm-ach'><label>Routing Number</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='Leave blank to keep current'></div>
+          <div class='pm-field pm-ach'><label>Account Number</label><input name='account_number' inputmode='numeric' placeholder='Leave blank to keep current'></div>
+          <div class='pm-field pm-ach'><label>Confirm Account Number</label><input name='confirm_account_number' inputmode='numeric' placeholder='Re-enter only if changing'></div>
+          <div><label><input type='checkbox' name='is_default' value='1' {% if method.is_default %}checked{% endif %}> Default</label></div>
+          <div><label><input type='checkbox' name='is_backup' value='1' {% if method.is_backup %}checked{% endif %}> Backup</label></div>
+          <div style='grid-column:1 / -1'><label>Note (optional)</label><input name='details_note' value='{{ method.details_note or "" }}' maxlength='300'></div>
+          <div class='small' style='grid-column:1 / -1'>Recorded method: {{ method.label or payment_method_type_labels.get(method.method_type or 'other', 'Payment Method') }}{% if method.brand_name %} &middot; {{ method.brand_name }}{% endif %}{% if method.account_last4 %} &middot; ending in {{ method.account_last4 }}{% endif %}{% if method.account_type and method.method_type == 'ach' %} &middot; {{ method.account_type|title }}{% endif %}{% if method.expiry_display %} &middot; expires {{ method.expiry_display }}{% endif %}</div>
+          <div style='display:flex;gap:8px;flex-wrap:wrap'>
+            <button type='submit' class='btn btn-secondary'>Update Method</button>
+            <button type='submit' class='btn btn-red' formaction='{{ url_for("cpa_dashboard", client_id=selected_business.id) }}' formmethod='post' formnovalidate onclick="this.form.querySelector('[name=action]').value='delete_payment_method'">Remove Method</button>
+          </div>
+        </form>
+        {% endfor %}
+        </div>
+      </details>
+    {% else %}
+      <div class='small'>No saved payment methods recorded for this business yet.</div>
+    {% endif %}
+  </details>
+</div>
+{% endif %}
+
+{% if selected_business %}
+<div class='card section-frame' style='margin-top:16px'>
+  <div class='card-head'><h3>Administrator Extra Fees &middot; {{ selected_business.business_name }}</h3><span class='badge'>Billing Foundation</span></div>
+  <div class='card' style='margin-bottom:14px;box-shadow:none;border:1px solid #E6ECF2'>
+    <div class='small-label'>ADMINISTRATOR EXTRA FEES</div>
+    <div class='small' style='margin-top:6px'>Use this section for one-time administrator charges only. Start with the fee type, choose how the fee will be collected, confirm the suggested amount, and then add only the payment action the business actually needs.</div>
+  </div>
+  <div class='grid cards-2' style='margin-bottom:14px;align-items:start'>
+    <div class='card' style='box-shadow:none;border:1px solid #E6ECF2'>
+      <details class='compact-details'>
+        <summary>Create One-Time Administrator Fee</summary>
+        <div class='small' style='margin:12px 0 10px 0'>Administrator fee for {{ selected_business.business_name }}{% if selected_business.service_level %} &middot; {{ service_level_labels.get(selected_business.service_level, 'Self-Service') }}{% endif %}</div>
+        <form method='post' class='form-grid admin-fee-form' data-service-level='{{ selected_business.service_level or "self_service" }}'>
+          <input type='hidden' name='action' value='add_payment_item'>
+          <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
+          <input type='hidden' name='client_id' value='{{ selected_business.id }}'>
+          <div><label>Fee Type</label><select name='payment_type' class='payment-type-select'>{% for value, label in payment_type_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+          <div><label>Collection Method</label><select name='collection_method'>{% for value, label in collection_method_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+          <div><label>Description / Reference</label><input name='description' required placeholder='Monthly bookkeeping, cleanup, filing, etc.' maxlength='200'></div>
+          <div><label>Amount Due</label><input name='amount_due' class='payment-amount-input' type='number' step='0.01' min='0.01' required></div>
+          <div><label>Status</label><select name='status'>{% for status in payment_statuses %}<option value='{{ status }}'>{{ status|title }}</option>{% endfor %}</select></div>
+          <div><label>Due Date</label><input name='due_date' type='date'></div>
+          <div style='grid-column:1 / -1'><label>Payment Instructions (optional)</label><input name='payment_instructions' placeholder='Offline instructions, invoice note, or request details' maxlength='500'></div>
+          <div style='grid-column:1 / -1'><label>Public Payment Link (optional)</label><input name='public_payment_link' placeholder='https://...' maxlength='1000'></div>
+          <div style='grid-column:1 / -1'><label>Legacy Payment Link (optional old-link compatibility)</label><input name='payment_link' placeholder='https://...' maxlength='1000'></div>
+          <div style='grid-column:1 / -1'><label>Note (optional)</label><input name='note' placeholder='Reference, instructions, or payment note' maxlength='500'></div>
+          <div style='grid-column:1 / -1'><label>Cancellation Note (optional)</label><input name='cancellation_note' placeholder='Used only if this fee is later cancelled' maxlength='300'></div>
+          <div class='small payment-suggestion-note' style='grid-column:1 / -1'>Suggested amount fills in from the business tier. Only add a payment link when the collection method truly needs one.</div>
+          <div><button type='submit'>Save Payment Item</button></div>
+        </form>
+      </details>
+    </div>
+    <div class='card stat-card premium-stat'>
+      <h3>Selected Business Payment Snapshot</h3>
+      <div class='metric'>Amount Due: ${{ '%.2f'|format(selected_business_payments.amount_due or 0) }}<br>Open Items: {{ selected_business_payments.pending_count or 0 }}<br>Paid Total: ${{ '%.2f'|format(selected_business_payments.paid_total or 0) }}<br>Cancelled: {{ selected_business_payments.cancelled_count or 0 }}<br>Archived: {{ selected_business_payments.archived_count or 0 }}</div>
+      <div class='small'>Businesses see only active open and paid administrator fees. Archived fees are removed from the active workspace lists without deleting history.</div>
+    </div>
+  </div>
+  {% if selected_business_payments.rows %}
+  <details class='compact-details'>
+    <summary>Manage Existing Fees ({{ selected_business_payments.rows|length }})</summary>
+  <div class='small' style='margin:12px 0 10px 0'>Edit existing administrator fees only when needed. Cancel keeps the history intact. Archive removes paid or cancelled items from the active list.</div>
+    {% for row in selected_business_payments.rows %}
+    <form method='post' class='card form-grid admin-fee-form' style='margin-bottom:12px;box-shadow:none;border:1px solid #E6ECF2' data-service-level='{{ selected_business.service_level or "self_service" }}'>
+      <input type='hidden' name='action' value='update_payment_item'>
+      <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
+      <input type='hidden' name='payment_item_id' value='{{ row.id }}'>
+      <div><label>Fee Type</label><select name='payment_type' class='payment-type-select'>{% for value, label in payment_type_options %}<option value='{{ value }}' {% if (row.payment_type or 'other') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Collection Method</label><select name='collection_method'>{% for value, label in collection_method_options %}<option value='{{ value }}' {% if (row.collection_method or 'send_payment_request') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Description / Reference</label><input name='description' value='{{ row.description }}' required maxlength='200'></div>
+      <div><label>Amount Due</label><input name='amount_due' class='payment-amount-input' type='number' step='0.01' min='0.01' value='{{ '%.2f'|format(row.amount_due or 0) }}' required></div>
+      <div><label>Status</label><select name='status'>{% for status in payment_statuses %}<option value='{{ status }}' {% if row.status==status %}selected{% endif %}>{{ status|title }}</option>{% endfor %}</select></div>
+      <div><label>Due Date</label><input name='due_date' type='date' value='{{ row.due_date or "" }}'></div>
+      <div style='grid-column:1 / -1'><label>Payment Instructions (optional)</label><input name='payment_instructions' value='{{ row.payment_instructions or "" }}' placeholder='Offline instructions, invoice note, or request details' maxlength='500'></div>
+      <div style='grid-column:1 / -1'><label>Public Payment Link (optional)</label><input name='public_payment_link' value='{{ row.public_payment_link or "" }}' placeholder='https://...' maxlength='1000'></div>
+      <div style='grid-column:1 / -1'><label>Legacy Payment Link (optional old-link compatibility)</label><input name='payment_link' value='{{ row.payment_link or "" }}' placeholder='https://...' maxlength='1000'></div>
+      <div style='grid-column:1 / -1'><label>Note (optional)</label><input name='note' value='{{ row.note or "" }}' placeholder='Reference, instructions, or payment note' maxlength='500'></div>
+      <div style='grid-column:1 / -1'><label>Cancellation Note (optional)</label><input name='cancellation_note' value='{{ row.cancellation_note or "" }}' placeholder='Reason for cancellation' maxlength='300'></div>
+      <div class='small payment-suggestion-note' style='grid-column:1 / -1'>Suggested amount updates when fee type changes unless you have already entered a custom amount.</div>
+      <div class='small' style='grid-column:1 / -1'>Created {{ row.created_at }}{% if row.updated_at %} &middot; Updated {{ row.updated_at }}{% endif %}{% if row.paid_at %} &middot; Paid {{ row.paid_at }}{% endif %}{% if row.cancellation_note %} &middot; Cancel Note: {{ row.cancellation_note }}{% endif %}</div>
+      <div style='display:flex;gap:8px;flex-wrap:wrap'>
+        <button type='submit' class='btn btn-secondary'>Save Changes</button>
+        <button type='submit' class='btn btn-red' formaction='{{ url_for("cpa_dashboard", client_id=selected_business.id) }}' formmethod='post' formnovalidate onclick="this.form.querySelector('[name=action]').value='cancel_payment_item'">Cancel Fee</button>
+        {% if row.status in ['paid', 'cancelled'] %}
+        <button type='submit' class='btn btn-secondary' formaction='{{ url_for("cpa_dashboard", client_id=selected_business.id) }}' formmethod='post' formnovalidate onclick="this.form.querySelector('[name=action]').value='archive_payment_item'">Archive Fee</button>
+        {% endif %}
+      </div>
+    </form>
+    {% endfor %}
+  </details>
+  {% else %}
+    <div class='small'>No payment items saved for this business yet.</div>
+  {% endif %}
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var suggestedAmounts = {{ suggested_payment_amounts|tojson }};
+
+  document.querySelectorAll('.admin-fee-form').forEach(function (form) {
+    var serviceLevel = form.getAttribute('data-service-level') || 'self_service';
+    var typeSelect = form.querySelector('.payment-type-select');
+    var amountInput = form.querySelector('.payment-amount-input');
+    var note = form.querySelector('.payment-suggestion-note');
+    if (!typeSelect || !amountInput) return;
+
+    function currentSuggestion() {
+      var byTier = suggestedAmounts[serviceLevel] || {};
+      return byTier[typeSelect.value];
+    }
+
+    function applySuggestion(force) {
+      var suggestion = currentSuggestion();
+      if (suggestion === null || suggestion === undefined) {
+        if (note) note.textContent = 'No default amount is set for this fee type. Enter the amount manually.';
+        if (force && !amountInput.dataset.userEdited) amountInput.value = '';
+        return;
+      }
+      if (note) note.textContent = 'Suggested amount for this business tier: $' + Number(suggestion).toFixed(2) + '. You can still override it before saving.';
+      if (force || !amountInput.value || !amountInput.dataset.userEdited) {
+        amountInput.value = Number(suggestion).toFixed(2);
+        delete amountInput.dataset.userEdited;
+      }
+    }
+
+    amountInput.addEventListener('input', function () {
+      amountInput.dataset.userEdited = '1';
+    });
+    typeSelect.addEventListener('change', function () {
+      applySuggestion(false);
+    });
+
+    applySuggestion(!amountInput.value);
+  });
+
+  document.querySelectorAll('.payment-method-form').forEach(function (form) {
+    var typeSelect = form.querySelector('select[name="method_type"]');
+    if (!typeSelect) return;
+    function updateFields() {
+      var type = typeSelect.value;
+      form.querySelectorAll('.pm-field').forEach(function (field) {
+        var show = field.classList.contains('pm-' + type);
+        field.style.display = show ? '' : 'none';
+      });
+    }
+    typeSelect.addEventListener('change', updateFields);
+    updateFields();
+  });
+
+  (function () {
+    var search = document.querySelector('[data-admin-scale-search]');
+    if (!search) return;
+
+    function normalize(value) {
+      return (value || '').toLowerCase().trim();
+    }
+
+    function applyFilter() {
+      var query = normalize(search.value);
+      document.querySelectorAll('[data-admin-scale-search-text]').forEach(function (item) {
+        var haystack = normalize(item.getAttribute('data-admin-scale-search-text'));
+        var match = !query || haystack.indexOf(query) !== -1;
+        item.classList.toggle('is-filter-hidden', !match);
+      });
+
+      if (!query) return;
+      document.querySelectorAll('[data-admin-scale-details]').forEach(function (block) {
+        var visibleMatches = block.querySelectorAll('[data-admin-scale-search-text]:not(.is-filter-hidden)').length;
+        block.open = visibleMatches > 0;
+      });
+    }
+
+    search.addEventListener('input', applyFilter);
+  })();
+});
+</script>
+
+<div class='card' style='margin-top:16px' data-admin-scale-console>
+  <details class='compact-details admin-scale-panel' data-admin-scale-details>
+    <summary><span>Open Business Payment Activity</span></summary>
+    {% if all_payment_items %}
+      <div class='small' style='margin:12px 0'>Review recent administrator fee activity across businesses without keeping the full table open.</div>
+      <table class='table'>
+        <tr><th>Business</th><th>Fee Type</th><th>Collection</th><th>Description</th><th>Status</th><th>Amount</th><th>Due</th></tr>
+        {% for row in all_payment_items[:12] %}
+        <tr data-admin-scale-search-text='{{ (row.business_name or "")|lower }} {{ (row.payment_type or "")|lower }} {{ (row.collection_method or "")|lower }} {{ (row.description or "")|lower }} {{ (row.status or "")|lower }} {{ (row.due_date or "")|lower }}'>
+          <td><strong>{{ row.business_name }}</strong></td>
+          <td>{% for value, label in payment_type_options %}{% if (row.payment_type or 'other') == value %}{{ label }}{% endif %}{% endfor %}</td>
+          <td>{{ collection_method_labels.get(row.collection_method or 'send_payment_request', 'Send Payment Request') }}</td>
+          <td>{{ row.description }}</td>
+          <td style='text-transform:capitalize'>{{ row.status or 'pending' }}</td>
+          <td>${{ '%.2f'|format(row.amount_due or 0) }}</td>
+          <td>{{ row.due_date or '&mdash;' }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    {% else %}
+      <div class='small'>No business payment items yet.</div>
+    {% endif %}
+  </details>
+</div>
+
+<div class='card' style='margin-top:16px' data-admin-scale-console>
+  <details class='compact-details admin-scale-panel' data-admin-scale-details>
+    <summary><span>Open Business Workspaces</span></summary>
+    <div class='small' style='margin:12px 0'>Use search to quickly find the workspace you want instead of scrolling the full administrator list.</div>
+    <table class='table'>
+      <tr><th>Color</th><th>Business</th><th>Contact</th><th>Email</th><th>Workspace</th></tr>
+      {% for c in businesses %}
+      <tr data-admin-scale-search-text='{{ (c.business_name or "")|lower }} {{ (c.contact_name or "")|lower }} {{ (c.email or "")|lower }} {{ (c.ein or "")|lower }}'>
+        <td><span class='business-dot large' style='background: {{ ['#2563eb','#7c3aed','#ea580c','#0ea5e9','#16a34a','#db2777','#9333ea','#0891b2'][(c.id-1) % 8] }}'></span></td>
+        <td><strong>{{ c.business_name }}</strong><div class='small'>{% if c.ein %}EIN {{ c.ein }}{% endif %}</div></td>
+        <td>{{ c.contact_name }}</td>
+        <td>{{ c.email }}</td>
+        <td><a class='btn btn-secondary btn-sm' href='{{ url_for("dashboard", client_id=c.id) }}'>Open Business</a></td>
+      </tr>
+      {% endfor %}
+    </table>
+  </details>
+</div>
+{% endblock %}
+
+

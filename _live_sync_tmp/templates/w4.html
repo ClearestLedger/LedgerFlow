@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='report'>
+  <div class='toolbar'><a href='{{ url_for("workers", client_id=worker.client_id, worker_id=worker.id) }}' class='btn btn-secondary'>Back to Workers</a><button onclick='window.print()' class='btn btn-dark' type='button'>Print</button></div>
+  <h2>Form W-4 Employee Withholding Certificate</h2>
+  <p class='small'>IRS-style employee worksheet. Save answers for this worker.</p>
+  <form method='post'>
+    <div class='form-grid'>
+      <div><label>1(a) First name and middle initial / Last name</label><input name='employee_name' value='{{ worker.name }}' readonly></div>
+      <div><label>1(b) Social Security Number</label><input name='employee_ssn' value='{{ worker.ssn }}' readonly></div>
+      <div style='grid-column:1/-1'><label>Home Address</label><input value='{{ worker.address }}' readonly></div>
+      <div><label>1(c) Filing Status</label><select name='filing_status'><option value='single' {% if answers and answers.filing_status=='single' %}selected{% endif %}>Single or Married filing separately</option><option value='married' {% if answers and answers.filing_status=='married' %}selected{% endif %}>Married filing jointly or Qualifying surviving spouse</option><option value='head' {% if answers and answers.filing_status=='head' %}selected{% endif %}>Head of household</option></select></div>
+      <div><label>Step 2 Multiple Jobs or Spouse Works</label><select name='multiple_jobs'><option value=''>No</option><option value='1' {% if answers and answers.multiple_jobs %}selected{% endif %}>Yes</option></select></div>
+      <div><label>Step 3 Qualifying children under 17</label><input name='qualifying_children' type='number' step='0.01' value='{{ answers.qualifying_children if answers else "" }}'></div>
+      <div><label>Step 3 Other dependents</label><input name='other_dependents' type='number' step='0.01' value='{{ answers.other_dependents if answers else "" }}'></div>
+      <div><label>Step 4(a) Other income (not from jobs)</label><input name='other_income' type='number' step='0.01' value='{{ answers.other_income if answers else "" }}'></div>
+      <div><label>Step 4(b) Deductions</label><input name='deductions' type='number' step='0.01' value='{{ answers.deductions if answers else "" }}'></div>
+      <div><label>Step 4(c) Extra withholding</label><input name='extra_withholding' type='number' step='0.01' value='{{ answers.extra_withholding if answers else "" }}'></div>
+      <div><label>Step 5 Signature Name</label><input name='signature_name' value='{{ answers.signature_name if answers else worker.name }}'></div>
+      <div><label>Signed Date</label><input name='signed_date' type='date' value='{{ answers.signed_date if answers else today }}'></div>
+    </div>
+    <div style='margin-top:16px'><button>Save W-4 Answers</button></div>
+  </form>
+</div>
+{% endblock %}

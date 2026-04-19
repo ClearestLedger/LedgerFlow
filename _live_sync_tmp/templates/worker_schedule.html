@@ -1,0 +1,48 @@
+{% extends 'worker_portal_base.html' %}
+{% block body %}
+<div class='toolbar'>
+  <div class='small'><strong>Your Schedule</strong> · {{ worker.business_name }}</div>
+  <div class='small'>Only jobs assigned to you are shown here.</div>
+</div>
+<div class='grid cards-3' style='margin-bottom:16px'>
+  <div class='card stat-card'><h3>Total Assigned</h3><div class='metric big'>{{ schedule_summary.total_items }}</div><div class='small'>Scheduled items in your portal</div></div>
+  <div class='card stat-card'><h3>Upcoming</h3><div class='metric big'>{{ schedule_summary.upcoming_count }}</div><div class='small'>Future or current assignments</div></div>
+  <div class='card stat-card'><h3>Next Job</h3><div class='metric'>{% if schedule_summary.next_item %}{{ schedule_summary.next_item.schedule_date }}<br>{{ schedule_summary.next_item.job_name }}{% else %}No job assigned{% endif %}</div></div>
+</div>
+
+<div class='card' style='margin-bottom:16px'>
+  <div class='card-head'>
+    <h3 style='margin:0'>Schedule Calendar</h3>
+    <div class='inline-form'>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("worker_schedule", year=prev_year, month=prev_month) }}'>&lsaquo; Prev</a>
+      <span class='badge'>{{ month_name }} {{ year }}</span>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("worker_schedule", year=next_year, month=next_month) }}'>Next &rsaquo;</a>
+    </div>
+  </div>
+  <div class='scroll-x'><table class='table calendar-table'><thead><tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead><tbody>
+  {% for week in weeks %}<tr>
+    {% for d in week %}{% set dkey = d.isoformat() %}<td class='cal-day {% if dkey==today %}cal-today{% endif %}'><div class='cal-num'>{{ d.day }}</div>{% for item in (entries_by_day.get(dkey) or []) %}<div class='cal-item cal-schedule-item'><strong>{{ item.job_name }}</strong><div class='small'>{% if item.start_time %}{{ item.start_time }}{% endif %}{% if item.job_address %}{% if item.start_time %} · {% endif %}{{ item.job_address }}{% endif %}</div>{% if item.scope_of_work %}<div class='small'>{{ item.scope_of_work }}</div>{% endif %}</div>{% endfor %}</td>{% endfor %}
+  </tr>{% endfor %}
+  </tbody></table></div>
+</div>
+<div class='card'>
+  <div class='card-head'><h3 style='margin:0'>Assigned Work Schedule</h3><span class='badge'>Team Member View</span></div>
+  {% if entries %}
+  <div class='schedule-list'>
+    {% for entry in entries %}
+    <div class='schedule-item'>
+      <div class='schedule-main'>
+        <div class='schedule-title'>{{ entry.job_name }}</div>
+        <div class='schedule-meta'>{{ entry.schedule_date }}{% if entry.start_time %} · {{ entry.start_time }}{% endif %}{% if entry.end_time %} - {{ entry.end_time }}{% elif entry.estimated_duration %} · {{ entry.estimated_duration }}{% endif %}</div>
+        {% if entry.job_address %}<div class='small'><strong>Address:</strong> {{ entry.job_address }}</div>{% endif %}
+        {% if entry.scope_of_work %}<div class='small'><strong>Scope:</strong> {{ entry.scope_of_work }}</div>{% endif %}
+        {% if entry.notes %}<div class='small'><strong>Notes:</strong> {{ entry.notes }}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class='empty-state'><strong>No assigned schedule items yet.</strong><span>Your manager can assign jobs from the business schedule area. Check back later or message your manager if you expected a job here.</span></div>
+  {% endif %}
+</div>
+{% endblock %}

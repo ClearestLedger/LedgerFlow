@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar'>
+  <div class='small'><strong>{{ client.business_name }}</strong> &middot; Team Member Payouts</div>
+  <button onclick='window.print()' class='btn btn-secondary' type='button'>Print This Page</button>
+</div>
+
+<div class='grid cards-2'>
+  <div class='card'>
+    <h3>Save Team Member Payout</h3>
+    <div class='small' style='margin-bottom:10px'>Use this section for business-to-team-member payments or administrator-managed payouts.</div>
+    <form method='post' class='form-grid'>
+      <input type='hidden' name='action' value='add'>
+      {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <div><label>Team Member</label><select name='worker_id'>{% for w in workers %}<option value='{{ w.id }}'>{{ w.name }} ({{ w.worker_type }})</option>{% endfor %}</select></div>
+      <div><label>Payment Date</label><input name='payment_date' type='date' value='{{ today }}'></div>
+      <div><label>Amount</label><input name='amount' type='number' step='0.01' min='0.01'></div>
+      <div><label>Payout Method</label><select name='payment_method'>{% for value, label in worker_payment_methods %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Status</label><select name='payment_status'>{% for value, label in worker_payment_statuses %}<option value='{{ value }}' {% if value=='paid' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Reference / Confirmation</label><input name='reference_number' maxlength='120' placeholder='Check #, ACH trace, Zelle ref'></div>
+      <div style='grid-column:1 / -1'><label>Note</label><input name='note' placeholder='Memo or payout note'></div>
+      <div><button>Save Team Member Payout</button></div>
+    </form>
+  </div>
+
+  <div class='card'>
+    <h3>Payout Ledger</h3>
+    <table class='table'>
+      <tr><th>Date</th><th>Team Member</th><th>Type</th><th>Method</th><th>Status</th><th>Amount</th><th>Reference</th></tr>
+      {% for row in payments %}
+      <tr>
+        <td>{{ row.payment_date }}</td>
+        <td>{{ row.worker_name }}</td>
+        <td>{{ row.worker_type }}</td>
+        <td>{{ worker_payment_method_labels.get(row.payment_method or 'other', 'Other') }}</td>
+        <td>{{ worker_payment_status_labels.get(row.payment_status or 'paid', 'Paid') }}</td>
+        <td>${{ '%.2f'|format(row.amount or 0) }}</td>
+        <td>{{ row.reference_number or '&mdash;' }}</td>
+      </tr>
+      <tr>
+        <td colspan='7' style='padding-top:0'>
+          <form method='post' class='form-grid' style='padding:10px 0 0 0'>
+            <input type='hidden' name='action' value='update'>
+            <input type='hidden' name='payment_id' value='{{ row.id }}'>
+            {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+            <div><label>Payment Date</label><input name='payment_date' type='date' value='{{ row.payment_date or "" }}'></div>
+            <div><label>Amount</label><input name='amount' type='number' step='0.01' min='0.01' value='{{ '%.2f'|format(row.amount or 0) }}'></div>
+            <div><label>Payout Method</label><select name='payment_method'>{% for value, label in worker_payment_methods %}<option value='{{ value }}' {% if (row.payment_method or 'other') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+            <div><label>Status</label><select name='payment_status'>{% for value, label in worker_payment_statuses %}<option value='{{ value }}' {% if (row.payment_status or 'paid') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+            <div><label>Reference / Confirmation</label><input name='reference_number' value='{{ row.reference_number or "" }}' maxlength='120'></div>
+            <div style='grid-column:1 / -1'><label>Note</label><input name='note' value='{{ row.note or "" }}'></div>
+            <div><button class='btn btn-secondary btn-sm'>Update Payout</button></div>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan='7'>No team member payouts saved yet.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}

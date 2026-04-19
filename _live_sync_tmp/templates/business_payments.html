@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Billing Workspace</div>
+    <div class='page-title'>{{ client.business_name }} &middot; Billing Center</div>
+    <div class='page-subtitle'>Subscription billing, method on file, and one-time administrator fees in one calm premium billing workspace.</div>
+  </div>
+  {% if current_user.role=='admin' %}<a class='btn btn-secondary' href='{{ url_for("cpa_dashboard", client_id=client_id) }}'>Back to Administrator</a>{% endif %}
+</div>
+
+<div class='card hero-surface' style='margin-bottom:16px'>
+  <div class='card-head'><h3>Billing Center</h3><span class='badge'>Subscription + Administrator Fees</span></div>
+  <div class='grid cards-4'>
+    <div class='card stat-card premium-stat'><h3>Subscription Plan</h3><div class='metric'>{{ client.subscription_plan_code or 'Not set' }}</div><div class='small'>Recurring monthly service</div></div>
+    <div class='card stat-card premium-stat'><h3>Subscription Status</h3><div class='metric'>{{ subscription_status_labels.get(client.subscription_status or 'inactive', 'Inactive') }}</div><div class='small'>Next billing {{ client.subscription_next_billing_date or 'not scheduled' }}</div></div>
+    <div class='card stat-card premium-stat'><h3>Method On File</h3><div class='metric'>{{ payment_method_summary.default_label or 'No default method on file' }}</div><div class='small'>{{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}</div></div>
+    <div class='card stat-card premium-stat premium-stat-accent'><h3>Administrator Fees Due</h3><div class='metric'>${{ '%.2f'|format(payment_summary.amount_due or 0) }}</div><div class='small'>{{ payment_summary.pending_count or 0 }} open one-time fee{% if (payment_summary.pending_count or 0) != 1 %}s{% endif %}</div></div>
+  </div>
+  <div class='summary-strip' style='margin-top:12px'>
+    <span class='summary-pill'>Recurring subscription tracked separately</span>
+    <span class='summary-pill'>One-time administrator fees tracked separately</span>
+    <span class='summary-pill'>Method on file {{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}</span>
+  </div>
+</div>
+
+{% if payment_summary.pending_count %}
+<div class='card action-banner action-banner-danger' style='margin-bottom:16px'>
+  <div class='card-head'><h3>Administrator Fee Due</h3><span class='badge'>Action Needed</span></div>
+  <div class='metric'>${{ '%.2f'|format(payment_summary.amount_due or 0) }}</div>
+  <div class='small' style='margin-top:8px'><strong>{{ open_fee_guidance.headline }}</strong> {{ open_fee_guidance.detail }} These charges are owed by your business to your administrator and are separate from your customer payments.</div>
+  <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:12px'>
+    <a class='btn btn-secondary btn-sm' href='#administrator-fees'>Review Administrator Fees</a>
+    <a class='btn btn-secondary btn-sm' href='#payment-methods'>Manage Method On File</a>
+  </div>
+</div>
+{% endif %}
+
+<div class='card section-frame' id='subscription-billing' style='margin-bottom:16px'>
+  <div class='card-head'><h3>Subscription Billing</h3><span class='badge'>Recurring Service</span></div>
+  <div class='grid cards-3' style='margin-bottom:12px'>
+    <div class='card stat-card premium-stat'><h3>Monthly Subscription</h3><div class='metric'>${{ '%.2f'|format(client.subscription_amount or 0) }}</div><div class='small'>{{ client.subscription_plan_code or 'No plan code recorded yet' }}</div></div>
+    <div class='card stat-card premium-stat'><h3>Default Method</h3><div class='metric'>{{ payment_method_summary.default_label or 'Not enrolled yet' }}</div><div class='small'>{{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}</div></div>
+    <div class='card stat-card premium-stat'><h3>Backup Method</h3><div class='metric'>{{ payment_method_summary.backup_label or 'Optional' }}</div><div class='small'>{{ payment_method_summary.active_count or 0 }} method{% if (payment_method_summary.active_count or 0) != 1 %}s{% endif %} active</div></div>
+  </div>
+  <div class='small'>Use one default payment method for subscription billing and optionally keep one backup on file. Full card storage and live autopay are not running inside this app.</div>
+
+  <details id='payment-methods' class='compact-details' style='margin-top:14px'>
+    <summary>Update Method On File</summary>
+    <div style='margin-top:14px'>
+      <form method='post' class='form-grid payment-method-form card' style='margin-bottom:12px;box-shadow:none;border:1px solid #E6ECF2'>
+        <input type='hidden' name='action' value='add_payment_method'>
+        <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
+        <div><label>Method Type</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+        <div><label>Method Label</label><input name='label' placeholder='Primary business Visa or Operating ACH' maxlength='120' required></div>
+        <div><label>Status</label><select name='status'>{% for value, label in payment_method_status_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+        <div class='pm-field pm-card pm-ach pm-zelle'><label>Card Brand / Bank Name</label><input name='brand_name' placeholder='Visa or Chase Business Checking' maxlength='80'></div>
+        <div class='pm-field pm-card pm-ach pm-zelle'><label>Account Holder Name</label><input name='holder_name' placeholder='Business legal name' maxlength='120'></div>
+        <div class='pm-field pm-card pm-ach pm-zelle'><label>Last 4 Digits</label><input name='account_last4' inputmode='numeric' maxlength='4' placeholder='4242'></div>
+        <div class='pm-field pm-card'><label>Expiration (MM/YY)</label><input name='expiry_display' maxlength='5' placeholder='08/28'></div>
+        <div class='pm-field pm-ach'><label>Account Type</label><select name='account_type'><option value='checking'>Checking</option><option value='savings'>Savings</option></select></div>
+        <div class='pm-field pm-ach'><label>Routing Number</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='9 digits'></div>
+        <div class='pm-field pm-ach'><label>Account Number</label><input name='account_number' inputmode='numeric' placeholder='Enter account number'></div>
+        <div class='pm-field pm-ach'><label>Confirm Account Number</label><input name='confirm_account_number' inputmode='numeric' placeholder='Re-enter account number'></div>
+        <div><label><input type='checkbox' name='is_default' value='1'> Set as default</label></div>
+        <div><label><input type='checkbox' name='is_backup' value='1'> Set as backup</label></div>
+        <div style='grid-column:1 / -1'><label>Note (optional)</label><input name='details_note' placeholder='Optional billing contact or setup note' maxlength='300'></div>
+        <div><button type='submit' class='btn btn-secondary'>Save Payment Method</button></div>
+      </form>
+
+      {% if payment_methods %}
+        <details class='compact-details' style='margin-top:8px'>
+          <summary>Review Existing Payment Methods ({{ payment_methods|length }})</summary>
+          <div style='margin-top:12px'>
+            {% for method in payment_methods %}
+            <form method='post' class='card form-grid payment-method-form' style='margin-bottom:10px;box-shadow:none;border:1px solid #E6ECF2'>
+              <input type='hidden' name='action' value='update_payment_method'>
+              <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
+              <input type='hidden' name='payment_method_id' value='{{ method.id }}'>
+              <div><label>Method Type</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if (method.method_type or 'other') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+              <div><label>Method Label</label><input name='label' value='{{ method.label or "" }}' maxlength='120' required></div>
+              <div><label>Status</label><select name='status'>{% for value, label in payment_method_status_options %}<option value='{{ value }}' {% if (method.status or 'active') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+              <div class='pm-field pm-card pm-ach pm-zelle'><label>Card Brand / Bank Name</label><input name='brand_name' value='{{ method.brand_name or "" }}' maxlength='80'></div>
+              <div class='pm-field pm-card pm-ach pm-zelle'><label>Account Holder Name</label><input name='holder_name' value='{{ method.holder_name or "" }}' maxlength='120'></div>
+              <div class='pm-field pm-card pm-ach pm-zelle'><label>Last 4 Digits</label><input name='account_last4' value='{{ method.account_last4 or "" }}' inputmode='numeric' maxlength='4'></div>
+              <div class='pm-field pm-card'><label>Expiration (MM/YY)</label><input name='expiry_display' value='{{ method.expiry_display or "" }}' maxlength='5' placeholder='08/28'></div>
+              <div class='pm-field pm-ach'><label>Account Type</label><select name='account_type'><option value='checking' {% if (method.account_type or 'checking') == 'checking' %}selected{% endif %}>Checking</option><option value='savings' {% if method.account_type == 'savings' %}selected{% endif %}>Savings</option></select></div>
+              <div class='pm-field pm-ach'><label>Routing Number</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='Leave blank to keep current'></div>
+              <div class='pm-field pm-ach'><label>Account Number</label><input name='account_number' inputmode='numeric' placeholder='Leave blank to keep current'></div>
+              <div class='pm-field pm-ach'><label>Confirm Account Number</label><input name='confirm_account_number' inputmode='numeric' placeholder='Re-enter only if changing'></div>
+              <div><label><input type='checkbox' name='is_default' value='1' {% if method.is_default %}checked{% endif %}> Default</label></div>
+              <div><label><input type='checkbox' name='is_backup' value='1' {% if method.is_backup %}checked{% endif %}> Backup</label></div>
+              <div style='grid-column:1 / -1'><label>Note (optional)</label><input name='details_note' value='{{ method.details_note or "" }}' maxlength='300'></div>
+              <div class='small' style='grid-column:1 / -1'>Recorded method: {{ method.label or payment_method_type_labels.get(method.method_type or 'other', 'Payment Method') }}{% if method.brand_name %} &middot; {{ method.brand_name }}{% endif %}{% if method.account_last4 %} &middot; ending in {{ method.account_last4 }}{% endif %}{% if method.account_type and method.method_type == 'ach' %} &middot; {{ method.account_type|title }}{% endif %}{% if method.expiry_display %} &middot; expires {{ method.expiry_display }}{% endif %}</div>
+              <div style='display:flex;gap:8px;flex-wrap:wrap'>
+                <button type='submit' class='btn btn-secondary btn-sm'>Update Method</button>
+                <button type='submit' class='btn btn-red btn-sm' formaction='{{ url_for("business_payments_page", client_id=client_id) }}' formmethod='post' formnovalidate onclick="this.form.querySelector('[name=action]').value='delete_payment_method'">Remove Method</button>
+              </div>
+            </form>
+            {% endfor %}
+          </div>
+        </details>
+      {% else %}
+        <div class='small' style='margin-top:12px'>No payment method has been recorded yet. Add a default card or ACH method so your billing setup is complete.</div>
+      {% endif %}
+    </div>
+  </details>
+</div>
+
+<div class='card section-frame' id='administrator-fees'>
+  <div class='card-head'><h3>Administrator Fees</h3><span class='badge'>One-Time Charges</span></div>
+  <div class='grid cards-3' style='margin-bottom:14px'>
+    <div class='card stat-card premium-stat premium-stat-accent'><h3>Amount Due</h3><div class='metric big'>${{ '%.2f'|format(payment_summary.amount_due or 0) }}</div><div class='small'>Open administrator fees awaiting action</div></div>
+    <div class='card stat-card premium-stat'><h3>Open Fees</h3><div class='metric big'>{{ payment_summary.pending_count or 0 }}</div><div class='small'>Pending or processing items</div></div>
+    <div class='card stat-card premium-stat'><h3>Fee History</h3><div class='metric big'>${{ '%.2f'|format(payment_summary.paid_total or 0) }}</div><div class='small'>Previously completed administrator fees</div></div>
+  </div>
+
+  {% set open_rows = payment_rows|rejectattr('status', 'eq', 'paid')|rejectattr('status', 'eq', 'cancelled')|list %}
+  {% if open_rows %}
+    <table class='table'>
+      <tr><th>Description</th><th>Due Date</th><th>Status</th><th>Collection Method</th><th>Amount</th><th>Next Step</th></tr>
+      {% for row in open_rows %}
+      {% set guidance = fee_collection_guidance(row) %}
+      <tr>
+        <td><strong>{{ row.description }}</strong>{% if row.note %}<div class='small'>{{ row.note }}</div>{% endif %}</td>
+        <td>{{ row.due_date or 'Not set' }}</td>
+        <td><span class='status-chip {{ row.status or "pending" }}'>{{ row.status or 'pending' }}</span></td>
+        <td>{{ collection_method_labels.get(row.collection_method or 'send_payment_request', 'Send Payment Request') }}</td>
+        <td><strong>${{ '%.2f'|format(row.amount_due or 0) }}</strong></td>
+        <td>
+          <div class='card' style='box-shadow:none;border:1px solid {% if guidance.tone == "action" %}#c7ddf7{% elif guidance.tone == "info" %}#d7eadf{% else %}#E6ECF2{% endif %};padding:10px;background:{% if guidance.tone == "action" %}#f7fbff{% elif guidance.tone == "info" %}#f8fcf9{% else %}#fafafa{% endif %}'>
+            <div class='small-label'>{{ guidance.label|upper }}</div>
+            <div class='small' style='margin:6px 0 10px 0'>{{ guidance.detail }}</div>
+            {% if guidance.url %}
+            <a class='btn btn-secondary btn-sm' href='{{ guidance.url }}' target='_blank' rel='noopener'>{{ guidance.button_label }}</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    <div class='small' style='margin-top:10px'>Administrator fees are one-time charges owed by your business to your administrator. They are separate from your recurring subscription and separate from your own customer payment workflows.</div>
+  {% else %}
+    <div class='small'>No open administrator service fees right now.</div>
+  {% endif %}
+
+  {% set paid_rows = payment_rows|selectattr('status', 'eq', 'paid')|list %}
+  <details class='compact-details' style='margin-top:16px'>
+    <summary>Administrator Fee History{% if paid_rows %} ({{ paid_rows|length }}){% endif %}</summary>
+    <div class='card' style='margin-top:12px;box-shadow:none;border:1px solid #E6ECF2'>
+      {% if paid_rows %}
+        <table class='table'>
+          <tr><th>Description</th><th>Paid</th><th>Amount</th><th>Reference</th></tr>
+          {% for row in paid_rows %}
+          <tr>
+            <td><strong>{{ row.description }}</strong></td>
+            <td>{{ row.paid_at or row.updated_at or row.created_at }}</td>
+            <td>${{ '%.2f'|format(row.amount_due or 0) }}</td>
+            <td>{{ row.note or 'No reference' }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <div class='small'>No completed administrator fee history yet.</div>
+      {% endif %}
+    </div>
+  </details>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.payment-method-form').forEach(function (form) {
+    var typeSelect = form.querySelector('select[name="method_type"]');
+    if (!typeSelect) return;
+    function updateFields() {
+      var type = typeSelect.value;
+      form.querySelectorAll('.pm-field').forEach(function (field) {
+        var show = field.classList.contains('pm-' + type);
+        field.style.display = show ? '' : 'none';
+      });
+    }
+    typeSelect.addEventListener('change', updateFields);
+    updateFields();
+  });
+});
+</script>
+{% endblock %}

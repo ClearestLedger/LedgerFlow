@@ -1,0 +1,647 @@
+{% if shell_assistant and shell_assistant.enabled %}
+<script type='application/json' id='shellAssistantTopics'>{{ shell_assistant.topics|tojson }}</script>
+<button
+  type='button'
+  class='assistant-launcher'
+  data-assistant-toggle
+  aria-expanded='false'
+  aria-controls='shellAssistantDrawer'
+>
+  <span class='assistant-launcher-face'>
+    <span class='assistant-face assistant-face-small' aria-hidden='true'>
+      <span class='assistant-face-eyes'><span></span><span></span></span>
+      <span class='assistant-face-mouth'></span>
+    </span>
+  </span>
+  <span class='assistant-launcher-label'>AI Guide</span>
+</button>
+
+<div class='assistant-drawer-backdrop' data-assistant-backdrop hidden></div>
+<aside class='assistant-drawer' id='shellAssistantDrawer' data-assistant-drawer data-assistant-shell aria-hidden='true'>
+  <div class='assistant-drawer-head'>
+    <div class='assistant-head-identity'>
+      <div class='assistant-live-shell' aria-hidden='true'>
+        <div class='assistant-face assistant-face-large'>
+          <span class='assistant-face-ring'></span>
+          <span class='assistant-face-glow'></span>
+          <span class='assistant-orbit-dots'>
+            <span></span><span></span><span></span>
+          </span>
+          <span class='assistant-face-eyes'><span></span><span></span></span>
+          <span class='assistant-face-mouth'></span>
+        </div>
+        <div class='assistant-voice-bars assistant-voice-bars-main'>
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+      <div>
+        <div class='page-kicker'>AI Assistant</div>
+        <div class='assistant-drawer-title'>{{ shell_assistant.title }}</div>
+        <div class='assistant-drawer-subtitle'>{{ shell_assistant.subtitle }}</div>
+      </div>
+    </div>
+    <div class='assistant-head-actions'>
+      <button type='button' class='assistant-head-btn' data-assistant-speak>Speak</button>
+      <button type='button' class='assistant-drawer-close' data-assistant-close aria-label='Close Assistant'>&times;</button>
+    </div>
+  </div>
+
+  <div class='assistant-capability-row'>
+    {% for capability in shell_assistant.capabilities %}
+    <span class='assistant-capability-chip'>{{ capability }}</span>
+    {% endfor %}
+  </div>
+
+  <div class='assistant-status-bar'>
+    <span class='assistant-status-pill {{ "live" if shell_assistant.live_enabled else "fallback" }}' data-assistant-status-pill>
+      {{ 'Live AI' if shell_assistant.live_enabled else 'Guided Fallback' }}
+    </span>
+    <span class='assistant-status-copy' data-assistant-status-copy>
+      {% if shell_assistant.live_enabled %}
+      Model-backed LedgerFlow guidance is active for this page.
+      {% else %}
+      Structured LedgerFlow guidance is active until live AI is configured.
+      {% endif %}
+    </span>
+    {% if current_user and current_user.role == 'admin' %}
+    <a class='assistant-status-link' href='{{ url_for("ai_guide_settings") }}'>AI Guide Settings</a>
+    {% endif %}
+  </div>
+
+  <div class='assistant-context-bar'>
+    <span>Context</span>
+    <strong>{{ shell_assistant.context_label }}</strong>
+  </div>
+
+  <div class='assistant-brief-card'>
+    <div>
+      <div class='small-label'>Live Page Briefing</div>
+      <div class='assistant-brief-title'>{{ shell_assistant.page_label }}</div>
+      <p class='assistant-brief-copy'>{{ shell_assistant.page_brief }}</p>
+    </div>
+    <div class='assistant-orbit-mark' aria-hidden='true'>
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+
+  {% if shell_assistant.primary_topic %}
+  <div class='assistant-priority-surface'>
+    <div class='assistant-priority-head'>
+      <div>
+        <div class='small-label'>Recommended Right Now</div>
+        <div class='assistant-priority-title'>{{ shell_assistant.primary_topic.title }}</div>
+      </div>
+      <span class='assistant-priority-category'>{{ shell_assistant.primary_topic.category }}</span>
+    </div>
+    <p class='assistant-priority-copy'>{{ shell_assistant.primary_topic.response }}</p>
+    <div class='assistant-priority-grid'>
+      <div class='assistant-priority-card'>
+        <div class='small-label'>Why It Matters</div>
+        <p>{{ shell_assistant.primary_topic.why }}</p>
+      </div>
+      <div class='assistant-priority-card'>
+        <div class='small-label'>Expected Outcome</div>
+        <p>{{ shell_assistant.primary_topic.outcome }}</p>
+      </div>
+      <div class='assistant-priority-card caution'>
+        <div class='small-label'>Avoid This</div>
+        <p>{{ shell_assistant.primary_topic.caution }}</p>
+      </div>
+    </div>
+    <ol class='assistant-priority-steps'>
+      {% for step in shell_assistant.primary_topic.steps %}
+      <li>{{ step }}</li>
+      {% endfor %}
+    </ol>
+    {% if shell_assistant.primary_topic.link_url and shell_assistant.primary_topic.link_label %}
+    <a class='assistant-priority-link' href='{{ shell_assistant.primary_topic.link_url }}'>{{ shell_assistant.primary_topic.link_label }}</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class='assistant-guided-grid'>
+    {% for topic in shell_assistant.secondary_topics %}
+    <button type='button' class='assistant-guided-card' data-assistant-topic='{{ topic.key }}'>
+      <span class='assistant-guided-kicker'>{{ topic.category }}</span>
+      <strong>{{ topic.title }}</strong>
+      <span>{{ topic.best_for }}</span>
+    </button>
+    {% endfor %}
+  </div>
+
+  <div class='assistant-quick-topics'>
+    {% for topic in shell_assistant.quick_topics %}
+    <button type='button' class='assistant-quick-chip' data-assistant-topic='{{ topic.key }}'>{{ topic.title }}</button>
+    {% endfor %}
+  </div>
+
+  <div class='assistant-starter-row'>
+    {% for prompt in shell_assistant.starter_questions %}
+    <button type='button' class='assistant-starter-chip' data-assistant-prompt='{{ prompt }}'>{{ prompt }}</button>
+    {% endfor %}
+  </div>
+
+  <div class='assistant-thread' data-assistant-thread></div>
+
+  <form class='assistant-composer' data-assistant-form>
+    <input type='text' name='question' placeholder='Ask about this page, billing, onboarding, payroll, reports, or anything in LedgerFlow...'>
+    <div class='assistant-composer-actions'>
+      <button type='button' class='assistant-head-btn' data-assistant-voice>Voice</button>
+      <button type='submit' class='btn'>Ask</button>
+    </div>
+  </form>
+
+  <details class='assistant-topic-library'>
+    <summary>Browse Help Topics</summary>
+    <div class='assistant-topic-grid'>
+      {% for topic in shell_assistant.topics %}
+      <button type='button' class='assistant-topic-card' data-assistant-topic='{{ topic.key }}'>
+        <strong>{{ topic.title }}</strong>
+        <span>{{ topic.summary }}</span>
+      </button>
+      {% endfor %}
+    </div>
+  </details>
+</aside>
+
+<script>
+  (function () {
+    const drawerKey = 'ledgerflow-shell-assistant-open';
+    const historyKey = 'ledgerflow-shell-assistant-history';
+    const contextKey = 'ledgerflow-shell-assistant-context';
+    const greeting = {{ shell_assistant.greeting|tojson }};
+    const contextLabel = {{ shell_assistant.context_label|tojson }};
+    const pageLabel = {{ shell_assistant.page_label|tojson }};
+    const pageBrief = {{ shell_assistant.page_brief|tojson }};
+    const assistantLiveEnabled = {{ shell_assistant.live_enabled|tojson }};
+    const assistantSetupUrl = {{ (url_for('ai_guide_settings') if current_user and current_user.role == 'admin' else '')|tojson }};
+    const launcher = document.querySelector('[data-assistant-toggle]');
+    const drawer = document.querySelector('[data-assistant-drawer]');
+    const assistantShell = document.querySelector('[data-assistant-shell]');
+    const backdrop = document.querySelector('[data-assistant-backdrop]');
+    const closeBtn = document.querySelector('[data-assistant-close]');
+    const thread = document.querySelector('[data-assistant-thread]');
+    const form = document.querySelector('[data-assistant-form]');
+    const input = form ? form.querySelector('input[name="question"]') : null;
+    const speakBtn = document.querySelector('[data-assistant-speak]');
+    const voiceBtn = document.querySelector('[data-assistant-voice]');
+    const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+    const topicButtons = document.querySelectorAll('[data-assistant-topic]');
+    const promptButtons = document.querySelectorAll('[data-assistant-prompt]');
+    const statusPill = document.querySelector('[data-assistant-status-pill]');
+    const statusCopy = document.querySelector('[data-assistant-status-copy]');
+    const topicsNode = document.getElementById('shellAssistantTopics');
+    const topics = topicsNode ? JSON.parse(topicsNode.textContent || '[]') : [];
+    const topicMap = new Map(topics.map(topic => [topic.key, topic]));
+    const guidedTopics = topics.slice(0, 3);
+    const body = document.body;
+    let recognition = null;
+    let isBusy = false;
+
+    if (!launcher || !drawer || !backdrop || !thread) return;
+
+    function setAssistantVisualState(mode) {
+      if (!assistantShell) return;
+      assistantShell.classList.remove('assistant-speaking', 'assistant-listening', 'assistant-thinking');
+      if (mode) {
+        assistantShell.classList.add('assistant-' + mode);
+      }
+    }
+
+    function safeHistory() {
+      try {
+        return JSON.parse(sessionStorage.getItem(historyKey) || '[]');
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveHistory(entries) {
+      sessionStorage.setItem(historyKey, JSON.stringify(entries.slice(-12)));
+    }
+
+    function renderMessage(entry) {
+      const bubble = document.createElement('div');
+      bubble.className = 'assistant-message ' + entry.role;
+      const label = document.createElement('div');
+      label.className = 'assistant-message-label';
+      label.textContent = entry.label || (entry.role === 'user' ? 'You' : 'LedgerFlow Guide AI');
+      bubble.appendChild(label);
+
+      const title = document.createElement('strong');
+      title.className = 'assistant-message-title';
+      title.textContent = entry.title || '';
+      bubble.appendChild(title);
+
+      const text = document.createElement('p');
+      text.className = 'assistant-message-copy';
+      text.textContent = entry.message || '';
+      bubble.appendChild(text);
+
+      if (entry.best_for) {
+        const hint = document.createElement('div');
+        hint.className = 'assistant-message-best-for';
+        hint.textContent = entry.best_for;
+        bubble.appendChild(hint);
+      }
+
+      if (entry.why || entry.outcome || entry.caution) {
+        const grid = document.createElement('div');
+        grid.className = 'assistant-message-grid';
+        [['Why it matters', entry.why], ['Expected outcome', entry.outcome], ['Avoid this', entry.caution]].forEach(function (pair) {
+          if (!pair[1]) return;
+          const card = document.createElement('div');
+          card.className = 'assistant-message-grid-card';
+          const cardTitle = document.createElement('strong');
+          cardTitle.textContent = pair[0];
+          const cardBody = document.createElement('span');
+          cardBody.textContent = pair[1];
+          card.appendChild(cardTitle);
+          card.appendChild(cardBody);
+          grid.appendChild(card);
+        });
+        bubble.appendChild(grid);
+      }
+
+      if (entry.steps && entry.steps.length) {
+        const list = document.createElement('ol');
+        list.className = 'assistant-message-steps';
+        entry.steps.forEach(function (step) {
+          const item = document.createElement('li');
+          item.textContent = step;
+          list.appendChild(item);
+        });
+        bubble.appendChild(list);
+      }
+
+      if (entry.link_url && entry.link_label) {
+        const link = document.createElement('a');
+        link.className = 'assistant-inline-link';
+        link.href = entry.link_url;
+        link.textContent = entry.link_label;
+        bubble.appendChild(link);
+      }
+      thread.appendChild(bubble);
+      thread.scrollTop = thread.scrollHeight;
+    }
+
+    function renderHistory(entries) {
+      thread.innerHTML = '';
+      entries.forEach(renderMessage);
+    }
+
+    function defaultEntries() {
+      return [
+        {
+          role: 'assistant',
+          label: 'LedgerFlow Guide AI',
+          title: 'Ready to help',
+          message: greeting,
+          best_for: 'Use the guided cards above or ask naturally in your own words.',
+        },
+        {
+          role: 'assistant',
+          label: 'Live page briefing',
+          title: pageLabel,
+          message: pageBrief,
+          best_for: guidedTopics[0] ? guidedTopics[0].best_for : '',
+          steps: guidedTopics[0] ? guidedTopics[0].steps : [],
+          why: guidedTopics[0] ? guidedTopics[0].why : '',
+          outcome: guidedTopics[0] ? guidedTopics[0].outcome : '',
+          caution: guidedTopics[0] ? guidedTopics[0].caution : '',
+          link_label: guidedTopics[0] ? guidedTopics[0].link_label : '',
+          link_url: guidedTopics[0] ? guidedTopics[0].link_url : '',
+        },
+      ];
+    }
+
+    function ensureHistory() {
+      let entries = safeHistory();
+      if (!entries.length) {
+        entries = defaultEntries();
+      }
+      const storedContext = sessionStorage.getItem(contextKey);
+      if (storedContext !== contextLabel) {
+        const lastSystem = entries[entries.length - 1];
+        if (!lastSystem || lastSystem.message !== contextLabel) {
+          entries.push({
+            role: 'system',
+            label: 'Current focus',
+            title: pageLabel,
+            message: contextLabel,
+          });
+        }
+        sessionStorage.setItem(contextKey, contextLabel);
+      }
+      saveHistory(entries);
+      renderHistory(entries);
+      return entries;
+    }
+
+    function addEntry(entry) {
+      const entries = safeHistory();
+      entries.push(entry);
+      saveHistory(entries);
+      renderHistory(entries);
+    }
+
+    function addAssistantEntry(entry) {
+      addEntry(Object.assign({
+        role: 'assistant',
+        label: 'LedgerFlow Guide AI',
+      }, entry));
+    }
+
+    function setComposerBusy(busy) {
+      isBusy = !!busy;
+      setAssistantVisualState(isBusy ? 'thinking' : '');
+      if (form) form.classList.toggle('is-busy', isBusy);
+      if (input) input.disabled = isBusy;
+      if (submitBtn) submitBtn.textContent = isBusy ? 'Thinking...' : 'Ask';
+      if (voiceBtn && !voiceBtn.disabled) voiceBtn.textContent = isBusy ? 'Voice Locked' : 'Voice';
+    }
+
+    function updateAssistantStatus(mode, copy) {
+      if (!statusPill || !statusCopy) return;
+      statusPill.classList.remove('live', 'fallback');
+      statusPill.classList.add(mode === 'live' ? 'live' : 'fallback');
+      statusPill.textContent = mode === 'live' ? 'Live AI' : 'Guided Fallback';
+      statusCopy.textContent = copy;
+    }
+
+    function setOpen(open) {
+      body.classList.toggle('assistant-open', open);
+      drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+      launcher.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        backdrop.removeAttribute('hidden');
+        localStorage.setItem(drawerKey, '1');
+        ensureHistory();
+      } else {
+        backdrop.setAttribute('hidden', 'hidden');
+        localStorage.setItem(drawerKey, '0');
+      }
+    }
+
+    function localTopicReply(topic) {
+      if (!topic) return null;
+      return {
+        title: topic.title,
+        message: topic.response,
+        best_for: topic.best_for,
+        steps: topic.steps,
+        why: topic.why,
+        outcome: topic.outcome,
+        caution: topic.caution,
+        link_label: topic.link_label,
+        link_url: topic.link_url,
+      };
+    }
+
+    function topicScore(topic, query) {
+      const text = query.toLowerCase();
+      let score = 0;
+      if ((topic.title || '').toLowerCase().includes(text)) score += 4;
+      (topic.keywords || []).forEach(function (keyword) {
+        if (text.includes(String(keyword).toLowerCase())) score += 3;
+      });
+      (topic.title || '').toLowerCase().split(/\s+/).forEach(function (part) {
+        if (part && text.includes(part)) score += 1;
+      });
+      return score;
+    }
+
+    function bestTopicByTitle(title) {
+      const needle = String(title || '').trim().toLowerCase();
+      return topics.find(topic => (topic.title || '').toLowerCase() === needle);
+    }
+
+    function localReplyForPrompt(text) {
+      if (text === 'Explain this page') {
+        const primary = guidedTopics[0];
+        return {
+          title: pageLabel,
+          message: pageBrief,
+          best_for: primary ? primary.best_for : '',
+          steps: primary ? primary.steps : [],
+          why: primary ? primary.why : '',
+          outcome: primary ? primary.outcome : '',
+          caution: primary ? primary.caution : '',
+          link_label: primary ? primary.link_label : '',
+          link_url: primary ? primary.link_url : '',
+        };
+      }
+      if (text === 'What should I do next?') {
+        return localTopicReply(guidedTopics[0]);
+      }
+      if (text === 'Show me the safest workflow') {
+        return {
+          title: 'Safest workflow',
+          message: 'Use this order for the cleanest result inside LedgerFlow.',
+          best_for: 'Best when you want the lowest-friction path without missing a step.',
+          steps: guidedTopics.map(function (topic, index) {
+            return 'Step ' + (index + 1) + ': ' + topic.title;
+          }),
+          outcome: 'A cleaner path through the page with less backtracking and fewer avoidable mistakes.',
+          link_label: guidedTopics[0] ? guidedTopics[0].link_label : '',
+          link_url: guidedTopics[0] ? guidedTopics[0].link_url : '',
+        };
+      }
+      if (text.toLowerCase().startsWith('how do i use ')) {
+        const topic = bestTopicByTitle(text.slice('How do I use '.length).replace(/\?$/, ''));
+        if (topic) {
+          return localTopicReply(topic);
+        }
+      }
+      return null;
+    }
+
+    function localReplyForQuestion(question) {
+      const query = (question || '').trim();
+      if (!query) return null;
+      let best = null;
+      let bestScore = 0;
+      topics.forEach(function (topic) {
+        const score = topicScore(topic, query);
+        if (score > bestScore) {
+          best = topic;
+          bestScore = score;
+        }
+      });
+      if (best && bestScore > 0) {
+        return localTopicReply(best);
+      }
+      return {
+        title: 'Best next step',
+        message: 'I could not map that exactly to one LedgerFlow workflow yet. Use one of the guided cards above, or ask about billing, onboarding, income records, team members, reports, benefits, or calendar so I can steer you faster.',
+        best_for: 'Best when you want a fast answer and the current question is broader than one page or tool.',
+        outcome: 'A clean next move instead of guessing.',
+        caution: 'Do not force a vague workflow if the page-specific options already narrow the right move.',
+        link_label: assistantSetupUrl && !assistantLiveEnabled ? 'Open AI Guide Settings' : '',
+        link_url: assistantSetupUrl && !assistantLiveEnabled ? assistantSetupUrl : '',
+      };
+    }
+
+    async function requestAssistant(question, options) {
+      const query = String(question || '').trim();
+      const settings = options || {};
+      if (!query || isBusy) return;
+      addEntry({
+        role: 'user',
+        label: 'You',
+        title: settings.userTitle || 'Question',
+        message: settings.userMessage || query,
+      });
+      setComposerBusy(true);
+      try {
+        if (!assistantLiveEnabled) {
+          addAssistantEntry(localReplyForPrompt(query) || settings.fallbackReply || localReplyForQuestion(query));
+          return;
+        }
+        const response = await fetch('/assistant/respond', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({question: query}),
+        });
+        const payload = await response.json().catch(function () { return {}; });
+        if (!response.ok || !payload.ok || !payload.reply) {
+          throw new Error(payload.error || 'Live AI could not answer this request.');
+        }
+        addAssistantEntry(payload.reply);
+        updateAssistantStatus('live', 'Model-backed LedgerFlow guidance is active for this page.');
+      } catch (error) {
+        const fallbackReply = localReplyForPrompt(query) || settings.fallbackReply || localReplyForQuestion(query);
+        if (assistantLiveEnabled) {
+          updateAssistantStatus('fallback', 'Live AI is unavailable right now. Guided LedgerFlow fallback is keeping the workflow moving.');
+          addAssistantEntry({
+            title: 'Live AI temporarily unavailable',
+            message: error && error.message ? error.message : 'The model layer did not answer this request, so I switched to the guided LedgerFlow fallback.',
+            best_for: 'Best when you still need a safe next step without breaking your workflow.',
+            caution: 'If this keeps happening, reopen AI Guide Settings and re-test the live connection.',
+            link_label: assistantSetupUrl ? 'Open AI Guide Settings' : '',
+            link_url: assistantSetupUrl || '',
+          });
+        }
+        if (fallbackReply) {
+          addAssistantEntry(fallbackReply);
+        }
+      } finally {
+        setComposerBusy(false);
+        if (input) {
+          input.value = '';
+          input.focus();
+        }
+      }
+    }
+
+    function speakLatest() {
+      if (!('speechSynthesis' in window)) return;
+      const entries = safeHistory().filter(entry => entry.role === 'assistant');
+      const latest = entries[entries.length - 1];
+      if (!latest) return;
+      const utterance = new SpeechSynthesisUtterance(latest.message);
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      utterance.lang = 'en-US';
+      utterance.onstart = function () {
+        setAssistantVisualState('speaking');
+      };
+      utterance.onend = function () {
+        setAssistantVisualState('');
+      };
+      utterance.onerror = function () {
+        setAssistantVisualState('');
+      };
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function setupVoiceInput() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        if (voiceBtn) {
+          voiceBtn.disabled = true;
+          voiceBtn.textContent = 'Voice Off';
+        }
+        return;
+      }
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onstart = function () {
+        setAssistantVisualState('listening');
+      };
+      recognition.onresult = function (event) {
+        const transcript = event.results && event.results[0] && event.results[0][0] ? event.results[0][0].transcript : '';
+        if (input) {
+          input.value = transcript;
+          input.focus();
+        }
+      };
+      recognition.onerror = function () {
+        setAssistantVisualState('');
+        if (voiceBtn) voiceBtn.textContent = 'Voice';
+      };
+      recognition.onend = function () {
+        setAssistantVisualState('');
+        if (voiceBtn) voiceBtn.textContent = 'Voice';
+      };
+    }
+
+    launcher.addEventListener('click', function () {
+      setOpen(!body.classList.contains('assistant-open'));
+    });
+    closeBtn.addEventListener('click', function () { setOpen(false); });
+    backdrop.addEventListener('click', function () { setOpen(false); });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') setOpen(false);
+    });
+    topicButtons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        const topic = topicMap.get(button.dataset.assistantTopic);
+        if (!topic) return;
+        requestAssistant('Guide me through ' + topic.title + ' inside LedgerFlow.', {
+          userTitle: topic.title,
+          userMessage: topic.summary,
+          fallbackReply: localTopicReply(topic),
+        });
+      });
+    });
+    promptButtons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        const prompt = button.dataset.assistantPrompt;
+        requestAssistant(prompt, {
+          userTitle: 'Prompt',
+          userMessage: prompt,
+        });
+      });
+    });
+    if (form) {
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        requestAssistant(input ? input.value : '');
+      });
+    }
+    if (speakBtn) {
+      speakBtn.addEventListener('click', function () {
+        speakLatest();
+      });
+    }
+    if (voiceBtn) {
+      voiceBtn.addEventListener('click', function () {
+        if (!recognition || isBusy) return;
+        voiceBtn.textContent = 'Listening...';
+        recognition.start();
+      });
+    }
+
+    setupVoiceInput();
+    if (localStorage.getItem(drawerKey) === '1') {
+      setOpen(true);
+    } else {
+      ensureHistory();
+    }
+  })();
+</script>
+{% endif %}

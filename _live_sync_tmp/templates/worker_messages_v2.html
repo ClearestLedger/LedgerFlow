@@ -1,0 +1,104 @@
+﻿{% extends 'worker_portal_base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Messages</div>
+    <div class='page-title'>Manager Messages</div>
+    <div class='page-subtitle'>Secure team member-to-manager communication in one compact restricted messaging view.</div>
+  </div>
+</div>
+<div class='card messenger-card messenger-page-card'>
+  <div class='card-head'>
+    <h3>Messenger</h3>
+    <span class='badge'>Manager Thread</span>
+  </div>
+  <details class='compact-details dashboard-chat-details'>
+    <summary>Open Messenger</summary>
+    <div class='chat-shell compact-chat-shell worker-messenger-shell'>
+      <section class='chat-panel compact-chat-panel messenger-main-panel'>
+        <div class='chat-header compact'>
+          <div>
+            <div class='chat-title'>{{ manager.full_name if manager else (worker.business_contact_name or worker.business_name ~ ' Manager') }}</div>
+            <div class='small'>Only manager communication is available in the team member portal.</div>
+          </div>
+        </div>
+        <div class='chat-thread {% if not messages %}chat-thread-empty{% endif %}' id='workerThread'>
+          {% if messages %}
+            {% for row in messages %}
+            <div class='message-row {{ "mine" if row.sender_kind=="worker" else "other" }}'>
+              <div class='message-bubble {{ "mine" if row.sender_kind=="worker" else "other" }}'>
+                <div class='message-meta'>
+                  <strong>{{ worker.name if row.sender_kind=="worker" else (row.manager_name or manager.full_name if manager else 'Manager') }}</strong>
+                  <span>&middot; {{ row.created_at }}</span>
+                </div>
+                <div class='message-body'>{{ row.body }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class='chat-empty'><div><strong>No messages yet.</strong><span>Send a message to your manager below.</span></div></div>
+          {% endif %}
+        </div>
+        <form method='post' class='chat-composer dashboard-chat-composer' style='padding-left:12px;padding-right:12px;border-top:none'>
+          <details class='compact-details chat-compose-details-inner'>
+            <summary>Quick Reply</summary>
+            <div class='chat-composer-wrap' style='margin-top:10px'>
+              <div class='chat-input-stack'>
+                <textarea id='workerChatBody' name='body' placeholder='Type your message to the manager...'></textarea>
+                <div class='chat-input-actions'>
+                  <div class='emoji-toolbar'>
+                    <button type='button' class='emoji-toggle' data-picker='workerEmojiPicker' aria-expanded='false' aria-controls='workerEmojiPicker'>Emoji</button>
+                    <div class='emoji-picker' id='workerEmojiPicker' hidden>
+                      {% for icon in [('&#128512;',128512),('&#128578;',128578),('&#128077;',128077),('&#128591;',128591),('&#9989;',9989),('&#128204;',128204),('&#127881;',127881),('&#9888;&#65039;',9888),('&#128172;',128172),('&#128206;',128206),('&#128188;',128188),('&#128197;',128197),('&#128181;',128181),('&#128588;',128588),('&#128640;',128640),('&#127919;',127919),('&#10024;',10024),('&#128161;',128161)] %}
+                      <button type='button' class='emoji-option-inline worker-emoji-option' data-code='{{ icon[1] }}'>{{ icon[0]|safe }}</button>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  <span class='small'>Quick emoji reactions and short work updates.</span>
+                </div>
+              </div>
+              <button type='submit'>Send</button>
+            </div>
+          </details>
+        </form>
+      </section>
+    </div>
+  </details>
+</div>
+<script>
+  (function(){
+    const thread = document.getElementById('workerThread');
+    if(thread){ thread.scrollTop = thread.scrollHeight; }
+    const textarea = document.getElementById('workerChatBody');
+    if(textarea){
+      document.querySelectorAll('.worker-emoji-option').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          textarea.value += (textarea.value ? ' ' : '') + String.fromCodePoint(parseInt(btn.dataset.code, 10));
+          textarea.focus();
+        });
+      });
+      document.querySelectorAll('.emoji-toggle').forEach(function(toggle){
+        toggle.addEventListener('click', function(){
+          var picker = document.getElementById(toggle.dataset.picker);
+          if(!picker) return;
+          var willOpen = picker.hasAttribute('hidden');
+          document.querySelectorAll('.emoji-picker').forEach(function(other){ other.setAttribute('hidden','hidden'); });
+          document.querySelectorAll('.emoji-toggle').forEach(function(other){ other.setAttribute('aria-expanded','false'); });
+          if(willOpen){
+            picker.removeAttribute('hidden');
+            toggle.setAttribute('aria-expanded','true');
+          }
+        });
+      });
+      document.addEventListener('click', function(event){
+        if(event.target.closest('.emoji-toolbar')) return;
+        document.querySelectorAll('.emoji-picker').forEach(function(other){ other.setAttribute('hidden','hidden'); });
+        document.querySelectorAll('.emoji-toggle').forEach(function(other){ other.setAttribute('aria-expanded','false'); });
+      });
+    }
+  })();
+</script>
+{% endblock %}
+
+
+

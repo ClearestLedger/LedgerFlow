@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar'>
+  <div>
+    <div class='small'><strong>{{ client.business_name }}</strong></div>
+    <div class='section-subtitle'>Manual small-business expense tracking</div>
+  </div>
+  <button onclick='window.print()' class='btn btn-secondary' type='button'>Print This Page</button>
+</div>
+
+<div class='summary-strip'>
+  <div class='summary-pill'>Total Entries: {{ expense_entries|length }}</div>
+  <div class='summary-pill'>Total Expenses: ${{ '%.2f'|format(total_expenses) }}</div>
+</div>
+
+<div class='grid cards-2'>
+  <div class='card'>
+    <div class='card-head'>
+      <div>
+        <h3>Add Expense</h3>
+        <div class='small'>Track everyday business costs in one place.</div>
+      </div>
+    </div>
+    <form method='post' class='form-grid'>
+      {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <div><label>Date</label><input name='expense_date' type='date' value='{{ today }}' required></div>
+      <div><label>Amount</label><input name='amount' type='number' min='0' step='0.01' placeholder='0.00' required></div>
+      <div style='grid-column:1/-1'><label>Vendor / Description</label><input name='vendor_description' placeholder='Vendor name or short description' required></div>
+      <div><label>Category</label><select name='category'>{% for category in categories %}<option value='{{ category }}'>{{ category|title }}</option>{% endfor %}</select></div>
+      <div><label>Optional Note</label><input name='note' placeholder='Optional detail'></div>
+      <div><button type='submit'>Save Expense</button></div>
+    </form>
+  </div>
+
+  <div class='card'>
+    <div class='card-head'>
+      <div>
+        <h3>Category Summary</h3>
+        <div class='small'>Quick totals by expense category.</div>
+      </div>
+    </div>
+    {% if expense_summary %}
+      <div class='expense-summary-grid'>
+        {% for row in expense_summary %}
+        <div class='expense-summary-chip'>
+          <div class='label'>{{ row.category }}</div>
+          <div class='value'>${{ '%.2f'|format(row.total_amount or 0) }}</div>
+          <div class='small'>{{ row.entry_count }} entr{{ 'y' if row.entry_count == 1 else 'ies' }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class='small'>No expenses saved yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class='card' style='margin-top:16px;'>
+  <div class='card-head'>
+    <div>
+      <h3>Saved Expenses</h3>
+      <div class='small'>Running list of manually entered expenses.</div>
+    </div>
+  </div>
+  {% if expense_entries %}
+  <div class='scroll-x'>
+    <table class='table'>
+      <tr>
+        <th>Date</th>
+        <th>Vendor / Description</th>
+        <th>Category</th>
+        <th>Amount</th>
+        <th>Note</th>
+      </tr>
+      {% for row in expense_entries %}
+      <tr>
+        <td>{{ row.expense_date }}</td>
+        <td>{{ row.vendor_description }}</td>
+        <td>{{ row.category|title }}</td>
+        <td>${{ '%.2f'|format(row.amount or 0) }}</td>
+        <td class='expense-entry-note'>{{ row.note or '' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% else %}
+    <div class='small'>No expense entries saved yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

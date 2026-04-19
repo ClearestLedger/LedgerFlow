@@ -1,0 +1,5 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar'><div class='small'><strong>{{ client.business_name }}</strong> · Weekly gas</div><button onclick='window.print()' class='btn btn-secondary' type='button'>Print This Page</button></div>
+<div class='grid cards-2'><div class='card'><h3>Weekly Gas</h3><form method='post' class='form-grid'>{% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}<div><label>Week Start</label><input name='week_start' type='date' value='{{ today }}'></div><div><label>Amount</label><input name='amount' type='number' step='0.01'></div><div style='grid-column:1/-1'><label>Note</label><input name='note'></div><div><button>Save Gas Entry</button></div></form></div><div class='card'><h3>Gas History</h3><table class='table'><tr><th>Week</th><th>Amount</th><th>Note</th></tr>{% for row in gas_entries %}<tr><td>{{ row.week_start }}</td><td>${{ '%.2f'|format(row.amount or 0) }}</td><td>{{ row.note }}</td></tr>{% endfor %}</table></div></div>
+{% endblock %}

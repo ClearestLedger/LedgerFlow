@@ -1,0 +1,189 @@
+{% if shell_messenger and shell_messenger.enabled %}
+<button
+  type='button'
+  class='messenger-launcher'
+  data-messenger-toggle
+  aria-expanded='false'
+  aria-controls='shellMessengerDrawer'
+>
+  <span class='messenger-launcher-icon'>&#128172;</span>
+  <span class='messenger-launcher-label'>Messenger</span>
+  {% if shell_messenger.unread_count %}
+  <span class='messenger-launcher-badge'>{{ shell_messenger.unread_count }}</span>
+  {% endif %}
+</button>
+
+<div class='messenger-drawer-backdrop' data-messenger-backdrop hidden></div>
+<aside class='messenger-drawer' id='shellMessengerDrawer' data-messenger-drawer aria-hidden='true'>
+  <div class='messenger-drawer-head'>
+    <div>
+      <div class='page-kicker'>Messenger</div>
+      <div class='messenger-drawer-title'>{{ shell_messenger.title }}</div>
+      <div class='messenger-drawer-subtitle'>{{ shell_messenger.subtitle }}</div>
+    </div>
+    <button type='button' class='messenger-drawer-close' data-messenger-close aria-label='Close Messenger'>&times;</button>
+  </div>
+
+  {% if shell_messenger.latest_incoming %}
+  <div class='mini-chat-alert {% if shell_messenger.unread_count %}unread{% endif %}' style='margin:0 0 12px 0'>
+    <strong>{{ shell_messenger.latest_incoming.sender_name }}</strong> &middot; {{ shell_messenger.latest_incoming.created_at }}<br>
+    {{ shell_messenger.latest_incoming.body }}
+  </div>
+  {% endif %}
+
+  <div class='chat-thread messenger-drawer-thread {% if not shell_messenger.messages %}chat-thread-empty{% endif %}'>
+    {% for message in shell_messenger.messages %}
+      <div class='message-row {{ "mine" if message.is_mine else "other" }}'>
+        <div class='message-bubble {{ "mine" if message.is_mine else "other" }}'>
+          <div class='message-meta'>
+            <span class='message-sender'>{{ message.sender_name }}</span>
+            <span class='message-role'>{{ message.sender_role }}</span>
+            {% if message.recipient_name %}<span class='message-direction'>&rarr; {{ message.recipient_name }}</span>{% endif %}
+            <span>&middot;</span>
+            <span>{{ message.created_at }}</span>
+          </div>
+          <div class='message-body'>{{ message.body }}</div>
+        </div>
+      </div>
+    {% else %}
+      <div class='chat-empty'><div><strong>No messages yet.</strong><span>Start a conversation without leaving this page.</span></div></div>
+    {% endfor %}
+  </div>
+
+  <form
+    method='post'
+    action='{{ url_for("chat") if shell_messenger.kind == "internal" else url_for("worker_messages") }}'
+    class='chat-composer messenger-drawer-composer'
+  >
+    {% if shell_messenger.kind == 'internal' %}
+    <input type='hidden' name='client_id' value='{{ shell_messenger.client_id }}'>
+    {% endif %}
+    <input type='hidden' name='return_path' value='{{ current_request_path }}'>
+
+    {% if shell_messenger.kind == 'internal' %}
+    <div class='chat-recipient-bar compact'>
+      <div class='recipient-label'>To</div>
+      <select name='recipient_user_id' class='recipient-select' {% if shell_messenger.recipients %}required{% else %}disabled{% endif %}>
+        {% for person in shell_messenger.recipients %}
+        <option value='{{ person.id }}' {% if person.id == shell_messenger.selected_recipient_id %}selected{% endif %}>{{ person.full_name }} &middot; {{ 'Administrator' if person.role=='admin' else 'Business' }} &middot; {{ person.presence_label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if not shell_messenger.recipients %}
+    <div class='small' style='margin:-2px 0 10px 0'>No available chat recipient is set for this business yet.</div>
+    {% endif %}
+    {% endif %}
+
+    <div class='chat-composer-wrap' style='max-width:none'>
+      <div class='chat-input-stack'>
+        <textarea
+          id='shellMessengerBody'
+          name='body'
+          {% if shell_messenger.kind == 'internal' and not shell_messenger.recipients %}disabled{% else %}required{% endif %}
+          placeholder='{% if shell_messenger.kind == "worker" %}Write a message to your manager...{% elif shell_messenger.recipients %}Write a message...{% else %}No recipient available{% endif %}'
+        ></textarea>
+        <div class='chat-input-actions'>
+          <div class='emoji-toolbar'>
+            <button type='button' class='emoji-toggle shell-emoji-toggle' data-picker='shellMessengerEmojiPicker' aria-expanded='false' aria-controls='shellMessengerEmojiPicker'>Emoji</button>
+            <div class='emoji-picker shell-emoji-picker' id='shellMessengerEmojiPicker' hidden>
+              {% for icon in [('&#128172;',128172),('&#128578;',128578),('&#128077;',128077),('&#9989;',9989),('&#128204;',128204),('&#128197;',128197),('&#128181;',128181),('&#128161;',128161),('&#10024;',10024),('&#128640;',128640),('&#128588;',128588),('&#128226;',128226),('&#9200;',9200),('&#9888;&#65039;',9888),('&#128221;',128221),('&#128295;',128295),('&#128205;',128205),('&#127881;',127881)] %}
+              <button type='button' class='emoji-option-inline shell-emoji-option' data-code='{{ icon[1] }}'>{{ icon[0]|safe }}</button>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+      <button
+        type='submit'
+        {% if shell_messenger.kind == 'internal' and not shell_messenger.recipients %}disabled{% endif %}
+      >Send</button>
+    </div>
+  </form>
+</aside>
+<script>
+  (function () {
+    const storageKey = 'ledgerflow-shell-messenger-open';
+    const body = document.body;
+    const launcher = document.querySelector('[data-messenger-toggle]');
+    const drawer = document.querySelector('[data-messenger-drawer]');
+    const backdrop = document.querySelector('[data-messenger-backdrop]');
+    const closeBtn = document.querySelector('[data-messenger-close]');
+    const textarea = document.getElementById('shellMessengerBody');
+    const thread = document.querySelector('.messenger-drawer-thread');
+
+    if (!launcher || !drawer || !backdrop) return;
+
+    function hideShellEmojiPickers() {
+      document.querySelectorAll('.shell-emoji-picker').forEach(function (other) { other.setAttribute('hidden', 'hidden'); });
+      document.querySelectorAll('.shell-emoji-toggle').forEach(function (other) { other.setAttribute('aria-expanded', 'false'); });
+    }
+
+    function setOpen(open) {
+      hideShellEmojiPickers();
+      body.classList.toggle('messenger-open', open);
+      drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+      launcher.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) {
+        backdrop.removeAttribute('hidden');
+        localStorage.setItem(storageKey, '1');
+        if (thread) thread.scrollTop = thread.scrollHeight;
+      } else {
+        backdrop.setAttribute('hidden', 'hidden');
+        localStorage.setItem(storageKey, '0');
+      }
+    }
+
+    launcher.addEventListener('click', function () {
+      setOpen(!body.classList.contains('messenger-open'));
+    });
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () { setOpen(false); });
+    }
+    backdrop.addEventListener('click', function () { setOpen(false); });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') setOpen(false);
+    });
+
+    if (localStorage.getItem(storageKey) === '1') {
+      setOpen(true);
+    }
+
+    if (textarea) {
+      ['focus', 'click', 'input', 'keydown'].forEach(function (eventName) {
+        textarea.addEventListener(eventName, hideShellEmojiPickers);
+      });
+      document.querySelectorAll('.shell-emoji-option').forEach(function (btn) {
+        btn.addEventListener('click', function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          if (textarea.disabled) return;
+          textarea.value += (textarea.value ? ' ' : '') + String.fromCodePoint(parseInt(btn.dataset.code, 10));
+          hideShellEmojiPickers();
+          textarea.focus();
+        });
+      });
+    }
+
+    document.querySelectorAll('.shell-emoji-toggle').forEach(function (toggle) {
+      toggle.addEventListener('click', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        var picker = document.getElementById(toggle.dataset.picker);
+        if (!picker) return;
+        var willOpen = picker.hasAttribute('hidden');
+        hideShellEmojiPickers();
+        if (willOpen) {
+          picker.removeAttribute('hidden');
+          toggle.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    document.addEventListener('click', function (event) {
+      if (event.target.closest('.emoji-toolbar') || event.target.closest('[data-messenger-toggle]')) return;
+      hideShellEmojiPickers();
+    });
+  })();
+</script>
+{% endif %}

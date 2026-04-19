@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='hero-surface welcome-center-hero'>
+  <div class='summary-strip'>
+    <span class='summary-pill'>Welcome page</span>
+    <span class='summary-pill'>Business onboarding support</span>
+    <span class='summary-pill'>Canva video ready</span>
+  </div>
+  <div class='toolbar hero-toolbar' style='margin-top:14px'>
+    <div>
+      <div class='page-kicker'>Welcome Center</div>
+      <div class='page-title'>Welcome to LedgerFlow</div>
+      <div class='page-subtitle'>A guided landing page for this business with clear first steps, personalized details, and a future-ready training area for how-to videos.</div>
+    </div>
+    <a class='btn btn-secondary' href='{{ url_for("dashboard", client_id=client_id) }}'>Open Dashboard</a>
+  </div>
+</div>
+
+<div class='grid cards-4' style='margin-top:16px'>
+  <div class='card stat-card premium-stat'>
+    <h3>Business Name</h3>
+    <div class='metric'>{{ business_name }}</div>
+    <div class='small'>Your LedgerFlow workspace business profile</div>
+  </div>
+  <div class='card stat-card premium-stat'>
+    <h3>User Name</h3>
+    <div class='metric'>{{ user_name }}</div>
+    <div class='small'>The signed-in user for this session</div>
+  </div>
+  <div class='card stat-card premium-stat'>
+    <h3>Owner Name</h3>
+    <div class='metric'>{{ owner_name }}</div>
+    <div class='small'>Primary business contact / owner record</div>
+  </div>
+  <div class='card stat-card premium-stat premium-stat-accent'>
+    <h3>Workspace Ready</h3>
+    <div class='metric'>{{ worker_count }} Team{% if worker_count != 1 %} Members{% else %} Member{% endif %}</div>
+    <div class='small'>Income records, billing, calendar, and operational tools are ready.</div>
+  </div>
+</div>
+
+<div class='grid cards-2' style='margin-top:18px;align-items:start'>
+  <section class='card section-frame welcome-message-card'>
+    <div class='card-head'><h3>Welcome Message</h3><span class='badge'>Personalized</span></div>
+    <div class='welcome-message-copy'>
+      <p><strong>{{ user_name }}</strong>, welcome to LedgerFlow.</p>
+      <p>Your workspace for <strong>{{ business_name }}</strong> is designed to keep billing, income records, team operations, payroll context, planning, and business coordination organized in one place.</p>
+      <p>Use this Welcome Center as your calm starting point. From here, you can move into the dashboard, review billing, track income, manage team members, and later watch guided how-to videos built specifically for this software.</p>
+    </div>
+    <div class='benefits-mini-points' style='margin-top:14px'>
+      <span>Open Dashboard</span>
+      <span>Review Billing</span>
+      <span>Save Income Records</span>
+      <span>Manage Team Members</span>
+    </div>
+  </section>
+
+  <section class='card section-frame welcome-first-steps'>
+    <div class='card-head'><h3>Recommended First Steps</h3><span class='badge'>Start Here</span></div>
+    <ol class='welcome-step-list'>
+      <li>Review your main dashboard and confirm the business name, owner details, and current workspace status.</li>
+      <li>Open Billing to confirm the subscription tier, billing status, and method on file.</li>
+      <li>Use Income Records to begin saving business income in a tax-preparation-friendly format.</li>
+      <li>Open Team Members if you need to add, update, or organize staff and payout information.</li>
+      <li>Use Calendar and reports as your operational planning layer once the basics are in place.</li>
+    </ol>
+    <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:14px'>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("dashboard", client_id=client_id) }}'>Overview</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>Billing</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>Income Records</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("workers", client_id=client_id) }}'>Team Members</a>
+    </div>
+  </section>
+</div>
+
+<div class='card section-frame' style='margin-top:18px'>
+  <div class='card-head'><h3>How-To Videos</h3><span class='badge'>Canva Ready</span></div>
+  <div class='small' style='margin-bottom:14px'>These training slots are ready for future Canva videos. Keep each video polished, calm, and task-focused so the Welcome Center feels like a premium onboarding experience.</div>
+  <div class='welcome-video-grid'>
+    {% for topic in video_topics %}
+    <article class='welcome-video-card'>
+      <div class='welcome-video-frame'>Video Placeholder</div>
+      <div class='welcome-video-meta'>
+        <strong>{{ topic.title }}</strong>
+        <span>{{ topic.length }}</span>
+      </div>
+      <div class='small'>{{ topic.description }}</div>
+    </article>
+    {% endfor %}
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-top:18px'>
+  <div class='card-head'><h3>Workspace Snapshot</h3><span class='badge'>Quick View</span></div>
+  <div class='grid cards-3'>
+    <div class='card stat-card premium-stat'>
+      <h3>Income Records</h3>
+      <div class='metric'>{{ summary.invoice_count }}</div>
+      <div class='small'>Saved income records in this workspace</div>
+    </div>
+    <div class='card stat-card premium-stat'>
+      <h3>Gross Income</h3>
+      <div class='metric'>${{ '%.2f'|format(summary.gross_income or 0) }}</div>
+      <div class='small'>Current total based on saved records</div>
+    </div>
+    <div class='card stat-card premium-stat'>
+      <h3>Estimated Operating Profit</h3>
+      <div class='metric'>${{ '%.2f'|format(summary.operating_profit or 0) }}</div>
+      <div class='small'>A quick high-level view of current business performance</div>
+    </div>
+  </div>
+</div>
+{% endblock %}

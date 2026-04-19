@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='card' style='margin-bottom:18px;'>
+  <div class='card-head'>
+    <div>
+      <div class='badge'>Support Center</div>
+      <h2 style='margin:10px 0 8px;color:var(--primary-dark);'>Help & Guidance</h2>
+      <p style='margin:0;max-width:860px;line-height:1.7;color:var(--muted);'>ClearLedger is designed to keep business records organized without forcing users through technical steps. This page gives administrators and business users a simple place to understand what each area does, where to go next, and how to move through daily work with confidence.</p>
+    </div>
+  </div>
+</div>
+
+<div class='grid cards-3' style='margin-bottom:18px;'>
+  <div class='card'>
+    <h3>Getting Started</h3>
+    <ul class='bullet-list'>
+      <li>Start in the <strong>Dashboard</strong> to see the current business overview.</li>
+      <li>Use <strong>Summary</strong> to review totals, activity, and overall business movement.</li>
+      <li>Keep entries current so reports, tax prep, and reviews stay clean and reliable.</li>
+    </ul>
+  </div>
+  <div class='card'>
+    <h3>Daily Recordkeeping</h3>
+    <ul class='bullet-list'>
+      <li>Manage billing work inside <strong>Invoices</strong>.</li>
+      <li>Use <strong>Team Members</strong> and <strong>Team Member Payouts</strong> to manage labor records and payouts.</li>
+      <li>Track field costs with <strong>Gas</strong>, <strong>Materials</strong>, and <strong>Mileage</strong>.</li>
+    </ul>
+  </div>
+  <div class='card'>
+    <h3>Communication & Review</h3>
+    <ul class='bullet-list'>
+      <li>Use <strong>Messenger</strong> for business-related communication inside the app.</li>
+      <li>Use <strong>Reports</strong> when you need organized output for review or printing.</li>
+      <li>Visit <strong>IRS Tips</strong> for general reminders and tax-support guidance.</li>
+    </ul>
+  </div>
+</div>
+
+<div class='grid cards-2' style='margin-bottom:18px;'>
+  <div class='card'>
+    <h3>Where to Find Things</h3>
+    <div class='metric'>
+      <strong>Administrator Area</strong><br>
+      Use this area to manage businesses, review the system at a high level, and enter a selected business workspace.<br><br>
+
+      <strong>Business Workspace</strong><br>
+      This is the dedicated operating area for one selected business. Use the workspace modules to move through overview, records, communication, and reports.<br><br>
+
+      <strong>Settings & Support</strong><br>
+      Use the existing profile, user, email, and help areas to keep setup organized and records accurate.
+    </div>
+  </div>
+
+  <div class='card'>
+    <h3>Recommended Workflow</h3>
+    <ul class='bullet-list'>
+      <li>Review the <strong>Dashboard</strong> first.</li>
+      <li>Update income records, team members, and payouts as activity happens.</li>
+      <li>Record gas, materials, and mileage regularly instead of waiting until the end of the month.</li>
+      <li>Use <strong>Summary</strong> and <strong>Reports</strong> to check totals before sharing, printing, or preparing for bookkeeping review.</li>
+      <li>Use <strong>Messenger</strong> when communication needs to stay connected to the business workflow.</li>
+    </ul>
+  </div>
+</div>
+
+<div class='grid cards-2' style='margin-bottom:18px;'>
+  <div class='card'>
+    <h3>General Support Guidance</h3>
+    <ul class='bullet-list'>
+      <li>Confirm the correct active business before entering or editing records.</li>
+      <li>Review key information before printing reports or sharing data with others.</li>
+      <li>Use the Help page as a quick reference whenever you are unsure where a feature lives.</li>
+      <li>Use IRS Tips for general tax guidance, but keep business records updated inside the normal workflow pages.</li>
+    </ul>
+  </div>
+
+  <div class='card'>
+    <h3>Administrator Master AI</h3>
+    <p class='small' style='font-size:14px;line-height:1.75;'>A future administrator intelligence layer is planned to help owners and administrators work faster with clearer guidance, smarter review support, and stronger operational visibility across businesses. The goal is to keep support practical, polished, and decision-focused without making ClearLedger feel technical or heavy.</p>
+    <div class='preview-box' style='min-height:0;'>
+      <div class='preview-title' style='font-size:20px;'>Premium Support Intelligence — Coming Soon</div>
+      <div class='small' style='font-size:14px;line-height:1.75;'>This upcoming feature is intended to assist administrators with cleaner oversight, guided review flows, support reminders, and more intelligent navigation through business tasks. It is being positioned as a premium administrator support layer built to strengthen speed, clarity, and control.</div>
+    </div>
+  </div>
+</div>
+
+{% if current_user.role != 'admin' %}
+<div class='grid cards-2' style='margin-bottom:18px;'>
+  <div class='card'>
+    <h3>Send a Suggestion / Request</h3>
+    <p class='small' style='font-size:14px;line-height:1.7;'>Use this area to share a suggestion, request support, or submit an improvement idea for your business workspace. Keep the message clear and practical so it can be reviewed easily.</p>
+    <form method='post' style='display:grid;gap:12px;margin-top:12px;'>
+      <div>
+        <label>Request Type</label>
+        <select name='request_type'>
+          {% for option in request_type_options %}
+          <option value='{{ option }}'>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>Suggestion or Request</label>
+        <textarea name='message' rows='5' placeholder='Enter your suggestion, usability feedback, support request, or improvement idea.' required></textarea>
+      </div>
+      <div>
+        <button class='btn primary' type='submit'>Submit Request</button>
+      </div>
+    </form>
+  </div>
+  <div class='card'>
+    <h3>How to Use This Area</h3>
+    <ul class='bullet-list'>
+      <li>Use <strong>Suggestion</strong> for ideas that could improve the workspace.</li>
+      <li>Use <strong>Feature request</strong> when you want a new tool or capability.</li>
+      <li>Use <strong>Usability feedback</strong> if something feels confusing or hard to use.</li>
+      <li>Use <strong>Support request</strong> when you need help with a business-side function.</li>
+      <li>Keep requests specific so they can be reviewed faster.</li>
+    </ul>
+    {% if recent_request %}
+    <div class='preview-box' style='margin-top:14px;min-height:0;'>
+      <div class='preview-title' style='font-size:18px;'>Last Submitted Request</div>
+      <div class='small' style='margin-top:6px;'><strong>Type:</strong> {{ recent_request.request_type or 'Suggestion' }}</div>
+      <div class='small' style='margin-top:4px;'><strong>Message:</strong> {{ recent_request.message }}</div>
+      <div class='small' style='margin-top:6px;color:var(--muted);'>Submitted {{ recent_request.created_at }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

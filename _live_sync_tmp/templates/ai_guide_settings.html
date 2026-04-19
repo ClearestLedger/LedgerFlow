@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='hero-toolbar'>
+  <div>
+    <div class='page-kicker'>AI Guide Settings</div>
+    <div class='page-title'>Configure The Live AI Layer</div>
+    <div class='page-subtitle'>Turn the AI Guide from a scripted helper into a true model-backed concierge with secure credentials, a premium label, and a real administrator test flow.</div>
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-bottom:18px'>
+  <div class='card-head'>
+    <div>
+      <div class='small-label'>Activation Path</div>
+      <h3>What Prime Live AI Needs</h3>
+    </div>
+    <span class='badge'>{{ 'Ready' if ai_config.configured else 'Action Needed' }}</span>
+  </div>
+  <div class='grid cols-3'>
+    <div class='metric'><strong>1.</strong> Enable the live AI layer for LedgerFlow.</div>
+    <div class='metric'><strong>2.</strong> Save a valid OpenAI API key and preferred model.</div>
+    <div class='metric'><strong>3.</strong> Run the live AI test before judging the drawer quality.</div>
+  </div>
+</div>
+
+<div class='grid cols-2'>
+  <div class='card section-frame'>
+    <div class='card-head'>
+      <div>
+        <div class='small-label'>Live AI Profile</div>
+        <h3>Secure AI Configuration</h3>
+      </div>
+      <span class='badge'>{{ 'Live Ready' if ai_config.configured else 'Fallback Mode' }}</span>
+    </div>
+    <form method='post' class='stack-actions'>
+      <div class='form-grid'>
+        <div>
+          <label>Enable Live AI</label>
+          <div class='small' style='margin-bottom:8px'>When enabled and configured, the AI Guide will call the live model instead of using scripted fallback answers.</div>
+          <label style='display:flex;align-items:center;gap:10px;font-size:14px;text-transform:none;letter-spacing:0;font-weight:700'>
+            <input type='checkbox' name='enabled' {% if ai_profile.enabled %}checked{% endif %} style='width:auto'> Enable live AI Guide
+          </label>
+        </div>
+        <div>
+          <label>Model</label>
+          <input name='model' value='{{ ai_profile.model or "gpt-5" }}' placeholder='gpt-5'>
+        </div>
+        <div>
+          <label>Assistant Label</label>
+          <input name='assistant_label' value='{{ ai_profile.assistant_label or "LedgerFlow Guide AI" }}' placeholder='LedgerFlow Guide AI'>
+        </div>
+        <div>
+          <label>API Key</label>
+          <input type='password' name='api_key' placeholder='{% if api_key_configured %}Saved. Enter only to replace it.{% else %}Paste OpenAI API key{% endif %}'>
+        </div>
+      </div>
+      <div>
+        <label>Premium System Prompt</label>
+        <textarea name='system_prompt' placeholder='Optional extra instructions for tone, business rules, and brand behavior'>{{ ai_profile.system_prompt or '' }}</textarea>
+      </div>
+      <div class='stack-actions'>
+        <button type='submit' name='action' value='save_settings'>Save AI Settings</button>
+        <button type='submit' name='action' value='test_ai' class='btn-secondary'>Run Live AI Test</button>
+      </div>
+    </form>
+    <div class='small' style='margin-top:12px'>Use an OpenAI API key here. Until it is configured, the visible drawer can only operate in guided fallback mode.</div>
+  </div>
+
+  <div class='card section-frame'>
+    <div class='card-head'>
+      <div>
+        <div class='small-label'>Current Status</div>
+        <h3>AI Readiness</h3>
+      </div>
+    </div>
+    <div class='metric'><strong>Provider:</strong> {{ ai_profile.provider or 'openai' }}</div>
+    <div class='metric'><strong>Mode:</strong> {{ 'Enabled' if ai_profile.enabled else 'Disabled' }}</div>
+    <div class='metric'><strong>Model:</strong> {{ ai_profile.model or 'gpt-5' }}</div>
+    <div class='metric'><strong>API Key Saved:</strong> {{ 'Yes' if api_key_configured else 'No' }}</div>
+    <div class='metric'><strong>Last Test:</strong> {{ ai_profile.last_test_status or 'Not tested yet' }}</div>
+    <div class='metric'><strong>Last Tested At:</strong> {{ ai_profile.last_tested_at or 'Not tested yet' }}</div>
+    <div class='metric'><strong>Last Error:</strong> {{ ai_profile.last_test_error or 'None' }}</div>
+    <div class='small' style='margin-top:12px'>Until this is configured, the AI Guide keeps working in safe fallback mode so the interface never breaks.</div>
+  </div>
+</div>
+{% endblock %}

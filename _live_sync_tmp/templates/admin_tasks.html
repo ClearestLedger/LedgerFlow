@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar'>
+  <div class='small'><strong>Administrator Tasks & Notes</strong> · practical reminders for daily admin work</div>
+  <div class='badge'>{{ open_items|length }} open · {{ completed_items|length }} completed</div>
+</div>
+<div class='grid cards-2 admin-task-layout' style='align-items:start'>
+  <div class='card'>
+    <h3 style='margin-top:0'>Add Task or Note</h3>
+    <form method='post' class='form-grid'>
+      <input type='hidden' name='action' value='add'>
+      <div style='grid-column:1 / -1'>
+        <label>Title or short note</label>
+        <input name='title' required placeholder='Example: Review April payroll deposit confirmations'>
+      </div>
+      <div>
+        <label>Due date (optional)</label>
+        <input type='date' name='due_date'>
+      </div>
+      <div>
+        <label>Priority (optional)</label>
+        <select name='priority'>
+          {% for p in priority_options %}
+          <option value='{{ p }}'>{{ p|title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div style='grid-column:1 / -1'><button type='submit'>Add Task</button></div>
+    </form>
+    <div class='small' style='margin-top:10px'>Use this space for follow-ups, filing reminders, payroll checks, or internal admin notes.</div>
+  </div>
+
+  <div class='card'>
+    <div class='card-head'>
+      <h3 style='margin:0'>Open Items</h3>
+      <span class='badge'>{{ open_items|length }}</span>
+    </div>
+    {% if open_items %}
+      <div class='admin-task-list'>
+        {% for item in open_items %}
+        <div class='admin-task-item priority-{{ item.priority or "medium" }}'>
+          <div class='admin-task-main'>
+            <div class='admin-task-title'>{{ item.title }}</div>
+            <div class='admin-task-meta'>
+              <span class='priority-chip {{ item.priority or "medium" }}'>{{ (item.priority or 'medium')|title }}</span>
+              {% if item.due_date %}<span>Due {{ item.due_date }}</span>{% else %}<span>No due date</span>{% endif %}
+            </div>
+          </div>
+          <form method='post' class='admin-task-action'>
+            <input type='hidden' name='action' value='toggle'>
+            <input type='hidden' name='item_id' value='{{ item.id }}'>
+            <button type='submit' class='btn btn-secondary btn-sm'>Mark Complete</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class='small'>No open tasks yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class='card' style='margin-top:18px'>
+  <div class='card-head'>
+    <h3 style='margin:0'>Completed</h3>
+    <span class='badge'>{{ completed_items|length }}</span>
+  </div>
+  {% if completed_items %}
+    <div class='admin-task-list compact'>
+      {% for item in completed_items %}
+      <div class='admin-task-item completed'>
+        <div class='admin-task-main'>
+          <div class='admin-task-title'>{{ item.title }}</div>
+          <div class='admin-task-meta'>
+            <span class='priority-chip {{ item.priority or "medium" }}'>{{ (item.priority or 'medium')|title }}</span>
+            {% if item.due_date %}<span>Due {{ item.due_date }}</span>{% endif %}
+            {% if item.completed_at %}<span>Completed {{ item.completed_at[:10] }}</span>{% endif %}
+          </div>
+        </div>
+        <form method='post' class='admin-task-action'>
+          <input type='hidden' name='action' value='toggle'>
+          <input type='hidden' name='item_id' value='{{ item.id }}'>
+          <button type='submit' class='btn btn-secondary btn-sm'>Mark Open</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class='small'>Completed tasks will appear here.</div>
+  {% endif %}
+</div>
+{% endblock %}

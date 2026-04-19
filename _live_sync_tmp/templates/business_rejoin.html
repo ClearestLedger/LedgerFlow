@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LedgerFlow | Restore Workspace Access</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=static_asset_version('style.css')) }}">
+</head>
+<body class="login-body">
+  <div class="login-brand-watermark">LEDGERFLOW</div>
+  <div class="login-floating-marks">
+    <span class="float-mark float-mark-1">Rejoin</span>
+    <span class="float-mark float-mark-2">Workspace</span>
+    <span class="float-mark float-mark-3">Billing</span>
+    <span class="float-mark float-mark-4">Return</span>
+  </div>
+
+  <main class="login-wrap login-wrap-split invite-shell">
+    <section class="login-brand-panel">
+      <div class="login-kicker">Return to LedgerFlow</div>
+      <h1 class="login-brand-title">Restore your business workspace access</h1>
+      <p class="login-brand-copy">
+        LedgerFlow can bring {{ invite.business_name }} back online without rebuilding your records. Use this step to restore access safely and continue with your normal workspace.
+      </p>
+      <div class="invite-step-list">
+        <div class="invite-step">
+          <strong>1. Restore access</strong>
+          <span>Reactivate the archived workspace record.</span>
+        </div>
+        <div class="invite-step">
+          <strong>2. Continue securely</strong>
+          <span>{% if existing_login %}Sign back in with your existing business login.{% else %}Create your business login if one has not been created yet.{% endif %}</span>
+        </div>
+        <div class="invite-step">
+          <strong>3. Resume operations</strong>
+          <span>Return to billing, income records, payroll tools, and the business calendar.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="login-card invite-card">
+      <div class="login-kicker">Workspace Rejoin</div>
+      <h1>Restore access for {{ invite.business_name }}</h1>
+      <p class="small" style="font-size:14px;line-height:1.8">
+        {% if invite.status == 'expired' %}
+        This rejoin link has expired. Ask your administrator to send a new one.
+        {% elif invite.status == 'accepted' %}
+        This workspace has already been restored. Sign in below to continue.
+        {% elif existing_login %}
+        We found an existing business login for this workspace. Restore access, then sign in with your current email.
+        {% else %}
+        Restore the workspace first, then continue into secure business login creation.
+        {% endif %}
+      </p>
+
+      <div class="invite-summary-card">
+        <div><strong>Business</strong><span>{{ invite.business_name }}</span></div>
+        <div><strong>Invite Email</strong><span>{{ invite.invited_email }}</span></div>
+        <div><strong>Status</strong><span>{{ invite.status|replace('_', ' ')|title }}</span></div>
+        {% if existing_login %}
+        <div><strong>Existing Login</strong><span>{{ existing_login.email }}</span></div>
+        {% endif %}
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      {% if invite.status in ['pending', 'sent', 'failed'] %}
+      <form method="post" class="form-grid" style="margin-top:14px">
+        <div style="grid-column:1 / -1">
+          <button class="btn" type="submit">{% if existing_login %}Restore and Sign In{% else %}Restore and Continue{% endif %}</button>
+        </div>
+      </form>
+      {% else %}
+      <div class="form-grid" style="margin-top:14px">
+        <a class="btn" href="{{ url_for('login') }}">Open Login</a>
+      </div>
+      {% endif %}
+
+      <div class="login-foot-links">
+        <a href="{{ url_for('login') }}">Sign In</a>
+        <a href="{{ url_for('forgot_password') }}">Forgot Password</a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

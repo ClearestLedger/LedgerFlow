@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Business Email Preview</div>
+    <div class='page-title'>{{ email_row.subject or 'Email Preview' }}</div>
+    <div class='page-subtitle'>Review the exact email that was sent from LedgerFlow to the business contact.</div>
+  </div>
+  <a class='btn btn-secondary' href='{{ url_for("client_users") }}'>Back to Business Users</a>
+</div>
+
+<div class='grid cards-2'>
+  <div class='card section-frame'>
+    <div class='card-head'><h3>Email Details</h3><span class='badge'>{{ (email_row.status or 'sent')|title }}</span></div>
+    <table class='table'>
+      <tr><th>Business</th><td>{{ email_row.business_name or 'System' }}</td></tr>
+      <tr><th>Type</th><td>{{ (email_row.email_type or 'email')|replace('_', ' ')|title }}</td></tr>
+      <tr><th>Recipient</th><td>{{ email_row.recipient_name or 'Business Contact' }} &lt;{{ email_row.recipient_email or '' }}&gt;</td></tr>
+      <tr><th>Created</th><td>{{ email_row.created_at }}</td></tr>
+      <tr><th>Sent By</th><td>{{ email_row.created_by_name or 'System' }}</td></tr>
+      {% if email_row.error_message %}<tr><th>Error</th><td>{{ email_row.error_message }}</td></tr>{% endif %}
+    </table>
+    <details class='compact-details' style='margin-top:16px'>
+      <summary>Plain Text Version</summary>
+      <div class='card' style='margin-top:12px;box-shadow:none;border:1px solid #E6ECF2;white-space:pre-wrap;line-height:1.65'>{{ email_row.body_text or 'No plain text body recorded.' }}</div>
+    </details>
+  </div>
+
+  <div class='card section-frame'>
+    <div class='card-head'><h3>Rendered Email</h3><span class='badge'>Preview</span></div>
+    {% if email_row.body_html %}
+      <div class='email-preview-surface'>{{ email_row.body_html|safe }}</div>
+    {% else %}
+      <div class='small'>No HTML email body was recorded for this item.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'worker_portal_base.html' %}
+{% block body %}
+<div class='toolbar'>
+  <a class='btn btn-secondary' href='{{ url_for("worker_pay_stubs") }}'>Back to Pay Stubs</a>
+  <button onclick='window.print()' class='btn btn-dark' type='button'>Print</button>
+</div>
+<div class='grid cards-2'>
+  <div class='card'>
+    <h3>Worker</h3>
+    <div><strong>{{ worker.name }}</strong></div>
+    <div class='small'>{{ worker.business_name }}</div>
+    <div class='small'>{{ worker.role_classification or 'Worker' }}</div>
+  </div>
+  <div class='card'>
+    <h3>Pay Stub</h3>
+    <div><strong>Date:</strong> {{ payment.payment_date or '—' }}</div>
+    <div><strong>Amount:</strong> ${{ '%.2f'|format(payment.amount or 0) }}</div>
+    <div><strong>Note:</strong> {{ payment.note or '—' }}</div>
+  </div>
+</div>
+{% endblock %}

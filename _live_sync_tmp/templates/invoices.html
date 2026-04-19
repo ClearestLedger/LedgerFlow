@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Income Record Center</div>
+    <div class='page-title'>{{ client.business_name }}</div>
+    <div class='page-subtitle'>Internal income records for tax preparation and reporting. This page is not a customer-facing invoice system.</div>
+  </div>
+  <button onclick='window.print()' class='btn btn-secondary' type='button'>Print This Page</button>
+</div>
+
+<div class='card section-frame' style='margin-bottom:16px'>
+  <div class='small'><strong>Important:</strong> Use this page to record money received by the business for tax preparation. Do not treat this as a client invoice delivery page.</div>
+</div>
+
+<div class='grid invoice-layout'>
+  <div class='card section-frame'>
+    <details class='compact-details'>
+      <summary>Create Income Record</summary>
+      <div class='small' style='margin:12px 0'>Add a new internal income record only when you need to capture new received revenue.</div>
+      <form method='post' class='form-grid'>
+        <input type='hidden' name='action' value='add_invoice'>
+        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <div><label>Income Type</label><select name='income_category'>{% for value, label in income_category_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+        <div><label>Gross Income Received</label><input name='paid_amount' type='number' step='0.01' min='0'></div>
+        <div><label>Income Source / Customer</label><input name='client_name' required></div>
+        <div><label>Service Address / Sale Location</label><input name='client_address'></div>
+        <div><label>Date Received</label><input name='invoice_date' type='date' value='{{ today }}'></div>
+        <div><label>Sales Tax Portion</label><input name='sales_tax_amount' type='number' step='0.01' min='0' value='0.00'></div>
+        <div style='grid-column:1/-1'><label><input type='checkbox' name='sales_tax_paid' value='1'> Sales tax on this record has already been paid / remitted</label></div>
+        <div style='grid-column:1/-1'><label>Notes</label><textarea name='notes' placeholder='Service performed, payment source, tax note, or internal documentation'></textarea></div>
+        <div><button>Save Income Record</button></div>
+      </form>
+    </details>
+  </div>
+  <div class='card section-frame'>
+    <details class='compact-details'>
+      <summary>Income Mileage Attachment</summary>
+      <div class='small' style='margin:12px 0'>Attach deductible travel only when you need to tie mileage to a saved income record.</div>
+      <form method='post' class='form-grid invoice-mileage-form' id='invoiceMileageForm'>
+        <input type='hidden' name='action' value='add_mileage'>
+        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <div><label>Income Record</label><select name='invoice_id' required><option value=''>Select saved record</option>{% for row in invoices %}<option value='{{ row.id }}'>Record #{{ row.job_number }} &middot; {{ row.client_name }}</option>{% endfor %}</select></div>
+        <div><label>Trip Date</label><input name='trip_date' type='date' value='{{ today }}'></div>
+        <div><label>Starting Point</label><input name='start_point' value='{{ home_address }}'></div>
+        <div><label>Destination</label><input name='destination' placeholder='Customer or job address'></div>
+        <div><label>Trip Type</label><select name='trip_type' id='trip_type'><option value='two_way' selected>Two-way</option><option value='one_way'>One-way</option></select></div>
+        <div><label>Number of Round Trips</label><input name='round_trips' id='round_trips' type='number' min='1' step='1' value='1'></div>
+        <div><label>One-Way Miles</label><input name='one_way_miles' id='one_way_miles' type='number' min='0' step='0.01' placeholder='Leave blank to auto-estimate'></div>
+        <div><label>Rate / Cost</label><input name='rate' id='rate' type='number' min='0' step='0.0001' value='0.67'></div>
+        <div><label>Total Miles</label><input name='total_miles_preview' id='total_miles_preview' type='text' value='0.00' readonly></div>
+        <div><label>Total Mileage Amount</label><input name='total_amount_preview' id='total_amount_preview' type='text' value='$0.00' readonly></div>
+        <div style='grid-column:1/-1'><label>Note</label><textarea name='note' placeholder='Optional job or trip note'></textarea></div>
+        <div><button type='submit'>Save Mileage Attachment</button></div>
+      </form>
+    </details>
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-top:16px'>
+  <div class='card-head'><h3>Saved Income Records</h3><div class='small'>Internal records of received income</div></div>
+  <div class='scroll-x'><table class='table'><tr><th>Record #</th><th>Date</th><th>Source</th><th>Type</th><th>Gross</th><th>Sales Tax</th><th>Tax Status</th><th>Actions</th></tr>{% for row in invoices %}<tr><td>{{ row.job_number }}</td><td>{{ row.invoice_date }}</td><td>{{ row.client_name }}</td><td>{{ income_category_labels.get(row.income_category or 'service_income', 'Service Income') }}</td><td>${{ '%.2f'|format(row.paid_amount or 0) }}</td><td>${{ '%.2f'|format(row.sales_tax_amount or 0) }}</td><td>{{ 'Paid / Remitted' if row.sales_tax_paid else 'Not marked paid' }}</td><td><a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>Print Record</a></td></tr>{% endfor %}</table></div>
+</div>
+
+<div class='card section-frame' style='margin-top:16px'>
+  <div class='card-head'><h3>Saved Mileage Attachments</h3><div class='small'>Mileage entries tied to income records</div></div>
+  <div class='scroll-x'><table class='table'><tr><th>Date</th><th>Record</th><th>Source</th><th>Route</th><th>Total Miles</th><th>Rate</th><th>Amount</th></tr>{% for row in invoice_mileage_entries %}<tr><td>{{ row.trip_date or '' }}</td><td>{% if row.job_number %}#{{ row.job_number }}{% else %}-{% endif %}</td><td>{{ row.client_name or '' }}</td><td>{{ row.start_point }} &rarr; {{ row.destination }}</td><td>{{ '%.2f'|format(row.total_miles or 0) }}</td><td>${{ '%.4f'|format(row.rate or 0) }}</td><td>${{ '%.2f'|format(row.total_amount or 0) }}</td></tr>{% else %}<tr><td colspan='7' class='small'>No mileage attachments saved yet.</td></tr>{% endfor %}</table></div>
+</div>
+<script>
+(function(){
+  function recalcInvoiceMileage(){
+    var oneWay = parseFloat(document.getElementById('one_way_miles')?.value || '0') || 0;
+    var rate = parseFloat(document.getElementById('rate')?.value || '0') || 0;
+    var roundTrips = parseInt(document.getElementById('round_trips')?.value || '1', 10) || 1;
+    var tripType = document.getElementById('trip_type')?.value || 'two_way';
+    var multiplier = tripType === 'one_way' ? 1 : 2;
+    var totalMiles = oneWay * multiplier * roundTrips;
+    var totalAmount = totalMiles * rate;
+    var milesField = document.getElementById('total_miles_preview');
+    var amountField = document.getElementById('total_amount_preview');
+    if (milesField) milesField.value = totalMiles.toFixed(2);
+    if (amountField) amountField.value = '$' + totalAmount.toFixed(2);
+  }
+  ['one_way_miles','rate','round_trips','trip_type'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('input', recalcInvoiceMileage);
+    if (el) el.addEventListener('change', recalcInvoiceMileage);
+  });
+  recalcInvoiceMileage();
+})();
+</script>
+{% endblock %}

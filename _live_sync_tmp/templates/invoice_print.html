@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='report'>
+  <div class='toolbar'><button onclick='window.print()' class='btn btn-dark' type='button'>Print</button></div>
+  <h2>Income Record #{{ invoice.job_number }}</h2>
+  <div class='grid cards-2'>
+    <div class='card'><strong>Business</strong><br>{{ invoice.business_name }}<br>{{ invoice.invoice_date }}</div>
+    <div class='card'><strong>Income Source</strong><br>{{ invoice.client_name }}<br>{{ invoice.client_address }}</div>
+  </div>
+  <div class='card' style='margin-top:16px'><strong>Income Type</strong><br>{{ {'service_income':'Service Income','product_sale':'Product / Sales Income','other_income':'Other Income'}.get(invoice.income_category or 'service_income', 'Service Income') }}<br><br><strong>Gross Income Received</strong><div class='metric big'>${{ '%.2f'|format(invoice.paid_amount or 0) }}</div><br><strong>Sales Tax Portion</strong><br>${{ '%.2f'|format(invoice.sales_tax_amount or 0) }}<br><strong>Sales Tax Status</strong><br>{{ 'Paid / Remitted' if invoice.sales_tax_paid else 'Not marked paid' }}<br><br><strong>Notes</strong><br>{{ invoice.notes or '&mdash;' }}</div>
+</div>
+{% endblock %}

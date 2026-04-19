@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='report'>
+  <div class='toolbar'>
+    <a href='{{ url_for("payroll_tax", client_id=worker.client_id, year=year, view="final_w2") }}' class='btn btn-secondary'>Back to </a>
+    <button onclick='window.print()' class='btn btn-dark' type='button'>Print</button>
+  </div>
+  <h2>Final Form W-2 · {{ year }}</h2>
+  <div class='card' style='padding:24px'>
+    <table class='table' style='width:100%;border-collapse:collapse'>
+      <tr>
+        <td style='border:1px solid #b91c1c;padding:8px;width:12%'><strong>a</strong><br>Employee SSN<br>{{ worker.ssn or '' }}</td>
+        <td style='border:1px solid #b91c1c;padding:8px;width:18%'><strong>b</strong><br>Employer EIN<br>{{ payer_ein }}</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>c</strong><br>Employer name, address, ZIP<br>{{ payer_name }}<br>{{ payer_address }}</td>
+      </tr>
+    </table>
+    <table class='table' style='width:100%;border-collapse:collapse;margin-top:12px'>
+      <tr>
+        <td style='border:1px solid #b91c1c;padding:8px;width:18%'><strong>d</strong><br>Control number<br>{{ worker.id }}</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>e / f</strong><br>Employee name and address<br>{{ worker.name }}<br>{{ worker.address or '' }}</td>
+      </tr>
+    </table>
+    <table class='table' style='width:100%;border-collapse:collapse;margin-top:12px'>
+      <tr>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>1</strong><br>Wages, tips, other compensation<br>${{ '%.2f'|format(totals.gross) }}</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>2</strong><br>Federal income tax withheld<br>${{ '%.2f'|format(totals.federal) }}</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>3</strong><br>Social Security wages<br>${{ '%.2f'|format(totals.social_security_wages) }}</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>4</strong><br>Social Security tax withheld<br>${{ '%.2f'|format(totals.social_security_tax) }}</td>
+      </tr>
+      <tr>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>5</strong><br>Medicare wages and tips<br>${{ '%.2f'|format(totals.medicare_wages) }}</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>6</strong><br>Medicare tax withheld<br>${{ '%.2f'|format(totals.medicare_tax) }}</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>7</strong><br>Social security tips<br>&nbsp;</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>8</strong><br>Allocated tips<br>&nbsp;</td>
+      </tr>
+      <tr>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>9</strong><br>&nbsp;<br>&nbsp;</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>10</strong><br>Dependent care benefits<br>&nbsp;</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>11</strong><br>Nonqualified plans<br>&nbsp;</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>12</strong><br>Codes<br>&nbsp;</td>
+      </tr>
+      <tr>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>13</strong><br>Statutory / retirement / sick pay<br>&nbsp;</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>14</strong><br>Other<br>&nbsp;</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>15</strong><br>State<br>&nbsp;</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>16</strong><br>State wages, tips, etc.<br>&nbsp;</td>
+      </tr>
+      <tr>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>17</strong><br>State income tax<br>&nbsp;</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>18</strong><br>Local wages, tips, etc.<br>&nbsp;</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>19</strong><br>Local income tax<br>&nbsp;</td>
+        <td style='border:1px solid #b91c1c;padding:8px'><strong>20</strong><br>Locality name<br>&nbsp;</td>
+      </tr>
+    </table>
+    <div class='small' style='margin-top:12px'>Form W-2 wage and tax statement summary generated from payroll records for administrator review before final filing.</div>
+  </div>
+</div>
+{% endblock %}

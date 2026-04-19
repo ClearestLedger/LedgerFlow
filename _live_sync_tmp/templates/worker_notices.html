@@ -1,0 +1,36 @@
+{% extends 'worker_portal_base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Team Member Policies</div>
+    <div class='page-title'>Policies & Notices</div>
+    <div class='page-subtitle'>Read-only team member guidance, company notices, and workplace expectations in one clear page.</div>
+  </div>
+</div>
+<div class='grid cards-2'>
+  {% for section in notice_sections %}
+  <div class='card section-frame'>
+    <div class='card-head'><h3>{{ section.title }}</h3><div class='small'>General workplace guidance</div></div>
+    <ul class='simple-list'>
+      {% for item in section["items"] %}<li>{{ item }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</div>
+
+<div class='card section-frame' style='margin-top:16px'>
+  <div class='card-head'><h3>Business Policies & Notices</h3><div class='small'>Read-only updates from your business</div></div>
+  {% if custom_notices %}
+  <div class='stack-list'>
+    {% for notice in custom_notices %}
+    <div class='stack-item'>
+      <div class='card-head' style='margin-bottom:8px'><h4 style='margin:0'>{{ notice.title }}</h4><div class='small'>Updated {{ notice.updated_at or notice.created_at }}</div></div>
+      <div style='white-space:pre-wrap;line-height:1.55'>{{ notice.body }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class='small'>No custom business policies or notices have been added yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

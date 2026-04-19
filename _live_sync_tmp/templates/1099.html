@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='report'>
+  <div class='toolbar'><a href='{{ url_for("workers", client_id=worker.client_id, worker_id=worker.id) }}' class='btn btn-secondary'>Back to Workers</a><button onclick='window.print()' class='btn btn-dark' type='button'>Print</button></div>
+  <h2>1099-NEC {{ year }} · {{ worker.name }}</h2>
+  <div class='grid cards-3'><div class='card'><strong>Payer</strong><br>{{ payer_name }}<br>{{ payer_ein }}<br>{{ payer_address }}</div><div class='card'><strong>Recipient</strong><br>{{ worker.name }}<br>{{ worker.ssn }}<br>{{ worker.address }}</div><div class='card'><strong>Box 1 Nonemployee Compensation</strong><br>${{ '%.2f'|format(totals.gross) }}<br><br><strong>SE Tax Est.</strong><br>${{ '%.2f'|format(totals.se) }}</div></div><table class='table' style='margin-top:16px'><tr><th>Date</th><th>Amount</th><th>Note</th></tr>{% for p in payments %}<tr><td>{{ p.payment_date }}</td><td>${{ '%.2f'|format(p.amount or 0) }}</td><td>{{ p.note }}</td></tr>{% endfor %}</table><div class='small' style='margin-top:12px'>1099 summary generated from business-specific payer details for administrator review before final filing.</div>
+</div>
+{% endblock %}

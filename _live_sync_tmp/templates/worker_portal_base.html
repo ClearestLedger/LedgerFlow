@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>{{ app_name }} &middot; {{ tr('Team Member Portal') }}</title>
+  <link rel='stylesheet' href='{{ url_for("static", filename="style.css", v=static_asset_version("style.css")) }}'>
+</head>
+<body>
+  <div class='header'>
+    <div>
+      <div class='brand'>{{ app_name }}</div>
+      <div class='sub'>{{ tr('Team Member Portal') }}</div>
+    </div>
+    <div class='header-right header-controls'>
+      <form method='post' action='{{ url_for("set_language") }}' class='language-inline-form'>
+        <input type='hidden' name='next' value='{{ current_request_path }}'>
+        <input type='hidden' name='quiet' value='1'>
+        <label for='worker-shell-language'>{{ tr('Language') }}</label>
+        <select id='worker-shell-language' name='preferred_language' onchange='this.form.submit()'>
+          {% for option in language_options %}
+          <option value='{{ option.code }}' {% if current_language == option.code %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <span>{{ worker.name }}</span>
+      <a class='header-link' href='{{ url_for("logout") }}'>{{ tr('Logout') }}</a>
+    </div>
+  </div>
+  <div class='mode-bar mode-business'>
+    <div class='mode-left'><span class='mode-chip active'>{{ tr('Restricted Team Member Portal') }}</span></div>
+    <div class='mode-right'>
+      <span class='business-dot' style='background:#2563eb'></span>
+      <strong>{{ worker.business_name }}</strong>
+    </div>
+  </div>
+  <div class='active-business-strip business-login-welcome-strip' style='border-left-color:#2563eb;'>
+    <div>
+      <div class='business-welcome-kicker'>{{ tr('Welcome') }}</div>
+      <div class='business-welcome-name'>{{ worker.name }}</div>
+      <div class='business-welcome-owner'>{{ worker.role_classification or 'Team Member Portal Access' }}</div>
+    </div>
+  </div>
+  <div class='app-shell worker-app-shell'>
+    <aside class='app-sidebar worker-app-sidebar'>
+      <div class='app-sidebar-card'>
+        <div class='app-sidebar-kicker'>{{ tr('Team Member Portal') }}</div>
+        <div class='app-sidebar-title'>{{ worker.name }}</div>
+        <div class='app-sidebar-subtitle'>{{ worker.business_name }} &middot; your work, pay, notices, and manager messages stay available in one clean portal menu.</div>
+      </div>
+      <nav class='app-nav'>
+        <div class='app-nav-group'>
+          <div class='app-nav-group-label'>{{ tr('Work') }}</div>
+          <a class='app-nav-link {% if request.endpoint=="worker_time_summary" %}active{% endif %}' href='{{ url_for("worker_time_summary") }}'>{{ tr('Time Summary') }}</a>
+          <a class='app-nav-link {% if request.endpoint in ["worker_pay_stubs","worker_pay_stub_detail"] %}active{% endif %}' href='{{ url_for("worker_pay_stubs") }}'>{{ tr('Pay Stubs') }}</a>
+          <a class='app-nav-link {% if request.endpoint=="worker_schedule" %}active{% endif %}' href='{{ url_for("worker_schedule") }}'>{{ tr('Schedule') }}</a>
+          <a class='app-nav-link {% if request.endpoint=="worker_time_off" %}active{% endif %}' href='{{ url_for("worker_time_off") }}'>{{ tr('Time Off Request') }}</a>
+        </div>
+        <div class='app-nav-group'>
+          <div class='app-nav-group-label'>{{ tr('Communication') }}</div>
+          <a class='app-nav-link {% if request.endpoint=="worker_notices" %}active{% endif %}' href='{{ url_for("worker_notices") }}'>{{ tr('Policies & Notices') }}</a>
+        </div>
+      </nav>
+    </aside>
+    <div class='app-main'>
+      <div class='container worker-portal-container'>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class='flash {{ category }}'>{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block body %}{% endblock %}
+      </div>
+    </div>
+  </div>
+  {% with shell_assistant=shell_assistant %}
+    {% include '_shell_assistant.html' %}
+  {% endwith %}
+  {% with shell_messenger=worker_shell_messenger %}
+    {% include '_shell_messenger.html' %}
+  {% endwith %}
+</body>
+</html>

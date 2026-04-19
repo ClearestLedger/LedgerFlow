@@ -1,2 +1,7 @@
-Flask==3.0.3
-gunicorn==22.0.0
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "LedgerFlow is running"

@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>Create Account</title>
+  <link rel='stylesheet' href='{{ url_for("static", filename="style.css", v=static_asset_version("style.css")) }}'>
+</head>
+<body class='login-body'>
+  <div class='login-brand-watermark'>LEDGERFLOW</div>
+  <div class='login-floating-marks' aria-hidden='true'>
+    <span class='mark-one'>Invite Access</span>
+    <span class='mark-two'>Secure Setup</span>
+    <span class='mark-three'>Business Login</span>
+    <span class='mark-four'>Guided Access</span>
+  </div>
+  <div class='login-wrap'>
+    <div class='login-card' style='max-width:720px'>
+      <div class='badge'>Account Setup</div>
+      <div class='login-kicker'>Create Account</div>
+      <h1>Create your business login</h1>
+      <p class='small'>Business accounts are created with an invite link sent by your administrator. This keeps access restricted to approved businesses only.</p>
+      <div class='card section-frame' style='box-shadow:none;margin-top:16px'>
+        <h3 style='margin-top:0'>How to create your account</h3>
+        <ol class='simple-list'>
+          <li>Ask your administrator to send your invite email.</li>
+          <li>Open the invite link from that email.</li>
+          <li>Enter your name, email, and password.</li>
+          <li>Return to the login page and sign in.</li>
+        </ol>
+      </div>
+      <div class='stack-actions' style='margin-top:16px'>
+        <a class='btn' href='{{ url_for("login") }}'>Back to Login</a>
+        <a class='btn btn-secondary' href='{{ url_for("worker_login") }}'>Worker Login</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

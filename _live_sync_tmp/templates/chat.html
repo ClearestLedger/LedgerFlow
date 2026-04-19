@@ -1,0 +1,145 @@
+﻿{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Messenger</div>
+    <div class='page-title'>{{ client.business_name }}</div>
+    <div class='page-subtitle'>Internal administrator and business communication in one focused messaging workspace.</div>
+  </div>
+</div>
+<div class='card messenger-card messenger-page-card'>
+  <div class='card-head'>
+    <h3>Messenger</h3>
+    <span class='badge {% if chat_unread_count %}badge-alert{% endif %}'>{% if chat_unread_count %}{{ chat_unread_count }} new{% else %}Live thread{% endif %}</span>
+  </div>
+  <details class='compact-details dashboard-chat-details'>
+    <summary>Open Messenger</summary>
+    <div class='chat-shell compact-chat-shell chat-shell-collapsible messenger-inner-shell'>
+      <aside class='chat-sidebar compact-chat-sidebar'>
+        <details class='compact-details'>
+          <summary>Participants</summary>
+          <div class='chat-participants' style='margin-top:12px'>
+            {% for person in participants %}
+            <div class='chat-person-card'>
+              <div class='chat-avatar {{ "admin" if person.role=="admin" else "client" }}'>{{ person.full_name[:1] }}</div>
+              <div class='chat-person-meta'>
+                <div class='chat-person-top'>
+                  <strong>{{ person.full_name }}</strong>
+                  <span class='presence-pill {{ person.presence }}'>{{ person.presence_label }}</span>
+                </div>
+                <div class='small'>{{ 'Administrator' if person.role=='admin' else 'Business' }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </details>
+      </aside>
+      <section class='chat-panel compact-chat-panel messenger-main-panel'>
+        {% if latest_incoming_message %}
+        <div class='mini-chat-alert {% if chat_unread_count %}unread{% endif %}' style='margin:12px'>
+          <strong>{{ latest_incoming_message.sender_name }}</strong> &middot; {{ latest_incoming_message.created_at }}<br>
+          {{ latest_incoming_message.body }}
+        </div>
+        {% endif %}
+        <div class='chat-thread {% if not messages %}chat-thread-empty{% endif %}' id='chatThread'>
+          {% for row in messages %}
+            <div class='message-row {{ "mine" if row.sender_user_id==current_user.id else "other" }}'>
+              <div class='message-bubble {{ "mine" if row.sender_user_id==current_user.id else "other" }}'>
+                <div class='message-meta'>
+                  <span class='message-sender'>{{ row.sender_name }}</span>
+                  <span class='message-role'>{{ 'Administrator' if row.sender_role=='admin' else 'Business' }}</span>
+                  {% if row.recipient_name %}<span class='message-direction'>&rarr; {{ row.recipient_name }}</span>{% endif %}
+                  <span>&middot;</span>
+                  <span>{{ row.created_at }}</span>
+                </div>
+                <div class='message-body'>{{ row.body }}</div>
+              </div>
+            </div>
+          {% else %}
+            <div class='chat-empty'><div><strong>No messages yet.</strong><span>Start a conversation.</span></div></div>
+          {% endfor %}
+        </div>
+        <form method='post' action='{{ url_for("chat") }}' class='chat-composer dashboard-chat-composer' style='padding-left:12px;padding-right:12px;border-top:none'>
+          <input type='hidden' name='client_id' value='{{ client_id }}'>
+          <div class='chat-recipient-bar compact'>
+            <div class='recipient-label'>To</div>
+            <select name='recipient_user_id' class='recipient-select' {% if chat_recipients %}required{% else %}disabled{% endif %}>
+              {% for person in chat_recipients %}
+              <option value='{{ person.id }}' {% if person.id == selected_recipient_id %}selected{% endif %}>{{ person.full_name }} &middot; {{ 'Administrator' if person.role=='admin' else 'Business' }} &middot; {{ person.presence_label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          {% if not chat_recipients %}<div class='small' style='margin:-2px 0 10px 0'>No available chat recipient is set for this business yet.</div>{% endif %}
+          <details class='compact-details chat-compose-details-inner'>
+            <summary>Quick Reply</summary>
+            <div class='chat-composer-wrap' style='max-width:none;margin-top:10px'>
+              <div class='chat-input-stack'>
+                <textarea id='chatBody' name='body' {% if chat_recipients %}required{% else %}disabled{% endif %} placeholder='{% if chat_recipients %}Write a message...{% else %}No recipient available{% endif %}'></textarea>
+                <div class='chat-input-actions'>
+                  <div class='emoji-toolbar'>
+                    <button type='button' class='emoji-toggle' data-picker='businessEmojiPicker' aria-expanded='false' aria-controls='businessEmojiPicker'>Emoji</button>
+                    <div class='emoji-picker' id='businessEmojiPicker' hidden>
+                      {% for icon in [('&#128512;',128512),('&#128578;',128578),('&#128077;',128077),('&#128591;',128591),('&#9989;',9989),('&#128204;',128204),('&#127881;',127881),('&#9888;&#65039;',9888),('&#128172;',128172),('&#128206;',128206),('&#128188;',128188),('&#128197;',128197),('&#128181;',128181),('&#128588;',128588),('&#128640;',128640),('&#127919;',127919),('&#10024;',10024),('&#128161;',128161)] %}
+                      <button type='button' class='emoji-option-inline' data-code='{{ icon[1] }}'>{{ icon[0]|safe }}</button>
+                      {% endfor %}
+                    </div>
+                  </div>
+                  <span class='small'>Messages refresh every 20 seconds</span>
+                </div>
+              </div>
+              <button type='submit' {% if not chat_recipients %}disabled{% endif %}>Send</button>
+            </div>
+          </details>
+        </form>
+      </section>
+    </div>
+  </details>
+</div>
+<script>
+  (function(){
+    const thread = document.getElementById('chatThread');
+    if(thread){ thread.scrollTop = thread.scrollHeight; }
+    const textarea = document.getElementById('chatBody');
+    let chatDirty = false;
+    if(textarea){
+      textarea.addEventListener('input', function(){
+        chatDirty = textarea.value.trim().length > 0;
+      });
+      document.querySelectorAll('.emoji-option-inline').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          if (textarea.disabled) return;
+          textarea.value += (textarea.value ? ' ' : '') + String.fromCodePoint(parseInt(btn.dataset.code, 10));
+          textarea.dispatchEvent(new Event('input'));
+          textarea.focus();
+        });
+      });
+      document.querySelectorAll('.emoji-toggle').forEach(function(toggle){
+        toggle.addEventListener('click', function(){
+          var picker = document.getElementById(toggle.dataset.picker);
+          if(!picker) return;
+          var willOpen = picker.hasAttribute('hidden');
+          document.querySelectorAll('.emoji-picker').forEach(function(other){ other.setAttribute('hidden','hidden'); });
+          document.querySelectorAll('.emoji-toggle').forEach(function(other){ other.setAttribute('aria-expanded','false'); });
+          if(willOpen){
+            picker.removeAttribute('hidden');
+            toggle.setAttribute('aria-expanded','true');
+          }
+        });
+      });
+      document.addEventListener('click', function(event){
+        if(event.target.closest('.emoji-toolbar')) return;
+        document.querySelectorAll('.emoji-picker').forEach(function(other){ other.setAttribute('hidden','hidden'); });
+        document.querySelectorAll('.emoji-toggle').forEach(function(other){ other.setAttribute('aria-expanded','false'); });
+      });
+    }
+    setTimeout(function(){
+      if(!chatDirty && document.activeElement !== textarea){
+        window.location.reload();
+      }
+    }, 20000);
+  })();
+</script>
+{% endblock %}
+
+
+

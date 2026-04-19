@@ -1,0 +1,37 @@
+{% extends 'worker_portal_base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Team Member Payroll</div>
+    <div class='page-title'>Pay Stubs</div>
+    <div class='page-subtitle'>Review your pay history, payment method, and year-to-date earnings in one secure team member payroll view.</div>
+  </div>
+</div>
+
+<div class='summary-strip'>
+  <div class='summary-pill'>Lifetime Paid: ${{ '%.2f'|format(pay_summary.lifetime_total or 0) }}</div>
+  <div class='summary-pill'>Year-to-Date: ${{ '%.2f'|format(pay_summary.year_total or 0) }}</div>
+  {% if pay_summary.latest_payment %}<div class='summary-pill'>Latest Payment: {{ pay_summary.latest_payment.payment_date }} &middot; ${{ '%.2f'|format(pay_summary.latest_payment.amount or 0) }}</div>{% endif %}
+</div>
+
+<div class='card section-frame'>
+  <div class='card-head'><h3>Pay Stub History</h3><div class='small'>Restricted team member payroll record</div></div>
+  {% if payments %}
+  <table class='table'>
+    <tr><th>Pay Date</th><th>Gross Pay</th><th>Method</th><th>Status</th><th>Reference</th><th>Stub</th></tr>
+    {% for row in payments %}
+    <tr>
+      <td>{{ row.payment_date or '&mdash;' }}</td>
+      <td><strong>${{ '%.2f'|format(row.amount or 0) }}</strong></td>
+      <td>{{ payment_method_labels.get(row.payment_method or 'other', 'Other') }}</td>
+      <td>{{ payment_status_labels.get(row.payment_status or 'paid', 'Paid') }}</td>
+      <td>{{ row.reference_number or '&mdash;' }}</td>
+      <td><a class='btn btn-secondary btn-sm' href='{{ url_for("worker_pay_stub_detail", payment_id=row.id) }}'>Open Stub</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class='empty-state'><strong>No pay stubs yet.</strong><span>When payroll payments are saved for you, they will appear here automatically.</span></div>
+  {% endif %}
+</div>
+{% endblock %}

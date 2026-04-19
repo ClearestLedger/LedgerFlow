@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar'><div class='small'><strong>{{ client.business_name }}</strong> · Invoice Mileage</div><button onclick='window.print()' class='btn btn-secondary' type='button'>Print This Page</button></div>
+<div class='grid cards-2'>
+  <div class='card'>
+    <h3>Add Invoice Mileage</h3>
+    <form method='post' class='form-grid'>
+      {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <div><label>Date</label><input name='trip_date' type='date' value='{{ today }}'></div>
+      <div><label>Invoice / Job (optional)</label>
+        <select name='invoice_id'>
+          <option value=''>Not linked</option>
+          {% for inv in invoices %}<option value='{{ inv.id }}'>Job #{{ inv.job_number or inv.id }}{% if inv.client_name %} · {{ inv.client_name }}{% endif %}</option>{% endfor %}
+        </select>
+      </div>
+      <div style='grid-column:1/-1'><label>Starting Point</label><input name='start_point' value='{{ home_address }}'></div>
+      <div style='grid-column:1/-1'><label>Destination</label><input name='destination'></div>
+      <div><label>Trip Type</label>
+        <select name='trip_type'>
+          <option value='two_way'>Two-way</option>
+          <option value='one_way'>One-way</option>
+        </select>
+      </div>
+      <div><label>Number of Round Trips</label><input name='round_trips' type='number' min='1' step='1' value='1'></div>
+      <div><label>One-way Miles (leave blank to auto-calculate)</label><input name='one_way_miles' type='number' min='0' step='0.01'></div>
+      <div><label>Rate</label><input name='rate' type='number' min='0' step='0.001' value='{{ '%.3f'|format(irs_mileage_rate) }}'></div>
+      <div style='grid-column:1/-1'><label>Custom Note</label><input name='note' placeholder='Estimate visit, paint pickup, job site delivery'></div>
+      <div><button>Save Invoice Mileage</button></div>
+    </form>
+    <p class='small'>Total miles are calculated from one-way miles × trip type × number of round trips. Mileage amount uses the selected rate.</p>
+  </div>
+  <div class='card'>
+    <h3>Invoice Mileage History</h3>
+    <table class='table'>
+      <tr><th>Date</th><th>Invoice</th><th>Total Miles</th><th>Rate</th><th>Amount</th></tr>
+      {% for row in invoice_mileage_entries %}
+      <tr>
+        <td>{{ row.trip_date }}</td>
+        <td>{% if row.job_number %}Job #{{ row.job_number }}{% else %}-{% endif %}</td>
+        <td>{{ '%.2f'|format(row.total_miles or 0) }}</td>
+        <td>${{ '%.3f'|format(row.rate or 0) }}</td>
+        <td>${{ '%.2f'|format(row.total_amount or 0) }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}

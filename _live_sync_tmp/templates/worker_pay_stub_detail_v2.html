@@ -1,0 +1,80 @@
+{% extends 'worker_portal_base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <a class='btn btn-secondary' href='{{ url_for("worker_pay_stubs") }}'>Back to Pay Stubs</a>
+  <button onclick='window.print()' class='btn btn-dark' type='button'>Print Stub</button>
+</div>
+
+<div class='card hero-surface' style='margin-bottom:16px'>
+  <div class='card-head'>
+    <h3>Team Member Pay Stub</h3>
+    <span class='badge'>{{ stub.status_label }}</span>
+  </div>
+  <div class='grid cards-4'>
+    <div class='card stat-card premium-stat'>
+      <h3>Pay Date</h3>
+      <div class='metric'>{{ payment.payment_date or '&mdash;' }}</div>
+      <div class='small'>Payroll record date</div>
+    </div>
+    <div class='card stat-card premium-stat'>
+      <h3>Gross Pay</h3>
+      <div class='metric big'>${{ '%.2f'|format(stub.detail.gross or 0) }}</div>
+      <div class='small'>Before deductions</div>
+    </div>
+    <div class='card stat-card premium-stat'>
+      <h3>Deductions</h3>
+      <div class='metric'>${{ '%.2f'|format((stub.detail.federal_withholding or 0) + stub.employee_payroll_taxes) }}</div>
+      <div class='small'>Federal + employee payroll taxes</div>
+    </div>
+    <div class='card stat-card premium-stat premium-stat-accent'>
+      <h3>Net Pay</h3>
+      <div class='metric big'>${{ '%.2f'|format(stub.detail.net_check or 0) }}</div>
+      <div class='small'>Estimated take-home</div>
+    </div>
+  </div>
+</div>
+
+<div class='grid cards-2'>
+  <div class='card section-frame'>
+    <div class='card-head'><h3>Team Member Information</h3><div class='small'>Restricted payroll view</div></div>
+    <div class='metric'><strong>{{ worker.name }}</strong></div>
+    <div class='small'>{{ worker.business_name }}</div>
+    <div class='small'>{{ worker.role_classification or 'Team Member' }}</div>
+    <div class='small' style='margin-top:10px'>Classification: <strong>{{ worker.worker_type }}</strong></div>
+    <div class='small'>Payment Method: <strong>{{ stub.method_label }}</strong></div>
+    <div class='small'>Reference: <strong>{{ payment.reference_number or 'Not provided' }}</strong></div>
+    <div class='small'>Note: <strong>{{ payment.note or 'No note recorded' }}</strong></div>
+  </div>
+
+  <div class='card section-frame'>
+    <div class='card-head'><h3>Current Pay Breakdown</h3><div class='small'>This payroll entry only</div></div>
+    <table class='table'>
+      <tr><th>Description</th><th>Amount</th></tr>
+      <tr><td>Gross Pay</td><td>${{ '%.2f'|format(stub.detail.gross or 0) }}</td></tr>
+      <tr><td>Federal Withholding</td><td>${{ '%.2f'|format(stub.detail.federal_withholding or 0) }}</td></tr>
+      <tr><td>Social Security</td><td>${{ '%.2f'|format(stub.detail.employee_social_security or 0) }}</td></tr>
+      <tr><td>Medicare</td><td>${{ '%.2f'|format(stub.detail.employee_medicare or 0) }}</td></tr>
+      {% if stub.detail.additional_medicare_tax %}
+      <tr><td>Additional Medicare</td><td>${{ '%.2f'|format(stub.detail.additional_medicare_tax or 0) }}</td></tr>
+      {% endif %}
+      <tr><td><strong>Net Pay</strong></td><td><strong>${{ '%.2f'|format(stub.detail.net_check or 0) }}</strong></td></tr>
+    </table>
+    {% if not stub.is_w2 %}
+    <div class='small' style='margin-top:10px'>This team member is recorded as a 1099 / contractor worker, so employee payroll withholding is not being applied to this stub.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-top:16px'>
+  <div class='card-head'><h3>Year-to-Date Payroll</h3><div class='small'>Through this payment</div></div>
+  <table class='table'>
+    <tr><th>YTD Item</th><th>Amount</th></tr>
+    <tr><td>Gross Pay</td><td>${{ '%.2f'|format(stub.ytd.gross or 0) }}</td></tr>
+    <tr><td>Federal Withholding</td><td>${{ '%.2f'|format(stub.ytd.federal_withholding or 0) }}</td></tr>
+    <tr><td>Social Security</td><td>${{ '%.2f'|format(stub.ytd.employee_social_security or 0) }}</td></tr>
+    <tr><td>Medicare</td><td>${{ '%.2f'|format(stub.ytd.employee_medicare or 0) }}</td></tr>
+    <tr><td>Additional Medicare</td><td>${{ '%.2f'|format(stub.ytd.additional_medicare_tax or 0) }}</td></tr>
+    <tr><td><strong>Net Pay</strong></td><td><strong>${{ '%.2f'|format(stub.ytd.net_check or 0) }}</strong></td></tr>
+  </table>
+</div>
+{% endblock %}

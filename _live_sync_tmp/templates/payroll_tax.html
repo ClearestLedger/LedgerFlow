@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Payroll Tax Center</div>
+    <div class='page-title'>{{ client.business_name }}</div>
+    <div class='page-subtitle'>Quarterly 941 review, deposit tracking, and EFTPS access in one administrator workspace.</div>
+  </div>
+  <div style='display:flex;gap:10px;flex-wrap:wrap'>
+    <a class='btn btn-secondary' href='{{ eftps_url }}' target='_blank' rel='noopener'>Open EFTPS Payment</a>
+    <button onclick='window.print()' class='btn btn-secondary' type='button'>Print This Page</button>
+  </div>
+</div>
+
+<div class='card hero-surface' style='margin-bottom:16px'>
+  <div style='display:flex;gap:10px;flex-wrap:wrap'>
+    <a class='btn {{ "btn-secondary" if view!="quarter" else "" }}' href='{{ url_for("payroll_tax", client_id=client_id, year=year, quarter=quarter, view="quarter") }}'>941 Quarter Builder</a>
+    <a class='btn {{ "btn-secondary" if view!="final_w2" else "" }}' href='{{ url_for("payroll_tax", client_id=client_id, year=year, quarter=quarter, view="final_w2") }}'>Generate Final W-2</a>
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-bottom:16px;border:1px solid #bfdbfe;background:#eff6ff'>
+  <div class='card-head'><h3>EFTPS Quick Pay</h3><span class='badge'>Administrator Shortcut</span></div>
+  <div class='small' style='margin-bottom:10px'>Use this official link to open EFTPS in a new tab for federal payroll tax payments. This app does not submit EFTPS payments directly.</div>
+  <div style='display:flex;gap:10px;flex-wrap:wrap;align-items:center'>
+    <a class='btn btn-secondary' href='{{ eftps_url }}' target='_blank' rel='noopener'>Go To EFTPS</a>
+    <div class='small'>Enrollment status: <strong>{{ client.eftps_status or 'Not Enrolled' }}</strong>{% if client.eftps_login_reference %} &middot; Login reference: {{ client.eftps_login_reference }}{% endif %}</div>
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-bottom:16px;background:#fff7ed;border:1px solid #fdba74'>
+  <div class='small'><strong>Payroll review notice:</strong> Federal withholding in this workspace should be reviewed against the employee's Form W-4 and current IRS withholding methods before filing or final payroll submission.</div>
+</div>
+
+{% if view == 'final_w2' %}
+<div class='card'>
+  <h3>Generate Final W-2</h3>
+  <form method='get' class='form-grid'>
+    <input type='hidden' name='client_id' value='{{ client_id }}'>
+    <input type='hidden' name='view' value='final_w2'>
+    <div><label>Year</label><input name='year' type='number' value='{{ year }}'></div>
+    <div><button type='submit'>Load W-2 Workers</button></div>
+  </form>
+  <table class='table' style='margin-top:16px'>
+    <tr><th>Worker</th><th>Status</th><th>Type</th><th>Open Final W-2</th></tr>
+    {% for w in w2_workers %}
+    <tr>
+      <td>{{ w.name }}</td>
+      <td>{{ w.status or 'active' }}</td>
+      <td>{{ w.worker_type }}</td>
+      <td><a class='btn btn-secondary btn-sm' href='{{ url_for("w2", worker_id=w.id, year=year) }}' target='_blank'>Open W-2</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan='4'>No W-2 workers found for this business.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% else %}
+<div class='grid cards-2'>
+  <div class='card'>
+    <h3>941 Quarter Builder</h3>
+    <form method='get' class='form-grid'>
+      <input type='hidden' name='client_id' value='{{ client_id }}'>
+      <input type='hidden' name='view' value='quarter'>
+      <div><label>Year</label><input name='year' type='number' value='{{ year }}'></div>
+      <div><label>Quarter</label><select name='quarter'>{% for q in [1,2,3,4] %}<option value='{{ q }}' {% if q==quarter %}selected{% endif %}>Q{{ q }}</option>{% endfor %}</select></div>
+      <div><button type='submit'>Load 941 Summary</button></div>
+    </form>
+    <div class='small' style='margin-top:10px'>941 includes W-2 payments only. 1099 payments are excluded from Form 941 totals.</div>
+  </div>
+  <div class='card'>
+    <h3>Add IRS Deposit</h3>
+    <form method='post' class='form-grid'>
+      <input type='hidden' name='client_id' value='{{ client_id }}'>
+      <input type='hidden' name='year' value='{{ year }}'>
+      <input type='hidden' name='quarter' value='{{ quarter }}'>
+      <input type='hidden' name='view' value='quarter'>
+      <input type='hidden' name='action' value='add_deposit'>
+      <div><label>Deposit Date</label><input name='deposit_date' type='date' value='{{ today }}'></div>
+      <div><label>Quarter Month</label><select name='tax_month'>{% for m in quarter_months %}<option value='{{ m }}'>{{ m }}</option>{% endfor %}</select></div>
+      <div><label>Amount</label><input name='amount' type='number' step='0.01'></div>
+      <div><label>Method</label><input name='payment_method' value='EFTPS'></div>
+      <div><label>Confirmation #</label><input name='confirmation_number'></div>
+      <div><label>Note</label><input name='note'></div>
+      <div><button>Save Deposit</button></div>
+    </form>
+  </div>
+</div>
+
+<div class='grid cards-3' style='margin-top:16px'>
+  <div class='card metric'><div class='metric-label'>Line 1 Employees</div><div class='metric-value'>{{ payroll_tax.totals.line1 }}</div></div>
+  <div class='card metric'><div class='metric-label'>Line 2 Wages</div><div class='metric-value'>${{ '%.2f'|format(payroll_tax.totals.line2_wages) }}</div></div>
+  <div class='card metric'><div class='metric-label'>Line 3 Federal Withheld</div><div class='metric-value'>${{ '%.2f'|format(payroll_tax.totals.line3_federal) }}</div></div>
+  <div class='card metric'><div class='metric-label'>Social Security Tax</div><div class='metric-value'>${{ '%.2f'|format(payroll_tax.totals.line5a_tax) }}</div></div>
+  <div class='card metric'><div class='metric-label'>Medicare Tax</div><div class='metric-value'>${{ '%.2f'|format(payroll_tax.totals.line5c_tax + payroll_tax.totals.line5d_tax) }}</div></div>
+  <div class='card metric'><div class='metric-label'>Total 941 Liability</div><div class='metric-value'>${{ '%.2f'|format(payroll_tax.totals.total_tax) }}</div></div>
+  <div class='card metric'><div class='metric-label'>Deposits Made</div><div class='metric-value'>${{ '%.2f'|format(payroll_tax.totals.deposits_total) }}</div></div>
+  <div class='card metric'><div class='metric-label'>Balance Due</div><div class='metric-value'>${{ '%.2f'|format(payroll_tax.totals.balance_due) }}</div></div>
+  <div class='card metric'><div class='metric-label'>Overpayment</div><div class='metric-value'>${{ '%.2f'|format(payroll_tax.totals.overpayment) }}</div></div>
+</div>
+
+<div class='card' style='margin-top:16px'>
+  <table class='table'>
+    <tr><th>Line</th><th>Description</th><th>Value</th></tr>
+    <tr><td>1</td><td>Employees who received wages</td><td>{{ payroll_tax.totals.line1 }}</td></tr>
+    <tr><td>2</td><td>Wages, tips, other compensation</td><td>${{ '%.2f'|format(payroll_tax.totals.line2_wages) }}</td></tr>
+    <tr><td>3</td><td>Federal income tax withheld</td><td>${{ '%.2f'|format(payroll_tax.totals.line3_federal) }}</td></tr>
+    <tr><td>5a</td><td>Taxable Social Security wages / tax</td><td>${{ '%.2f'|format(payroll_tax.totals.line5a_wages) }} / ${{ '%.2f'|format(payroll_tax.totals.line5a_tax) }}</td></tr>
+    <tr><td>5c</td><td>Taxable Medicare wages / tax</td><td>${{ '%.2f'|format(payroll_tax.totals.line5c_wages) }} / ${{ '%.2f'|format(payroll_tax.totals.line5c_tax) }}</td></tr>
+    <tr><td>5d</td><td>Additional Medicare wages / tax</td><td>${{ '%.2f'|format(payroll_tax.totals.line5d_wages) }} / ${{ '%.2f'|format(payroll_tax.totals.line5d_tax) }}</td></tr>
+    <tr><td>Total</td><td>Total tax before adjustments</td><td>${{ '%.2f'|format(payroll_tax.totals.total_tax) }}</td></tr>
+  </table>
+</div>
+
+<div class='grid cards-2' style='margin-top:16px'>
+  <div class='card'>
+    <h3>Monthly Liability vs Deposits</h3>
+    <table class='table'>
+      <tr><th>Month</th><th>Liability</th><th>Deposits</th><th>Difference</th></tr>
+      {% for row in payroll_tax.monthly_rows %}
+      <tr><td>{{ row.month }}</td><td>${{ '%.2f'|format(row.liability) }}</td><td>${{ '%.2f'|format(row.deposits) }}</td><td>${{ '%.2f'|format(row.difference) }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class='card'>
+    <h3>IRS Deposit Ledger</h3>
+    <table class='table'>
+      <tr><th>Date</th><th>Month</th><th>Amount</th><th>Method</th><th>Confirmation</th></tr>
+      {% for row in payroll_tax.deposits %}
+      <tr><td>{{ row.deposit_date }}</td><td>{{ row.tax_month }}</td><td>${{ '%.2f'|format(row.amount or 0) }}</td><td>{{ row.payment_method }}</td><td>{{ row.confirmation_number }}</td></tr>
+      {% else %}
+      <tr><td colspan='5'>No deposits saved for this quarter.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class='grid cards-2' style='margin-top:16px'>
+  <div class='card'>
+    <h3>Included W-2 Payments</h3>
+    <table class='table'>
+      <tr><th>Date</th><th>Worker</th><th>Gross</th><th>Fed</th><th>SS</th><th>Medicare</th><th>Net</th></tr>
+      {% for row in payroll_tax.details %}
+      <tr><td>{{ row.payment_date }}</td><td>{{ row.worker_name }}</td><td>${{ '%.2f'|format(row.gross) }}</td><td>${{ '%.2f'|format(row.federal_withholding) }}</td><td>${{ '%.2f'|format(row.employee_social_security) }}</td><td>${{ '%.2f'|format(row.employee_medicare + row.additional_medicare_tax) }}</td><td>${{ '%.2f'|format(row.net_check) }}</td></tr>
+      {% else %}
+      <tr><td colspan='7'>No W-2 payments found for this quarter.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class='card'>
+    <h3>Excluded 1099 Payments</h3>
+    <table class='table'>
+      <tr><th>Date</th><th>Worker</th><th>Gross</th><th>Reason</th></tr>
+      {% for row in payroll_tax.excluded_1099 %}
+      <tr><td>{{ row.payment_date }}</td><td>{{ row.worker_name }}</td><td>${{ '%.2f'|format(row.gross) }}</td><td>1099 excluded from Form 941</td></tr>
+      {% else %}
+      <tr><td colspan='4'>No 1099 payments in this quarter.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

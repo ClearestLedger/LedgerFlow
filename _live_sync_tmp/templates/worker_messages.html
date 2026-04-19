@@ -1,0 +1,41 @@
+{% extends 'worker_portal_base.html' %}
+{% block body %}
+<div class='toolbar'>
+  <div class='small'><strong>Messenger</strong> · Manager-only communication</div>
+</div>
+<div class='chat-shell'>
+  <div class='chat-panel'>
+    <div class='chat-header'>
+      <div>
+        <div class='chat-title'>{{ manager.full_name if manager else (worker.business_contact_name or worker.business_name ~ ' Manager') }}</div>
+      <div class='small'>Only manager communication is available in the team member portal.</div>
+      </div>
+    </div>
+    <div class='chat-thread {% if not messages %}chat-thread-empty{% endif %}'>
+      {% if messages %}
+        {% for row in messages %}
+        <div class='message-row {{ "mine" if row.sender_kind=="worker" else "theirs" }}'>
+          <div class='message-bubble'>
+            <div class='message-meta'>
+              <strong>{{ worker.name if row.sender_kind=="worker" else (row.manager_name or manager.full_name if manager else 'Manager') }}</strong>
+              <span>· {{ row.created_at }}</span>
+            </div>
+            <div class='message-body'>{{ row.body }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class='chat-empty'><div><strong>No messages yet.</strong><span>Send a message to your manager below.</span></div></div>
+      {% endif %}
+    </div>
+    <form method='post' class='chat-composer'>
+      <div class='chat-composer-wrap'>
+        <div class='chat-input-stack'>
+          <textarea name='body' placeholder='Type your message to the manager...'></textarea>
+        </div>
+        <button type='submit'>Send</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

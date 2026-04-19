@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>{{ app_name }} &middot; {{ tr('Worker Login') }}</title>
+  <link rel='stylesheet' href='{{ url_for("static", filename="style.css", v=static_asset_version("style.css")) }}'>
+</head>
+<body class='login-body'>
+  <div class='login-brand-watermark'>LEDGERFLOW</div>
+  <div class='login-floating-marks worker-login-marks' aria-hidden='true'>
+    <span class='mark-one'>Worker Portal</span>
+    <span class='mark-two'>Pay Stubs</span>
+    <span class='mark-three'>Schedules</span>
+    <span class='mark-four'>Policies</span>
+  </div>
+  <div class='login-wrap'>
+    <div class='login-card'>
+      <form method='post' action='{{ url_for("set_language") }}' class='language-inline-form login-language-form'>
+        <input type='hidden' name='next' value='{{ request.path }}'>
+        <input type='hidden' name='quiet' value='1'>
+        <label for='worker-language'>{{ tr('Language') }}</label>
+        <select id='worker-language' name='preferred_language' onchange='this.form.submit()'>
+          {% for option in language_options %}
+          <option value='{{ option.code }}' {% if current_language == option.code %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <div class='stack-actions' style='justify-content:flex-start;margin-bottom:10px'>
+        <a class='btn btn-secondary' href='{{ url_for("main_portal") }}'>{{ tr('Return to Main Portal') }}</a>
+      </div>
+      <div class='badge'>{{ tr('RESTRICTED WORKER ACCESS') }}</div>
+      <div class='login-kicker'>{{ tr('Welcome Worker') }}</div>
+      <h1>{{ tr('Worker Portal') }}</h1>
+      <p class='small'>{{ tr('Secure worker access for time, schedule, pay stubs, and notices.') }}</p>
+      <div class='card section-frame' style='box-shadow:none;margin:14px 0 16px 0;padding:14px 16px'>
+        <div class='small-label'>{{ tr('NEED ADMIN OR BUSINESS LOGIN?') }}</div>
+        <div style='font-weight:800;color:var(--primary-dark);margin-top:6px'>{{ tr('Use the main LedgerFlow portal for administrator and business access.') }}</div>
+        <div class='small' style='margin-top:6px'>{{ tr('If you landed here by mistake, use the return button above or below this sign-in form.') }}</div>
+      </div>
+      <form method='post'>
+        <input type='hidden' name='preferred_language' value='{{ current_language }}'>
+        <label>{{ tr('Email') }}</label>
+        <input name='email' type='email' required>
+        <label style='margin-top:12px'>{{ tr('Password') }}</label>
+        <div class='password-field'><input type='password' name='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div>
+        <button style='margin-top:16px;width:100%'>{{ tr('Sign In to Worker Portal') }}</button>
+        <div style='margin-top:10px;text-align:right'><a class='small' href='{{ url_for("forgot_password") }}'>{{ tr('Forgot Password?') }}</a></div>
+      </form>
+      <div style='margin-top:14px;text-align:center'>
+        <a class='btn btn-secondary' href='{{ url_for("main_portal") }}'>{{ tr('Return to Main Portal') }}</a>
+      </div>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, msg in messages %}
+            <div class='flash {{ category }}' style='margin-top:12px'>{{ msg }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.password-field').forEach(function (field) {
+    var input = field.querySelector('input');
+    var toggle = field.querySelector('.password-toggle');
+    if (!input || !toggle) return;
+    if (toggle.dataset && toggle.dataset.toggleBound === '1') return;
+    if (toggle.dataset) toggle.dataset.toggleBound = '1';
+    toggle.addEventListener('click', function () {
+      var visible = input.type === 'text';
+      input.type = visible ? 'password' : 'text';
+      field.classList.toggle('is-visible', !visible);
+      toggle.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
+      toggle.setAttribute('title', visible ? 'Show password' : 'Hide password');
+    });
+  });
+});
+</script>
+</body>
+</html>
