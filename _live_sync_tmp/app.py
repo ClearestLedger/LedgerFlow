@@ -7,6 +7,9 @@ import json
 import html
 import secrets
 import smtplib
+import shutil
+import tempfile
+import zipfile
 from email.message import EmailMessage
 from cryptography.fernet import Fernet
 import base64
@@ -21,7 +24,7 @@ from urllib import request as urlrequest, error as urlerror
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, jsonify
+from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash, abort, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -2230,23 +2233,21 @@ IS_PRODUCTION = any([
     bool((os.environ.get('RENDER_EXTERNAL_URL') or '').strip()),
 ])
 
+local_secret_path = DATA_DIR / '.local_secret_key'
 secret_key = (os.environ.get('SECRET_KEY') or os.environ.get('ClearLedger_SECRET') or '').strip()
-if IS_PRODUCTION and not secret_key:
-    raise RuntimeError('SECRET_KEY must be set in production.')
 if not secret_key:
-    local_secret_path = DATA_DIR / '.local_secret_key'
     try:
         if local_secret_path.exists():
             secret_key = local_secret_path.read_text(encoding='utf-8').strip()
-        if not secret_key:
+        if not secret_key and not IS_PRODUCTION:
             secret_key = secrets.token_urlsafe(32)
             local_secret_path.write_text(secret_key, encoding='utf-8')
     except Exception:
-        secret_key = secrets.token_urlsafe(32)
+        if not IS_PRODUCTION:
+            secret_key = secrets.token_urlsafe(32)
+if IS_PRODUCTION and not secret_key:
+    raise RuntimeError('SECRET_KEY must be set in production or available as .local_secret_key in DATA_DIR.')
 app.config['SECRET_KEY'] = secret_key
-
-if IS_PRODUCTION and not (os.environ.get('DATABASE_PATH') or '').strip():
-    raise RuntimeError('DATABASE_PATH must be set in production.')
 
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -3158,6 +3159,54 @@ def current_worker():
     except sqlite3.Error:
         session.pop('worker_id', None)
         return None
+
+
+def production_import_enabled() -> bool:
+    return IS_PRODUCTION and (os.environ.get('PRODUCTION_IMPORT_ENABLED') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def production_import_key() -> str:
+    return (os.environ.get('PRODUCTION_IMPORT_KEY') or '').strip()
+
+
+def production_import_allowed() -> bool:
+    return production_import_enabled() and bool(production_import_key())
+
+
+def allowed_migration_files() -> set[str]:
+    return {'rds_core_web.db', 'email_runtime_config.json', '.local_secret_key'}
+
+
+def backup_existing_migration_files() -> Path | None:
+    existing = [name for name in allowed_migration_files() if (DATA_DIR / name).exists()]
+    if not existing:
+        return None
+    backup_dir = DATA_DIR / f"pre_import_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    for name in existing:
+        shutil.copy2(DATA_DIR / name, backup_dir / name)
+    return backup_dir
+
+
+def apply_migration_bundle(bundle_path: Path) -> tuple[list[str], Path | None]:
+    extracted: dict[str, bytes] = {}
+    with zipfile.ZipFile(bundle_path) as archive:
+        for info in archive.infolist():
+            if info.is_dir():
+                continue
+            clean_name = Path(info.filename).name
+            if clean_name in allowed_migration_files():
+                extracted[clean_name] = archive.read(info)
+    if 'rds_core_web.db' not in extracted:
+        raise RuntimeError('Migration bundle must include rds_core_web.db.')
+    backup_dir = backup_existing_migration_files()
+    written: list[str] = []
+    for name, raw in extracted.items():
+        target = DATA_DIR / name
+        with open(target, 'wb') as fh:
+            fh.write(raw)
+        written.append(name)
+    return written, backup_dir
 
 
 def current_language_code(user=None, worker=None) -> str:
@@ -4981,6 +5030,99 @@ def create_account_info():
 @app.route('/main-portal', methods=['GET', 'POST'])
 def main_portal():
     return login()
+
+
+@app.route('/production-import', methods=['GET', 'POST'])
+def production_import():
+    if not production_import_enabled():
+        abort(404)
+    error_text = ''
+    success_text = ''
+    backup_path = ''
+    written_files: list[str] = []
+    if request.method == 'POST':
+        supplied_key = (request.form.get('import_key') or '').strip()
+        expected_key = production_import_key()
+        if not expected_key:
+            error_text = 'Production import key is not configured.'
+        elif not secrets.compare_digest(supplied_key, expected_key):
+            error_text = 'Import key is incorrect.'
+        else:
+            bundle = request.files.get('migration_bundle')
+            filename = (bundle.filename or '').strip() if bundle else ''
+            if not bundle or not filename.lower().endswith('.zip'):
+                error_text = 'Upload the Render migration ZIP file.'
+            else:
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    bundle_path = Path(temp_dir) / 'render_migration_bundle.zip'
+                    bundle.save(bundle_path)
+                    try:
+                        written_files, backup_dir = apply_migration_bundle(bundle_path)
+                        backup_path = str(backup_dir) if backup_dir else ''
+                        success_text = 'Migration imported successfully. Restart the Render service now so the imported database and secret key are loaded cleanly.'
+                    except Exception as exc:
+                        error_text = str(exc)
+    return render_template_string(
+        """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LedgerFlow Production Import</title>
+  <style>
+    body { margin: 0; font-family: Georgia, 'Times New Roman', serif; background: #1F1F1F; color: #F3EFE7; }
+    .shell { max-width: 760px; margin: 48px auto; padding: 32px; background: rgba(243,239,231,0.06); border: 1px solid rgba(184,173,160,0.28); border-radius: 22px; box-shadow: 0 24px 60px rgba(0,0,0,0.32); }
+    h1 { margin: 0 0 12px; font-size: 32px; }
+    p, li, label { color: #D8D2C8; line-height: 1.6; }
+    .eyebrow { text-transform: uppercase; letter-spacing: 0.18em; font-size: 12px; color: #B8ADA0; margin-bottom: 12px; }
+    .notice { padding: 14px 16px; border-radius: 14px; margin: 18px 0; }
+    .error { background: rgba(158,76,76,0.24); border: 1px solid rgba(255,155,155,0.28); color: #ffe1de; }
+    .success { background: rgba(105,132,94,0.24); border: 1px solid rgba(170,214,161,0.28); color: #efffe7; }
+    .card { background: rgba(255,255,255,0.03); border: 1px solid rgba(184,173,160,0.2); border-radius: 18px; padding: 20px; margin-top: 20px; }
+    input[type=password], input[type=file] { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(184,173,160,0.35); background: rgba(243,239,231,0.96); color: #1F1F1F; box-sizing: border-box; margin-top: 8px; margin-bottom: 18px; }
+    button { background: #8A7A67; color: #F3EFE7; border: none; border-radius: 999px; padding: 14px 22px; font-weight: 700; cursor: pointer; }
+    code { background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="eyebrow">LedgerFlow Production Import</div>
+    <h1>Upload your live data bundle</h1>
+    <p>Use this one-time page only after your Render persistent disk is attached. Upload the ZIP bundle from your Desktop to move your real businesses, team members, email settings, and login data into production.</p>
+    {% if error_text %}<div class="notice error">{{ error_text }}</div>{% endif %}
+    {% if success_text %}<div class="notice success">{{ success_text }}</div>{% endif %}
+    <div class="card">
+      <form method="post" enctype="multipart/form-data">
+        <label for="import_key">Production Import Key</label>
+        <input id="import_key" name="import_key" type="password" autocomplete="off" required>
+        <label for="migration_bundle">Render Migration ZIP</label>
+        <input id="migration_bundle" name="migration_bundle" type="file" accept=".zip" required>
+        <button type="submit">Import Production Data</button>
+      </form>
+    </div>
+    <div class="card">
+      <p><strong>Bundle must contain:</strong></p>
+      <ul>
+        <li><code>rds_core_web.db</code></li>
+        <li><code>email_runtime_config.json</code></li>
+        <li><code>.local_secret_key</code></li>
+      </ul>
+      {% if written_files %}
+      <p><strong>Imported now:</strong> {{ written_files|join(', ') }}</p>
+      {% endif %}
+      {% if backup_path %}
+      <p><strong>Backup created on Render:</strong> <code>{{ backup_path }}</code></p>
+      {% endif %}
+      <p>After a successful import, restart the Render service once so the imported database and secret key are picked up cleanly.</p>
+    </div>
+  </div>
+</body>
+</html>""",
+        error_text=error_text,
+        success_text=success_text,
+        backup_path=backup_path,
+        written_files=written_files,
+    )
 
 
 @app.route('/business-comeback')
