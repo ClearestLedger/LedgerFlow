@@ -1,7 +1,6 @@
-from flask import Flask
-
-app = Flask(__name__)
-
-@app.route("/")
-def home():
-    return "LedgerFlow is running"
+Flask==3.0.3
+Werkzeug==3.0.3
+geopy==2.4.1
+gunicorn==22.0.0
+cryptography==42.0.8
+waitress>=3.0.0
