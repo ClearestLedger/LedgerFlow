@@ -3,44 +3,44 @@
 {% set current_tier = subscription_tier_map.get(client.service_level or 'self_service', subscription_tier_map.get('self_service')) %}
 <div class='toolbar hero-toolbar'>
   <div>
-    <div class='page-kicker'>Billing Workspace</div>
-    <div class='page-title'>{{ client.business_name }} &middot; Billing Center</div>
-    <div class='page-subtitle'>Subscription billing, method on file, and one-time administrator fees in one calm premium billing workspace.</div>
+    <div class='page-kicker'>{{ tr('Billing Workspace') }}</div>
+    <div class='page-title'>{{ client.business_name }} &middot; {{ tr('Billing Center') }}</div>
+    <div class='page-subtitle'>{{ tr('Subscription billing, method on file, and one-time administrator fees in one calm premium billing workspace.') }}</div>
   </div>
-  {% if current_user.role=='admin' %}<a class='btn btn-secondary' href='{{ url_for("cpa_dashboard", client_id=client_id) }}'>Back to Administrator</a>{% endif %}
+  {% if current_user.role=='admin' %}<a class='btn btn-secondary' href='{{ url_for("cpa_dashboard", client_id=client_id) }}'>{{ tr('Back to Administrator') }}</a>{% endif %}
 </div>
 
 <div class='card hero-surface' style='margin-bottom:16px'>
-  <div class='card-head'><h3>Billing Center</h3><span class='badge'>Subscription + Administrator Fees</span></div>
+  <div class='card-head'><h3>{{ tr('Billing Center') }}</h3><span class='badge'>{{ tr('Subscription + Administrator Fees') }}</span></div>
   <div class='grid cards-4'>
-    <div class='card stat-card premium-stat'><h3>Subscription Plan</h3><div class='metric'>{{ current_tier.label if current_tier else (client.subscription_plan_code or 'Not set') }}</div><div class='small'>{{ current_tier.plan_code if current_tier else 'Recurring monthly service' }}</div></div>
-    <div class='card stat-card premium-stat'><h3>Subscription Status</h3><div class='metric'>{{ subscription_status_labels.get(client.subscription_status or 'inactive', 'Inactive') }}</div><div class='small'>Next billing {{ client.subscription_next_billing_date or 'not scheduled' }}</div></div>
-    <div class='card stat-card premium-stat'><h3>Method On File</h3><div class='metric'>{{ payment_method_summary.default_label or 'No default method on file' }}</div><div class='small'>{{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}</div></div>
-    <div class='card stat-card premium-stat premium-stat-accent'><h3>Administrator Fees Due</h3><div class='metric'>${{ '%.2f'|format(payment_summary.amount_due or 0) }}</div><div class='small'>{{ payment_summary.pending_count or 0 }} open one-time fee{% if (payment_summary.pending_count or 0) != 1 %}s{% endif %}</div></div>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Subscription Plan') }}</h3><div class='metric'>{{ current_tier.label if current_tier else (client.subscription_plan_code or tr('Not set')) }}</div><div class='small'>{{ current_tier.plan_code if current_tier else tr('Recurring monthly service') }}</div></div>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Subscription Status') }}</h3><div class='metric'>{{ subscription_status_labels.get(client.subscription_status or 'inactive', 'Inactive') }}</div><div class='small'>{{ tr('Next billing') }} {{ client.subscription_next_billing_date or tr('not scheduled') }}</div></div>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Method On File') }}</h3><div class='metric'>{{ payment_method_summary.default_label or tr('No default method on file') }}</div><div class='small'>{{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}</div></div>
+    <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Administrator Fees') }}</h3><div class='metric'>${{ '%.2f'|format(payment_summary.amount_due or 0) }}</div><div class='small'>{{ payment_summary.pending_count or 0 }} {{ tr('Open Fees') }}</div></div>
   </div>
   <div class='summary-strip' style='margin-top:12px'>
-    <span class='summary-pill'>Recurring subscription tracked separately</span>
-    <span class='summary-pill'>One-time administrator fees tracked separately</span>
-    <span class='summary-pill'>Method on file {{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}</span>
+    <span class='summary-pill'>{{ tr('Recurring subscription tracked separately') }}</span>
+    <span class='summary-pill'>{{ tr('One-time administrator fees tracked separately') }}</span>
+    <span class='summary-pill'>{{ tr('Method on file') }} {{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}</span>
   </div>
 </div>
 
 {% if payment_summary.pending_count %}
 <div class='card action-banner action-banner-danger' style='margin-bottom:16px'>
-  <div class='card-head'><h3>Administrator Fee Due</h3><span class='badge'>Action Needed</span></div>
+  <div class='card-head'><h3>{{ tr('Amount Due') }}</h3><span class='badge'>{{ tr('Action Needed') }}</span></div>
   <div class='metric'>${{ '%.2f'|format(payment_summary.amount_due or 0) }}</div>
   <div class='small' style='margin-top:8px'><strong>{{ open_fee_guidance.headline }}</strong> {{ open_fee_guidance.detail }} These charges are owed by your business to your administrator and are separate from your customer payments.</div>
   <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:12px'>
-    <a class='btn btn-secondary btn-sm' href='#administrator-fees'>Review Administrator Fees</a>
-    <a class='btn btn-secondary btn-sm' href='#payment-methods'>Manage Method On File</a>
+    <a class='btn btn-secondary btn-sm' href='#administrator-fees'>{{ tr('Review Administrator Fees') }}</a>
+    <a class='btn btn-secondary btn-sm' href='#payment-methods'>{{ tr('Manage Method On File') }}</a>
   </div>
 </div>
 {% endif %}
 
 <div class='card section-frame' id='subscription-billing' style='margin-bottom:16px'>
-  <div class='card-head'><h3>Subscription Billing</h3><span class='badge'>Recurring Service</span></div>
+  <div class='card-head'><h3>{{ tr('Subscription Billing') }}</h3><span class='badge'>{{ tr('Recurring Service') }}</span></div>
   <div class='tier-rollout-note' style='margin-bottom:14px'>
-    This live portal is billed as a private administrator-managed client service. Your selected plan and method on file are active now, while fully automated self-checkout and premium banking tools continue through final rollout.
+    {{ tr('This live portal is billed as a private administrator-managed client service. Your selected plan and method on file are active now, while fully automated self-checkout and premium banking tools continue through final rollout.') }}
   </div>
   <div class='grid cards-3' style='margin-bottom:12px'>
     <div class='card stat-card premium-stat'><h3>Monthly Subscription</h3><div class='metric'>${{ '%.2f'|format(client.subscription_amount or 0) }}</div><div class='small'>{{ client.subscription_plan_code or 'No plan code recorded yet' }}</div></div>
@@ -64,16 +64,16 @@
       </ul>
       {% if tier.coming_soon %}
       <div class='subscription-tier-coming-soon'>
-        <strong>Coming Soon:</strong> {{ tier.coming_soon|join(', ') }}
+        <strong>{{ tr('Coming Soon:') }}</strong> {{ tier.coming_soon|join(', ') }}
       </div>
       {% endif %}
     </div>
     {% endfor %}
   </div>
-  <div class='small'>Use one default payment method for subscription billing and optionally keep one backup on file. Full card storage and live autopay are not running inside this app.</div>
+  <div class='small'>{{ tr('Use one default payment method for subscription billing and optionally keep one backup on file. Full card storage and live autopay are not running inside this app.') }}</div>
 
   <details id='payment-methods' class='compact-details' style='margin-top:14px'>
-    <summary>Update Method On File</summary>
+    <summary>{{ tr('Update Method On File') }}</summary>
     <div style='margin-top:14px'>
       <form method='post' class='form-grid payment-method-form card' style='margin-bottom:12px;box-shadow:none;border:1px solid #E6ECF2'>
         <input type='hidden' name='action' value='add_payment_method'>
@@ -135,17 +135,17 @@
 </div>
 
 <div class='card section-frame' id='administrator-fees'>
-  <div class='card-head'><h3>Administrator Fees</h3><span class='badge'>One-Time Charges</span></div>
+  <div class='card-head'><h3>{{ tr('Administrator Fees') }}</h3><span class='badge'>{{ tr('One-Time Charges') }}</span></div>
   <div class='grid cards-3' style='margin-bottom:14px'>
-    <div class='card stat-card premium-stat premium-stat-accent'><h3>Amount Due</h3><div class='metric big'>${{ '%.2f'|format(payment_summary.amount_due or 0) }}</div><div class='small'>Open administrator fees awaiting action</div></div>
-    <div class='card stat-card premium-stat'><h3>Open Fees</h3><div class='metric big'>{{ payment_summary.pending_count or 0 }}</div><div class='small'>Pending or processing items</div></div>
-    <div class='card stat-card premium-stat'><h3>Fee History</h3><div class='metric big'>${{ '%.2f'|format(payment_summary.paid_total or 0) }}</div><div class='small'>Previously completed administrator fees</div></div>
+    <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Amount Due') }}</h3><div class='metric big'>${{ '%.2f'|format(payment_summary.amount_due or 0) }}</div><div class='small'>{{ tr('Open administrator fees awaiting action') }}</div></div>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Open Fees') }}</h3><div class='metric big'>{{ payment_summary.pending_count or 0 }}</div><div class='small'>{{ tr('Pending or processing items') }}</div></div>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Fee History') }}</h3><div class='metric big'>${{ '%.2f'|format(payment_summary.paid_total or 0) }}</div><div class='small'>{{ tr('Previously completed administrator fees') }}</div></div>
   </div>
 
   {% set open_rows = payment_rows|rejectattr('status', 'eq', 'paid')|rejectattr('status', 'eq', 'cancelled')|list %}
   {% if open_rows %}
     <table class='table'>
-      <tr><th>Description</th><th>Due Date</th><th>Status</th><th>Collection Method</th><th>Amount</th><th>Next Step</th></tr>
+      <tr><th>{{ tr('Description') }}</th><th>{{ tr('Due Date') }}</th><th>{{ tr('Status') }}</th><th>{{ tr('Collection Method') }}</th><th>{{ tr('Amount') }}</th><th>{{ tr('Next Step') }}</th></tr>
       {% for row in open_rows %}
       {% set guidance = fee_collection_guidance(row) %}
       <tr>

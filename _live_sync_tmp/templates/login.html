@@ -9,10 +9,10 @@
 <body class='login-body'>
   <div class='login-brand-watermark'>LEDGERFLOW</div>
   <div class='login-floating-marks' aria-hidden='true'>
-    <span class='mark-one'>Billing</span>
-    <span class='mark-two'>Payroll</span>
-    <span class='mark-three'>Tax Ready</span>
-    <span class='mark-four'>Calendar</span>
+    <span class='mark-one'>{{ tr('Billing') }}</span>
+    <span class='mark-two'>{{ tr('Payroll') }}</span>
+    <span class='mark-three'>{{ tr('Tax Ready') }}</span>
+    <span class='mark-four'>{{ tr('Calendar') }}</span>
   </div>
   <div class='login-wrap login-wrap-split'>
     <div class='login-stage'>
@@ -76,22 +76,22 @@
     </div>
   </div>
   <div class='login-bottom-rail' aria-label='Platform functions'>
-    <span>Payroll</span>
-    <span>Income Records</span>
-    <span>Billing</span>
+    <span>{{ tr('Payroll') }}</span>
+    <span>{{ tr('Income Records') }}</span>
+    <span>{{ tr('Billing') }}</span>
     <span>Payroll Tax</span>
-    <span>Calendar</span>
-    <span>Worker Portal</span>
-    <span>Administrator Fees</span>
-    <a href='{{ url_for("create_account_info") }}'>Marketing Video Coming Soon</a>
+    <span>{{ tr('Calendar') }}</span>
+    <span>{{ tr('Worker Portal') }}</span>
+    <span>{{ tr('Administrator Fees') }}</span>
+    <a href='{{ url_for("create_account_info") }}'>{{ tr('Marketing Video Coming Soon') }}</a>
   </div>
   <div class='login-portal-footer'>
-    <div class='login-portal-footer-copy'>Private invited-client rollout. Core portal functions are live and actively administered while final improvements continue.</div>
+    <div class='login-portal-footer-copy'>{{ tr('Private invited-client rollout. Core portal functions are live and actively administered while final improvements continue.') }}</div>
     <div class='login-portal-footer-links'>
-      <a href='{{ url_for("trust_center") }}#rollout'>Rollout Notice</a>
-      <a href='{{ url_for("trust_center") }}#privacy'>Privacy Notice</a>
-      <a href='{{ url_for("trust_center") }}#terms'>Terms of Use</a>
-      <a href='{{ url_for("trust_center") }}#security'>Security &amp; Data</a>
+      <a href='{{ url_for("trust_center") }}#rollout'>{{ tr('Rollout Notice') }}</a>
+      <a href='{{ url_for("trust_center") }}#privacy'>{{ tr('Privacy Notice') }}</a>
+      <a href='{{ url_for("trust_center") }}#terms'>{{ tr('Terms of Use') }}</a>
+      <a href='{{ url_for("trust_center") }}#security'>{{ tr('Security & Data') }}</a>
     </div>
   </div>
 <script>

@@ -28,9 +28,9 @@
         <div><label>{{ tr('Business Email') }}</label><input name='email' value='{{ request.form.get("email", client.email or current_user.email or "") }}' required></div>
         <div><label>{{ tr('Business Phone') }}</label><input name='phone' value='{{ request.form.get("phone", client.phone or "") }}' required></div>
         <div><label>{{ tr('Preferred Language') }}</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if request.form.get("preferred_language", current_language) == option.code %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
-        <div><label>EIN</label><input name='ein' value='{{ request.form.get("ein", client.ein or "") }}' placeholder='XX-XXXXXXX'></div>
+        <div><label>{{ tr('EIN') }}</label><input name='ein' value='{{ request.form.get("ein", client.ein or "") }}' placeholder='XX-XXXXXXX'></div>
         <div style='grid-column:1 / -1'><label>{{ tr('Business Address') }}</label><input name='address' value='{{ request.form.get("address", client.address or "") }}' required></div>
-        <div style='grid-column:1 / -1'><label>{{ tr('Billing Notes (optional)') }}</label><input name='billing_notes' value='{{ request.form.get("billing_notes", client.billing_notes or "") }}' placeholder='Anything your administrator should know about billing or contact preferences'></div>
+        <div style='grid-column:1 / -1'><label>{{ tr('Billing Notes (optional)') }}</label><input name='billing_notes' value='{{ request.form.get("billing_notes", client.billing_notes or "") }}' placeholder='{{ tr("Anything your administrator should know about billing or contact preferences") }}'></div>
       </div>
     </section>
 
@@ -56,7 +56,7 @@
           </ul>
           {% if tier.coming_soon %}
           <div class='subscription-tier-coming-soon'>
-            <strong>Coming Soon:</strong> {{ tier.coming_soon|join(', ') }}
+            <strong>{{ tr('Coming Soon:') }}</strong> {{ tier.coming_soon|join(', ') }}
           </div>
           {% endif %}
         </label>
@@ -66,42 +66,42 @@
         <div class='card stat-card premium-stat'>
           <h3>{{ tr('Plan Code') }}</h3>
           <div class='metric' id='planCodePreview'>{{ (client.subscription_plan_code or subscription_tier_map.get(selected_level, subscription_tier_map.get("self_service")).plan_code) if not request.form.get("service_level") else '' }}</div>
-          <div class='small'>Assigned automatically from your selected tier</div>
+          <div class='small'>{{ tr('Assigned automatically from your selected tier') }}</div>
         </div>
         <div class='card stat-card premium-stat premium-stat-accent'>
           <h3>{{ tr('Monthly Subscription') }}</h3>
           <div class='metric' id='subscriptionAmountPreview'>${{ '%.2f'|format(suggested_subscription_amount or 0) }}</div>
-          <div class='small'>Suggested monthly platform fee for your selected tier</div>
+          <div class='small'>{{ tr('Suggested monthly platform fee for your selected tier') }}</div>
         </div>
         <div class='card stat-card premium-stat'>
           <h3>{{ tr('Billing Start Date') }}</h3>
           <div class='metric'>
             <input name='subscription_start_date' type='date' value='{{ request.form.get("subscription_start_date", client.subscription_next_billing_date or today) }}' required>
           </div>
-          <div class='small'>This becomes your first recorded billing date</div>
+          <div class='small'>{{ tr('This becomes your first recorded billing date') }}</div>
         </div>
       </div>
       <div class='tier-rollout-note' style='margin-top:12px'>
-        This private client rollout uses administrator-managed billing. Your selected plan, pricing, and method on file are saved now so billing can begin immediately, while self-service autopay and premium banking tools continue through final buildout.
+        {{ tr('This private client rollout uses administrator-managed billing. Your selected plan, pricing, and method on file are saved now so billing can begin immediately, while self-service autopay and premium banking tools continue through final buildout.') }}
       </div>
       <label class='small' style='display:block;margin-top:10px'><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if request.form.get("subscription_autopay_enabled", '1' if client.subscription_autopay_enabled else '') %}checked{% endif %}> {{ tr('Keep this method on file for subscription billing.') }}</label>
     </section>
 
     <section class='card section-frame' style='grid-column:1 / -1'>
       <div class='card-head'><h3>{{ tr('Method On File') }}</h3><span class='badge'>{{ tr('Required') }}</span></div>
-      <div class='small' style='margin-bottom:14px'>Add the payment method your business wants on file for subscription billing. This creates or updates your default billing method.</div>
+      <div class='small' style='margin-bottom:14px'>{{ tr('Add the payment method your business wants on file for subscription billing. This creates or updates your default billing method.') }}</div>
       <div class='form-grid payment-method-form onboarding-method-form'>
-        <div><label>Method Type</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if request.form.get("method_type", default_method.method_type if default_method else "card") == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-        <div><label>Method Label</label><input name='label' value='{{ request.form.get("label", default_method.label if default_method else "") }}' placeholder='Primary business card or Operating ACH' required></div>
-        <div class='pm-field pm-card pm-ach pm-zelle'><label>Card Brand / Bank Name</label><input name='brand_name' value='{{ request.form.get("brand_name", default_method.brand_name if default_method else "") }}' placeholder='Visa or Chase Business Checking'></div>
-        <div class='pm-field pm-card pm-ach pm-zelle'><label>Account Holder Name</label><input name='holder_name' value='{{ request.form.get("holder_name", default_method.holder_name if default_method else client.contact_name or current_user.full_name or "") }}' placeholder='Business legal name'></div>
-        <div class='pm-field pm-card pm-ach pm-zelle'><label>Last 4 Digits</label><input name='account_last4' value='{{ request.form.get("account_last4", default_method.account_last4 if default_method else "") }}' inputmode='numeric' maxlength='4' placeholder='4242'></div>
-        <div class='pm-field pm-card'><label>Expiration (MM/YY)</label><input name='expiry_display' value='{{ request.form.get("expiry_display", default_method.expiry_display if default_method else "") }}' maxlength='5' placeholder='08/28'></div>
-        <div class='pm-field pm-ach'><label>Account Type</label><select name='account_type'><option value='checking' {% if request.form.get("account_type", default_method.account_type if default_method else "checking") == "checking" %}selected{% endif %}>Checking</option><option value='savings' {% if request.form.get("account_type", default_method.account_type if default_method else "") == "savings" %}selected{% endif %}>Savings</option></select></div>
-        <div class='pm-field pm-ach'><label>Routing Number</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='{% if default_method and default_method.method_type == "ach" %}Leave blank to keep current{% else %}9 digits{% endif %}'></div>
-        <div class='pm-field pm-ach'><label>Account Number</label><input name='account_number' inputmode='numeric' placeholder='{% if default_method and default_method.method_type == "ach" %}Leave blank to keep current{% else %}Enter account number{% endif %}'></div>
-        <div class='pm-field pm-ach'><label>Confirm Account Number</label><input name='confirm_account_number' inputmode='numeric' placeholder='Re-enter account number'></div>
-        <div style='grid-column:1 / -1'><label>Note (optional)</label><input name='details_note' value='{{ request.form.get("details_note", default_method.details_note if default_method else "") }}' placeholder='Optional billing contact or setup note'></div>
+        <div><label>{{ tr('Method Type') }}</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if request.form.get("method_type", default_method.method_type if default_method else "card") == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div><label>{{ tr('Method Label') }}</label><input name='label' value='{{ request.form.get("label", default_method.label if default_method else "") }}' placeholder='{{ tr("Primary business card or Operating ACH") }}' required></div>
+        <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank Name') }}</label><input name='brand_name' value='{{ request.form.get("brand_name", default_method.brand_name if default_method else "") }}' placeholder='{{ tr("Visa or Chase Business Checking") }}'></div>
+        <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Account Holder Name') }}</label><input name='holder_name' value='{{ request.form.get("holder_name", default_method.holder_name if default_method else client.contact_name or current_user.full_name or "") }}' placeholder='{{ tr("Business legal name") }}'></div>
+        <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Last 4 Digits') }}</label><input name='account_last4' value='{{ request.form.get("account_last4", default_method.account_last4 if default_method else "") }}' inputmode='numeric' maxlength='4' placeholder='4242'></div>
+        <div class='pm-field pm-card'><label>{{ tr('Expiration (MM/YY)') }}</label><input name='expiry_display' value='{{ request.form.get("expiry_display", default_method.expiry_display if default_method else "") }}' maxlength='5' placeholder='08/28'></div>
+        <div class='pm-field pm-ach'><label>{{ tr('Account Type') }}</label><select name='account_type'><option value='checking' {% if request.form.get("account_type", default_method.account_type if default_method else "checking") == "checking" %}selected{% endif %}>{{ tr('Checking') }}</option><option value='savings' {% if request.form.get("account_type", default_method.account_type if default_method else "") == "savings" %}selected{% endif %}>{{ tr('Savings') }}</option></select></div>
+        <div class='pm-field pm-ach'><label>{{ tr('Routing Number') }}</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='{% if default_method and default_method.method_type == "ach" %}{{ tr("Leave blank to keep current") }}{% else %}{{ tr("9 digits") }}{% endif %}'></div>
+        <div class='pm-field pm-ach'><label>{{ tr('Account Number') }}</label><input name='account_number' inputmode='numeric' placeholder='{% if default_method and default_method.method_type == "ach" %}{{ tr("Leave blank to keep current") }}{% else %}{{ tr("Enter account number") }}{% endif %}'></div>
+        <div class='pm-field pm-ach'><label>{{ tr('Confirm Account Number') }}</label><input name='confirm_account_number' inputmode='numeric' placeholder='{{ tr("Re-enter account number") }}'></div>
+        <div style='grid-column:1 / -1'><label>{{ tr('Note (optional)') }}</label><input name='details_note' value='{{ request.form.get("details_note", default_method.details_note if default_method else "") }}' placeholder='{{ tr("Optional billing contact or setup note") }}'></div>
         <input type='hidden' name='status' value='active'>
         <input type='hidden' name='is_default' value='1'>
       </div>
@@ -109,7 +109,7 @@
 
     <section class='card section-frame' style='grid-column:1 / -1'>
       <div class='card-head'><h3>{{ tr('Finish Setup') }}</h3><span class='badge'>{{ tr('Unlock Access') }}</span></div>
-      <div class='small' style='margin-bottom:12px'>When you complete this step, LedgerFlow will save your business profile, activate your subscription record, save your method on file, and unlock your full business workspace.</div>
+      <div class='small' style='margin-bottom:12px'>{{ tr('When you complete this step, LedgerFlow will save your business profile, activate your subscription record, save your method on file, and unlock your full business workspace.') }}</div>
       <div style='display:flex;gap:10px;flex-wrap:wrap'>
         <button type='submit'>{{ tr('Complete Setup & Unlock Workspace') }}</button>
         <a class='btn btn-secondary' href='{{ url_for("logout") }}'>{{ tr('Finish Later') }}</a>

@@ -38,7 +38,7 @@
     <div>
       <div class='business-welcome-kicker'>{{ tr('Welcome') }}</div>
       <div class='business-welcome-name'>{{ worker.name }}</div>
-      <div class='business-welcome-owner'>{{ worker.role_classification or 'Team Member Portal Access' }}</div>
+      <div class='business-welcome-owner'>{{ worker.role_classification or tr('Team Member Portal Access') }}</div>
     </div>
   </div>
   <div class='app-shell worker-app-shell'>
@@ -46,7 +46,7 @@
       <div class='app-sidebar-card'>
         <div class='app-sidebar-kicker'>{{ tr('Team Member Portal') }}</div>
         <div class='app-sidebar-title'>{{ worker.name }}</div>
-        <div class='app-sidebar-subtitle'>{{ worker.business_name }} &middot; your work, pay, notices, and manager messages stay available in one clean portal menu.</div>
+        <div class='app-sidebar-subtitle'>{{ worker.business_name }} &middot; {{ tr('your work, pay, notices, and manager messages stay available in one clean portal menu.') }}</div>
       </div>
       <nav class='app-nav'>
         <div class='app-nav-group'>

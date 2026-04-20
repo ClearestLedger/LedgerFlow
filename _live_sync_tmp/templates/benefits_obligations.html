@@ -2,45 +2,45 @@
 {% block body %}
 <div class='hero-surface benefits-hero'>
   <div class='summary-strip'>
-    <span class='summary-pill'>Business guide</span>
-    <span class='summary-pill'>Official links only</span>
-    <span class='summary-pill'>Federal overview</span>
+    <span class='summary-pill'>{{ tr('Business guide') }}</span>
+    <span class='summary-pill'>{{ tr('Official links only') }}</span>
+    <span class='summary-pill'>{{ tr('Federal overview') }}</span>
   </div>
   <div class='toolbar hero-toolbar' style='margin-top:14px'>
     <div>
       <div class='page-kicker'>Benefits &amp; Obligations</div>
       <div class='page-title'>{{ client.business_name }}</div>
-      <div class='page-subtitle'>A practical business-owner guide to tax-favored benefit opportunities, federal employer obligations, and live official resources you can trust.</div>
+      <div class='page-subtitle'>{{ tr('A practical business-owner guide to tax-favored benefit opportunities, federal employer obligations, and live official resources you can trust.') }}</div>
     </div>
-    <a class='btn btn-secondary' href='{{ url_for("dashboard", client_id=client_id) }}'>Back to Overview</a>
+    <a class='btn btn-secondary' href='{{ url_for("dashboard", client_id=client_id) }}'>{{ tr('Back to Overview') }}</a>
   </div>
 </div>
 
 <div class='grid cards-4' style='margin-top:16px'>
   <div class='card stat-card premium-stat'>
-    <h3>Benefit Opportunities</h3>
+    <h3>{{ tr('Benefit Opportunities') }}</h3>
     <div class='metric'>4</div>
-    <div class='small'>Focused on health, retirement, and tax-favored benefit design.</div>
+    <div class='small'>{{ tr('Focused on health, retirement, and tax-favored benefit design.') }}</div>
   </div>
   <div class='card stat-card premium-stat'>
-    <h3>Federal Checkpoints</h3>
+    <h3>{{ tr('Federal Checkpoints') }}</h3>
     <div class='metric'>4</div>
-    <div class='small'>Use these before changing coverage, notices, or employer policy.</div>
+    <div class='small'>{{ tr('Use these before changing coverage, notices, or employer policy.') }}</div>
   </div>
   <div class='card stat-card premium-stat'>
-    <h3>Official Resources</h3>
+    <h3>{{ tr('Official Resources') }}</h3>
     <div class='metric'>{{ official_links|length }}</div>
-    <div class='small'>IRS, DOL, EBSA, and HealthCare.gov links only.</div>
+    <div class='small'>{{ tr('IRS, DOL, EBSA, and HealthCare.gov links only.') }}</div>
   </div>
   <div class='card stat-card premium-stat premium-stat-accent'>
-    <h3>Important Note</h3>
-    <div class='metric'>Size Matters</div>
-    <div class='small'>Many rules depend on workforce size, plan type, and state law.</div>
+    <h3>{{ tr('Important Note') }}</h3>
+    <div class='metric'>{{ tr('Size Matters') }}</div>
+    <div class='small'>{{ tr('Many rules depend on workforce size, plan type, and state law.') }}</div>
   </div>
 </div>
 
 <div class='card section-frame benefits-guidance-note' style='margin-top:16px'>
-  <div class='card-head'><h3>How to Use This Page</h3><span class='badge'>Practical</span></div>
+  <div class='card-head'><h3>{{ tr('How to Use This Page') }}</h3><span class='badge'>{{ tr('Practical') }}</span></div>
   <div class='small'>
     Use this page as a starting point before offering or changing employee benefits. It is designed to help you spot federal opportunities and federal obligations quickly.
     It is not a substitute for legal, payroll, tax, or benefits-plan advice. State rules, carrier rules, and plan documents may add requirements.
@@ -50,8 +50,8 @@
 <div class='benefits-layout'>
   <section class='benefits-column'>
     <div class='benefits-column-head'>
-      <div class='page-kicker'>Opportunity Lane</div>
-      <h2>Ways benefits may help the business</h2>
+      <div class='page-kicker'>{{ tr('Opportunity Lane') }}</div>
+      <h2>{{ tr('Ways benefits may help the business') }}</h2>
       <p class='small'>These are the areas where employers commonly find tax-favored structures, retention value, or owner-planning advantages when set up correctly.</p>
     </div>
     {% for section in opportunity_sections %}
@@ -61,7 +61,7 @@
           <div class='small-label'>{{ section.eyebrow }}</div>
           <h3>{{ section.title }}</h3>
         </div>
-        <span class='status-chip sent'>Opportunity</span>
+        <span class='status-chip sent'>{{ tr('Opportunity') }}</span>
       </div>
       <p class='small benefits-topic-summary'>{{ section.summary }}</p>
       <ul class='benefits-bullets'>
@@ -80,18 +80,18 @@
 
   <section class='benefits-column'>
     <div class='benefits-column-head'>
-      <div class='page-kicker'>Compliance Lane</div>
-      <h2>What to review before you offer benefits</h2>
+      <div class='page-kicker'>{{ tr('Compliance Lane') }}</div>
+      <h2>{{ tr('What to review before you offer benefits') }}</h2>
       <p class='small'>These checkpoints help business owners avoid assuming a rule applies everywhere or missing a rule that turns on size, plan type, or coverage design.</p>
     </div>
     {% for section in obligation_sections %}
     <article class='card benefits-topic-card obligations-card'>
       <div class='benefits-topic-head'>
         <div>
-          <div class='small-label'>Federal checkpoint</div>
+          <div class='small-label'>{{ tr('Federal checkpoint') }}</div>
           <h3>{{ section.title }}</h3>
         </div>
-        <span class='status-chip accepted'>Review</span>
+        <span class='status-chip accepted'>{{ tr('Review') }}</span>
       </div>
       <p class='small benefits-topic-summary'>{{ section.summary }}</p>
       <ul class='benefits-bullets'>
@@ -110,7 +110,7 @@
 </div>
 
 <div class='card section-frame' style='margin-top:18px'>
-  <div class='card-head'><h3>Official Resource Library</h3><span class='badge'>Live Links</span></div>
+  <div class='card-head'><h3>{{ tr('Official Resource Library') }}</h3><span class='badge'>{{ tr('Live Links') }}</span></div>
   <div class='benefits-resource-grid'>
     {% for link in official_links %}
     <a class='benefits-resource-card' href='{{ link.url }}' target='_blank' rel='noopener noreferrer'>

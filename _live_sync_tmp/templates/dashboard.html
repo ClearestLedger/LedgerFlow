@@ -8,7 +8,7 @@
     <div class='welcome-business-name'>{{ client.business_name }}</div>
     <div class='welcome-owner-name'>{{ client.contact_name or current_user.full_name or '' }}</div>
     {% else %}
-    <div class='welcome-kicker'>Welcome Business</div>
+    <div class='welcome-kicker'>{{ tr('Welcome Business') }}</div>
     <div class='welcome-business-name'>{{ client.business_name }}</div>
     <div class='welcome-owner-name'>{{ client.contact_name or current_user.full_name or '' }}</div>
     {% endif %}
@@ -18,96 +18,96 @@
 <div class='toolbar hero-toolbar'>
   {% if current_user.role=='admin' %}
   <form method='get' class='inline-form'>
-    <label>Business</label>
+    <label>{{ tr('Business') }}</label>
     <select name='client_id' onchange='this.form.submit()'>
       {% for c in all_clients %}<option value='{{ c.id }}' {% if c.id==client_id %}selected{% endif %}>{{ c.business_name }}</option>{% endfor %}
     </select>
   </form>
   {% endif %}
   <div>
-    <div class='page-kicker'>Business Workspace</div>
+    <div class='page-kicker'>{{ tr('Business Workspace') }}</div>
     <div class='page-title'>{{ client.business_name }}</div>
-    <div class='page-subtitle'>Financial control, billing visibility, payroll context, and day-to-day business performance in one executive workspace.</div>
+    <div class='page-subtitle'>{{ tr('Financial control, billing visibility, payroll context, and day-to-day business performance in one executive workspace.') }}</div>
   </div>
-  <button onclick='window.print()' class='btn btn-secondary' type='button'>Print Dashboard</button>
+  <button onclick='window.print()' class='btn btn-secondary' type='button'>{{ tr('Print Dashboard') }}</button>
 </div>
 
 {% if current_user.role != 'admin' %}
 <div class='card section-frame' style='margin-bottom:16px'>
-  <div class='card-head'><h3>Subscription Billing</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>Open Billing</a></div>
+  <div class='card-head'><h3>{{ tr('Subscription Billing') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Open Billing') }}</a></div>
   <div class='grid cards-4'>
-    <div class='card stat-card premium-stat'><h3>Plan</h3><div class='metric'>{{ client.subscription_plan_code or 'Not set' }}</div></div>
-    <div class='card stat-card premium-stat'><h3>Status</h3><div class='metric'>{{ subscription_status_labels.get(client.subscription_status or 'inactive', 'Inactive') }}</div></div>
-    <div class='card stat-card premium-stat'><h3>Monthly Fee</h3><div class='metric'>${{ '%.2f'|format(client.subscription_amount or 0) }}</div></div>
-    <div class='card stat-card premium-stat premium-stat-accent'><h3>Next Billing Date</h3><div class='metric'>{{ client.subscription_next_billing_date or '&mdash;' }}</div></div>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Plan') }}</h3><div class='metric'>{{ client.subscription_plan_code or tr('Not set') }}</div></div>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Status') }}</h3><div class='metric'>{{ subscription_status_labels.get(client.subscription_status or 'inactive', 'Inactive') }}</div></div>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Monthly Fee') }}</h3><div class='metric'>${{ '%.2f'|format(client.subscription_amount or 0) }}</div></div>
+    <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Next Billing Date') }}</h3><div class='metric'>{{ client.subscription_next_billing_date or '&mdash;' }}</div></div>
   </div>
-  <div class='small' style='margin-top:10px'>Method on file: <strong>{{ payment_method_summary.default_label or 'No method recorded yet' }}</strong>{% if payment_method_summary.default_label %} ({{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}){% endif %}. Open Billing to manage the subscription method on file and any one-time administrator fees.</div>
+  <div class='small' style='margin-top:10px'>{{ tr('Method on file') }}: <strong>{{ payment_method_summary.default_label or tr('No method recorded yet') }}</strong>{% if payment_method_summary.default_label %} ({{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}){% endif %}. {{ tr('Open Billing to manage the subscription method on file and any one-time administrator fees.') }}</div>
 </div>
 {% if admin_fee_summary and admin_fee_summary.pending_count %}
 <div class='card billing-inline-alert' style='margin-bottom:16px'>
-  <div class='card-head'><h3>Administrator Fee Notice</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>Review Fees</a></div>
-  <div class='small'><strong>${{ '%.2f'|format(admin_fee_summary.amount_due or 0) }}</strong> across {{ admin_fee_summary.pending_count or 0 }} open fee{% if (admin_fee_summary.pending_count or 0) != 1 %}s{% endif %}. {{ open_fee_guidance.detail }} This stays separate from your day-to-day customer payment activity.</div>
+  <div class='card-head'><h3>{{ tr('Administrator Fee Notice') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Review Fees') }}</a></div>
+  <div class='small'><strong>${{ '%.2f'|format(admin_fee_summary.amount_due or 0) }}</strong> {{ tr('across') }} {{ admin_fee_summary.pending_count or 0 }} {{ tr('open fee items') }}. {{ open_fee_guidance.detail }} {{ tr('This stays separate from your day-to-day customer payment activity.') }}</div>
 </div>
 {% endif %}
 {% endif %}
 
 <div class='grid cards-4'>
-  <div class='card stat-card'><h3>Income Snapshot</h3><div class='metric big'>${{ '%.2f'|format(summary.gross_income) }}</div><div class='small'>{{ summary.invoice_count }} income records saved</div></div>
-  <div class='card stat-card'><h3>Expenses</h3><div class='metric'>Gas: ${{ '%.2f'|format(summary.gas_total) }}<br>Materials: ${{ '%.2f'|format(summary.materials_total) }}<br>Team Members: ${{ '%.2f'|format(summary.worker_total) }}</div></div>
-  <div class='card stat-card'><h3>Tax Foundation</h3><div class='metric'>Operating Profit: ${{ '%.2f'|format(summary.operating_profit) }}<br>Adjusted Profit: ${{ '%.2f'|format(summary.adjusted_profit) }}<br>SE Tax: ${{ '%.2f'|format(summary.self_employment_tax_estimate) }}<br>Total Est.: ${{ '%.2f'|format(summary.federal_plus_se_estimate) }}</div></div>
-  <div class='card stat-card'><h3>Mileage Deduction</h3><div class='metric'>Miles: {{ '%.2f'|format(summary.mileage_miles) }}<br>Deduction: ${{ '%.2f'|format(summary.mileage_deduction) }}</div></div>
+  <div class='card stat-card'><h3>{{ tr('Income Snapshot') }}</h3><div class='metric big'>${{ '%.2f'|format(summary.gross_income) }}</div><div class='small'>{{ summary.invoice_count }} {{ tr('income records saved') }}</div></div>
+  <div class='card stat-card'><h3>{{ tr('Expenses') }}</h3><div class='metric'>{{ tr('Gas') }}: ${{ '%.2f'|format(summary.gas_total) }}<br>{{ tr('Materials') }}: ${{ '%.2f'|format(summary.materials_total) }}<br>{{ tr('Team Members') }}: ${{ '%.2f'|format(summary.worker_total) }}</div></div>
+  <div class='card stat-card'><h3>{{ tr('Tax Foundation') }}</h3><div class='metric'>{{ tr('Operating Profit') }}: ${{ '%.2f'|format(summary.operating_profit) }}<br>{{ tr('Adjusted Profit') }}: ${{ '%.2f'|format(summary.adjusted_profit) }}<br>{{ tr('SE Tax') }}: ${{ '%.2f'|format(summary.self_employment_tax_estimate) }}<br>{{ tr('Total Est.') }}: ${{ '%.2f'|format(summary.federal_plus_se_estimate) }}</div></div>
+  <div class='card stat-card'><h3>{{ tr('Mileage Deduction') }}</h3><div class='metric'>{{ tr('Miles') }}: {{ '%.2f'|format(summary.mileage_miles) }}<br>{{ tr('Deduction') }}: ${{ '%.2f'|format(summary.mileage_deduction) }}</div></div>
 </div>
 <div class='grid cards-2' style='margin-top:16px'>
   <div class='card'>
-    <div class='card-head'><h3>Recent Income Records</h3><a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}'>Add Income Record</a></div>
-    <table class='table'><tr><th>Job #</th><th>Date</th><th>Customer</th><th>Amount</th></tr>{% for row in invoices %}<tr><td>{{ row.job_number or row.id }}</td><td>{{ row.invoice_date }}</td><td>{{ row.client_name }}</td><td>${{ '%.2f'|format(row.paid_amount or 0) }}</td></tr>{% endfor %}</table>
+    <div class='card-head'><h3>{{ tr('Recent Income Records') }}</h3><a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Add Income Record') }}</a></div>
+    <table class='table'><tr><th>{{ tr('Job #') }}</th><th>{{ tr('Date') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Amount') }}</th></tr>{% for row in invoices %}<tr><td>{{ row.job_number or row.id }}</td><td>{{ row.invoice_date }}</td><td>{{ row.client_name }}</td><td>${{ '%.2f'|format(row.paid_amount or 0) }}</td></tr>{% endfor %}</table>
   </div>
   <div class='card'>
-    <div class='card-head'><h3>Team Members</h3><a class='btn btn-secondary' href='{{ url_for("workers", client_id=client_id) }}'>Manage Team Members</a></div>
-    <table class='table'><tr><th>Name</th><th>Type</th><th>Forms</th></tr>{% for w in workers %}<tr><td>{{ w.name }}</td><td>{{ w.worker_type }}</td><td><a href='{{ url_for("w4", worker_id=w.id) }}'>W-4</a> &middot; <a href='{{ url_for("w2", worker_id=w.id) }}'>W-2</a> &middot; <a href='{{ url_for("form_1099", worker_id=w.id) }}'>1099</a></td></tr>{% endfor %}</table>
+    <div class='card-head'><h3>{{ tr('Team Members') }}</h3><a class='btn btn-secondary' href='{{ url_for("workers", client_id=client_id) }}'>{{ tr('Manage Team Members') }}</a></div>
+    <table class='table'><tr><th>{{ tr('Full Name') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Forms') }}</th></tr>{% for w in workers %}<tr><td>{{ w.name }}</td><td>{{ w.worker_type }}</td><td><a href='{{ url_for("w4", worker_id=w.id) }}'>W-4</a> &middot; <a href='{{ url_for("w2", worker_id=w.id) }}'>W-2</a> &middot; <a href='{{ url_for("form_1099", worker_id=w.id) }}'>1099</a></td></tr>{% endfor %}</table>
   </div>
 </div>
 
 <div class='grid' style='margin-top:16px;align-items:start'>
   <div class='card'>
-    <div class='card-head'><h3>Administrator Review Status</h3><span class='badge'>Workspace</span></div>
+    <div class='card-head'><h3>{{ tr('Administrator Review Status') }}</h3><span class='badge'>{{ tr('Workspace') }}</span></div>
     {% if current_user.role == 'client' %}
       {% if review_request and review_request.status == 'pending' %}
-        <div class='badge'>Pending Administrator Review</div>
+        <div class='badge'>{{ tr('Pending Administrator Review') }}</div>
       {% elif review_request and review_request.status == 'approved' %}
-        <div class='badge'>Approved</div>
+        <div class='badge'>{{ tr('Approved') }}</div>
       {% elif review_request and review_request.status == 'needs_correction' %}
-        <div class='badge'>Needs Correction</div>
+        <div class='badge'>{{ tr('Needs Correction') }}</div>
       {% else %}
-        <div class='small' style='margin-bottom:12px'>Submit your updates to Administrator for review.</div>
+        <div class='small' style='margin-bottom:12px'>{{ tr('Submit your updates to Administrator for review.') }}</div>
       {% endif %}
       <form method='post' action='{{ url_for("submit_for_cpa_review") }}' class='form-grid'>
         <input type='hidden' name='client_id' value='{{ client_id }}'>
-        <div style='grid-column:1 / -1'><label>Note to Administrator (optional)</label><input name='note' placeholder='Optional message for Administrator'></div>
-        <div><button type='submit'>Submit for Administrator Review</button></div>
+        <div style='grid-column:1 / -1'><label>{{ tr('Note to Administrator (optional)') }}</label><input name='note' placeholder='{{ tr("Optional message for Administrator") }}'></div>
+        <div><button type='submit'>{{ tr('Submit for Administrator Review') }}</button></div>
       </form>
     {% else %}
-      <div class='small'>Administrator workspace view.</div>
+      <div class='small'>{{ tr('Administrator workspace view.') }}</div>
     {% endif %}
   </div>
   <div class='card welcome-center-card'>
-    <div class='card-head'><h3>Welcome Center</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>Open Welcome</a></div>
-    <div class='small' style='margin-bottom:12px'>A guided welcome space for this business with owner details, first-step direction, and future how-to video slots for Canva training content.</div>
+    <div class='card-head'><h3>{{ tr('Welcome Center') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>{{ tr('Open Welcome') }}</a></div>
+    <div class='small' style='margin-bottom:12px'>{{ tr('A guided welcome space for this business with owner details, first-step direction, and future how-to video slots for Canva training content.') }}</div>
     <div class='benefits-mini-points'>
-      <span>Business welcome</span>
-      <span>Owner and user details</span>
-      <span>How-to video space</span>
-      <span>Quick first steps</span>
+      <span>{{ tr('Business welcome') }}</span>
+      <span>{{ tr('Owner and user details') }}</span>
+      <span>{{ tr('How-to video space') }}</span>
+      <span>{{ tr('Quick first steps') }}</span>
     </div>
   </div>
   <div class='card benefits-dashboard-card'>
-    <div class='card-head'><h3>Benefits &amp; Employer Obligations</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("benefits_obligations", client_id=client_id) }}'>Open Guide</a></div>
-    <div class='small' style='margin-bottom:12px'>Review tax-favored benefit options, employer obligations, and official federal resources before changing health, retirement, or leave offerings.</div>
+    <div class='card-head'><h3>{{ tr('Benefits & Obligations') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("benefits_obligations", client_id=client_id) }}'>{{ tr('Open Guide') }}</a></div>
+    <div class='small' style='margin-bottom:12px'>{{ tr('Review tax-favored benefit options, employer obligations, and official federal resources before changing health, retirement, or leave offerings.') }}</div>
     <div class='benefits-mini-points'>
-      <span>Health coverage options</span>
-      <span>Tax-favored benefit accounts</span>
-      <span>Retirement plan choices</span>
-      <span>Federal obligations and notices</span>
+      <span>{{ tr('Health coverage options') }}</span>
+      <span>{{ tr('Tax-favored benefit accounts') }}</span>
+      <span>{{ tr('Retirement plan choices') }}</span>
+      <span>{{ tr('Federal obligations and notices') }}</span>
     </div>
   </div>
 </div>

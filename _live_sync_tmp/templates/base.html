@@ -166,7 +166,7 @@
   <div class='workspace-shell'>
     <aside class='workspace-sidebar'>
       <div class='workspace-sidebar-head'>
-        <div class='workspace-eyebrow'>Business Workspace</div>
+        <div class='workspace-eyebrow'>{{ tr('Business Workspace') }}</div>
         <div class='workspace-business'>{{ active_client.business_name }}</div>
         <div class='workspace-owner'>{{ active_client.contact_name or '' }}</div>
       </div>
@@ -178,10 +178,10 @@
       </form>
       <div class='card' style='margin:14px 0;box-shadow:none;border:1px solid #E6ECF2'>
         <div class='small-label'>ADMIN EXIT</div>
-        <div class='small' style='margin:6px 0 10px 0'>You are viewing a single business workspace. Use one of these to return to admin mode.</div>
+        <div class='small' style='margin:6px 0 10px 0'>{{ tr('You are viewing a single business workspace. Use one of these to return to admin mode.') }}</div>
         <div style='display:flex;flex-direction:column;gap:8px'>
-          <a class='btn btn-secondary btn-sm' href='{{ url_for("cpa_dashboard", client_id=active_client.id) }}'>Open Billing Setup</a>
-          <a class='btn btn-secondary btn-sm' href='{{ url_for("cpa_dashboard") }}'>Return to Administrator Dashboard</a>
+          <a class='btn btn-secondary btn-sm' href='{{ url_for("cpa_dashboard", client_id=active_client.id) }}'>{{ tr('Open Billing Setup') }}</a>
+          <a class='btn btn-secondary btn-sm' href='{{ url_for("cpa_dashboard") }}'>{{ tr('Return to Administrator Dashboard') }}</a>
         </div>
       </div>
       <nav class='workspace-nav'>
@@ -189,10 +189,10 @@
         <a class='workspace-link {% if request.endpoint=="welcome_center" %}active{% endif %}' href='{{ url_for("welcome_center", client_id=active_client.id) }}'>Welcome Center</a>
         <a class='workspace-link {% if request.endpoint=="clients" %}active{% endif %}' href='{{ url_for("clients", client_id=active_client.id) }}'>Business Profile</a>
         <a class='workspace-link {% if request.endpoint=="summary" %}active{% endif %}' href='{{ url_for("summary", client_id=active_client.id) }}'>Summary</a>
-        <a class='workspace-link {% if request.endpoint=="invoices" %}active{% endif %}' href='{{ url_for("invoices", client_id=active_client.id) }}'>Invoices</a>
+        <a class='workspace-link {% if request.endpoint=="invoices" %}active{% endif %}' href='{{ url_for("invoices", client_id=active_client.id) }}'>{{ tr('Income Records') }}</a>
         <a class='workspace-link {% if request.endpoint=="workers" %}active{% endif %}' href='{{ url_for("workers", client_id=active_client.id) }}'>Team Members</a>
         <a class='workspace-link {% if request.endpoint=="worker_payments" %}active{% endif %}' href='{{ url_for("worker_payments", client_id=active_client.id) }}'>Team Member Payouts</a>
-        <a class='workspace-link {% if request.endpoint=="business_payments_page" %}active{% endif %}' href='{{ url_for("business_payments_page", client_id=active_client.id) }}'>Billing View</a>
+        <a class='workspace-link {% if request.endpoint=="business_payments_page" %}active{% endif %}' href='{{ url_for("business_payments_page", client_id=active_client.id) }}'>{{ tr('Billing') }}</a>
         <a class='workspace-link {% if request.endpoint=="benefits_obligations" %}active{% endif %}' href='{{ url_for("benefits_obligations", client_id=active_client.id) }}'>Benefits &amp; Obligations</a>
         <a class='workspace-link {% if request.endpoint=="work_schedule" %}active{% endif %}' href='{{ url_for("work_schedule", client_id=active_client.id) }}'>Work Schedule</a>
         <a class='workspace-link {% if request.endpoint=="payroll_tax" %}active{% endif %}' href='{{ url_for("payroll_tax", client_id=active_client.id) }}'>941 / Payroll Tax</a>
@@ -209,22 +209,22 @@
   <footer class='portal-footer'>
     <div class='portal-footer-brand'>
       <div class='portal-footer-title'>{{ app_name }}</div>
-      <div class='portal-footer-copy'>Private client portal currently in final invited-client rollout. Core workspace functions are live, permission-based, and may continue to improve as the platform is finalized.</div>
-      <div class='portal-footer-disclaimer'>This portal uses secured account controls and active administrator oversight. It does not claim formal security certification or guarantee uninterrupted service.</div>
+      <div class='portal-footer-copy'>{{ tr('Private client portal currently in final invited-client rollout. Core workspace functions are live, permission-based, and may continue to improve as the platform is finalized.') }}</div>
+      <div class='portal-footer-disclaimer'>{{ tr('This portal uses secured account controls and active administrator oversight. It does not claim formal security certification or guarantee uninterrupted service.') }}</div>
     </div>
     <div class='portal-footer-links'>
-      <a href='{{ url_for("trust_center") }}#rollout'>Rollout Notice</a>
-      <a href='{{ url_for("trust_center") }}#privacy'>Privacy Notice</a>
-      <a href='{{ url_for("trust_center") }}#terms'>Terms of Use</a>
-      <a href='{{ url_for("trust_center") }}#security'>Security &amp; Data</a>
+      <a href='{{ url_for("trust_center") }}#rollout'>{{ tr('Rollout Notice') }}</a>
+      <a href='{{ url_for("trust_center") }}#privacy'>{{ tr('Privacy Notice') }}</a>
+      <a href='{{ url_for("trust_center") }}#terms'>{{ tr('Terms of Use') }}</a>
+      <a href='{{ url_for("trust_center") }}#security'>{{ tr('Security & Data') }}</a>
       {% if current_user %}
         {% if current_user.role == 'admin' %}
-        <a href='{{ url_for("help_center") }}'>Support</a>
+        <a href='{{ url_for("help_center") }}'>{{ tr('Support') }}</a>
         {% elif active_client %}
-        <a href='{{ url_for("help_center", client_id=active_client.id) }}'>Support</a>
+        <a href='{{ url_for("help_center", client_id=active_client.id) }}'>{{ tr('Support') }}</a>
         {% endif %}
       {% else %}
-      <a href='{{ url_for("main_portal") }}'>Main Portal</a>
+      <a href='{{ url_for("main_portal") }}'>{{ tr('Main Portal') }}</a>
       {% endif %}
     </div>
   </footer>
