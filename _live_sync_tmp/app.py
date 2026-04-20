@@ -8178,6 +8178,111 @@ def summary():
     return render_template('summary.html', client=client, client_id=client_id, workers=workers, invoices=invoices, mileage_entries=mileage, summary=client_summary(client_id, start_date or None, end_date or None), start_date=start_date, end_date=end_date)
 
 
+@app.route('/clients-sales')
+@login_required
+def customer_sales():
+    user = current_user()
+    client_id = selected_client_id(user, 'get')
+    with get_conn() as conn:
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        estimate_source_rows = conn.execute(
+            "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'')='estimate' ORDER BY invoice_date DESC, id DESC LIMIT 10",
+            (client_id,),
+        ).fetchall()
+        invoice_source_rows = conn.execute(
+            "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'')='customer_invoice' ORDER BY invoice_date DESC, id DESC LIMIT 10",
+            (client_id,),
+        ).fetchall()
+        estimate_rows = []
+        estimate_public_links = {}
+        invoice_rows = []
+        invoice_public_links = {}
+        customer_activity_map: dict[tuple[str, str], dict] = {}
+        metrics = {
+            'customer_count': 0,
+            'open_estimates': 0,
+            'approved_estimates': 0,
+            'open_invoices': 0,
+        }
+
+        for row in estimate_source_rows:
+            token = ensure_invoice_public_token(conn, row['id'])
+            status = estimate_current_status(row)
+            row_dict = dict(row)
+            row_dict['invoice_status'] = status
+            estimate_rows.append(row_dict)
+            estimate_public_links[row['id']] = public_estimate_url(token)
+            if status in {'draft', 'sent', 'viewed'}:
+                metrics['open_estimates'] += 1
+            if status == 'approved':
+                metrics['approved_estimates'] += 1
+            customer_name = (row['client_name'] or '').strip() or 'Unnamed customer'
+            customer_email = (row['recipient_email'] or '').strip().lower()
+            key = (customer_name.lower(), customer_email)
+            activity = customer_activity_map.setdefault(key, {
+                'customer_name': customer_name,
+                'customer_email': customer_email,
+                'estimate_count': 0,
+                'invoice_count': 0,
+                'last_estimate_status': '',
+                'last_invoice_status': '',
+                'last_activity_at': '',
+                'open_balance': 0.0,
+            })
+            activity['estimate_count'] += 1
+            activity['last_estimate_status'] = status
+            activity['last_activity_at'] = max(activity['last_activity_at'], row['updated_at'] or row['invoice_date'] or '')
+
+        for row in invoice_source_rows:
+            token = ensure_invoice_public_token(conn, row['id'])
+            status = invoice_payment_progress_status(row)
+            balance_due = invoice_balance_due(row)
+            row_dict = dict(row)
+            row_dict['invoice_status'] = status
+            row_dict['balance_due'] = balance_due
+            invoice_rows.append(row_dict)
+            invoice_public_links[row['id']] = public_invoice_url(token)
+            if balance_due > 0:
+                metrics['open_invoices'] += 1
+            customer_name = (row['client_name'] or '').strip() or 'Unnamed customer'
+            customer_email = (row['recipient_email'] or '').strip().lower()
+            key = (customer_name.lower(), customer_email)
+            activity = customer_activity_map.setdefault(key, {
+                'customer_name': customer_name,
+                'customer_email': customer_email,
+                'estimate_count': 0,
+                'invoice_count': 0,
+                'last_estimate_status': '',
+                'last_invoice_status': '',
+                'last_activity_at': '',
+                'open_balance': 0.0,
+            })
+            activity['invoice_count'] += 1
+            activity['last_invoice_status'] = status
+            activity['open_balance'] += balance_due
+            activity['last_activity_at'] = max(activity['last_activity_at'], row['updated_at'] or row['invoice_date'] or '')
+
+    customer_activity = sorted(
+        customer_activity_map.values(),
+        key=lambda item: (item['last_activity_at'] or '', item['customer_name'].lower()),
+        reverse=True,
+    )
+    metrics['customer_count'] = len(customer_activity)
+    return render_template(
+        'customer_sales.html',
+        client=client,
+        client_id=client_id,
+        customer_activity=customer_activity,
+        estimate_rows=estimate_rows,
+        estimate_public_links=estimate_public_links,
+        estimate_status_labels=estimate_status_label_map(),
+        invoice_rows=invoice_rows,
+        invoice_public_links=invoice_public_links,
+        invoice_status_labels=invoice_status_label_map(),
+        metrics=metrics,
+    )
+
+
 @app.route('/benefits-obligations')
 @login_required
 def benefits_obligations():
@@ -10173,9 +10278,16 @@ def invoices():
         ''', (client_id,)).fetchall()
         customer_rows = [row for row in rows if (row['record_kind'] or 'income_record') == 'customer_invoice']
         income_rows = [row for row in rows if (row['record_kind'] or 'income_record') == 'income_record']
+        estimate_source_rows = conn.execute(
+            "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'')='estimate' ORDER BY job_number DESC, id DESC LIMIT 6",
+            (client_id,),
+        ).fetchall()
         line_items_map = invoice_line_items_for_ids(conn, [row['id'] for row in customer_rows])
         customer_invoice_rows = []
         invoice_public_links = {}
+        estimate_preview_rows = []
+        estimate_preview_links = {}
+        estimate_status_counts = {'draft': 0, 'sent': 0, 'viewed': 0, 'approved': 0, 'converted': 0}
         for row in customer_rows:
             token = ensure_invoice_public_token(conn, row['id'])
             current_status = invoice_payment_progress_status(row)
@@ -10185,6 +10297,15 @@ def invoices():
             row_dict['balance_due'] = invoice_balance_due(row)
             customer_invoice_rows.append(row_dict)
             invoice_public_links[row['id']] = public_invoice_url(token)
+        for row in estimate_source_rows:
+            token = ensure_invoice_public_token(conn, row['id'])
+            current_status = estimate_current_status(row)
+            row_dict = dict(row)
+            row_dict['invoice_status'] = current_status
+            estimate_preview_rows.append(row_dict)
+            estimate_preview_links[row['id']] = public_estimate_url(token)
+            if current_status in estimate_status_counts:
+                estimate_status_counts[current_status] += 1
         conn.commit()
     if auto_reminder_count:
         flash(f'{auto_reminder_count} overdue invoice reminder(s) were sent automatically.', 'success')
@@ -10201,6 +10322,10 @@ def invoices():
         income_category_options=income_category_options(),
         income_category_labels=income_category_label_map(),
         invoice_status_labels=invoice_status_label_map(),
+        estimate_preview_rows=estimate_preview_rows,
+        estimate_preview_links=estimate_preview_links,
+        estimate_status_counts=estimate_status_counts,
+        estimate_status_labels=estimate_status_label_map(),
         today=today_iso,
         default_due_date=default_due_date,
         auto_reminder_count=auto_reminder_count,

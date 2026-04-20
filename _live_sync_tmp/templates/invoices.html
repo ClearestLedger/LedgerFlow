@@ -4,13 +4,14 @@
   <div>
     <div class='page-kicker'>Invoices &amp; Income</div>
     <div class='page-title'>{{ client.business_name }}</div>
-    <div class='page-subtitle'>Create customer invoices, send hosted payment-ready links, trigger reminders, and still keep internal income records and mileage organized in one place.</div>
+    <div class='page-subtitle'>Move from estimate to invoice in one business workflow: send hosted estimates first, convert approved work into customer invoices, then keep internal income records and mileage organized below.</div>
   </div>
   <button onclick='window.print()' class='btn btn-secondary' type='button'>Print This Page</button>
 </div>
 
 <div class='card section-frame' style='margin-bottom:16px'>
   <div class='summary-strip'>
+    <span class='summary-pill'>Estimate first, invoice second</span>
     <span class='summary-pill'>Hosted customer invoices</span>
     <span class='summary-pill'>Pay-online links supported</span>
     <span class='summary-pill'>Automatic overdue reminders</span>
@@ -23,11 +24,70 @@
   {% endif %}
 </div>
 
+<div class='grid cards-2' style='margin-bottom:16px'>
+  <div class='card section-frame'>
+    <div class='card-head'>
+      <h3>Estimate Workflow</h3>
+      <span class='badge'>Wave-style flow</span>
+    </div>
+    <div class='small'>Create the quote first, send the hosted link, track whether the customer opened it, then convert approved work into the final invoice when you are ready to bill.</div>
+    <div class='summary-strip' style='margin-top:14px'>
+      <span class='summary-pill'>{{ estimate_status_counts['draft'] }} Draft</span>
+      <span class='summary-pill'>{{ estimate_status_counts['sent'] + estimate_status_counts['viewed'] }} Sent / Viewed</span>
+      <span class='summary-pill'>{{ estimate_status_counts['approved'] }} Approved</span>
+      <span class='summary-pill'>{{ estimate_status_counts['converted'] }} Converted</span>
+    </div>
+    <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:16px'>
+      <a class='btn' href='{{ url_for("estimates", client_id=client_id) }}'>Open Estimates</a>
+      <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>Create Estimate</a>
+    </div>
+  </div>
+
+  <div class='card section-frame'>
+    <div class='card-head'>
+      <h3>Recent Estimates</h3>
+      <div class='small'>Hosted links and send actions surfaced right here</div>
+    </div>
+    <div class='estimate-preview-list'>
+      {% for row in estimate_preview_rows %}
+      <div class='estimate-preview-item'>
+        <div>
+          <strong>#{{ row.job_number or row.id }} · {{ row.client_name }}</strong>
+          <div class='small'>{{ estimate_status_labels.get(row.invoice_status, row.invoice_status|title) }} · ${{ '%.2f'|format(row.invoice_total_amount or 0) }}{% if row.recipient_email %} · {{ row.recipient_email }}{% endif %}</div>
+        </div>
+        <div class='estimate-preview-actions'>
+          <a class='btn btn-secondary btn-sm' href='{{ estimate_preview_links.get(row.id) }}' target='_blank'>Open Link</a>
+          <button class='btn btn-secondary btn-sm copy-link-btn' type='button' data-copy-url='{{ estimate_preview_links.get(row.id) }}'>Copy Link</button>
+          {% if row.invoice_status not in ['converted', 'declined', 'expired'] %}
+          <form method='post' style='display:inline' action='{{ url_for("estimates", client_id=client_id) }}'>
+            <input type='hidden' name='action' value='send_estimate'>
+            <input type='hidden' name='estimate_id' value='{{ row.id }}'>
+            {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+            <button class='btn btn-secondary btn-sm' type='submit'>Send Estimate</button>
+          </form>
+          {% endif %}
+          {% if row.invoice_status in ['approved', 'sent', 'viewed'] %}
+          <form method='post' style='display:inline' action='{{ url_for("estimates", client_id=client_id) }}'>
+            <input type='hidden' name='action' value='convert_estimate_to_invoice'>
+            <input type='hidden' name='estimate_id' value='{{ row.id }}'>
+            {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+            <button class='btn btn-secondary btn-sm' type='submit'>Convert</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class='small'>No estimates yet. Start with an estimate when you want the customer to review the scope before invoicing.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
 <div class='grid cards-2'>
   <div class='card section-frame'>
     <details class='compact-details' open>
       <summary>Create Customer Invoice</summary>
-      <div class='small' style='margin:12px 0'>Build a real customer invoice with line items, optional pay-online link, and a hosted invoice page that can be emailed right away.</div>
+      <div class='small' style='margin:12px 0'>Build a real customer invoice with line items, optional pay-online link, and a hosted invoice page that can be emailed right away. If the customer still needs approval first, use the estimate workflow above.</div>
       <form method='post' class='form-grid' id='customerInvoiceForm'>
         <input type='hidden' name='action' value='create_customer_invoice'>
         {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
@@ -195,6 +255,20 @@
 
 <script>
 (function(){
+  function copyText(text){
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text);
+      return;
+    }
+    var helper = document.createElement('input');
+    helper.value = text;
+    document.body.appendChild(helper);
+    helper.select();
+    document.execCommand('copy');
+    document.body.removeChild(helper);
+  }
+
   function recalcCustomerInvoice(){
     var rows = document.querySelectorAll('#invoiceLineItemsTable tr');
     var subtotal = 0;
@@ -233,6 +307,13 @@
   document.querySelectorAll('#invoiceLineItemsTable input, #customer_invoice_sales_tax').forEach(function(el){
     el.addEventListener('input', recalcCustomerInvoice);
     el.addEventListener('change', recalcCustomerInvoice);
+  });
+  document.querySelectorAll('.copy-link-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      copyText(btn.getAttribute('data-copy-url') || '');
+      btn.textContent = 'Copied';
+      window.setTimeout(function(){ btn.textContent = 'Copy Link'; }, 1400);
+    });
   });
   ['one_way_miles','rate','round_trips','trip_type'].forEach(function(id){
     var el = document.getElementById(id);

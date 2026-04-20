@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Clients &amp; Sales</div>
+    <div class='page-title'>{{ client.business_name }}</div>
+    <div class='page-subtitle'>One customer-facing workspace for estimates, invoices, hosted links, and the customers moving through your sales pipeline.</div>
+  </div>
+  <div class='stack-actions'>
+    <a class='btn' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>Create Estimate</a>
+    <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'>Create Invoice</a>
+  </div>
+</div>
+
+<div class='grid cards-4'>
+  <div class='card stat-card premium-stat'><h3>Customers</h3><div class='metric big'>{{ metrics.customer_count }}</div></div>
+  <div class='card stat-card premium-stat'><h3>Open Estimates</h3><div class='metric big'>{{ metrics.open_estimates }}</div></div>
+  <div class='card stat-card premium-stat'><h3>Approved Estimates</h3><div class='metric big'>{{ metrics.approved_estimates }}</div></div>
+  <div class='card stat-card premium-stat premium-stat-accent'><h3>Open Invoices</h3><div class='metric big'>{{ metrics.open_invoices }}</div></div>
+</div>
+
+<div class='grid cards-2' style='margin-top:16px'>
+  <div class='card section-frame'>
+    <div class='card-head'><h3>How This Flow Works</h3><span class='badge'>Estimate → Invoice</span></div>
+    <ol class='trial-compact-list'>
+      <li>Create the estimate first when the customer still needs to review the scope or approve pricing.</li>
+      <li>Send or copy the hosted estimate link so the customer can review it online.</li>
+      <li>Convert approved work into the final invoice when you are ready to collect payment.</li>
+      <li>Use customer invoices and reminders for collections, and keep bookkeeping-only income records separate.</li>
+    </ol>
+  </div>
+
+  <div class='card section-frame'>
+    <div class='card-head'><h3>Quick Actions</h3><span class='badge'>Sales Tools</span></div>
+    <div class='stack-actions'>
+      <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}'>Open Estimates</a>
+      <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}'>Open Invoices</a>
+      <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'>Invoice a Customer</a>
+      <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>Quote a Customer</a>
+    </div>
+    <div class='small' style='margin-top:12px'>This tab is your customer-facing control center. Estimates and invoices still keep their full dedicated pages for creation, sending, and follow-up.</div>
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-top:16px'>
+  <div class='card-head'><h3>Customer Activity</h3><div class='small'>Recent customer relationships built from estimates and invoices</div></div>
+  <div class='scroll-x'>
+    <table class='table'>
+      <tr><th>Customer</th><th>Estimates</th><th>Invoices</th><th>Last Estimate</th><th>Last Invoice</th><th>Open Balance</th></tr>
+      {% for row in customer_activity %}
+      <tr>
+        <td><strong>{{ row.customer_name }}</strong><div class='small'>{{ row.customer_email or 'No email saved yet' }}</div></td>
+        <td>{{ row.estimate_count }}</td>
+        <td>{{ row.invoice_count }}</td>
+        <td>{{ estimate_status_labels.get(row.last_estimate_status, row.last_estimate_status|title) if row.last_estimate_status else '—' }}</td>
+        <td>{{ invoice_status_labels.get(row.last_invoice_status, row.last_invoice_status|title) if row.last_invoice_status else '—' }}</td>
+        <td>${{ '%.2f'|format(row.open_balance or 0) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan='6' class='small'>No customer-facing estimate or invoice activity yet.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class='grid cards-2' style='margin-top:16px'>
+  <div class='card section-frame'>
+    <div class='card-head'><h3>Recent Estimates</h3><div class='small'>Hosted link and approval workflow</div></div>
+    <div class='estimate-preview-list'>
+      {% for row in estimate_rows %}
+      <div class='estimate-preview-item'>
+        <div>
+          <strong>#{{ row.job_number or row.id }} · {{ row.client_name }}</strong>
+          <div class='small'>{{ estimate_status_labels.get(row.invoice_status, row.invoice_status|title) }} · ${{ '%.2f'|format(row.invoice_total_amount or 0) }}{% if row.recipient_email %} · {{ row.recipient_email }}{% endif %}</div>
+        </div>
+        <div class='estimate-preview-actions'>
+          <a class='btn btn-secondary btn-sm' href='{{ estimate_public_links.get(row.id) }}' target='_blank'>Open Link</a>
+          <button class='btn btn-secondary btn-sm copy-link-btn' type='button' data-copy-url='{{ estimate_public_links.get(row.id) }}'>Copy Link</button>
+        </div>
+      </div>
+      {% else %}
+      <div class='small'>No estimates yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class='card section-frame'>
+    <div class='card-head'><h3>Recent Invoices</h3><div class='small'>Hosted billing links and collection status</div></div>
+    <div class='estimate-preview-list'>
+      {% for row in invoice_rows %}
+      <div class='estimate-preview-item'>
+        <div>
+          <strong>#{{ row.job_number or row.id }} · {{ row.client_name }}</strong>
+          <div class='small'>{{ invoice_status_labels.get(row.invoice_status, row.invoice_status|title) }} · ${{ '%.2f'|format(row.invoice_total_amount or 0) }}{% if row.recipient_email %} · {{ row.recipient_email }}{% endif %}</div>
+        </div>
+        <div class='estimate-preview-actions'>
+          <a class='btn btn-secondary btn-sm' href='{{ invoice_public_links.get(row.id) }}' target='_blank'>Open Link</a>
+          <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>Print</a>
+        </div>
+      </div>
+      {% else %}
+      <div class='small'>No customer invoices yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function copyText(text){
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text);
+      return;
+    }
+    var helper = document.createElement('input');
+    helper.value = text;
+    document.body.appendChild(helper);
+    helper.select();
+    document.execCommand('copy');
+    document.body.removeChild(helper);
+  }
+
+  document.querySelectorAll('.copy-link-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      copyText(btn.getAttribute('data-copy-url') || '');
+      btn.textContent = 'Copied';
+      window.setTimeout(function(){ btn.textContent = 'Copy Link'; }, 1400);
+    });
+  });
+})();
+</script>
+{% endblock %}
