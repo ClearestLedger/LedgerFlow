@@ -13,50 +13,88 @@
     <span class='mark-one'>{% if trial_mode %}{{ trial_offer_days }}-Day Trial{% else %}Secure Access{% endif %}</span>
     <span class='mark-two'>Business Setup</span>
     <span class='mark-three'>Subscription</span>
-    <span class='mark-four'>{% if trial_mode %}Marketing Ready{% else %}Billing Ready{% endif %}</span>
+    <span class='mark-four'>{% if trial_mode %}Upgrade Later{% else %}Billing Ready{% endif %}</span>
   </div>
-  <div class='login-wrap login-wrap-split invite-shell'>
-    <section class='login-stage'>
-      <div class='login-stage-kicker'>{% if trial_mode %}Complimentary Trial{% else %}Welcome to{% endif %}</div>
-      <div class='login-stage-title'>{% if trial_mode %}Start your {{ trial_offer_days }}-day LedgerFlow trial{% else %}LedgerFlow{% endif %}</div>
-      <div class='login-stage-subtitle'>
-        {% if trial_mode %}
-        Claim the private client trial for {{ invite.business_name }}, review the subscription options, and continue into guided setup with direct administrator support.
-        {% else %}
-        Create your secure business access for {{ invite.business_name }} and finish setup in a guided, professional flow.
-        {% endif %}
+
+  {% if trial_mode %}
+  <div class='trial-landing-shell'>
+    <section class='card hero-surface trial-landing-hero'>
+      <div class='card-head'>
+        <div>
+          <div class='page-kicker'>Complimentary Trial</div>
+          <div class='page-title'>Start your {{ trial_offer_days }}-day LedgerFlow trial</div>
+          <div class='page-subtitle'>A cleaner guided start for {{ invite.business_name }}: review the workspace experience, explore the subscription tiers, create secure access, and continue the trial now. Upgrade later when you are ready.</div>
+        </div>
+        <span class='badge'>{{ trial_offer_days }} Days</span>
       </div>
-      <div class='invite-stage-points'>
-        <div class='invite-stage-point'>
-          <strong>{% if trial_mode %}1. Claim your trial{% else %}1. Create secure access{% endif %}</strong>
-          <span>{% if trial_mode %}Use this invite to open your complimentary trial and create the business owner login for the workspace.{% else %}Use this invite to create the business owner login for the workspace.{% endif %}</span>
+      <div class='summary-strip' style='margin-top:14px'>
+        <span class='summary-pill'>No card required to begin</span>
+        <span class='summary-pill'>Video tutorial ready</span>
+        <span class='summary-pill'>Choose subscription now</span>
+        <span class='summary-pill'>Upgrade later</span>
+      </div>
+    </section>
+
+    <div class='trial-landing-grid'>
+      <section class='card section-frame trial-video-card'>
+        <div class='card-head'>
+          <h3>Welcome Tutorial Preview</h3>
+          <span class='badge'>Canva Ready</span>
         </div>
-        <div class='invite-stage-point'>
-          <strong>2. Complete setup</strong>
-          <span>{% if trial_mode %}LedgerFlow will guide you through business details, subscription choice, and the method on file that becomes active after the complimentary window ends.{% else %}LedgerFlow will guide you through business details, subscription choice, and payment method on file.{% endif %}</span>
+        <div class='welcome-video-frame trial-video-frame'>Drop your marketing or welcome video here later</div>
+        <div class='small' style='margin-top:12px'>This top section is reserved for the welcome/tutorial video that introduces the workspace, explains the 7-day complimentary period, and shows the first steps clearly.</div>
+      </section>
+
+      <section class='card section-frame'>
+        <div class='card-head'>
+          <h3>How the Trial Works</h3>
+          <span class='badge'>4 Steps</span>
         </div>
-        <div class='invite-stage-point'>
-          <strong>3. Unlock full workspace</strong>
-          <span>{% if trial_mode %}Once setup is complete, your billing, records, payroll tax, and planning tools are ready while your {{ trial_offer_days }}-day trial period is active.{% else %}Once setup is complete, your billing, records, payroll tax, and planning tools are ready to use.{% endif %}</span>
+        <div class='trial-journey-grid'>
+          <article class='trial-journey-step'>
+            <strong>1. Review the workspace</strong>
+            <span>Start with the overview, tutorial, and pricing so the offer feels clear before you create anything.</span>
+          </article>
+          <article class='trial-journey-step'>
+            <strong>2. Create secure access</strong>
+            <span>Create the business owner login for {{ invite.business_name }} and open the Welcome Center.</span>
+          </article>
+          <article class='trial-journey-step'>
+            <strong>3. Choose your subscription</strong>
+            <span>Select the tier that fits your business now, with full pricing visible and no pressure to enter billing today.</span>
+          </article>
+          <article class='trial-journey-step'>
+            <strong>4. Continue the free trial</strong>
+            <span>Enter business details, explore the workspace, and upgrade later before the complimentary period ends.</span>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <section class='card section-frame'>
+      <div class='card-head'>
+        <div>
+          <div class='page-kicker'>Subscription Options</div>
+          <div class='page-title' style='font-size:1.55rem'>Choose your growth path now</div>
+          <div class='page-subtitle'>Each tier opens separately so the pricing stays visible first and the details stay organized.</div>
         </div>
       </div>
-      {% if trial_mode %}
-      <div class='trial-offer-card'>
-        <div class='badge'>{{ trial_offer_days }} Complimentary Days</div>
-        <div class='small' style='margin-top:10px'>Choose the subscription level that fits your business now. Billing begins only after the complimentary trial ends.</div>
-        <div class='subscription-tier-grid trial-tier-grid'>
-          {% for tier in subscription_tiers %}
-          <div class='subscription-tier-card trial-tier-card'>
-            <div class='subscription-tier-head'>
+      <div class='trial-pricing-stack'>
+        {% for tier in subscription_tiers %}
+        <details class='compact-details trial-pricing-option'>
+          <summary>
+            <div class='trial-pricing-summary'>
               <div>
                 <div class='subscription-tier-label'>{{ tier.label }}</div>
-                <div class='subscription-tier-tagline'>{{ tier.tagline }}</div>
+                <div class='small'>{{ tier.best_for }}</div>
               </div>
               <div class='subscription-tier-price'>${{ '%.0f'|format(tier.monthly_amount) }}<span>/mo</span></div>
             </div>
-            <div class='subscription-tier-bestfor'>{{ tier.best_for }}</div>
+          </summary>
+          <div class='trial-pricing-body'>
+            <div class='subscription-tier-tagline'>{{ tier.tagline }}</div>
             <ul class='subscription-tier-list'>
-              {% for feature in tier.features[:4] %}
+              {% for feature in tier.features %}
               <li>{{ feature }}</li>
               {% endfor %}
             </ul>
@@ -64,25 +102,85 @@
             <div class='subscription-tier-coming-soon'><strong>Coming Soon:</strong> {{ tier.coming_soon|join(', ') }}</div>
             {% endif %}
           </div>
-          {% endfor %}
-        </div>
+        </details>
+        {% endfor %}
       </div>
-      <div class='trial-video-placeholder'>
-        <div class='welcome-video-meta'>
-          <strong>Marketing video space</strong>
-          <span>Canva Ready</span>
-        </div>
-        <div class='welcome-video-frame'>Drop your Canva video here later</div>
-        <div class='small' style='margin-top:10px'>Send a Canva share link or an exported MP4 to connect the final marketing video to this trial landing page.</div>
-      </div>
-      {% endif %}
     </section>
 
+    <section class='card section-frame trial-claim-card'>
+      <div class='card-head'>
+        <div>
+          <div class='page-kicker'>Claim Trial & Create Login</div>
+          <div class='page-title' style='font-size:1.65rem'>Continue with the free trial now</div>
+          <div class='page-subtitle'>The trial workspace opens first. Billing can be added later before the complimentary period ends.</div>
+        </div>
+        <span class='badge'>{{ invite.business_name }}</span>
+      </div>
+
+      <div class='invite-summary-card' style='margin-bottom:16px'>
+        <div class='invite-detail-grid'>
+          <div>
+            <span class='small-label'>Business</span>
+            <strong>{{ invite.business_name }}</strong>
+          </div>
+          <div>
+            <span class='small-label'>Invite Email</span>
+            <strong>{{ invite.invited_email }}</strong>
+          </div>
+          <div>
+            <span class='small-label'>Trial Offer</span>
+            <strong>{{ trial_offer_days }} complimentary days</strong>
+          </div>
+          <div>
+            <span class='small-label'>After Login</span>
+            <strong>Welcome Center first, then quick setup</strong>
+          </div>
+        </div>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div style='display:flex;flex-direction:column;gap:10px;margin:0 0 16px'>
+            {% for category, msg in messages %}
+              <div class='flash {{ category }}' style='margin:0'>{{ msg }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% if invite.status in ['pending','sent','failed'] %}
+      <form method='post' class='form-grid'>
+        <div><label>Full Name</label><input name='full_name' value='{{ request.form.get("full_name", invite.invited_name or "") }}' required></div>
+        <div><label>Email</label><input name='email' value='{{ request.form.get("email", invite.invited_email or "") }}' required></div>
+        <div><label>Create Password</label><div class='password-field'><input name='password' type='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
+        <div><label>Confirm Password</label><div class='password-field'><input name='confirm_password' type='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
+        <div><button>Continue with Free Trial</button></div>
+      </form>
+      <div class='trial-note-callout'>
+        <strong>No payment required today.</strong>
+        <span>Create the login now, open the Welcome Center, and complete the quick setup when you are ready. You can upgrade and add billing later before the complimentary period ends.</span>
+      </div>
+      {% else %}
+        {% if invite.status == 'accepted' %}
+        <p>This business login has already been created. Sign in with the email you used for setup.</p>
+        <div style='display:flex;gap:10px;flex-wrap:wrap'>
+          <a class='btn btn-secondary' href='{{ url_for("login") }}'>Sign In</a>
+          <a class='btn btn-secondary' href='{{ url_for("forgot_password") }}'>Forgot Password</a>
+        </div>
+        {% else %}
+        <p>This invite is no longer available.</p>
+        <a class='btn btn-secondary' href='{{ url_for("login") }}'>Back to Login</a>
+        {% endif %}
+      {% endif %}
+    </section>
+  </div>
+  {% else %}
+  <div class='login-wrap invite-standard-shell'>
     <section class='login-card'>
       <div class='badge'>{{ invite_kind_label }}</div>
-      <div class='login-kicker'>{% if trial_mode %}Claim Trial & Create Login{% else %}Create Business Login{% endif %}</div>
+      <div class='login-kicker'>Create Business Login</div>
       <h1>{{ invite.business_name }}</h1>
-      <p class='small'>{% if trial_mode %}Your administrator has invited you to a {{ trial_offer_days }}-day complimentary LedgerFlow trial for this workspace. Review the offer, create secure access, and continue directly into setup.{% else %}Your administrator has invited you to begin secure access setup for this LedgerFlow workspace.{% endif %}{% if invite.expires_at %} Invite expires {{ invite.expires_at }}.{% endif %}</p>
+      <p class='small'>Your administrator has invited you to begin secure access setup for this LedgerFlow workspace.{% if invite.expires_at %} Invite expires {{ invite.expires_at }}.{% endif %}</p>
       <div class='invite-summary-card'>
         <div class='invite-detail-grid'>
           <div>
@@ -94,15 +192,9 @@
             <strong>{{ invite.invited_email }}</strong>
           </div>
           <div>
-            <span class='small-label'>{% if trial_mode %}Complimentary Offer{% else %}Next Step{% endif %}</span>
-            <strong>{% if trial_mode %}{{ trial_offer_days }}-day trial before billing starts{% else %}Create login and continue to setup{% endif %}</strong>
+            <span class='small-label'>Next Step</span>
+            <strong>Create login and continue to setup</strong>
           </div>
-          {% if trial_mode %}
-          <div>
-            <span class='small-label'>Subscription Review</span>
-            <strong>Choose your tier during guided setup</strong>
-          </div>
-          {% endif %}
         </div>
       </div>
       {% with messages = get_flashed_messages(with_categories=true) %}
@@ -120,23 +212,25 @@
         <div><label>Email</label><input name='email' value='{{ request.form.get("email", invite.invited_email or "") }}' required></div>
         <div><label>Create Password</label><div class='password-field'><input name='password' type='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
         <div><label>Confirm Password</label><div class='password-field'><input name='confirm_password' type='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
-        <div><button>{% if trial_mode %}Claim Trial & Create Login{% else %}Create Business Login{% endif %}</button></div>
+        <div><button>Create Business Login</button></div>
       </form>
-      <div class='small' style='margin-top:12px'>{% if trial_mode %}This trial invite creates your login first, then takes you into guided setup. Billing starts only after the complimentary {{ trial_offer_days }}-day period ends.{% else %}This invite creates your login first. It does not open the full workspace until setup is completed.{% endif %}</div>
+      <div class='small' style='margin-top:12px'>This invite creates your login first. It does not open the full workspace until setup is completed.</div>
       {% else %}
-      {% if invite.status == 'accepted' %}
-      <p>This business login has already been created. Sign in with the email you used for setup.</p>
-      <div style='display:flex;gap:10px;flex-wrap:wrap'>
-        <a class='btn btn-secondary' href='{{ url_for("login") }}'>Sign In</a>
-        <a class='btn btn-secondary' href='{{ url_for("forgot_password") }}'>Forgot Password</a>
-      </div>
-      {% else %}
-      <p>This invite is no longer available.</p>
-      <a class='btn btn-secondary' href='{{ url_for("login") }}'>Back to Login</a>
-      {% endif %}
+        {% if invite.status == 'accepted' %}
+        <p>This business login has already been created. Sign in with the email you used for setup.</p>
+        <div style='display:flex;gap:10px;flex-wrap:wrap'>
+          <a class='btn btn-secondary' href='{{ url_for("login") }}'>Sign In</a>
+          <a class='btn btn-secondary' href='{{ url_for("forgot_password") }}'>Forgot Password</a>
+        </div>
+        {% else %}
+        <p>This invite is no longer available.</p>
+        <a class='btn btn-secondary' href='{{ url_for("login") }}'>Back to Login</a>
+        {% endif %}
       {% endif %}
     </section>
   </div>
+  {% endif %}
+
   <div class='login-bottom-rail' aria-label='Platform functions'>
     <span>Billing Center</span>
     <span>Income Records</span>

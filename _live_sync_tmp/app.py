@@ -1493,6 +1493,14 @@ def user_requires_business_onboarding(user) -> bool:
     return bool(row and (row['onboarding_status'] or 'completed') != 'completed')
 
 
+def user_has_trial_offer(user) -> bool:
+    if not user or user['role'] != 'client' or not user['client_id']:
+        return False
+    with get_conn() as conn:
+        row = conn.execute('SELECT trial_offer_days FROM clients WHERE id=?', (user['client_id'],)).fetchone()
+    return bool(row and int(row['trial_offer_days'] or 0) > 0)
+
+
 def client_access_issue_from_row(client_row) -> dict | None:
     if not client_row:
         return {
@@ -2139,7 +2147,17 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
             f"<td style='padding:14px 12px;border-bottom:1px solid #e3e7ee;color:#4b5e79;font-size:13px;line-height:1.6'>{html.escape(tier['best_for'])}<br>{html.escape(feature_preview)}{coming_soon}</td>"
             f"</tr>"
         )
+    video_preview_html = (
+        f"<div style='margin-top:20px;padding:18px 20px;border:1px solid #d7dce7;border-radius:18px;background:#ffffff'>"
+        f"<div style='color:#141b2d;font-size:14px;font-weight:800'>Welcome tutorial preview</div>"
+        f"<div style='margin-top:12px;display:flex;align-items:center;justify-content:center;min-height:160px;border-radius:16px;border:1px dashed #c9d2e0;background:linear-gradient(180deg,#f7f9fc,#eef2f6);color:#425067;font-size:14px;font-weight:700;text-align:center;padding:18px'>"
+        f"Video-ready trial introduction<br>Open the trial page to watch the welcome walkthrough"
+        f"</div>"
+        f"<div style='margin-top:10px;color:#5b687d;font-size:13px;line-height:1.7'>Email clients do not reliably play embedded video, so this preview block takes the business directly into the full trial page where the welcome tutorial and setup guidance live together.</div>"
+        f"</div>"
+    )
     trial_summary_html = (
+        video_preview_html +
         f"<div style='margin-top:22px;padding:18px 20px;border:1px solid #d7dce7;border-radius:18px;background:#f7f1e7'>"
         f"<div style='color:#141b2d;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase'>Complimentary Trial Offer</div>"
         f"<div style='margin-top:8px;color:#141b2d;font-size:24px;line-height:1.25;font-weight:800'>{trial_days}-day free guided trial</div>"
@@ -2158,10 +2176,11 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
         "",
         f"You've been invited to try LedgerFlow with a {trial_days}-day complimentary business trial for {business_name}.",
         "",
-        "Use the secure link below to review the subscription options, create your business login, and continue into guided setup:",
+        "Use the secure link below to review the subscription options, create your business login, and open the full trial experience:",
         invite_link,
         "",
-        "During setup, you'll choose the best-fit subscription tier and method on file. Billing begins only after the complimentary trial window ends.",
+        "No payment method is required to begin the complimentary trial.",
+        "You'll choose the subscription that fits your business now, and you can add billing later before the complimentary trial window ends.",
         "",
         "If you were not expecting this invitation, you can ignore this email.",
         "",
@@ -2174,10 +2193,11 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
         greeting=greeting,
         body_lines=[
             f'You have a {trial_days}-day complimentary window to explore the LedgerFlow business portal before monthly billing begins.',
-            'Use the secure button below to review the offer, create your login, and continue into guided setup.',
+            'Use the secure button below to review the offer, create your login, and open the full trial experience.',
+            'No card is required to begin the complimentary trial.',
             'Your administrator remains directly involved, so the rollout feels white-glove from the first step.',
         ],
-        cta_label=f'Claim {trial_days}-Day Trial',
+        cta_label=f'Open {trial_days}-Day Trial Experience',
         cta_link=invite_link,
         detail_rows=[
             ('Business', business_name),
@@ -2197,6 +2217,257 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
         html=email_html,
     )
     return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'prospect_trial_invite'}
+
+
+def preferred_admin_notification_user_id(conn: sqlite3.Connection, client_id: int | None = None, fallback_user_id: int | None = None) -> int | None:
+    if fallback_user_id:
+        row = conn.execute(
+            'SELECT id FROM users WHERE id=? AND role="admin"',
+            (fallback_user_id,),
+        ).fetchone()
+        if row:
+            return row['id']
+    if client_id:
+        row = conn.execute(
+            '''SELECT created_by_user_id
+               FROM business_invites
+               WHERE client_id=? AND created_by_user_id IS NOT NULL
+               ORDER BY created_at DESC, id DESC
+               LIMIT 1''',
+            (client_id,),
+        ).fetchone()
+        if row and row['created_by_user_id']:
+            return row['created_by_user_id']
+        row = conn.execute(
+            'SELECT created_by_user_id, updated_by_user_id FROM clients WHERE id=?',
+            (client_id,),
+        ).fetchone()
+        if row:
+            for key in ('created_by_user_id', 'updated_by_user_id'):
+                if row[key]:
+                    admin_row = conn.execute(
+                        'SELECT id FROM users WHERE id=? AND role="admin"',
+                        (row[key],),
+                    ).fetchone()
+                    if admin_row:
+                        return admin_row['id']
+    row = conn.execute(
+        'SELECT id FROM users WHERE role="admin" ORDER BY id LIMIT 1'
+    ).fetchone()
+    return row['id'] if row else None
+
+
+def admin_notification_recipients(conn: sqlite3.Connection, preferred_admin_user_id: int | None = None):
+    if preferred_admin_user_id:
+        row = conn.execute(
+            'SELECT id, email, full_name FROM users WHERE id=? AND role="admin" AND COALESCE(email,"")<>""',
+            (preferred_admin_user_id,),
+        ).fetchone()
+        if row:
+            return [row]
+    return conn.execute(
+        'SELECT id, email, full_name FROM users WHERE role="admin" AND COALESCE(email,"")<>"" ORDER BY id'
+    ).fetchall()
+
+
+def send_business_trial_claimed_email(
+    to_email: str,
+    to_name: str,
+    business_name: str,
+    *,
+    trial_days: int,
+    trial_end_date: str = '',
+):
+    cfg = smtp_config()
+    sender_email = cfg['sender_email']
+    smtp_username = cfg['smtp_username']
+    smtp_password = cfg['smtp_password']
+    if cfg.get('password_unreadable'):
+        raise RuntimeError('Saved SMTP password must be entered again once after the security-key update.')
+    if not sender_email or not smtp_username or not smtp_password:
+        raise RuntimeError('SMTP not configured')
+    login_link = public_app_url('/main-portal')
+    greeting = f"Hi {to_name}," if to_name else "Hi,"
+    trial_timing = f"Your complimentary access is active through {trial_end_date[:10]}." if trial_end_date else f"Your {trial_days}-day complimentary access is now active."
+    body = "\n".join([
+        greeting,
+        "",
+        f"We're excited you decided to start LedgerFlow for {business_name}.",
+        trial_timing,
+        "",
+        "You can sign in now, open the Welcome Center, and continue the quick setup when you're ready.",
+        "No payment method is required to begin the complimentary trial.",
+        "",
+        "Open LedgerFlow here:",
+        login_link,
+        "",
+        "If you have any questions, reach out before the trial ends and we will help you personally.",
+        "",
+        "LedgerFlow",
+    ])
+    email_html = render_marketing_email(
+        eyebrow='Trial Activated',
+        title=f'Your LedgerFlow trial is ready for {business_name}',
+        intro='We are excited to support your business while you explore the workspace and decide how you want to grow with LedgerFlow.',
+        greeting=greeting,
+        body_lines=[
+            trial_timing,
+            'Sign in now to open the Welcome Center, review the guided tutorial, and finish the quick setup when you are ready.',
+            'No payment method is required to begin the complimentary trial.',
+            'If you have any questions, reach out and we will help you move through it personally.',
+        ],
+        cta_label='Open Your Trial Workspace',
+        cta_link=login_link,
+        detail_rows=[
+            ('Business', business_name),
+            ('Trial Offer', f'{trial_days} complimentary days'),
+            ('Login Email', to_email),
+        ],
+        feature_tags=['Welcome Center', 'Guided Setup', 'Upgrade Later', 'Direct Support'],
+        support_note='If you were not expecting this message, you can ignore it.'
+    )
+    subject = f'Your LedgerFlow trial is ready for {business_name}'
+    send_rich_email(
+        cfg,
+        subject=subject,
+        to_email=to_email,
+        plain_text=body,
+        html=email_html,
+    )
+    return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'business_trial_claimed'}
+
+
+def send_admin_trial_claimed_email(
+    to_email: str,
+    to_name: str,
+    business_name: str,
+    *,
+    claimed_by_name: str,
+    claimed_by_email: str,
+    trial_days: int,
+    claimed_at: str = '',
+):
+    cfg = smtp_config()
+    sender_email = cfg['sender_email']
+    smtp_username = cfg['smtp_username']
+    smtp_password = cfg['smtp_password']
+    if cfg.get('password_unreadable'):
+        raise RuntimeError('Saved SMTP password must be entered again once after the security-key update.')
+    if not sender_email or not smtp_username or not smtp_password:
+        raise RuntimeError('SMTP not configured')
+    portal_link = public_app_url('/main-portal')
+    greeting = f"Hi {to_name}," if to_name else "Hi,"
+    plain_lines = [
+        greeting,
+        "",
+        f"The {trial_days}-day LedgerFlow trial for {business_name} has just been claimed.",
+        f"Claimed by: {claimed_by_name or 'Business contact'}",
+        f"Login email: {claimed_by_email}",
+    ]
+    if claimed_at:
+        plain_lines.append(f"Claimed at: {claimed_at}")
+    plain_lines.extend([
+        "",
+        "Open the administrator portal to review the invite pipeline, follow onboarding progress, and support the business directly.",
+        portal_link,
+        "",
+        "LedgerFlow",
+    ])
+    email_html = render_marketing_email(
+        eyebrow='Trial Claimed',
+        title=f'{business_name} just claimed the complimentary trial',
+        intro='The business owner created secure access and entered the trial workspace flow.',
+        greeting=greeting,
+        body_lines=[
+            f'{claimed_by_name or "The business contact"} created the login for the trial workspace.',
+            'Open the administrator portal to review the invite pipeline, confirm onboarding progress, and step in if support is needed.',
+        ],
+        cta_label='Open Administrator Portal',
+        cta_link=portal_link,
+        detail_rows=[
+            ('Business', business_name),
+            ('Claimed by', claimed_by_name or 'Business contact'),
+            ('Login email', claimed_by_email),
+            ('Offer', f'{trial_days}-day complimentary trial'),
+            ('Claimed at', claimed_at),
+        ],
+        feature_tags=['Invite Tracking', 'Trial Claimed', 'Onboarding Follow-Up'],
+        support_note='This message is part of the LedgerFlow administrator notification stream.'
+    )
+    subject = f'Trial claimed: {business_name}'
+    send_rich_email(
+        cfg,
+        subject=subject,
+        to_email=to_email,
+        plain_text='\n'.join(plain_lines),
+        html=email_html,
+    )
+    return {'subject': subject, 'body_text': '\n'.join(plain_lines), 'body_html': email_html, 'email_type': 'trial_claimed_notification'}
+
+
+def send_admin_subscription_activation_email(
+    to_email: str,
+    to_name: str,
+    business_name: str,
+    *,
+    activated_by_name: str,
+    activated_by_email: str,
+    tier_label: str,
+    monthly_amount: float,
+):
+    cfg = smtp_config()
+    sender_email = cfg['sender_email']
+    smtp_username = cfg['smtp_username']
+    smtp_password = cfg['smtp_password']
+    if cfg.get('password_unreadable'):
+        raise RuntimeError('Saved SMTP password must be entered again once after the security-key update.')
+    if not sender_email or not smtp_username or not smtp_password:
+        raise RuntimeError('SMTP not configured')
+    portal_link = public_app_url('/main-portal')
+    greeting = f"Hi {to_name}," if to_name else "Hi,"
+    body = "\n".join([
+        greeting,
+        "",
+        f"{business_name} completed setup and activated the {tier_label} subscription.",
+        f"Activated by: {activated_by_name or 'Business contact'}",
+        f"Login email: {activated_by_email}",
+        f"Monthly amount: ${monthly_amount:.2f}",
+        "",
+        "Open the administrator portal to review the account, billing status, and next support steps.",
+        portal_link,
+        "",
+        "LedgerFlow",
+    ])
+    email_html = render_marketing_email(
+        eyebrow='Subscription Activated',
+        title=f'{business_name} completed setup',
+        intro='A business just moved from trial/setup into an active subscription state.',
+        greeting=greeting,
+        body_lines=[
+            f'{activated_by_name or "The business contact"} finished the setup flow and activated the selected subscription.',
+            'Open the administrator portal to confirm billing details, workspace readiness, and any next follow-up.',
+        ],
+        cta_label='Open Administrator Portal',
+        cta_link=portal_link,
+        detail_rows=[
+            ('Business', business_name),
+            ('Activated by', activated_by_name or 'Business contact'),
+            ('Login email', activated_by_email),
+            ('Subscription', tier_label),
+            ('Monthly amount', f'${monthly_amount:.2f}'),
+        ],
+        feature_tags=['Activation Alert', 'Billing Ready', 'Client Growth'],
+        support_note='This message is part of the LedgerFlow administrator notification stream.'
+    )
+    subject = f'Subscription activated: {business_name}'
+    send_rich_email(
+        cfg,
+        subject=subject,
+        to_email=to_email,
+        plain_text=body,
+        html=email_html,
+    )
+    return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'subscription_activation_notification'}
 
 
 def send_rejoin_email(to_email: str, to_name: str, business_name: str, rejoin_link: str):
@@ -5337,6 +5608,8 @@ def enforce_business_onboarding_gate():
     allowed = {'business_onboarding', 'business_comeback', 'logout', 'static', 'help_center', 'irs_tips', 'forgot_password', 'reset_password'}
     if endpoint in allowed:
         return
+    if endpoint == 'welcome_center' and user_has_trial_offer(user):
+        return
     if user_requires_business_onboarding(user):
         return redirect(url_for('business_onboarding'))
     if client_access_issue_for_user(user):
@@ -7140,6 +7413,7 @@ def welcome_center():
         'welcome_center.html',
         client=client,
         client_id=client_id,
+        needs_onboarding=user_requires_business_onboarding(user),
         user_name=user['full_name'],
         owner_name=owner_name or user['full_name'],
         business_name=(client['business_name'] if client else ''),
@@ -7820,7 +8094,27 @@ def client_users():
                 return redirect(url_for('client_users'))
         active_clients = conn.execute("SELECT * FROM clients WHERE COALESCE(record_status,'active')='active' ORDER BY business_name").fetchall()
         users = conn.execute('SELECT u.*, c.business_name FROM users u LEFT JOIN clients c ON c.id=u.client_id WHERE u.role="client" ORDER BY c.business_name, u.full_name').fetchall()
-        invites = conn.execute("SELECT bi.*, c.business_name, COALESCE(c.record_status,'active') AS business_record_status FROM business_invites bi JOIN clients c ON c.id=bi.client_id WHERE COALESCE(c.record_status,'active')<>'archived' ORDER BY bi.created_at DESC").fetchall()
+        invites = conn.execute(
+            """SELECT
+                   bi.*,
+                   c.business_name,
+                   COALESCE(c.record_status,'active') AS business_record_status,
+                   c.onboarding_status,
+                   c.onboarding_completed_at,
+                   c.subscription_status,
+                   c.service_level,
+                   creator.full_name created_by_name,
+                   accepted.full_name accepted_user_name,
+                   accepted.email accepted_user_email,
+                   completed.full_name onboarding_completed_by_name
+               FROM business_invites bi
+               JOIN clients c ON c.id=bi.client_id
+               LEFT JOIN users creator ON creator.id=bi.created_by_user_id
+               LEFT JOIN users accepted ON accepted.id=bi.accepted_user_id
+               LEFT JOIN users completed ON completed.id=c.onboarding_completed_by_user_id
+               WHERE COALESCE(c.record_status,'active')<>'archived'
+               ORDER BY bi.created_at DESC, bi.id DESC"""
+        ).fetchall()
         prospect_clients = conn.execute(
             """SELECT
                    c.*,
@@ -7836,6 +8130,10 @@ def client_users():
                    bi.created_at invite_created_at,
                    bi.expires_at invite_expires_at,
                    bi.used_at invite_used_at,
+                   creator.full_name invite_created_by_name,
+                   accepted.full_name accepted_user_name,
+                   accepted.email accepted_user_email,
+                   completed.full_name onboarding_completed_by_name,
                    (
                        SELECT edl.id
                        FROM email_delivery_log edl
@@ -7876,6 +8174,9 @@ def client_users():
                    ORDER BY bi2.created_at DESC, bi2.id DESC
                    LIMIT 1
                )
+               LEFT JOIN users creator ON creator.id = bi.created_by_user_id
+               LEFT JOIN users accepted ON accepted.id = bi.accepted_user_id
+               LEFT JOIN users completed ON completed.id = c.onboarding_completed_by_user_id
                WHERE COALESCE(c.record_status,'active')='prospect'
                ORDER BY c.created_at DESC, c.business_name"""
         ).fetchall()
@@ -7884,7 +8185,18 @@ def client_users():
         row['pipeline_stage'] = prospect_pipeline_stage(row)
     prospect_stage_counts = summarize_prospect_pipeline(prospect_clients)
     email_logs = recent_email_activity(visible_client_ids(user, include_non_active=True), limit=40)
-    return render_template('client_users.html', clients=active_clients, prospect_clients=prospect_clients, prospect_stage_counts=prospect_stage_counts, users=users, invites=invites, build_invite_link=build_invite_link, app_base_url=configured_base_url(), email_logs=email_logs)
+    return render_template(
+        'client_users.html',
+        clients=active_clients,
+        prospect_clients=prospect_clients,
+        prospect_stage_counts=prospect_stage_counts,
+        users=users,
+        invites=invites,
+        build_invite_link=build_invite_link,
+        app_base_url=configured_base_url(),
+        email_logs=email_logs,
+        subscription_status_labels=subscription_status_label_map(),
+    )
 
 
 @app.route('/client-logins/email-preview/<int:email_id>')
@@ -8149,6 +8461,8 @@ def business_invite(token):
                 contact_name = (client_row['contact_name'] if client_row else '') or ''
                 client_email = (client_row['email'] if client_row else '') or ''
                 login_created_at = now_iso()
+                is_trial_claim = normalize_invite_kind(invite['invite_kind']) == 'prospect_trial'
+                trial_days = int(invite['trial_days'] or client_row['trial_offer_days'] or default_trial_offer_days())
                 if not contact_name.strip() or not client_email.strip():
                     conn.execute(
                         '''UPDATE clients
@@ -8159,8 +8473,7 @@ def business_invite(token):
                            WHERE id=?''',
                         (full_name, email, login_created_at, new_user['id'], invite['client_id'])
                     )
-                if normalize_invite_kind(invite['invite_kind']) == 'prospect_trial':
-                    trial_days = int(invite['trial_days'] or client_row['trial_offer_days'] or default_trial_offer_days())
+                if is_trial_claim:
                     trial_started_at_value = client_row['trial_started_at'] or login_created_at
                     trial_started_at_value, trial_ends_at_value = trial_date_window(trial_started_at_value, trial_days)
                     conn.execute(
@@ -8194,13 +8507,107 @@ def business_invite(token):
                     changed_by_user_id=new_user['id'],
                     detail='Business login created from invite.',
                 )
+                log_account_activity(
+                    conn,
+                    client_id=invite['client_id'],
+                    account_type='trial_business_login' if is_trial_claim else 'business_login',
+                    account_email=email,
+                    account_name=full_name,
+                    created_by_user_id=invite['created_by_user_id'],
+                    status='claimed_trial' if is_trial_claim else 'created',
+                    detail='Business login created from invite.',
+                )
                 conn.execute('UPDATE business_invites SET status="accepted", used_at=CURRENT_TIMESTAMP, accepted_user_id=? WHERE id=?', (new_user['id'], invite['id']))
                 conn.commit()
                 session.clear()
                 session['user_id'] = new_user['id']
+                if is_trial_claim and smtp_email_ready():
+                    trial_end_row = conn.execute(
+                        'SELECT trial_ends_at FROM clients WHERE id=?',
+                        (invite['client_id'],),
+                    ).fetchone()
+                    trial_end_date = (trial_end_row['trial_ends_at'] if trial_end_row else '') or ''
+                    try:
+                        trial_claim_payload = send_business_trial_claimed_email(
+                            email,
+                            full_name,
+                            invite['business_name'],
+                            trial_days=trial_days,
+                            trial_end_date=trial_end_date,
+                        )
+                        log_email_delivery(
+                            client_id=invite['client_id'],
+                            email_type=trial_claim_payload['email_type'],
+                            recipient_email=email,
+                            recipient_name=full_name,
+                            subject=trial_claim_payload['subject'],
+                            body_text=trial_claim_payload['body_text'],
+                            body_html=trial_claim_payload['body_html'],
+                            status='sent',
+                            created_by_user_id=invite['created_by_user_id'],
+                            related_invite_id=invite['id'],
+                            related_user_id=new_user['id'],
+                        )
+                    except Exception as e:
+                        log_email_delivery(
+                            client_id=invite['client_id'],
+                            email_type='business_trial_claimed',
+                            recipient_email=email,
+                            recipient_name=full_name,
+                            subject=f'Your LedgerFlow trial is ready for {invite["business_name"]}',
+                            status='failed',
+                            error_message=str(e)[:500],
+                            created_by_user_id=invite['created_by_user_id'],
+                            related_invite_id=invite['id'],
+                            related_user_id=new_user['id'],
+                        )
+                    admin_user_id = preferred_admin_notification_user_id(conn, invite['client_id'], invite['created_by_user_id'])
+                    for admin_row in admin_notification_recipients(conn, admin_user_id):
+                        try:
+                            admin_payload = send_admin_trial_claimed_email(
+                                admin_row['email'],
+                                admin_row['full_name'],
+                                invite['business_name'],
+                                claimed_by_name=full_name,
+                                claimed_by_email=email,
+                                trial_days=trial_days,
+                                claimed_at=login_created_at,
+                            )
+                            log_email_delivery(
+                                client_id=invite['client_id'],
+                                email_type=admin_payload['email_type'],
+                                recipient_email=admin_row['email'],
+                                recipient_name=admin_row['full_name'],
+                                subject=admin_payload['subject'],
+                                body_text=admin_payload['body_text'],
+                                body_html=admin_payload['body_html'],
+                                status='sent',
+                                created_by_user_id=invite['created_by_user_id'],
+                                related_invite_id=invite['id'],
+                                related_user_id=new_user['id'],
+                            )
+                        except Exception as e:
+                            log_email_delivery(
+                                client_id=invite['client_id'],
+                                email_type='trial_claimed_notification',
+                                recipient_email=admin_row['email'],
+                                recipient_name=admin_row['full_name'],
+                                subject=f'Trial claimed: {invite["business_name"]}',
+                                status='failed',
+                                error_message=str(e)[:500],
+                                created_by_user_id=invite['created_by_user_id'],
+                                related_invite_id=invite['id'],
+                                related_user_id=new_user['id'],
+                            )
                 if onboarding_needed:
+                    if is_trial_claim:
+                        flash('Trial claimed. Start in the Welcome Center, review the guided overview, and finish the quick setup when you are ready.', 'success')
+                        return redirect(url_for('welcome_center'))
                     flash('Business login created. Complete setup to unlock your full LedgerFlow workspace.', 'success')
                     return redirect(url_for('business_onboarding'))
+                if is_trial_claim:
+                    flash('Trial claimed. Your LedgerFlow workspace is ready to explore.', 'success')
+                    return redirect(url_for('welcome_center'))
                 welcome_sent = False
                 welcome_error = ''
                 if smtp_email_ready():
@@ -8477,10 +8884,21 @@ def business_onboarding():
                     changed_by_user_id=user['id'],
                     detail='Business setup completed and subscription foundation saved.',
                 )
+                log_account_activity(
+                    conn,
+                    client_id=client_id,
+                    account_type='subscription_activation',
+                    account_email=email,
+                    account_name=contact_name,
+                    created_by_user_id=user['id'],
+                    status='subscription_active',
+                    detail=f'Subscription activated on {service_level_label_map().get(service_level, service_level)}.',
+                )
                 conn.commit()
                 welcome_sent = False
                 welcome_error = ''
                 welcome_payload = None
+                admin_notification_user_id = preferred_admin_notification_user_id(conn, client_id)
                 if smtp_email_ready():
                     try:
                         welcome_payload = send_welcome_email(
@@ -8518,6 +8936,43 @@ def business_onboarding():
                         created_by_user_id=user['id'],
                         related_user_id=user['id'],
                     )
+                if smtp_email_ready():
+                    tier_label = service_level_label_map().get(service_level, service_level)
+                    for admin_row in admin_notification_recipients(conn, admin_notification_user_id):
+                        try:
+                            activation_payload = send_admin_subscription_activation_email(
+                                admin_row['email'],
+                                admin_row['full_name'],
+                                business_name,
+                                activated_by_name=contact_name,
+                                activated_by_email=email,
+                                tier_label=tier_label,
+                                monthly_amount=float(subscription_amount_decimal),
+                            )
+                            log_email_delivery(
+                                client_id=client_id,
+                                email_type=activation_payload['email_type'],
+                                recipient_email=admin_row['email'],
+                                recipient_name=admin_row['full_name'],
+                                subject=activation_payload['subject'],
+                                body_text=activation_payload['body_text'],
+                                body_html=activation_payload['body_html'],
+                                status='sent',
+                                created_by_user_id=user['id'],
+                                related_user_id=user['id'],
+                            )
+                        except Exception as e:
+                            log_email_delivery(
+                                client_id=client_id,
+                                email_type='subscription_activation_notification',
+                                recipient_email=admin_row['email'],
+                                recipient_name=admin_row['full_name'],
+                                subject=f'Subscription activated: {business_name}',
+                                status='failed',
+                                error_message=str(e)[:500],
+                                created_by_user_id=user['id'],
+                                related_user_id=user['id'],
+                            )
                 if welcome_sent:
                     flash('Setup complete. Your LedgerFlow workspace is ready and your welcome email has been sent.', 'success')
                 elif smtp_email_ready():

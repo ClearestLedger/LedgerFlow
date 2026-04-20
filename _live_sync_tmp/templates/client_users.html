@@ -106,13 +106,34 @@
       </div>
       {% if invites %}
       <table class='table'>
-        <tr><th>Business</th><th>Offer</th><th>Email</th><th>Status</th><th>Invite Link</th><th>Action</th><th>Error</th></tr>
+        <tr><th>Business</th><th>Offer</th><th>Invitee</th><th>Sent By</th><th>Claimed / Activated</th><th>Invite Link</th><th>Action</th><th>Error</th></tr>
         {% for invite in invites %}
-        <tr data-search-text='{{ (invite.business_name or "")|lower }} {{ (invite.invited_email or "")|lower }} {{ (invite.status or "")|lower }} {{ (invite.invited_name or "")|lower }} {{ (invite.invite_error or "")|lower }} {{ (invite.invite_kind or "")|lower }}'>
-          <td>{{ invite.business_name }}</td>
+        <tr data-search-text='{{ (invite.business_name or "")|lower }} {{ (invite.invited_email or "")|lower }} {{ (invite.status or "")|lower }} {{ (invite.invited_name or "")|lower }} {{ (invite.invite_error or "")|lower }} {{ (invite.invite_kind or "")|lower }} {{ (invite.created_by_name or "")|lower }} {{ (invite.accepted_user_name or "")|lower }} {{ (invite.onboarding_completed_by_name or "")|lower }}'>
+          <td>
+            <strong>{{ invite.business_name }}</strong>
+            <div class='small'>{{ invite.created_at }}</div>
+          </td>
           <td>{% if invite.invite_kind == 'prospect_trial' %}{{ invite.trial_days or 7 }}-Day Trial{% else %}Business Access{% endif %}</td>
-          <td>{{ invite.invited_email }}</td>
-          <td><span class='status-chip {{ invite.status or "pending" }}'>{{ invite.status or 'pending' }}</span></td>
+          <td>
+            <strong>{{ invite.invited_email }}</strong>
+            <div class='small'>{{ invite.invited_name or 'No name saved' }}</div>
+            <div class='small'><span class='status-chip {{ invite.status or "pending" }}'>{{ invite.status or 'pending' }}</span></div>
+          </td>
+          <td>{{ invite.created_by_name or 'Administrator' }}</td>
+          <td>
+            {% if invite.accepted_user_name or invite.accepted_user_email %}
+            <div class='small'><strong>Login:</strong> {{ invite.accepted_user_name or 'Claimed' }}{% if invite.accepted_user_email %} | {{ invite.accepted_user_email }}{% endif %}</div>
+            {% endif %}
+            {% if invite.used_at %}
+            <div class='small'><strong>Claimed:</strong> {{ invite.used_at }}</div>
+            {% endif %}
+            {% if invite.onboarding_completed_at %}
+            <div class='small'><strong>Activated:</strong> {{ invite.onboarding_completed_at }}</div>
+            <div class='small'>{{ invite.onboarding_completed_by_name or 'Business owner' }} | {{ subscription_status_labels.get(invite.subscription_status or 'inactive', invite.subscription_status or 'inactive') }}</div>
+            {% else %}
+            <div class='small'>{{ 'Waiting for trial claim' if invite.invite_kind == 'prospect_trial' and not invite.used_at else 'Waiting for setup completion' }}</div>
+            {% endif %}
+          </td>
           <td><input value='{{ build_invite_link(invite.token) if app_base_url else "Set APP_BASE_URL in Email Settings" }}' readonly></td>
           <td>
             <form method='post' style='margin:0'>
@@ -156,14 +177,23 @@
             <div class='small'>Offer: {% if c.invite_kind == 'prospect_trial' %}<span class='status-chip accepted'>{{ c.trial_days or 7 }}-Day Trial</span>{% else %}<span class='status-chip pending'>Prospect Invite</span>{% endif %}</div>
             <div class='small'>Pipeline Stage: <span class='status-chip {{ c.pipeline_stage.key }}'>{{ c.pipeline_stage.label }}</span></div>
             <div class='small'>{{ c.pipeline_stage.detail }}</div>
+            {% if c.invite_created_by_name %}
+            <div class='small'>Invite sent by: {{ c.invite_created_by_name }}</div>
+            {% endif %}
             {% if c.invite_created_at %}
             <div class='small'>Last invite sent: {{ c.invite_created_at }}</div>
             {% endif %}
             {% if c.invite_used_at %}
             <div class='small'>Invite accepted: {{ c.invite_used_at }}</div>
             {% endif %}
+            {% if c.accepted_user_name or c.accepted_user_email %}
+            <div class='small'>Trial login created by: {{ c.accepted_user_name or 'Business owner' }}{% if c.accepted_user_email %} | {{ c.accepted_user_email }}{% endif %}</div>
+            {% endif %}
             {% if c.onboarding_started_at %}
             <div class='small'>Setup started: {{ c.onboarding_started_at }}</div>
+            {% endif %}
+            {% if c.onboarding_completed_at %}
+            <div class='small'>Subscription activated: {{ c.onboarding_completed_at }}{% if c.onboarding_completed_by_name %} | {{ c.onboarding_completed_by_name }}{% endif %}</div>
             {% endif %}
             {% if c.last_invite_email_sent_at %}
             <div class='small'>Last email log: <span class='status-chip {{ c.last_invite_email_status or "sent" }}'>{{ c.last_invite_email_status or 'sent' }}</span> | {{ c.last_invite_email_sent_at }}{% if c.last_invite_email_type %} | {{ c.last_invite_email_type|replace('_', ' ')|title }}{% endif %}</div>
