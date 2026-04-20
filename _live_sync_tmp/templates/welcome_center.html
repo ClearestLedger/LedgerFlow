@@ -1,16 +1,18 @@
 {% extends 'base.html' %}
 {% block body %}
+{% set is_trial_workspace = (client.trial_offer_days or 0) > 0 %}
 <div class='hero-surface welcome-center-hero'>
   <div class='summary-strip'>
     <span class='summary-pill'>{{ tr('Welcome page') }}</span>
     <span class='summary-pill'>{{ tr('Business onboarding support') }}</span>
+    <span class='summary-pill'>{{ tr('Workspace overview') }}</span>
     <span class='summary-pill'>{{ tr('Canva video ready') }}</span>
   </div>
   <div class='toolbar hero-toolbar' style='margin-top:14px'>
     <div>
       <div class='page-kicker'>Welcome Center</div>
       <div class='page-title'>{{ tr('Welcome to LedgerFlow') }}</div>
-      <div class='page-subtitle'>{{ tr('A guided landing page for this business with clear first steps, personalized details, and a future-ready training area for how-to videos.') }}</div>
+      <div class='page-subtitle'>{{ tr('A guided landing page for this business with a real overview, clear first steps, and a future-ready training area for how-to videos.') }}</div>
     </div>
     <a class='btn btn-secondary' href='{{ url_for("dashboard", client_id=client_id) }}'>{{ tr('Open Dashboard') }}</a>
   </div>
@@ -35,7 +37,7 @@
   <div class='card stat-card premium-stat premium-stat-accent'>
     <h3>{{ tr('Workspace Ready') }}</h3>
     <div class='metric'>{{ worker_count }} Team{% if worker_count != 1 %} Members{% else %} Member{% endif %}</div>
-    <div class='small'>{{ tr('Income records, billing, calendar, and operational tools are ready.') }}</div>
+    <div class='small'>{{ tr('Income records, overview tools, calendar, and operational tools are ready.') if is_trial_workspace else tr('Income records, billing, calendar, and operational tools are ready.') }}</div>
   </div>
 </div>
 
@@ -45,11 +47,11 @@
     <div class='welcome-message-copy'>
       <p><strong>{{ user_name }}</strong>, {{ tr('welcome to LedgerFlow.') }}</p>
       <p>{{ tr('Your workspace for') }} <strong>{{ business_name }}</strong> {{ tr('is designed to keep billing, income records, team operations, payroll context, planning, and business coordination organized in one place.') }}</p>
-      <p>{{ tr('Use this Welcome Center as your calm starting point. From here, you can move into the dashboard, review billing, track income, manage team members, and later watch guided how-to videos built specifically for this software.') }}</p>
+      <p>{{ tr('Use this Welcome Center as your calm starting point. From here, you can move into the dashboard, review the overview, track income, manage team members, and later watch guided how-to videos built specifically for this software.') if is_trial_workspace else tr('Use this Welcome Center as your calm starting point. From here, you can move into the dashboard, review billing, track income, manage team members, and later watch guided how-to videos built specifically for this software.') }}</p>
     </div>
     <div class='benefits-mini-points' style='margin-top:14px'>
       <span>{{ tr('Open Dashboard') }}</span>
-      <span>{{ tr('Review Billing') }}</span>
+      <span>{{ tr('Workspace overview') }}</span>
       <span>{{ tr('Save Income Records') }}</span>
       <span>{{ tr('Manage Team Members') }}</span>
     </div>
@@ -59,17 +61,44 @@
     <div class='card-head'><h3>{{ tr('Recommended First Steps') }}</h3><span class='badge'>{{ tr('Start Here') }}</span></div>
     <ol class='welcome-step-list'>
       <li>Review your main dashboard and confirm the business name, owner details, and current workspace status.</li>
-      <li>Open Billing to confirm the subscription tier, billing status, and method on file.</li>
+      <li>{{ tr('Open the workspace overview and get familiar with the core sections you will use first.') if is_trial_workspace else tr('Open Billing to confirm the subscription tier, billing status, and method on file.') }}</li>
       <li>Use Income Records to begin saving business income in a tax-preparation-friendly format.</li>
       <li>Open Team Members if you need to add, update, or organize staff and payout information.</li>
-      <li>Use Calendar and reports as your operational planning layer once the basics are in place.</li>
+      <li>{{ tr('Use the tutorial and overview cards here first, then add billing later before the trial period ends.') if is_trial_workspace else tr('Use Calendar and reports as your operational planning layer once the basics are in place.') }}</li>
     </ol>
     <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:14px'>
       <a class='btn btn-secondary btn-sm' href='{{ url_for("dashboard", client_id=client_id) }}'>{{ tr('Overview') }}</a>
+      {% if is_trial_workspace %}
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>{{ tr('Tutorial') }}</a>
+      {% else %}
       <a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Billing') }}</a>
+      {% endif %}
       <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Income Records') }}</a>
       <a class='btn btn-secondary btn-sm' href='{{ url_for("workers", client_id=client_id) }}'>{{ tr('Team Members') }}</a>
     </div>
+  </section>
+</div>
+
+<div class='grid cards-2' style='margin-top:18px;align-items:start'>
+  <section class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Workspace Overview') }}</h3><span class='badge'>{{ tr('Overview') }}</span></div>
+    <div class='small' style='margin-bottom:14px'>{{ tr('This page is your soft landing. Use it to understand the main parts of LedgerFlow before you start entering records or settings.') }}</div>
+    <div class='benefits-mini-points'>
+      <span>{{ tr('Dashboard snapshot') }}</span>
+      <span>{{ tr('Income records') }}</span>
+      <span>{{ tr('Team member tools') }}</span>
+      <span>{{ tr('Administrator support path') }}</span>
+    </div>
+  </section>
+  <section class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Getting Started Tutorial') }}</h3><span class='badge'>{{ tr('Guided') }}</span></div>
+    <div class='small' style='margin-bottom:14px'>{{ tr('Use these fixtures as your starter tutorial flow while the Canva videos are being finalized.') }}</div>
+    <ol class='welcome-step-list'>
+      <li>{{ tr('Confirm the business profile and owner details are correct.') }}</li>
+      <li>{{ tr('Open the dashboard and review the overview cards.') }}</li>
+      <li>{{ tr('Save your first income record so the workspace starts building real data.') }}</li>
+      <li>{{ tr('Return here anytime for the next recommended step.') }}</li>
+    </ol>
   </section>
 </div>
 

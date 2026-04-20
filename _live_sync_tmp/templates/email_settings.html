@@ -39,12 +39,23 @@
       <div><label>SMTP Host</label><input name='smtp_host' value='{{ smtp_host or "smtp.gmail.com" }}' placeholder='smtp.gmail.com'></div>
       <div><label>SMTP Port</label><input name='smtp_port' value='{{ smtp_port or "587" }}' placeholder='587'></div>
       <div><label>SMTP Username</label><input name='smtp_username' value='{{ smtp_username or "" }}' placeholder='name@yourdomain.com'></div>
-      <div><label>SMTP Password</label><div class='password-field'><input name='smtp_password' type='password' autocomplete='new-password' placeholder='{% if password_configured %}Enter new password only if changing{% else %}Enter app password{% endif %}'><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
+      <div>
+        <label>SMTP Password</label>
+        {% if password_configured %}
+        <div class='small' style='margin-bottom:8px'>{{ tr('Saved and locked. Leave it as is unless you are intentionally changing it.') }}</div>
+        <details class='compact-details'>
+          <summary>{{ tr('Change saved password') }}</summary>
+          <div class='password-field' style='margin-top:10px'><input name='smtp_password' type='password' autocomplete='new-password' placeholder='{{ tr("Enter new app password only if changing") }}'><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div>
+        </details>
+        {% else %}
+        <div class='password-field'><input name='smtp_password' type='password' autocomplete='new-password' placeholder='{{ tr("Enter app password") }}'><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div>
+        {% endif %}
+      </div>
       <div><label>App Base URL</label><input name='app_base_url' value='{{ app_base_url or "" }}' placeholder='https://yourdomain.com'></div>
       <div style='display:flex;align-items:end;'><button type='submit'>Save Settings</button></div>
     </form>
   </details>
-  <div class='small' style='margin-top:10px'>Phase 1 lock: these email settings are now saved inside the software database and mirrored to runtime storage for compatibility. You can paste the main portal URL here and LedgerFlow will normalize it to the correct public base.</div>
+  <div class='small' style='margin-top:10px'>Phase 1 lock: these email settings are now saved inside the software database and mirrored to runtime storage for compatibility. You can paste the main portal URL here and LedgerFlow will normalize it to the correct public base. SMTP password stays saved between logins unless you open the change control and replace it.</div>
 </div>
 
 <div class='card' style='max-width:980px;margin:16px auto 0;'>
@@ -57,13 +68,24 @@
       <div><label>SMTP Host</label><input name='smtp_host' value='{{ smtp_host or "smtp.gmail.com" }}' placeholder='smtp.gmail.com'></div>
       <div><label>SMTP Port</label><input name='smtp_port' value='{{ smtp_port or "587" }}' placeholder='587'></div>
       <div><label>SMTP Username</label><input name='smtp_username' value='{{ smtp_username or "" }}' placeholder='name@yourdomain.com'></div>
-      <div><label>SMTP Password</label><div class='password-field'><input name='smtp_password' type='password' autocomplete='new-password' placeholder='{% if password_configured %}Leave blank to keep current password{% else %}Enter app password{% endif %}'><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
+      <div>
+        <label>SMTP Password</label>
+        {% if password_configured %}
+        <div class='small' style='margin-bottom:8px'>{{ tr('Saved and locked. Leave blank to keep the current password.') }}</div>
+        <details class='compact-details'>
+          <summary>{{ tr('Change saved password for test send') }}</summary>
+          <div class='password-field' style='margin-top:10px'><input name='smtp_password' type='password' autocomplete='new-password' placeholder='{{ tr("Enter new app password only if changing") }}'><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div>
+        </details>
+        {% else %}
+        <div class='password-field'><input name='smtp_password' type='password' autocomplete='new-password' placeholder='{{ tr("Enter app password") }}'><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div>
+        {% endif %}
+      </div>
       <div><label>App Base URL</label><input name='app_base_url' value='{{ app_base_url or "" }}' placeholder='https://yourdomain.com'></div>
       <div><label>Test Email Address</label><input name='test_email' value='' placeholder='you@example.com'></div>
       <div style='display:flex;align-items:end;'><button type='submit'>Send Test Email</button></div>
     </form>
   </details>
-  <div class='small' style='margin-top:10px'>Use your Gmail app password. The password field is always blank by design.</div>
+  <div class='small' style='margin-top:10px'>Use your Gmail app password. If one is already saved, it stays locked and active until you intentionally replace it.</div>
   {% if settings_profile.last_test_status == 'failed' and settings_profile.last_test_error %}
   <div class='flash error' style='margin-top:12px'>Last test error: {{ settings_profile.last_test_error }}</div>
   {% endif %}

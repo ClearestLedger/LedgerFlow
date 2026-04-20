@@ -1,5 +1,6 @@
 ﻿{% extends 'base.html' %}
 {% block body %}
+{% set is_trial_workspace = (client.trial_offer_days or 0) > 0 %}
 
 <div class='welcome-panel welcome-panel-large business-welcome-panel'>
   <div class='welcome-stack'>
@@ -33,6 +34,23 @@
 </div>
 
 {% if current_user.role != 'admin' %}
+{% if is_trial_workspace %}
+<div class='card section-frame' style='margin-bottom:16px'>
+  <div class='card-head'><h3>{{ tr('Trial Workspace Overview') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>{{ tr('Open Tutorial') }}</a></div>
+  <div class='grid cards-4'>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Trial Plan') }}</h3><div class='metric'>{{ client.subscription_plan_code or tr('Not set') }}</div></div>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Trial Status') }}</h3><div class='metric'>{{ tr('Active') }}</div></div>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Complimentary Period') }}</h3><div class='metric'>{{ client.trial_offer_days or 0 }} {{ tr('Days') }}</div></div>
+    <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Trial Ends') }}</h3><div class='metric'>{{ client.trial_ends_at[:10] if client.trial_ends_at else (client.subscription_next_billing_date or '&mdash;') }}</div></div>
+  </div>
+  <div class='small' style='margin-top:10px'>{{ tr('Your complimentary trial is open now. Start with the overview and tutorial first. Billing can be added later before the first charge date.') }}</div>
+  <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:14px'>
+    <a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>{{ tr('Open Welcome Tutorial') }}</a>
+    <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Open Income Records') }}</a>
+    <a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Add Billing Later') }}</a>
+  </div>
+</div>
+{% else %}
 <div class='card section-frame' style='margin-bottom:16px'>
   <div class='card-head'><h3>{{ tr('Subscription Billing') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Open Billing') }}</a></div>
   <div class='grid cards-4'>
@@ -43,7 +61,8 @@
   </div>
   <div class='small' style='margin-top:10px'>{{ tr('Method on file') }}: <strong>{{ payment_method_summary.default_label or tr('No method recorded yet') }}</strong>{% if payment_method_summary.default_label %} ({{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}){% endif %}. {{ tr('Open Billing to manage the subscription method on file and any one-time administrator fees.') }}</div>
 </div>
-{% if admin_fee_summary and admin_fee_summary.pending_count %}
+{% endif %}
+{% if (not is_trial_workspace) and admin_fee_summary and admin_fee_summary.pending_count %}
 <div class='card billing-inline-alert' style='margin-bottom:16px'>
   <div class='card-head'><h3>{{ tr('Administrator Fee Notice') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Review Fees') }}</a></div>
   <div class='small'><strong>${{ '%.2f'|format(admin_fee_summary.amount_due or 0) }}</strong> {{ tr('across') }} {{ admin_fee_summary.pending_count or 0 }} {{ tr('open fee items') }}. {{ open_fee_guidance.detail }} {{ tr('This stays separate from your day-to-day customer payment activity.') }}</div>
@@ -92,9 +111,10 @@
   </div>
   <div class='card welcome-center-card'>
     <div class='card-head'><h3>{{ tr('Welcome Center') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>{{ tr('Open Welcome') }}</a></div>
-    <div class='small' style='margin-bottom:12px'>{{ tr('A guided welcome space for this business with owner details, first-step direction, and future how-to video slots for Canva training content.') }}</div>
+    <div class='small' style='margin-bottom:12px'>{{ tr('A guided welcome space for this business with owner details, overview direction, and future how-to video slots for Canva training content.') }}</div>
     <div class='benefits-mini-points'>
       <span>{{ tr('Business welcome') }}</span>
+      <span>{{ tr('Workspace overview') }}</span>
       <span>{{ tr('Owner and user details') }}</span>
       <span>{{ tr('How-to video space') }}</span>
       <span>{{ tr('Quick first steps') }}</span>

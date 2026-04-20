@@ -5526,6 +5526,9 @@ def login():
                         issue = client_access_issue_for_user(user)
                         if issue:
                             return redirect(url_for('business_comeback'))
+                        client = conn.execute('SELECT id, trial_offer_days FROM clients WHERE id=?', (user['client_id'],)).fetchone()
+                        if client and int(client['trial_offer_days'] or 0) > 0:
+                            return redirect(url_for('welcome_center', client_id=user['client_id']))
                     return redirect(url_for('cpa_dashboard' if user['role']=='admin' else 'dashboard'))
 
                 workers = conn.execute(
