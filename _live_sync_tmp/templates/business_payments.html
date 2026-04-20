@@ -40,11 +40,12 @@
 <div class='card section-frame' id='subscription-billing' style='margin-bottom:16px'>
   <div class='card-head'><h3>{{ tr('Subscription Billing') }}</h3><span class='badge'>{{ tr('Recurring Service') }}</span></div>
   <div class='tier-rollout-note' style='margin-bottom:14px'>
-    {{ tr('This live portal is billed as a private administrator-managed client service. Your selected plan and method on file are active now, while fully automated self-checkout and premium banking tools continue through final rollout.') }}
+    {{ tr('This live portal is billed as a private administrator-managed client service. Your selected plan, payment authorization, and method on file are active now while premium banking tools continue through final rollout.') }}
   </div>
-  <div class='grid cards-3' style='margin-bottom:12px'>
+  <div class='grid cards-4' style='margin-bottom:12px'>
     <div class='card stat-card premium-stat'><h3>Monthly Subscription</h3><div class='metric'>${{ '%.2f'|format(client.subscription_amount or 0) }}</div><div class='small'>{{ client.subscription_plan_code or 'No plan code recorded yet' }}</div></div>
     <div class='card stat-card premium-stat'><h3>Default Method</h3><div class='metric'>{{ payment_method_summary.default_label or 'Not enrolled yet' }}</div><div class='small'>{{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}</div></div>
+    <div class='card stat-card premium-stat'><h3>Automatic Withdrawal</h3><div class='metric'>{{ 'Authorized' if client.subscription_autopay_enabled else 'Manual approval' }}</div><div class='small'>{{ 'Runs from the default saved method' if client.subscription_autopay_enabled else 'Use this if you want approval before collection' }}</div></div>
     <div class='card stat-card premium-stat'><h3>Backup Method</h3><div class='metric'>{{ payment_method_summary.backup_label or 'Optional' }}</div><div class='small'>{{ payment_method_summary.active_count or 0 }} method{% if (payment_method_summary.active_count or 0) != 1 %}s{% endif %} active</div></div>
   </div>
   <div class='subscription-tier-grid subscription-tier-grid-compact' style='margin-bottom:14px'>
@@ -70,7 +71,22 @@
     </div>
     {% endfor %}
   </div>
-  <div class='small'>{{ tr('Use one default payment method for subscription billing and optionally keep one backup on file. Full card storage and live autopay are not running inside this app.') }}</div>
+  <div class='small'>{{ tr('Use one default payment method for subscription billing, optionally keep one backup on file, and authorize automatic withdrawal when you want recurring billing collected from the saved default method.') }}</div>
+
+  <div class='card' style='margin-top:14px;box-shadow:none;border:1px solid #E6ECF2'>
+    <div class='card-head'><h3>{{ tr('Subscription Billing Preferences') }}</h3><span class='badge'>{{ tr('Automatic Withdrawal') }}</span></div>
+    <form method='post' class='form-grid'>
+      <input type='hidden' name='action' value='update_subscription_billing_preferences'>
+      <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
+      <div style='grid-column:1 / -1'>
+        <label><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if client.subscription_autopay_enabled %}checked{% endif %}> {{ tr('Authorize automatic withdrawal from the default saved method for recurring subscription billing.') }}</label>
+        <div class='small' style='margin-top:6px'>{{ tr('Turn this on when you want monthly subscription billing collected from the default card or ACH method already on file.') }}</div>
+      </div>
+      <div><label>{{ tr('Next Billing Date') }}</label><input type='date' name='subscription_next_billing_date' value='{{ client.subscription_next_billing_date or "" }}'></div>
+      <div class='small' style='align-self:end'>{{ tr('An active default card or ACH method is required before automatic withdrawal can be enabled.') }}</div>
+      <div><button type='submit' class='btn btn-secondary'>{{ tr('Save Billing Preferences') }}</button></div>
+    </form>
+  </div>
 
   <details id='payment-methods' class='compact-details' style='margin-top:14px'>
     <summary>{{ tr('Update Method On File') }}</summary>
@@ -83,6 +99,7 @@
         <div><label>Status</label><select name='status'>{% for value, label in payment_method_status_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
         <div class='pm-field pm-card pm-ach pm-zelle'><label>Card Brand / Bank Name</label><input name='brand_name' placeholder='Visa or Chase Business Checking' maxlength='80'></div>
         <div class='pm-field pm-card pm-ach pm-zelle'><label>Account Holder Name</label><input name='holder_name' placeholder='Business legal name' maxlength='120'></div>
+        <div class='pm-field pm-card'><label>Card Number</label><input name='card_number' inputmode='numeric' maxlength='23' placeholder='4111 1111 1111 1111'></div>
         <div class='pm-field pm-card pm-ach pm-zelle'><label>Last 4 Digits</label><input name='account_last4' inputmode='numeric' maxlength='4' placeholder='4242'></div>
         <div class='pm-field pm-card'><label>Expiration (MM/YY)</label><input name='expiry_display' maxlength='5' placeholder='08/28'></div>
         <div class='pm-field pm-ach'><label>Account Type</label><select name='account_type'><option value='checking'>Checking</option><option value='savings'>Savings</option></select></div>
@@ -109,6 +126,7 @@
               <div><label>Status</label><select name='status'>{% for value, label in payment_method_status_options %}<option value='{{ value }}' {% if (method.status or 'active') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
               <div class='pm-field pm-card pm-ach pm-zelle'><label>Card Brand / Bank Name</label><input name='brand_name' value='{{ method.brand_name or "" }}' maxlength='80'></div>
               <div class='pm-field pm-card pm-ach pm-zelle'><label>Account Holder Name</label><input name='holder_name' value='{{ method.holder_name or "" }}' maxlength='120'></div>
+              <div class='pm-field pm-card'><label>Card Number</label><input name='card_number' inputmode='numeric' maxlength='23' placeholder='Leave blank to keep current'></div>
               <div class='pm-field pm-card pm-ach pm-zelle'><label>Last 4 Digits</label><input name='account_last4' value='{{ method.account_last4 or "" }}' inputmode='numeric' maxlength='4'></div>
               <div class='pm-field pm-card'><label>Expiration (MM/YY)</label><input name='expiry_display' value='{{ method.expiry_display or "" }}' maxlength='5' placeholder='08/28'></div>
               <div class='pm-field pm-ach'><label>Account Type</label><select name='account_type'><option value='checking' {% if (method.account_type or 'checking') == 'checking' %}selected{% endif %}>Checking</option><option value='savings' {% if method.account_type == 'savings' %}selected{% endif %}>Savings</option></select></div>

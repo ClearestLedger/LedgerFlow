@@ -1183,12 +1183,14 @@ def validate_payment_method_form(form, *, existing=None) -> tuple[dict, list[str
     status = normalize_saved_method_status(form.get('status', 'active'))
     holder_name = form.get('holder_name', '').strip()
     brand_name = form.get('brand_name', '').strip()
+    card_number = clean_digits(form.get('card_number', '').strip())
     account_last4 = clean_last4(form.get('account_last4', '').strip())
     expiry_display = (form.get('expiry_display', '') or '').strip()
     routing_number = clean_digits(form.get('routing_number', '').strip())
     account_number = clean_digits(form.get('account_number', '').strip())
     confirm_account_number = clean_digits(form.get('confirm_account_number', '').strip())
     account_type = normalize_bank_account_type(form.get('account_type', 'checking'))
+    existing_card_number = decrypt_secret((existing['card_number_enc'] or '')) if existing and 'card_number_enc' in existing.keys() else ''
     if not label:
         errors.append('Enter a payment method label.')
     elif len(label) > 120:
@@ -1203,6 +1205,16 @@ def validate_payment_method_form(form, *, existing=None) -> tuple[dict, list[str
         errors.append('Expiration must be in MM/YY format.')
     if expiry_display and not re.fullmatch(r'(0[1-9]|1[0-2])/\d{2}', expiry_display):
         errors.append('Expiration must use MM/YY format.')
+    if method_type == 'card':
+        if not brand_name:
+            errors.append('Enter the card brand or issuer for card billing.')
+        if not holder_name:
+            errors.append('Enter the cardholder name for card billing.')
+        if card_number:
+            if len(card_number) < 13 or len(card_number) > 19:
+                errors.append('Card number must be between 13 and 19 digits.')
+        elif not existing_card_number and not account_last4 and not (existing['account_last4'] if existing else ''):
+            errors.append('Enter a card number for card billing.')
     if method_type == 'ach':
         existing_routing = decrypt_secret((existing['routing_number_enc'] or '')) if existing else ''
         existing_account = decrypt_secret((existing['account_number_enc'] or '')) if existing else ''
@@ -1223,7 +1235,7 @@ def validate_payment_method_form(form, *, existing=None) -> tuple[dict, list[str
             errors.append('Enter the bank name for ACH.')
     if len(details_note) > 300:
         errors.append('Payment method note must be 300 characters or fewer.')
-    final_account_last4 = account_last4 or clean_last4(account_number) or (existing['account_last4'] if existing else '')
+    final_account_last4 = account_last4 or clean_last4(card_number) or clean_last4(account_number) or (existing['account_last4'] if existing else '')
     return {
         'method_type': method_type,
         'label': label,
@@ -1235,6 +1247,7 @@ def validate_payment_method_form(form, *, existing=None) -> tuple[dict, list[str
         'account_last4': final_account_last4,
         'expiry_display': expiry_display,
         'account_type': account_type,
+        'card_number_enc': encrypt_secret(card_number) if card_number else (existing['card_number_enc'] if existing and 'card_number_enc' in existing.keys() else ''),
         'routing_number_enc': encrypt_secret(routing_number) if routing_number else (existing['routing_number_enc'] if existing else ''),
         'account_number_enc': encrypt_secret(account_number) if account_number else (existing['account_number_enc'] if existing else ''),
         'details_note': details_note,
@@ -3199,6 +3212,7 @@ def init_db():
                 account_last4 TEXT DEFAULT '',
                 expiry_display TEXT DEFAULT '',
                 account_type TEXT DEFAULT '',
+                card_number_enc TEXT DEFAULT '',
                 routing_number_enc TEXT DEFAULT '',
                 account_number_enc TEXT DEFAULT '',
                 details_note TEXT DEFAULT '',
@@ -3574,6 +3588,7 @@ def init_db():
         ensure_column(conn, 'business_payment_methods', 'account_last4', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_payment_methods', 'expiry_display', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_payment_methods', 'account_type', "TEXT DEFAULT ''")
+        ensure_column(conn, 'business_payment_methods', 'card_number_enc', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_payment_methods', 'routing_number_enc', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_payment_methods', 'account_number_enc', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_payment_methods', 'details_note', "TEXT DEFAULT ''")
@@ -5983,8 +5998,8 @@ def cpa_dashboard():
                     if cleaned['is_backup']:
                         conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (client_id,))
                     conn.execute(
-                        '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, card_number_enc, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                         (
                             client_id,
                             cleaned['method_type'],
@@ -5997,6 +6012,7 @@ def cpa_dashboard():
                             cleaned['account_last4'],
                             cleaned['expiry_display'],
                             cleaned['account_type'],
+                            cleaned['card_number_enc'],
                             cleaned['routing_number_enc'],
                             cleaned['account_number_enc'],
                             cleaned['details_note'],
@@ -6025,7 +6041,7 @@ def cpa_dashboard():
                         conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (row['client_id'],))
                     conn.execute(
                         '''UPDATE business_payment_methods
-                           SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
+                           SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, card_number_enc=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
                            WHERE id=?''',
                         (
                             cleaned['method_type'],
@@ -6038,6 +6054,7 @@ def cpa_dashboard():
                             cleaned['account_last4'],
                             cleaned['expiry_display'],
                             cleaned['account_type'],
+                            cleaned['card_number_enc'],
                             cleaned['routing_number_enc'],
                             cleaned['account_number_enc'],
                             cleaned['details_note'],
@@ -6938,11 +6955,47 @@ def business_payments_page():
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     if request.method == 'POST':
         action = request.form.get('action', '').strip().lower()
-        if action in {'add_payment_method', 'update_payment_method', 'delete_payment_method'} and not valid_payment_csrf(request.form.get('csrf_token', '')):
+        if action in {'add_payment_method', 'update_payment_method', 'delete_payment_method', 'update_subscription_billing_preferences'} and not valid_payment_csrf(request.form.get('csrf_token', '')):
             flash('Your session expired. Refresh the page and try again.', 'error')
             return redirect(url_for('business_payments_page', client_id=client_id))
         with get_conn() as conn:
-            if action == 'add_payment_method':
+            if action == 'update_subscription_billing_preferences':
+                client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+                next_billing_raw = request.form.get('subscription_next_billing_date', '').strip()
+                next_billing_date = client['subscription_next_billing_date'] or ''
+                if next_billing_raw:
+                    parsed_next = parse_date(next_billing_raw)
+                    if not parsed_next:
+                        flash('Enter a valid next billing date.', 'error')
+                        return redirect(url_for('business_payments_page', client_id=client_id))
+                    next_billing_date = parsed_next.isoformat()
+                autopay_enabled = 1 if request.form.get('subscription_autopay_enabled') in {'1', 'on', 'true', 'yes'} else 0
+                default_active = conn.execute(
+                    '''SELECT 1
+                       FROM business_payment_methods
+                       WHERE client_id=? AND is_default=1 AND COALESCE(status,'active')='active'
+                       LIMIT 1''',
+                    (client_id,),
+                ).fetchone()
+                if autopay_enabled and not default_active:
+                    flash('Add an active default card or ACH method before enabling automatic withdrawal.', 'error')
+                    return redirect(url_for('business_payments_page', client_id=client_id))
+                conn.execute(
+                    '''UPDATE clients
+                       SET subscription_autopay_enabled=?, subscription_next_billing_date=?, updated_at=?, updated_by_user_id=?
+                       WHERE id=?''',
+                    (
+                        autopay_enabled,
+                        next_billing_date,
+                        datetime.now().isoformat(timespec='seconds'),
+                        user['id'],
+                        client_id,
+                    )
+                )
+                conn.commit()
+                flash('Subscription billing preferences updated.', 'success')
+                return redirect(url_for('business_payments_page', client_id=client_id))
+            elif action == 'add_payment_method':
                 cleaned, errors = validate_payment_method_form(request.form)
                 if not errors:
                     if cleaned['is_default']:
@@ -6950,8 +7003,8 @@ def business_payments_page():
                     if cleaned['is_backup']:
                         conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (client_id,))
                     conn.execute(
-                        '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, card_number_enc, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                         (
                             client_id,
                             cleaned['method_type'],
@@ -6964,6 +7017,7 @@ def business_payments_page():
                             cleaned['account_last4'],
                             cleaned['expiry_display'],
                             cleaned['account_type'],
+                            cleaned['card_number_enc'],
                             cleaned['routing_number_enc'],
                             cleaned['account_number_enc'],
                             cleaned['details_note'],
@@ -6992,7 +7046,7 @@ def business_payments_page():
                         conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (client_id,))
                     conn.execute(
                         '''UPDATE business_payment_methods
-                           SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
+                           SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, card_number_enc=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
                            WHERE id=? AND client_id=?''',
                         (
                             cleaned['method_type'],
@@ -7005,6 +7059,7 @@ def business_payments_page():
                             cleaned['account_last4'],
                             cleaned['expiry_display'],
                             cleaned['account_type'],
+                            cleaned['card_number_enc'],
                             cleaned['routing_number_enc'],
                             cleaned['account_number_enc'],
                             cleaned['details_note'],
@@ -8340,7 +8395,7 @@ def business_onboarding():
                         conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (client_id,))
                     conn.execute(
                         '''UPDATE business_payment_methods
-                           SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
+                           SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, card_number_enc=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
                            WHERE id=? AND client_id=?''',
                         (
                             cleaned_method['method_type'],
@@ -8353,6 +8408,7 @@ def business_onboarding():
                             cleaned_method['account_last4'],
                             cleaned_method['expiry_display'],
                             cleaned_method['account_type'],
+                            cleaned_method['card_number_enc'],
                             cleaned_method['routing_number_enc'],
                             cleaned_method['account_number_enc'],
                             cleaned_method['details_note'],
@@ -8363,8 +8419,8 @@ def business_onboarding():
                     )
                 else:
                     conn.execute(
-                        '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, card_number_enc, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                         (
                             client_id,
                             cleaned_method['method_type'],
@@ -8377,6 +8433,7 @@ def business_onboarding():
                             cleaned_method['account_last4'],
                             cleaned_method['expiry_display'],
                             cleaned_method['account_type'],
+                            cleaned_method['card_number_enc'],
                             cleaned_method['routing_number_enc'],
                             cleaned_method['account_number_enc'],
                             cleaned_method['details_note'],

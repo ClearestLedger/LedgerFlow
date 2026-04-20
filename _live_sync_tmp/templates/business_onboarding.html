@@ -135,9 +135,9 @@
           </div>
         </div>
         <div class='tier-rollout-note' style='margin-top:12px'>
-          {{ tr('This private client rollout uses administrator-managed billing. Your selected plan, pricing, and method on file are saved now so billing can begin immediately, while self-service autopay and premium banking tools continue through final buildout.') }}
+          {{ tr('This private client rollout uses administrator-managed billing. Your selected plan, payment authorization, and method on file are saved now so billing can begin immediately while premium banking tools continue through final buildout.') }}
         </div>
-        <label class='small' style='display:block;margin-top:10px'><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if request.form.get("subscription_autopay_enabled", '1' if client.subscription_autopay_enabled else '') %}checked{% endif %}> {{ tr('Keep this method on file for subscription billing.') }}</label>
+        <label class='small' style='display:block;margin-top:10px'><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if request.form.get("subscription_autopay_enabled", '1' if client.subscription_autopay_enabled else '') %}checked{% endif %}> {{ tr('Authorize automatic withdrawal from the default saved method for recurring subscription billing.') }}</label>
       </div>
     </details>
 
@@ -161,6 +161,7 @@
           <div><label>{{ tr('Method Label') }}</label><input name='label' value='{{ request.form.get("label", default_method.label if default_method else "") }}' placeholder='{{ tr("Primary business card or Operating ACH") }}' required></div>
           <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank Name') }}</label><input name='brand_name' value='{{ request.form.get("brand_name", default_method.brand_name if default_method else "") }}' placeholder='{{ tr("Visa or Chase Business Checking") }}'></div>
           <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Account Holder Name') }}</label><input name='holder_name' value='{{ request.form.get("holder_name", default_method.holder_name if default_method else client.contact_name or current_user.full_name or "") }}' placeholder='{{ tr("Business legal name") }}'></div>
+          <div class='pm-field pm-card'><label>{{ tr('Card Number') }}</label><input name='card_number' inputmode='numeric' maxlength='23' placeholder='{% if default_method and default_method.method_type == "card" %}{{ tr("Leave blank to keep current") }}{% else %}4111 1111 1111 1111{% endif %}'></div>
           <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Last 4 Digits') }}</label><input name='account_last4' value='{{ request.form.get("account_last4", default_method.account_last4 if default_method else "") }}' inputmode='numeric' maxlength='4' placeholder='4242'></div>
           <div class='pm-field pm-card'><label>{{ tr('Expiration (MM/YY)') }}</label><input name='expiry_display' value='{{ request.form.get("expiry_display", default_method.expiry_display if default_method else "") }}' maxlength='5' placeholder='08/28'></div>
           <div class='pm-field pm-ach'><label>{{ tr('Account Type') }}</label><select name='account_type'><option value='checking' {% if request.form.get("account_type", default_method.account_type if default_method else "checking") == "checking" %}selected{% endif %}>{{ tr('Checking') }}</option><option value='savings' {% if request.form.get("account_type", default_method.account_type if default_method else "") == "savings" %}selected{% endif %}>{{ tr('Savings') }}</option></select></div>
