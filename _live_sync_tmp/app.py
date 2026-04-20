@@ -9558,6 +9558,7 @@ def business_onboarding():
                 request.form.get('details_note', '').strip(),
             ]
             submitted_payment_method = any(submitted_payment_fields)
+            trial_billing_opt_in = request.form.get('add_billing_now') in {'1', 'on', 'true', 'yes'}
             errors: list[str] = []
             if not business_name:
                 errors.append('Business name is required.')
@@ -9574,7 +9575,7 @@ def business_onboarding():
             if not start_date:
                 errors.append('Select a subscription start date.')
             cleaned_method = None
-            if (not trial_payment_optional) or submitted_payment_method:
+            if (not trial_payment_optional) or (trial_billing_opt_in and submitted_payment_method):
                 cleaned_method, payment_errors = validate_payment_method_form(request.form, existing=default_method)
                 errors.extend(payment_errors)
             if errors:

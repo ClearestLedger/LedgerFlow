@@ -442,6 +442,18 @@ linear-gradient(180deg,#f4f8ff 0%,#f8fbff 52%,#f6fafc 100%)}
 .trial-onboarding-note .small{line-height:1.75}
 .trial-onboarding-shell .trial-landing-grid{margin-bottom:0}
 .trial-onboarding-hero{padding:2px 2px 4px}
+.trial-onboarding-hero-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr);gap:18px;align-items:start}
+.trial-onboarding-fact-card{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:22px;border:1px solid rgba(116,130,155,.22);background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(240,244,248,.98));box-shadow:0 16px 28px rgba(34,37,43,.08)}
+.trial-onboarding-fact-card .badge{align-self:flex-start}
+.trial-fact-list,.trial-compact-list{margin:0;padding-left:18px;display:grid;gap:10px;color:var(--ink-soft);line-height:1.7}
+.trial-fact-list li::marker,.trial-compact-list li::marker{color:var(--primary)}
+.trial-side-card{height:100%}
+.trial-selection-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch}
+.trial-selection-summary .summary-pill{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:18px}
+.trial-selection-summary .summary-pill strong{font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.trial-date-pill input{width:auto;min-width:150px;max-width:100%;padding:8px 10px;border-radius:10px}
+.trial-next-card{padding:18px 20px}
+.trial-final-grid{align-items:stretch}
 .trial-optional-billing{margin-top:14px}
 .onboarding-flow{display:flex;flex-direction:column;gap:16px}
 .onboarding-step{padding:0;overflow:hidden}
@@ -890,6 +902,9 @@ body.messenger-open .messenger-drawer{transform:translateX(0);opacity:1;pointer-
 .welcome-video-meta span{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#72819A}
 .welcome-center-card .small,.welcome-first-steps .small{line-height:1.7}
 @media (max-width:700px){
+  .trial-onboarding-hero-grid,.trial-selection-summary,.trial-final-grid{grid-template-columns:1fr}
+  .trial-selection-summary .summary-pill{align-items:flex-start;flex-direction:column}
+  .trial-date-pill input{width:100%}
   .business-directory-tools{align-items:stretch}
   .business-directory-controls{width:100%}
   .business-directory-controls input{min-width:0;width:100%}

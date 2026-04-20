@@ -7,27 +7,30 @@
 {% if trial_offer_days %}
 <div class='login-wrap trial-onboarding-shell' style='max-width:1200px;margin:0 auto'>
   <div class='card hero-surface trial-onboarding-hero' style='margin-bottom:18px'>
-    <div class='card-head'>
+    <div class='trial-onboarding-hero-grid'>
       <div>
         <div class='page-kicker'>{{ tr('Complimentary Trial Active') }}</div>
         <div class='page-title'>{{ tr('Welcome to your LedgerFlow trial') }}</div>
-        <div class='page-subtitle'>{{ tr('Start with the overview and tutorial, confirm your business information, choose the subscription that fits best, and continue the free trial now. Billing can be added later before the complimentary period ends.') }}</div>
+        <div class='page-subtitle'>{{ tr('Confirm your business information, choose the subscription that fits best, and open the full workspace now. Billing can be added later before the complimentary period ends.') }}</div>
+        {% if trial_ends_at %}
+        <div class='summary-strip' style='margin-top:14px'>
+          <span class='summary-pill'>{{ tr('Trial ends') }} {{ trial_ends_at[:10] }}</span>
+          <span class='summary-pill'>{{ tr('Suggested first billing date') }} {{ default_subscription_start_date }}</span>
+          <span class='summary-pill'>{{ tr('No card required today') }}</span>
+        </div>
+        {% endif %}
       </div>
-      <span class='badge'>{{ trial_offer_days }} {{ tr('Days') }}</span>
+      <div class='trial-onboarding-fact-card'>
+        <div class='small-label'>{{ tr('This Trial Includes') }}</div>
+        <ul class='trial-fact-list'>
+          <li>{{ tr('Full workspace access while you evaluate the fit') }}</li>
+          <li>{{ tr('A guided welcome center and tutorial-first experience') }}</li>
+          <li>{{ tr('Visible subscription pricing without payment pressure today') }}</li>
+          <li>{{ tr('Billing can be added later from inside your workspace') }}</li>
+        </ul>
+        <div class='badge'>{{ trial_offer_days }} {{ tr('Days') }}</div>
+      </div>
     </div>
-    <div class='summary-strip' style='margin-top:12px'>
-      <span class='summary-pill'>1. {{ tr('Welcome') }}</span>
-      <span class='summary-pill'>2. {{ tr('Business Info') }}</span>
-      <span class='summary-pill'>3. {{ tr('Subscription') }}</span>
-      <span class='summary-pill'>4. {{ tr('Continue Free Trial') }}</span>
-    </div>
-    {% if trial_ends_at %}
-    <div class='summary-strip' style='margin-top:12px'>
-      <span class='summary-pill'>{{ tr('Trial ends') }} {{ trial_ends_at[:10] }}</span>
-      <span class='summary-pill'>{{ tr('Suggested first billing date') }} {{ default_subscription_start_date }}</span>
-      <span class='summary-pill'>{{ tr('No card required today') }}</span>
-    </div>
-    {% endif %}
   </div>
 
   <div class='trial-landing-grid' style='margin-bottom:18px'>
@@ -40,29 +43,17 @@
       <div class='small' style='margin-top:12px'>{{ tr('Use this area for the short marketing or welcome video that explains the workspace, trial expectations, and first steps clearly.') }}</div>
     </section>
 
-    <section class='card section-frame'>
+    <section class='card section-frame trial-side-card'>
       <div class='card-head'>
-        <h3>{{ tr('What Happens During the Trial') }}</h3>
-        <span class='badge'>{{ tr('Guided') }}</span>
+        <h3>{{ tr('What To Do First') }}</h3>
+        <span class='badge'>{{ tr('Simple') }}</span>
       </div>
-      <div class='trial-journey-grid'>
-        <article class='trial-journey-step'>
-          <strong>{{ tr('Open the Welcome Center') }}</strong>
-          <span>{{ tr('Start with the tutorial, overview, and workspace structure so the software feels clear before you begin entering data.') }}</span>
-        </article>
-        <article class='trial-journey-step'>
-          <strong>{{ tr('Save your business profile') }}</strong>
-          <span>{{ tr('Confirm the business name, contact information, language, EIN, and notes that should live with this workspace.') }}</span>
-        </article>
-        <article class='trial-journey-step'>
-          <strong>{{ tr('Choose your subscription') }}</strong>
-          <span>{{ tr('Select the tier you want to grow into now, with full pricing visible and no billing pressure today.') }}</span>
-        </article>
-        <article class='trial-journey-step'>
-          <strong>{{ tr('Continue the free trial') }}</strong>
-          <span>{{ tr('Open the workspace immediately, explore the tools, and add billing later before the complimentary period ends.') }}</span>
-        </article>
-      </div>
+      <ol class='trial-compact-list'>
+        <li>{{ tr('Save the business profile so your workspace starts with the right name, contact details, and category.') }}</li>
+        <li>{{ tr('Choose the subscription that fits your business, with pricing visible before you open each tier.') }}</li>
+        <li>{{ tr('Open the welcome center first so the tutorial and workspace overview make the software feel clear.') }}</li>
+        <li>{{ tr('Continue the free trial now and decide about billing later from inside the portal.') }}</li>
+      </ol>
     </section>
   </div>
 
@@ -148,24 +139,10 @@
           </details>
           {% endfor %}
         </div>
-        <div class='grid cards-3' style='margin-top:14px'>
-          <div class='card stat-card premium-stat'>
-            <h3>{{ tr('Plan Code') }}</h3>
-            <div class='metric' id='planCodePreview'>{{ selected_tier_meta.plan_code }}</div>
-            <div class='small'>{{ tr('Assigned automatically from your selected tier') }}</div>
-          </div>
-          <div class='card stat-card premium-stat premium-stat-accent'>
-            <h3>{{ tr('Monthly Subscription') }}</h3>
-            <div class='metric' id='subscriptionAmountPreview'>${{ '%.2f'|format(suggested_subscription_amount or 0) }}</div>
-            <div class='small'>{{ tr('Visible now, billed later if you continue after the trial') }}</div>
-          </div>
-          <div class='card stat-card premium-stat'>
-            <h3>{{ tr('Suggested First Billing Date') }}</h3>
-            <div class='metric'>
-              <input name='subscription_start_date' type='date' value='{{ default_subscription_start_date }}' required>
-            </div>
-            <div class='small'>{{ tr('You can keep this date aligned with the end of the complimentary period') }}</div>
-          </div>
+        <div class='trial-selection-summary' style='margin-top:14px'>
+          <div class='summary-pill'><strong>{{ tr('Plan Code') }}:</strong> <span id='planCodePreview'>{{ selected_tier_meta.plan_code }}</span></div>
+          <div class='summary-pill'><strong>{{ tr('Monthly Subscription') }}:</strong> <span id='subscriptionAmountPreview'>${{ '%.2f'|format(suggested_subscription_amount or 0) }}</span></div>
+          <label class='summary-pill trial-date-pill'><strong>{{ tr('Suggested First Billing Date') }}:</strong> <input name='subscription_start_date' type='date' value='{{ default_subscription_start_date }}' required></label>
         </div>
       </div>
     </details>
@@ -184,28 +161,15 @@
         </div>
       </summary>
       <div class='onboarding-step-body'>
-        <div class='grid cards-2'>
-          <div class='card section-frame'>
-            <div class='page-kicker'>{{ tr('What you will see first') }}</div>
-            <div class='page-title' style='font-size:1.45rem'>{{ tr('Welcome Center') }}</div>
-            <div class='small' style='margin-top:10px'>{{ tr('After you continue the free trial, LedgerFlow opens your Welcome Center first so the dashboard, workspace overview, and how-to flow feel calm and organized.') }}</div>
-            <div class='summary-strip' style='margin-top:14px'>
-              <span class='summary-pill'>{{ tr('Workspace overview') }}</span>
-              <span class='summary-pill'>{{ tr('How-to videos') }}</span>
-              <span class='summary-pill'>{{ tr('Income records') }}</span>
-              <span class='summary-pill'>{{ tr('Team tools') }}</span>
-            </div>
-          </div>
-          <div class='card section-frame'>
-            <div class='page-kicker'>{{ tr('First Week Focus') }}</div>
-            <div class='page-title' style='font-size:1.45rem'>{{ tr('Use the trial to evaluate the fit') }}</div>
-            <ol class='welcome-step-list' style='margin-top:12px'>
-              <li>{{ tr('Confirm the business profile and owner details are correct.') }}</li>
-              <li>{{ tr('Open the dashboard and review the workspace overview cards.') }}</li>
-              <li>{{ tr('Save your first income record to begin building real data.') }}</li>
-              <li>{{ tr('Decide which subscription level fits the way you want to operate long term.') }}</li>
-            </ol>
-          </div>
+        <div class='card section-frame trial-next-card'>
+          <div class='page-kicker'>{{ tr('What Opens Next') }}</div>
+          <div class='page-title' style='font-size:1.45rem'>{{ tr('Welcome Center first, workspace second') }}</div>
+          <div class='small' style='margin-top:10px'>{{ tr('After you continue the trial, LedgerFlow opens the Welcome Center so the tutorial, workspace overview, and first actions feel calm and organized instead of overwhelming.') }}</div>
+          <ul class='trial-compact-list' style='margin-top:14px'>
+            <li>{{ tr('Review the workspace overview and how-to tutorial area.') }}</li>
+            <li>{{ tr('Save your first income record or estimate to start using the portal with real data.') }}</li>
+            <li>{{ tr('Explore reports, team tools, and scheduling at your own pace during the trial.') }}</li>
+          </ul>
         </div>
       </div>
     </details>
@@ -224,38 +188,15 @@
         </div>
       </summary>
       <div class='onboarding-step-body'>
-        <div class='card section-frame trial-note-callout' style='margin-bottom:14px'>
-          <strong>{{ tr('No payment method is required today.') }}</strong>
-          <span>{{ tr('Your selected subscription is saved now so you can move through the trial with clarity. Add billing later before the first charge date if you decide LedgerFlow is the right fit.') }}</span>
-        </div>
-
-        <details class='compact-details trial-optional-billing'>
-          <summary>{{ tr('Add billing now instead (optional)') }}</summary>
-          <div style='padding-top:14px'>
-            <div class='form-grid payment-method-form onboarding-method-form'>
-              <div><label>{{ tr('Method Type') }}</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if request.form.get("method_type", default_method.method_type if default_method else "card") == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-              <div><label>{{ tr('Method Label') }}</label><input name='label' value='{{ request.form.get("label", default_method.label if default_method else "") }}' placeholder='{{ tr("Primary business card or Operating ACH") }}'></div>
-              <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank Name') }}</label><input name='brand_name' value='{{ request.form.get("brand_name", default_method.brand_name if default_method else "") }}' placeholder='{{ tr("Visa or Chase Business Checking") }}'></div>
-              <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Account Holder Name') }}</label><input name='holder_name' value='{{ request.form.get("holder_name", default_method.holder_name if default_method else client.contact_name or current_user.full_name or "") }}' placeholder='{{ tr("Business legal name") }}'></div>
-              <div class='pm-field pm-card'><label>{{ tr('Card Number') }}</label><input name='card_number' inputmode='numeric' maxlength='23' placeholder='{% if default_method and default_method.method_type == "card" %}{{ tr("Leave blank to keep current") }}{% else %}4111 1111 1111 1111{% endif %}'></div>
-              <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Last 4 Digits') }}</label><input name='account_last4' value='{{ request.form.get("account_last4", default_method.account_last4 if default_method else "") }}' inputmode='numeric' maxlength='4' placeholder='4242'></div>
-              <div class='pm-field pm-card'><label>{{ tr('Expiration (MM/YY)') }}</label><input name='expiry_display' value='{{ request.form.get("expiry_display", default_method.expiry_display if default_method else "") }}' maxlength='5' placeholder='08/28'></div>
-              <div class='pm-field pm-ach'><label>{{ tr('Account Type') }}</label><select name='account_type'><option value='checking' {% if request.form.get("account_type", default_method.account_type if default_method else "checking") == "checking" %}selected{% endif %}>{{ tr('Checking') }}</option><option value='savings' {% if request.form.get("account_type", default_method.account_type if default_method else "") == "savings" %}selected{% endif %}>{{ tr('Savings') }}</option></select></div>
-              <div class='pm-field pm-ach'><label>{{ tr('Routing Number') }}</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='{% if default_method and default_method.method_type == "ach" %}{{ tr("Leave blank to keep current") }}{% else %}{{ tr("9 digits") }}{% endif %}'></div>
-              <div class='pm-field pm-ach'><label>{{ tr('Account Number') }}</label><input name='account_number' inputmode='numeric' placeholder='{% if default_method and default_method.method_type == "ach" %}{{ tr("Leave blank to keep current") }}{% else %}{{ tr("Enter account number") }}{% endif %}'></div>
-              <div class='pm-field pm-ach'><label>{{ tr('Confirm Account Number') }}</label><input name='confirm_account_number' inputmode='numeric' placeholder='{{ tr("Re-enter account number") }}'></div>
-              <div style='grid-column:1 / -1'><label>{{ tr('Note (optional)') }}</label><input name='details_note' value='{{ request.form.get("details_note", default_method.details_note if default_method else "") }}' placeholder='{{ tr("Optional billing contact or setup note") }}'></div>
-              <input type='hidden' name='status' value='active'>
-              <input type='hidden' name='is_default' value='1'>
-            </div>
-          </div>
-        </details>
-
-        <div class='grid cards-2' style='margin-top:14px'>
+        <div class='grid cards-2 trial-final-grid' style='margin-top:14px'>
           <div class='card section-frame'>
-            <div class='page-kicker'>{{ tr('Ready to Continue') }}</div>
+            <div class='page-kicker'>{{ tr('No Billing Today') }}</div>
             <div class='page-title' style='font-size:1.45rem'>{{ tr('Open the full workspace') }}</div>
-            <div class='small' style='margin-top:10px'>{{ tr('LedgerFlow will save your business profile, selected subscription, and trial timing, then open the Welcome Center so you can continue exploring with calm, guided structure.') }}</div>
+            <div class='small' style='margin-top:10px'>{{ tr('No payment method is required to begin the trial. LedgerFlow will save your business profile, selected subscription, and trial timing, then open the Welcome Center.') }}</div>
+            <div class='trial-note-callout' style='margin-top:14px'>
+              <strong>{{ tr('Upgrade later if you decide to continue.') }}</strong>
+              <span>{{ tr('Billing can be added later from inside the Billing page before the first charge date.') }}</span>
+            </div>
           </div>
           <div class='card section-frame'>
             <div class='page-kicker'>{{ tr('Finish Setup') }}</div>
