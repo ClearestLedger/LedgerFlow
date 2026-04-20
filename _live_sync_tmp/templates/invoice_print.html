@@ -1,12 +1,75 @@
 {% extends 'base.html' %}
 {% block body %}
 <div class='report'>
-  <div class='toolbar'><button onclick='window.print()' class='btn btn-dark' type='button'>Print</button></div>
+  <div class='toolbar'>
+    <button onclick='window.print()' class='btn btn-dark' type='button'>Print</button>
+    {% if public_invoice_link %}<a class='btn btn-secondary' href='{{ public_invoice_link }}' target='_blank'>Open Hosted Invoice</a>{% endif %}
+    {% if pay_online_link and (invoice.record_kind or 'income_record') == 'customer_invoice' %}<a class='btn btn-secondary' href='{{ pay_online_link }}' target='_blank'>Pay Online Link</a>{% endif %}
+  </div>
+
+  {% if (invoice.record_kind or 'income_record') == 'customer_invoice' %}
+  <h2>{{ invoice.invoice_title or 'Customer Invoice' }} #{{ invoice.job_number }}</h2>
+  <div class='grid cards-3'>
+    <div class='card'>
+      <strong>Business</strong><br>
+      {{ invoice.business_name }}<br>
+      {{ invoice.business_address or '&mdash;' }}<br>
+      {% if invoice.business_email %}{{ invoice.business_email }}<br>{% endif %}
+      {% if invoice.business_phone %}{{ invoice.business_phone }}{% endif %}
+    </div>
+    <div class='card'>
+      <strong>Bill To</strong><br>
+      {{ invoice.client_name }}<br>
+      {{ invoice.client_address or '&mdash;' }}<br>
+      {{ invoice.recipient_email or '&mdash;' }}
+    </div>
+    <div class='card'>
+      <strong>Issue Date</strong><br>{{ invoice.invoice_date or '&mdash;' }}<br><br>
+      <strong>Due Date</strong><br>{{ invoice.due_date or '&mdash;' }}<br><br>
+      <strong>Status</strong><br>{{ invoice_status_label }}
+    </div>
+  </div>
+
+  <div class='card' style='margin-top:16px'>
+    <strong>Line Items</strong>
+    <table class='table' style='margin-top:12px'>
+      <tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr>
+      {% for item in line_items %}
+      <tr>
+        <td>{{ item.description }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>${{ '%.2f'|format(item.unit_price or 0) }}</td>
+        <td>${{ '%.2f'|format(item.line_total or 0) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan='4'>No line items saved.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class='grid cards-2' style='margin-top:16px'>
+    <div class='card'>
+      <strong>Invoice Notes</strong><br>
+      {{ invoice.notes or '&mdash;' }}
+      {% if invoice.payment_note %}
+      <br><br><strong>Payment Note</strong><br>{{ invoice.payment_note }}
+      {% endif %}
+    </div>
+    <div class='card'>
+      <strong>Invoice Total</strong>
+      <div class='metric big'>${{ '%.2f'|format(invoice.invoice_total_amount or 0) }}</div>
+      <strong>Payments Received</strong><br>${{ '%.2f'|format(invoice.paid_amount or 0) }}<br><br>
+      <strong>Balance Due</strong><br>${{ '%.2f'|format(balance_due or 0) }}<br><br>
+      <strong>Sales Tax Portion</strong><br>${{ '%.2f'|format(invoice.sales_tax_amount or 0) }}
+    </div>
+  </div>
+  {% else %}
   <h2>Income Record #{{ invoice.job_number }}</h2>
   <div class='grid cards-2'>
     <div class='card'><strong>Business</strong><br>{{ invoice.business_name }}<br>{{ invoice.invoice_date }}</div>
     <div class='card'><strong>Income Source</strong><br>{{ invoice.client_name }}<br>{{ invoice.client_address }}</div>
   </div>
   <div class='card' style='margin-top:16px'><strong>Income Type</strong><br>{{ {'service_income':'Service Income','product_sale':'Product / Sales Income','other_income':'Other Income'}.get(invoice.income_category or 'service_income', 'Service Income') }}<br><br><strong>Gross Income Received</strong><div class='metric big'>${{ '%.2f'|format(invoice.paid_amount or 0) }}</div><br><strong>Sales Tax Portion</strong><br>${{ '%.2f'|format(invoice.sales_tax_amount or 0) }}<br><strong>Sales Tax Status</strong><br>{{ 'Paid / Remitted' if invoice.sales_tax_paid else 'Not marked paid' }}<br><br><strong>Notes</strong><br>{{ invoice.notes or '&mdash;' }}</div>
+  {% endif %}
 </div>
 {% endblock %}

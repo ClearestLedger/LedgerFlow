@@ -2640,6 +2640,152 @@ def send_rejoin_email(to_email: str, to_name: str, business_name: str, rejoin_li
     return {'subject': subject, 'body_text': body, 'body_html': html, 'email_type': 'business_rejoin'}
 
 
+def send_customer_invoice_email(
+    *,
+    to_email: str,
+    to_name: str,
+    business_name: str,
+    invoice_number,
+    invoice_title: str,
+    invoice_link: str,
+    due_date: str,
+    total_amount: float,
+    payment_link: str = '',
+):
+    cfg = smtp_config()
+    sender_email = cfg['sender_email']
+    smtp_username = cfg['smtp_username']
+    smtp_password = cfg['smtp_password']
+    if cfg.get('password_unreadable'):
+        raise RuntimeError('Saved SMTP password must be entered again once after the security-key update.')
+    if not sender_email or not smtp_username or not smtp_password:
+        raise RuntimeError('SMTP not configured')
+    greeting = f"Hi {to_name}," if to_name else 'Hi,'
+    title = invoice_title or 'Customer Invoice'
+    due_line = f'Due date: {due_date}' if due_date else 'Due date: review the invoice page for the current payment timeline.'
+    payment_note = 'A pay-online button is included on the invoice page.' if payment_link else 'Open the invoice page to view, print, and manage payment.'
+    body = "\n".join([
+        greeting,
+        "",
+        f"{business_name} sent you invoice #{invoice_number}: {title}",
+        due_line,
+        f"Invoice total: ${total_amount:.2f}",
+        "",
+        "Open your invoice here:",
+        invoice_link,
+        "",
+        payment_note,
+        "",
+        "LedgerFlow",
+    ])
+    email_html = render_marketing_email(
+        eyebrow='Customer Invoice',
+        title=f'Invoice #{invoice_number} from {business_name}',
+        intro='Review the invoice, print it if needed, and use the hosted page for the fastest next step.',
+        greeting=greeting,
+        body_lines=[
+            f'{title} is ready for review.',
+            due_line,
+            f'Invoice total: ${total_amount:.2f}.',
+            'Use the secure button below to open the hosted invoice page.',
+            'If an online payment option was provided, it will appear directly on the invoice page.',
+        ],
+        cta_label='Open Invoice',
+        cta_link=invoice_link,
+        detail_rows=[
+            ('Business', business_name),
+            ('Invoice', f'#{invoice_number}'),
+            ('Invoice title', title),
+            ('Due date', due_date or 'View invoice page'),
+            ('Invoice total', f'${total_amount:.2f}'),
+        ],
+        feature_tags=['Hosted Invoice', 'Print Ready', 'Pay Online Option', 'Paperless Billing'],
+        support_note='If you were not expecting this invoice, contact the sender directly before making any payment.'
+    )
+    subject = f'Invoice #{invoice_number} from {business_name}'
+    send_rich_email(
+        cfg,
+        subject=subject,
+        to_email=to_email,
+        plain_text=body,
+        html=email_html,
+    )
+    return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'customer_invoice'}
+
+
+def send_customer_invoice_reminder_email(
+    *,
+    to_email: str,
+    to_name: str,
+    business_name: str,
+    invoice_number,
+    invoice_title: str,
+    invoice_link: str,
+    due_date: str,
+    balance_due: float,
+    payment_link: str = '',
+):
+    cfg = smtp_config()
+    sender_email = cfg['sender_email']
+    smtp_username = cfg['smtp_username']
+    smtp_password = cfg['smtp_password']
+    if cfg.get('password_unreadable'):
+        raise RuntimeError('Saved SMTP password must be entered again once after the security-key update.')
+    if not sender_email or not smtp_username or not smtp_password:
+        raise RuntimeError('SMTP not configured')
+    greeting = f"Hi {to_name}," if to_name else 'Hi,'
+    title = invoice_title or 'Customer Invoice'
+    due_line = f'Due date: {due_date}' if due_date else 'Please review the invoice page for the current payment timeline.'
+    payment_note = 'The invoice page includes the pay-online option that was provided.' if payment_link else 'Open the invoice page to review payment details.'
+    body = "\n".join([
+        greeting,
+        "",
+        f"This is a reminder about invoice #{invoice_number} from {business_name}: {title}",
+        due_line,
+        f"Balance due: ${balance_due:.2f}",
+        "",
+        "Open your invoice here:",
+        invoice_link,
+        "",
+        payment_note,
+        "",
+        "LedgerFlow",
+    ])
+    email_html = render_marketing_email(
+        eyebrow='Invoice Reminder',
+        title=f'Reminder: invoice #{invoice_number}',
+        intro='A business sent you a follow-up reminder so the invoice stays easy to find and complete.',
+        greeting=greeting,
+        body_lines=[
+            f'{title} is still open.',
+            due_line,
+            f'Current balance due: ${balance_due:.2f}.',
+            'Use the secure button below to reopen the hosted invoice page.',
+            'If an online payment option was provided, it will appear directly on the invoice page.',
+        ],
+        cta_label='Review Invoice',
+        cta_link=invoice_link,
+        detail_rows=[
+            ('Business', business_name),
+            ('Invoice', f'#{invoice_number}'),
+            ('Invoice title', title),
+            ('Due date', due_date or 'Open invoice page'),
+            ('Balance due', f'${balance_due:.2f}'),
+        ],
+        feature_tags=['Automatic Reminder', 'Hosted Invoice', 'Balance Due'],
+        support_note='If you already handled this invoice, you can ignore this reminder.'
+    )
+    subject = f'Reminder: invoice #{invoice_number} from {business_name}'
+    send_rich_email(
+        cfg,
+        subject=subject,
+        to_email=to_email,
+        plain_text=body,
+        html=email_html,
+    )
+    return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'customer_invoice_reminder'}
+
+
 def smtp_email_ready() -> bool:
     cfg = smtp_config()
     return bool(cfg['sender_email'] and cfg['smtp_username'] and cfg['smtp_password'])
@@ -3425,10 +3571,24 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 client_id INTEGER NOT NULL,
                 job_number INTEGER,
+                record_kind TEXT NOT NULL DEFAULT 'income_record',
+                invoice_title TEXT DEFAULT '',
                 client_name TEXT NOT NULL,
+                recipient_email TEXT DEFAULT '',
                 client_address TEXT,
+                invoice_total_amount REAL NOT NULL DEFAULT 0,
                 paid_amount REAL DEFAULT 0,
                 invoice_date TEXT,
+                due_date TEXT DEFAULT '',
+                invoice_status TEXT NOT NULL DEFAULT 'draft',
+                public_invoice_token TEXT DEFAULT '',
+                public_payment_link TEXT DEFAULT '',
+                sent_at TEXT DEFAULT '',
+                last_reminder_at TEXT DEFAULT '',
+                reminder_count INTEGER NOT NULL DEFAULT 0,
+                customer_viewed_at TEXT DEFAULT '',
+                customer_paid_at TEXT DEFAULT '',
+                payment_note TEXT DEFAULT '',
                 notes TEXT DEFAULT '',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(client_id) REFERENCES clients(id)
@@ -3575,6 +3735,17 @@ def init_db():
                 note TEXT DEFAULT '',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(client_id) REFERENCES clients(id),
+                FOREIGN KEY(invoice_id) REFERENCES invoices(id)
+            );
+            CREATE TABLE IF NOT EXISTS invoice_line_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                invoice_id INTEGER NOT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                description TEXT NOT NULL DEFAULT '',
+                quantity REAL NOT NULL DEFAULT 1,
+                unit_price REAL NOT NULL DEFAULT 0,
+                line_total REAL NOT NULL DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(invoice_id) REFERENCES invoices(id)
             );
             CREATE TABLE IF NOT EXISTS other_expenses_entries (
@@ -4021,6 +4192,26 @@ def init_db():
         ensure_column(conn, 'invoices', 'income_category', "TEXT DEFAULT 'service_income'")
         ensure_column(conn, 'invoices', 'sales_tax_amount', 'REAL NOT NULL DEFAULT 0')
         ensure_column(conn, 'invoices', 'sales_tax_paid', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'invoices', 'record_kind', "TEXT NOT NULL DEFAULT 'income_record'")
+        ensure_column(conn, 'invoices', 'invoice_title', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'recipient_email', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'invoice_total_amount', 'REAL NOT NULL DEFAULT 0')
+        ensure_column(conn, 'invoices', 'due_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'invoice_status', "TEXT NOT NULL DEFAULT 'draft'")
+        ensure_column(conn, 'invoices', 'public_invoice_token', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'public_payment_link', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'sent_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'last_reminder_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'reminder_count', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'invoices', 'customer_viewed_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'customer_paid_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'payment_note', "TEXT DEFAULT ''")
+        conn.execute("UPDATE invoices SET record_kind='income_record' WHERE COALESCE(record_kind,'')=''")
+        conn.execute("UPDATE invoices SET invoice_total_amount=COALESCE(invoice_total_amount,0)+paid_amount WHERE COALESCE(invoice_total_amount,0)=0")
+        conn.execute("UPDATE invoices SET invoice_status='paid' WHERE record_kind='income_record' AND COALESCE(invoice_status,'') IN ('', 'draft')")
+        conn.execute("UPDATE invoices SET invoice_status='paid' WHERE record_kind='customer_invoice' AND COALESCE(paid_amount,0) >= COALESCE(invoice_total_amount,0) AND COALESCE(invoice_total_amount,0) > 0")
+        conn.execute("UPDATE invoices SET invoice_status='partial' WHERE record_kind='customer_invoice' AND COALESCE(paid_amount,0) > 0 AND COALESCE(paid_amount,0) < COALESCE(invoice_total_amount,0)")
+        conn.execute("UPDATE invoices SET invoice_status='draft' WHERE record_kind='customer_invoice' AND COALESCE(invoice_status,'')=''")
 
         # Initialize base URL from environment for invite links in production
         env_base_url = (os.environ.get('APP_BASE_URL') or os.environ.get('RENDER_EXTERNAL_URL') or '').strip().rstrip('/')
@@ -6942,6 +7133,211 @@ def income_category_label_map():
     return dict(income_category_options())
 
 
+def invoice_status_options():
+    return [
+        ('draft', 'Draft'),
+        ('sent', 'Sent'),
+        ('viewed', 'Viewed'),
+        ('partial', 'Partial Payment'),
+        ('overdue', 'Overdue'),
+        ('paid', 'Paid'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+
+def invoice_status_label_map():
+    return dict(invoice_status_options())
+
+
+def normalize_invoice_status(value: str, *, default: str = 'draft') -> str:
+    allowed = {key for key, _ in invoice_status_options()}
+    cleaned = (value or '').strip().lower()
+    return cleaned if cleaned in allowed else default
+
+
+def invoice_payment_progress_status(row) -> str:
+    total_amount = money(row['invoice_total_amount'] or 0)
+    paid_amount = money(row['paid_amount'] or 0)
+    if total_amount > 0 and paid_amount >= total_amount:
+        return 'paid'
+    if paid_amount > 0 and paid_amount < max(total_amount, 0.01):
+        return 'partial'
+    base_status = normalize_invoice_status(row['invoice_status'] or '', default='draft')
+    if (
+        base_status in {'sent', 'viewed', 'partial', 'overdue'}
+        and (row['due_date'] or '').strip()
+        and (row['due_date'] or '') < date.today().isoformat()
+        and paid_amount < total_amount
+    ):
+        return 'overdue'
+    return base_status
+
+
+def invoice_balance_due(row) -> float:
+    total_amount = money(row['invoice_total_amount'] or 0)
+    paid_amount = money(row['paid_amount'] or 0)
+    return money(max(total_amount - paid_amount, 0))
+
+
+def generate_invoice_public_token() -> str:
+    return secrets.token_urlsafe(24)
+
+
+def ensure_invoice_public_token(conn: sqlite3.Connection, invoice_id: int) -> str:
+    row = conn.execute('SELECT public_invoice_token FROM invoices WHERE id=?', (invoice_id,)).fetchone()
+    existing = (row['public_invoice_token'] or '').strip() if row else ''
+    if existing:
+        return existing
+    while True:
+        token = generate_invoice_public_token()
+        taken = conn.execute('SELECT 1 FROM invoices WHERE public_invoice_token=? LIMIT 1', (token,)).fetchone()
+        if not taken:
+            conn.execute('UPDATE invoices SET public_invoice_token=? WHERE id=?', (token, invoice_id))
+            return token
+
+
+def public_invoice_url(token: str) -> str:
+    return public_app_url(f'/customer-invoice/{token}')
+
+
+def public_invoice_payment_url(token: str) -> str:
+    return public_app_url(f'/customer-invoice/{token}/pay')
+
+
+def invoice_line_items_for_ids(conn: sqlite3.Connection, invoice_ids) -> dict[int, list[sqlite3.Row]]:
+    ids = [int(invoice_id) for invoice_id in invoice_ids or [] if invoice_id]
+    if not ids:
+        return {}
+    placeholders = ','.join('?' for _ in ids)
+    rows = conn.execute(
+        f'''SELECT *
+            FROM invoice_line_items
+            WHERE invoice_id IN ({placeholders})
+            ORDER BY invoice_id, sort_order, id''',
+        tuple(ids),
+    ).fetchall()
+    grouped: dict[int, list[sqlite3.Row]] = {}
+    for row in rows:
+        grouped.setdefault(int(row['invoice_id']), []).append(row)
+    return grouped
+
+
+def parse_invoice_line_items(form) -> tuple[list[dict], list[str]]:
+    descriptions = form.getlist('line_description')
+    quantities = form.getlist('line_quantity')
+    unit_prices = form.getlist('line_unit_price')
+    max_rows = max(len(descriptions), len(quantities), len(unit_prices), 0)
+    items: list[dict] = []
+    errors: list[str] = []
+    for idx in range(max_rows):
+        description = (descriptions[idx] if idx < len(descriptions) else '').strip()
+        quantity_text = (quantities[idx] if idx < len(quantities) else '').strip()
+        unit_price_text = (unit_prices[idx] if idx < len(unit_prices) else '').strip()
+        if not any([description, quantity_text, unit_price_text]):
+            continue
+        if not description:
+            errors.append(f'Line item {idx + 1} needs a description.')
+            continue
+        try:
+            quantity = Decimal(quantity_text or '1')
+        except Exception:
+            errors.append(f'Line item {idx + 1} has an invalid quantity.')
+            continue
+        if quantity <= 0:
+            errors.append(f'Line item {idx + 1} must use a quantity above zero.')
+            continue
+        unit_price = normalize_money_amount(unit_price_text or '0')
+        if unit_price is None or unit_price < 0:
+            errors.append(f'Line item {idx + 1} has an invalid unit price.')
+            continue
+        line_total = (quantity * unit_price).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        items.append({
+            'sort_order': idx,
+            'description': description[:200],
+            'quantity': float(quantity),
+            'quantity_display': f'{quantity.normalize()}' if quantity != quantity.to_integral() else str(int(quantity)),
+            'unit_price': float(unit_price),
+            'line_total': float(line_total),
+        })
+    if not items:
+        errors.append('Add at least one invoice line item before saving a customer invoice.')
+    return items, errors
+
+
+def invoice_subtotal(items: list[dict]) -> Decimal:
+    return sum((Decimal(str(item['line_total'])) for item in items), Decimal('0.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+
+def automatic_invoice_reminders(conn: sqlite3.Connection, *, client_id: int, created_by_user_id=None) -> int:
+    if not smtp_email_ready():
+        return 0
+    today_iso = date.today().isoformat()
+    reminder_cutoff = (datetime.now() - timedelta(days=3)).isoformat(timespec='seconds')
+    rows = conn.execute(
+        '''SELECT i.*, c.business_name
+           FROM invoices i
+           JOIN clients c ON c.id = i.client_id
+           WHERE i.client_id=?
+             AND COALESCE(i.record_kind,'income_record')='customer_invoice'
+             AND COALESCE(i.recipient_email,'')<>''
+             AND COALESCE(i.invoice_status,'draft') IN ('sent','viewed','partial','overdue')
+             AND COALESCE(i.invoice_total_amount,0) > COALESCE(i.paid_amount,0)
+             AND COALESCE(i.due_date,'')<>''
+             AND i.due_date <= ?
+             AND (COALESCE(i.last_reminder_at,'')='' OR i.last_reminder_at <= ?)
+           ORDER BY i.due_date, i.id
+           LIMIT 5''',
+        (client_id, today_iso, reminder_cutoff),
+    ).fetchall()
+    sent_count = 0
+    for row in rows:
+        token = ensure_invoice_public_token(conn, row['id'])
+        view_link = public_invoice_url(token)
+        pay_link = (row['public_payment_link'] or '').strip()
+        try:
+            email_result = send_customer_invoice_reminder_email(
+                to_email=row['recipient_email'],
+                to_name=row['client_name'],
+                business_name=row['business_name'],
+                invoice_number=row['job_number'] or row['id'],
+                invoice_title=row['invoice_title'] or 'Customer Invoice',
+                invoice_link=view_link,
+                due_date=row['due_date'] or '',
+                balance_due=invoice_balance_due(row),
+                payment_link=pay_link,
+            )
+            conn.execute(
+                '''UPDATE invoices
+                   SET invoice_status='overdue', last_reminder_at=?, reminder_count=COALESCE(reminder_count,0)+1
+                   WHERE id=?''',
+                (now_iso(), row['id']),
+            )
+            log_email_delivery(
+                client_id=client_id,
+                email_type=email_result['email_type'],
+                recipient_email=row['recipient_email'],
+                recipient_name=row['client_name'],
+                subject=email_result['subject'],
+                body_text=email_result['body_text'],
+                body_html=email_result['body_html'],
+                status='sent',
+                created_by_user_id=created_by_user_id,
+            )
+            sent_count += 1
+        except Exception as exc:
+            log_email_delivery(
+                client_id=client_id,
+                email_type='customer_invoice_reminder',
+                recipient_email=row['recipient_email'],
+                recipient_name=row['client_name'],
+                subject=f'Invoice reminder #{row["job_number"] or row["id"]}',
+                status='failed',
+                error_message=str(exc)[:500],
+                created_by_user_id=created_by_user_id,
+            )
+    return sent_count
+
+
 def admin_todo_priorities():
     return ['low', 'medium', 'high']
 
@@ -9222,7 +9618,12 @@ def business_onboarding():
 def invoices():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    today_iso = date.today().isoformat()
+    default_due_date = (date.today() + timedelta(days=14)).isoformat()
     with get_conn() as conn:
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        if not client or not allowed_client(user, client_id):
+            abort(403)
         if request.method == 'POST':
             action = request.form.get('action', 'add_invoice').strip()
             if action == 'add_mileage':
@@ -9248,16 +9649,300 @@ def invoices():
                 conn.commit()
                 flash('Invoice mileage entry saved.', 'success')
                 return redirect(url_for('invoices', client_id=client_id))
+            if action == 'create_customer_invoice':
+                errors: list[str] = []
+                customer_name = request.form.get('client_name', '').strip()
+                recipient_email = request.form.get('recipient_email', '').strip().lower()
+                invoice_date = request.form.get('invoice_date', '').strip() or today_iso
+                due_date = request.form.get('due_date', '').strip()
+                invoice_title = request.form.get('invoice_title', '').strip() or 'Customer Invoice'
+                client_address = request.form.get('client_address', '').strip()
+                notes = request.form.get('notes', '').strip()
+                payment_link = normalize_payment_link(request.form.get('public_payment_link', '').strip())
+                sales_tax_amount = normalize_money_amount(request.form.get('sales_tax_amount', '0') or '0')
+                items, item_errors = parse_invoice_line_items(request.form)
+                errors.extend(item_errors)
+                if not customer_name:
+                    errors.append('Customer name is required.')
+                if not recipient_email or '@' not in recipient_email:
+                    errors.append('A valid recipient email is required.')
+                if payment_link is None:
+                    errors.append('Online payment link must be a valid http or https URL.')
+                if not parse_date(invoice_date):
+                    errors.append('Issue date is invalid.')
+                if due_date and not parse_date(due_date):
+                    errors.append('Due date is invalid.')
+                if sales_tax_amount is None or sales_tax_amount < 0:
+                    errors.append('Sales tax amount is invalid.')
+                subtotal = invoice_subtotal(items) if not item_errors else Decimal('0.00')
+                total_amount = (subtotal + (sales_tax_amount or Decimal('0.00'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                if total_amount <= 0:
+                    errors.append('Invoice total must be above zero.')
+                if errors:
+                    for error in errors:
+                        flash(error, 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
+                next_job = conn.execute('SELECT COALESCE(MAX(job_number),0)+1 n FROM invoices WHERE client_id=?', (client_id,)).fetchone()['n']
+                token = generate_invoice_public_token()
+                while conn.execute('SELECT 1 FROM invoices WHERE public_invoice_token=? LIMIT 1', (token,)).fetchone():
+                    token = generate_invoice_public_token()
+                cursor = conn.execute(
+                    '''INSERT INTO invoices (
+                        client_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
+                        invoice_total_amount, paid_amount, invoice_date, due_date, invoice_status, public_invoice_token,
+                        public_payment_link, notes, income_category, sales_tax_amount, sales_tax_paid
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    (
+                        client_id,
+                        next_job,
+                        'customer_invoice',
+                        invoice_title,
+                        customer_name,
+                        recipient_email,
+                        client_address,
+                        float(total_amount),
+                        0,
+                        invoice_date,
+                        due_date,
+                        'draft',
+                        token,
+                        payment_link or '',
+                        notes,
+                        'service_income',
+                        float(sales_tax_amount or Decimal('0.00')),
+                        0,
+                    )
+                )
+                invoice_id = cursor.lastrowid
+                for item in items:
+                    conn.execute(
+                        '''INSERT INTO invoice_line_items (invoice_id, sort_order, description, quantity, unit_price, line_total)
+                           VALUES (?,?,?,?,?,?)''',
+                        (
+                            invoice_id,
+                            item['sort_order'],
+                            item['description'],
+                            item['quantity'],
+                            item['unit_price'],
+                            item['line_total'],
+                        )
+                    )
+                send_now = bool(request.form.get('send_now'))
+                if send_now:
+                    view_link = public_invoice_url(token)
+                    try:
+                        email_result = send_customer_invoice_email(
+                            to_email=recipient_email,
+                            to_name=customer_name,
+                            business_name=client['business_name'],
+                            invoice_number=next_job,
+                            invoice_title=invoice_title,
+                            invoice_link=view_link,
+                            due_date=due_date,
+                            total_amount=float(total_amount),
+                            payment_link=payment_link or '',
+                        )
+                        conn.execute(
+                            'UPDATE invoices SET invoice_status=?, sent_at=? WHERE id=?',
+                            ('overdue' if due_date and due_date < today_iso else 'sent', now_iso(), invoice_id),
+                        )
+                        log_email_delivery(
+                            client_id=client_id,
+                            email_type=email_result['email_type'],
+                            recipient_email=recipient_email,
+                            recipient_name=customer_name,
+                            subject=email_result['subject'],
+                            body_text=email_result['body_text'],
+                            body_html=email_result['body_html'],
+                            status='sent',
+                            created_by_user_id=user['id'],
+                        )
+                        flash('Customer invoice saved and sent.', 'success')
+                    except Exception as exc:
+                        log_email_delivery(
+                            client_id=client_id,
+                            email_type='customer_invoice',
+                            recipient_email=recipient_email,
+                            recipient_name=customer_name,
+                            subject=f'Invoice #{next_job} from {client["business_name"]}',
+                            status='failed',
+                            error_message=str(exc)[:500],
+                            created_by_user_id=user['id'],
+                        )
+                        flash(f'Customer invoice saved, but sending failed: {exc}', 'error')
+                else:
+                    flash('Customer invoice saved.', 'success')
+                conn.commit()
+                return redirect(url_for('invoices', client_id=client_id))
+            if action == 'send_customer_invoice':
+                invoice_id = request.form.get('invoice_id', type=int)
+                row = conn.execute(
+                    '''SELECT i.*, c.business_name
+                       FROM invoices i
+                       JOIN clients c ON c.id = i.client_id
+                       WHERE i.id=? AND i.client_id=? AND COALESCE(i.record_kind,'income_record')='customer_invoice' ''',
+                    (invoice_id, client_id),
+                ).fetchone()
+                if not row:
+                    flash('Customer invoice not found.', 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
+                if not (row['recipient_email'] or '').strip():
+                    flash('Add a recipient email before sending this invoice.', 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
+                token = ensure_invoice_public_token(conn, row['id'])
+                view_link = public_invoice_url(token)
+                try:
+                    email_result = send_customer_invoice_email(
+                        to_email=row['recipient_email'],
+                        to_name=row['client_name'],
+                        business_name=row['business_name'],
+                        invoice_number=row['job_number'] or row['id'],
+                        invoice_title=row['invoice_title'] or 'Customer Invoice',
+                        invoice_link=view_link,
+                        due_date=row['due_date'] or '',
+                        total_amount=money(row['invoice_total_amount'] or 0),
+                        payment_link=(row['public_payment_link'] or '').strip(),
+                    )
+                    conn.execute(
+                        'UPDATE invoices SET invoice_status=?, sent_at=? WHERE id=?',
+                        ('overdue' if (row['due_date'] or '') and (row['due_date'] or '') < today_iso and invoice_balance_due(row) > 0 else 'sent', now_iso(), row['id']),
+                    )
+                    log_email_delivery(
+                        client_id=client_id,
+                        email_type=email_result['email_type'],
+                        recipient_email=row['recipient_email'],
+                        recipient_name=row['client_name'],
+                        subject=email_result['subject'],
+                        body_text=email_result['body_text'],
+                        body_html=email_result['body_html'],
+                        status='sent',
+                        created_by_user_id=user['id'],
+                    )
+                    conn.commit()
+                    flash('Customer invoice sent.', 'success')
+                except Exception as exc:
+                    log_email_delivery(
+                        client_id=client_id,
+                        email_type='customer_invoice',
+                        recipient_email=row['recipient_email'],
+                        recipient_name=row['client_name'],
+                        subject=f'Invoice #{row["job_number"] or row["id"]} from {row["business_name"]}',
+                        status='failed',
+                        error_message=str(exc)[:500],
+                        created_by_user_id=user['id'],
+                    )
+                    conn.commit()
+                    flash(f'Invoice send failed: {exc}', 'error')
+                return redirect(url_for('invoices', client_id=client_id))
+            if action == 'send_customer_invoice_reminder':
+                invoice_id = request.form.get('invoice_id', type=int)
+                row = conn.execute(
+                    '''SELECT i.*, c.business_name
+                       FROM invoices i
+                       JOIN clients c ON c.id = i.client_id
+                       WHERE i.id=? AND i.client_id=? AND COALESCE(i.record_kind,'income_record')='customer_invoice' ''',
+                    (invoice_id, client_id),
+                ).fetchone()
+                if not row:
+                    flash('Customer invoice not found.', 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
+                token = ensure_invoice_public_token(conn, row['id'])
+                view_link = public_invoice_url(token)
+                try:
+                    email_result = send_customer_invoice_reminder_email(
+                        to_email=row['recipient_email'],
+                        to_name=row['client_name'],
+                        business_name=row['business_name'],
+                        invoice_number=row['job_number'] or row['id'],
+                        invoice_title=row['invoice_title'] or 'Customer Invoice',
+                        invoice_link=view_link,
+                        due_date=row['due_date'] or '',
+                        balance_due=invoice_balance_due(row),
+                        payment_link=(row['public_payment_link'] or '').strip(),
+                    )
+                    conn.execute(
+                        '''UPDATE invoices
+                           SET invoice_status=?, last_reminder_at=?, reminder_count=COALESCE(reminder_count,0)+1
+                           WHERE id=?''',
+                        ('overdue' if (row['due_date'] or '') and (row['due_date'] or '') < today_iso and invoice_balance_due(row) > 0 else 'sent', now_iso(), row['id']),
+                    )
+                    log_email_delivery(
+                        client_id=client_id,
+                        email_type=email_result['email_type'],
+                        recipient_email=row['recipient_email'],
+                        recipient_name=row['client_name'],
+                        subject=email_result['subject'],
+                        body_text=email_result['body_text'],
+                        body_html=email_result['body_html'],
+                        status='sent',
+                        created_by_user_id=user['id'],
+                    )
+                    conn.commit()
+                    flash('Invoice reminder sent.', 'success')
+                except Exception as exc:
+                    log_email_delivery(
+                        client_id=client_id,
+                        email_type='customer_invoice_reminder',
+                        recipient_email=row['recipient_email'],
+                        recipient_name=row['client_name'],
+                        subject=f'Reminder: invoice #{row["job_number"] or row["id"]}',
+                        status='failed',
+                        error_message=str(exc)[:500],
+                        created_by_user_id=user['id'],
+                    )
+                    conn.commit()
+                    flash(f'Invoice reminder failed: {exc}', 'error')
+                return redirect(url_for('invoices', client_id=client_id))
+            if action == 'mark_customer_invoice_paid':
+                invoice_id = request.form.get('invoice_id', type=int)
+                row = conn.execute(
+                    '''SELECT *
+                       FROM invoices
+                       WHERE id=? AND client_id=? AND COALESCE(record_kind,'income_record')='customer_invoice' ''',
+                    (invoice_id, client_id),
+                ).fetchone()
+                if not row:
+                    flash('Customer invoice not found.', 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
+                paid_at = now_iso()
+                conn.execute(
+                    '''UPDATE invoices
+                       SET paid_amount=?, invoice_status='paid', customer_paid_at=?, payment_note=?, sent_at=CASE WHEN COALESCE(sent_at,'')='' THEN ? ELSE sent_at END
+                       WHERE id=?''',
+                    (
+                        money(row['invoice_total_amount'] or 0),
+                        paid_at,
+                        request.form.get('payment_note', '').strip()[:300],
+                        paid_at,
+                        row['id'],
+                    )
+                )
+                conn.commit()
+                flash('Customer invoice marked paid.', 'success')
+                return redirect(url_for('invoices', client_id=client_id))
             next_job = conn.execute('SELECT COALESCE(MAX(job_number),0)+1 n FROM invoices WHERE client_id=?', (client_id,)).fetchone()['n']
+            gross_amount = request.form.get('paid_amount', type=float) or 0
             conn.execute(
-                'INSERT INTO invoices (client_id, job_number, client_name, client_address, paid_amount, invoice_date, notes, income_category, sales_tax_amount, sales_tax_paid) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                '''INSERT INTO invoices (
+                    client_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
+                    invoice_total_amount, paid_amount, invoice_date, due_date, invoice_status, public_invoice_token,
+                    public_payment_link, notes, income_category, sales_tax_amount, sales_tax_paid
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (
                     client_id,
                     next_job,
+                    'income_record',
+                    'Income Record',
                     request.form.get('client_name', '').strip(),
+                    '',
                     request.form.get('client_address', '').strip(),
-                    request.form.get('paid_amount', type=float) or 0,
+                    gross_amount,
+                    gross_amount,
                     request.form.get('invoice_date', '').strip(),
+                    '',
+                    'paid',
+                    '',
+                    '',
                     request.form.get('notes', '').strip(),
                     request.form.get('income_category', 'service_income').strip() or 'service_income',
                     request.form.get('sales_tax_amount', type=float) or 0,
@@ -9267,6 +9952,20 @@ def invoices():
             conn.commit()
             flash('Income record saved.', 'success')
             return redirect(url_for('invoices', client_id=client_id))
+        conn.execute(
+            '''UPDATE invoices
+               SET invoice_status='overdue'
+               WHERE client_id=?
+                 AND COALESCE(record_kind,'income_record')='customer_invoice'
+                 AND COALESCE(invoice_status,'draft') IN ('sent','viewed','partial')
+                 AND COALESCE(invoice_total_amount,0) > COALESCE(paid_amount,0)
+                 AND COALESCE(due_date,'')<>''
+                 AND due_date < ?''',
+            (client_id, today_iso),
+        )
+        auto_reminder_count = automatic_invoice_reminders(conn, client_id=client_id, created_by_user_id=user['id'])
+        if auto_reminder_count:
+            conn.commit()
         rows = conn.execute('SELECT * FROM invoices WHERE client_id=? ORDER BY job_number DESC, id DESC', (client_id,)).fetchall()
         invoice_mileage_rows = conn.execute('''
             SELECT im.*, i.job_number, i.client_name
@@ -9275,16 +9974,39 @@ def invoices():
             WHERE im.client_id=?
             ORDER BY im.trip_date DESC, im.id DESC
         ''', (client_id,)).fetchall()
-        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        customer_rows = [row for row in rows if (row['record_kind'] or 'income_record') == 'customer_invoice']
+        income_rows = [row for row in rows if (row['record_kind'] or 'income_record') != 'customer_invoice']
+        line_items_map = invoice_line_items_for_ids(conn, [row['id'] for row in customer_rows])
+        customer_invoice_rows = []
+        invoice_public_links = {}
+        for row in customer_rows:
+            token = ensure_invoice_public_token(conn, row['id'])
+            current_status = invoice_payment_progress_status(row)
+            row_dict = dict(row)
+            row_dict['public_invoice_token'] = token
+            row_dict['invoice_status'] = current_status
+            row_dict['balance_due'] = invoice_balance_due(row)
+            customer_invoice_rows.append(row_dict)
+            invoice_public_links[row['id']] = public_invoice_url(token)
+        conn.commit()
+    if auto_reminder_count:
+        flash(f'{auto_reminder_count} overdue invoice reminder(s) were sent automatically.', 'success')
     return render_template(
         'invoices.html',
-        invoices=rows,
+        customer_invoices=customer_invoice_rows,
+        income_records=income_rows,
+        invoice_line_items_map=line_items_map,
+        invoice_public_links=invoice_public_links,
         invoice_mileage_entries=invoice_mileage_rows,
         client=client,
         client_id=client_id,
         home_address=DEFAULT_HOME_ADDRESS,
         income_category_options=income_category_options(),
         income_category_labels=income_category_label_map(),
+        invoice_status_labels=invoice_status_label_map(),
+        today=today_iso,
+        default_due_date=default_due_date,
+        auto_reminder_count=auto_reminder_count,
     )
 
 
@@ -9293,10 +10015,89 @@ def invoices():
 def invoice_print(invoice_id):
     user = current_user()
     with get_conn() as conn:
-        row = conn.execute('SELECT i.*, c.business_name FROM invoices i JOIN clients c ON c.id=i.client_id WHERE i.id=?', (invoice_id,)).fetchone()
+        row = conn.execute(
+            '''SELECT i.*, c.business_name, c.contact_name business_contact_name, c.email business_email, c.phone business_phone, c.address business_address
+               FROM invoices i
+               JOIN clients c ON c.id=i.client_id
+               WHERE i.id=?''',
+            (invoice_id,),
+        ).fetchone()
+        line_items = conn.execute(
+            'SELECT * FROM invoice_line_items WHERE invoice_id=? ORDER BY sort_order, id',
+            (invoice_id,),
+        ).fetchall()
     if not row or not allowed_client(user, row['client_id']):
         abort(403)
-    return render_template('invoice_print.html', invoice=row)
+    status = invoice_payment_progress_status(row)
+    token = (row['public_invoice_token'] or '').strip()
+    return render_template(
+        'invoice_print.html',
+        invoice=row,
+        line_items=line_items,
+        invoice_status_label=invoice_status_label_map().get(status, 'Draft'),
+        balance_due=invoice_balance_due(row),
+        public_invoice_link=public_invoice_url(token) if token else '',
+        pay_online_link=(row['public_payment_link'] or '').strip(),
+    )
+
+
+@app.route('/customer-invoice/<token>')
+def customer_invoice_public(token):
+    with get_conn() as conn:
+        row = conn.execute(
+            '''SELECT i.*, c.business_name, c.contact_name business_contact_name, c.email business_email, c.phone business_phone, c.address business_address
+               FROM invoices i
+               JOIN clients c ON c.id = i.client_id
+               WHERE i.public_invoice_token=? AND COALESCE(i.record_kind,'income_record')='customer_invoice' ''',
+            ((token or '').strip(),),
+        ).fetchone()
+        if not row:
+            abort(404)
+        line_items = conn.execute(
+            'SELECT * FROM invoice_line_items WHERE invoice_id=? ORDER BY sort_order, id',
+            (row['id'],),
+        ).fetchall()
+        status = invoice_payment_progress_status(row)
+        viewed_at = row['customer_viewed_at'] or now_iso()
+        updated_status = status
+        if status in {'draft', 'sent'} and invoice_balance_due(row) > 0:
+            updated_status = 'overdue' if (row['due_date'] or '').strip() and (row['due_date'] or '') < date.today().isoformat() else 'viewed'
+        conn.execute(
+            'UPDATE invoices SET customer_viewed_at=?, invoice_status=? WHERE id=?',
+            (viewed_at, updated_status, row['id']),
+        )
+        conn.commit()
+    return render_template(
+        'invoice_public.html',
+        invoice=row,
+        line_items=line_items,
+        invoice_status_label=invoice_status_label_map().get(updated_status, 'Draft'),
+        balance_due=invoice_balance_due(row),
+        pay_online_link=(row['public_payment_link'] or '').strip(),
+    )
+
+
+@app.route('/customer-invoice/<token>/pay')
+def customer_invoice_pay(token):
+    with get_conn() as conn:
+        row = conn.execute(
+            '''SELECT *
+               FROM invoices
+               WHERE public_invoice_token=? AND COALESCE(record_kind,'income_record')='customer_invoice' ''',
+            ((token or '').strip(),),
+        ).fetchone()
+        if not row:
+            abort(404)
+        payment_link = (row['public_payment_link'] or '').strip()
+        if not payment_link:
+            return redirect(public_invoice_url((token or '').strip()))
+        status = invoice_payment_progress_status(row)
+        conn.execute(
+            'UPDATE invoices SET customer_viewed_at=?, invoice_status=? WHERE id=?',
+            (row['customer_viewed_at'] or now_iso(), 'overdue' if status == 'overdue' else 'viewed', row['id']),
+        )
+        conn.commit()
+    return redirect(payment_link)
 
 
 @app.route('/workers', methods=['GET', 'POST'])
