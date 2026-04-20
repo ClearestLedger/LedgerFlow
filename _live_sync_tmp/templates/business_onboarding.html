@@ -9,14 +9,14 @@
       <div>
         <div class='page-kicker'>{{ tr('Business Setup') }}</div>
         <div class='page-title'>{{ tr('Set up your LedgerFlow workspace') }}</div>
-        <div class='page-subtitle'>{{ tr('A cleaner four-step setup: add business information, choose your subscription, set payment, then open your welcome tutorial.') }}</div>
+        <div class='page-subtitle'>{{ tr('A cleaner four-step setup: add business information, choose your subscription, confirm billing timing, then open your welcome tutorial.') if trial_offer_days else tr('A cleaner four-step setup: add business information, choose your subscription, set payment, then open your welcome tutorial.') }}</div>
       </div>
       <span class='badge'>{{ tr('4 Steps') }}</span>
     </div>
     <div class='summary-strip' style='margin-top:12px'>
       <span class='summary-pill'>1. {{ tr('Business Info') }}</span>
       <span class='summary-pill'>2. {{ tr('Subscription') }}</span>
-      <span class='summary-pill'>3. {{ tr('Payment') }}</span>
+      <span class='summary-pill'>3. {{ tr('Billing Later') if trial_offer_days else tr('Payment') }}</span>
       <span class='summary-pill'>4. {{ tr('Welcome Tutorial') }}</span>
     </div>
   </div>
@@ -26,7 +26,7 @@
       <h3>{{ tr('Complimentary Trial Active') }}</h3>
       <span class='badge'>{{ trial_offer_days }} {{ tr('Days') }}</span>
     </div>
-    <div class='small'>{{ tr('This business claimed a complimentary trial offer. Subscription setup is being saved now so billing can start after the trial window ends.') }}</div>
+    <div class='small'>{{ tr('This business claimed a complimentary trial offer. No payment method is required to start. Save the subscription now and add billing later before the trial window ends.') }}</div>
     {% if trial_ends_at %}
     <div class='summary-strip' style='margin-top:12px'>
       <span class='summary-pill'>{{ tr('Trial ends') }} {{ trial_ends_at[:10] }}</span>
@@ -135,9 +135,11 @@
           </div>
         </div>
         <div class='tier-rollout-note' style='margin-top:12px'>
-          {{ tr('This private client rollout uses administrator-managed billing. Your selected plan, payment authorization, and method on file are saved now so billing can begin immediately while premium banking tools continue through final buildout.') }}
+          {{ tr('This private client rollout uses administrator-managed billing. Your selected plan is being saved now so the workspace can open immediately while premium banking tools continue through final buildout.') if trial_offer_days else tr('This private client rollout uses administrator-managed billing. Your selected plan, payment authorization, and method on file are saved now so billing can begin immediately while premium banking tools continue through final buildout.') }}
         </div>
+        {% if not trial_offer_days %}
         <label class='small' style='display:block;margin-top:10px'><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if request.form.get("subscription_autopay_enabled", '1' if client.subscription_autopay_enabled else '') %}checked{% endif %}> {{ tr('Authorize automatic withdrawal from the default saved method for recurring subscription billing.') }}</label>
+        {% endif %}
       </div>
     </details>
 
@@ -147,18 +149,23 @@
           <div class='onboarding-step-title'>
             <span class='step-number'>3</span>
             <div class='onboarding-step-copy'>
-              <strong>{{ tr('Make Payment Setup') }}</strong>
-              <span>{{ tr('Save the method on file that LedgerFlow will use for subscription billing.') }}</span>
+              <strong>{{ tr('Billing Setup Later') if trial_offer_days else tr('Make Payment Setup') }}</strong>
+              <span>{{ tr('Your free trial can start now without adding payment.') if trial_offer_days else tr('Save the method on file that LedgerFlow will use for subscription billing.') }}</span>
             </div>
           </div>
-          <span class='status-chip processing'>{{ selected_method_type|replace('_', ' ')|title }}</span>
+          <span class='status-chip {{ "pending" if trial_offer_days else "processing" }}'>{{ tr('Optional') if trial_offer_days else selected_method_type|replace('_', ' ')|title }}</span>
         </div>
       </summary>
       <div class='onboarding-step-body'>
-        <div class='small' style='margin-bottom:14px'>{{ tr('Add the payment method your business wants on file for subscription billing. This creates or updates your default billing method.') }}</div>
+        <div class='small' style='margin-bottom:14px'>{{ tr('No payment method is required during the complimentary trial. You can complete setup now and add billing later before the first charge date.') if trial_offer_days else tr('Add the payment method your business wants on file for subscription billing. This creates or updates your default billing method.') }}</div>
+        {% if trial_offer_days %}
+        <details class='compact-details'>
+          <summary>{{ tr('Add billing now instead') }}</summary>
+          <div style='padding-top:14px'>
+        {% endif %}
         <div class='form-grid payment-method-form onboarding-method-form'>
           <div><label>{{ tr('Method Type') }}</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if request.form.get("method_type", default_method.method_type if default_method else "card") == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-          <div><label>{{ tr('Method Label') }}</label><input name='label' value='{{ request.form.get("label", default_method.label if default_method else "") }}' placeholder='{{ tr("Primary business card or Operating ACH") }}' required></div>
+          <div><label>{{ tr('Method Label') }}</label><input name='label' value='{{ request.form.get("label", default_method.label if default_method else "") }}' placeholder='{{ tr("Primary business card or Operating ACH") }}' {% if not trial_offer_days %}required{% endif %}></div>
           <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank Name') }}</label><input name='brand_name' value='{{ request.form.get("brand_name", default_method.brand_name if default_method else "") }}' placeholder='{{ tr("Visa or Chase Business Checking") }}'></div>
           <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Account Holder Name') }}</label><input name='holder_name' value='{{ request.form.get("holder_name", default_method.holder_name if default_method else client.contact_name or current_user.full_name or "") }}' placeholder='{{ tr("Business legal name") }}'></div>
           <div class='pm-field pm-card'><label>{{ tr('Card Number') }}</label><input name='card_number' inputmode='numeric' maxlength='23' placeholder='{% if default_method and default_method.method_type == "card" %}{{ tr("Leave blank to keep current") }}{% else %}4111 1111 1111 1111{% endif %}'></div>
@@ -172,6 +179,10 @@
           <input type='hidden' name='status' value='active'>
           <input type='hidden' name='is_default' value='1'>
         </div>
+        {% if trial_offer_days %}
+          </div>
+        </details>
+        {% endif %}
       </div>
     </details>
 
@@ -204,7 +215,7 @@
           <div class='card section-frame'>
             <div class='page-kicker'>{{ tr('Finish Setup') }}</div>
             <div class='page-title' style='font-size:1.45rem'>{{ tr('Save and open your workspace') }}</div>
-            <div class='small' style='margin-top:10px'>{{ tr('LedgerFlow will save your business profile, subscription choice, and payment method, then unlock the workspace and open your Welcome Center tutorial.') }}</div>
+            <div class='small' style='margin-top:10px'>{{ tr('LedgerFlow will save your business profile and subscription choice, then unlock the workspace and open your Welcome Center tutorial. Billing can be added later before the trial ends.') if trial_offer_days else tr('LedgerFlow will save your business profile, subscription choice, and payment method, then unlock the workspace and open your Welcome Center tutorial.') }}</div>
             <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:16px'>
               <button type='submit'>{{ tr('Complete Setup & Open Welcome Center') }}</button>
               <a class='btn btn-secondary' href='{{ url_for("logout") }}'>{{ tr('Finish Later') }}</a>

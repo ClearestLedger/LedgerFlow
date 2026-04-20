@@ -1481,7 +1481,8 @@ def client_onboarding_is_complete(conn: sqlite3.Connection, client_row) -> bool:
             (client_row['id'],)
         ).fetchone()
     )
-    return profile_ready and subscription_ready and payment_ready
+    trial_ready = int(client_row['trial_offer_days'] or 0) > 0
+    return profile_ready and subscription_ready and (trial_ready or payment_ready)
 
 
 def user_requires_business_onboarding(user) -> bool:
@@ -8308,6 +8309,7 @@ def business_onboarding():
         trial_offer_days = int(client['trial_offer_days'] or 0)
         trial_ends_at = (client['trial_ends_at'] or '').strip()
         trial_billing_start = trial_ends_at[:10] if trial_offer_days and trial_ends_at else ''
+        trial_payment_optional = trial_offer_days > 0
         if request.method == 'POST':
             selected_language = normalize_language(
                 request.form.get('preferred_language')
@@ -8326,6 +8328,19 @@ def business_onboarding():
             billing_notes = request.form.get('billing_notes', '').strip()[:500]
             start_date_raw = request.form.get('subscription_start_date', '').strip()
             start_date = parse_date(start_date_raw)
+            submitted_payment_fields = [
+                request.form.get('label', '').strip(),
+                request.form.get('brand_name', '').strip(),
+                request.form.get('holder_name', '').strip(),
+                request.form.get('card_number', '').strip(),
+                request.form.get('account_last4', '').strip(),
+                request.form.get('expiry_display', '').strip(),
+                request.form.get('routing_number', '').strip(),
+                request.form.get('account_number', '').strip(),
+                request.form.get('confirm_account_number', '').strip(),
+                request.form.get('details_note', '').strip(),
+            ]
+            submitted_payment_method = any(submitted_payment_fields)
             errors: list[str] = []
             if not business_name:
                 errors.append('Business name is required.')
@@ -8341,8 +8356,10 @@ def business_onboarding():
                 errors.append('Business address is required.')
             if not start_date:
                 errors.append('Select a subscription start date.')
-            cleaned_method, payment_errors = validate_payment_method_form(request.form, existing=default_method)
-            errors.extend(payment_errors)
+            cleaned_method = None
+            if (not trial_payment_optional) or submitted_payment_method:
+                cleaned_method, payment_errors = validate_payment_method_form(request.form, existing=default_method)
+                errors.extend(payment_errors)
             if errors:
                 for error in errors:
                     flash(error, 'error')
@@ -8351,6 +8368,9 @@ def business_onboarding():
                 started_at, canceled_at, paused_at = subscription_status_timestamps('active', client)
                 next_billing_date = start_date.isoformat()
                 setup_completed_at = now_iso()
+                autopay_enabled = 0
+                if not trial_payment_optional:
+                    autopay_enabled = 1 if request.form.get('subscription_autopay_enabled') in {'1', 'on', 'true', 'yes'} else 0
                 conn.execute(
                     '''UPDATE clients
                        SET business_name=?, business_type=?, service_level=?, contact_name=?, phone=?, email=?, address=?, ein=?,
@@ -8372,7 +8392,7 @@ def business_onboarding():
                         ein,
                         service_level_plan_code(service_level),
                         float(subscription_amount_decimal),
-                        1 if request.form.get('subscription_autopay_enabled') in {'1', 'on', 'true', 'yes'} else 0,
+                        autopay_enabled,
                         next_billing_date,
                         started_at,
                         canceled_at,
@@ -8386,61 +8406,62 @@ def business_onboarding():
                         client_id,
                     )
                 )
-                if cleaned_method['is_default'] != 1:
-                    cleaned_method['is_default'] = 1
-                if default_method:
-                    if cleaned_method['is_default']:
-                        conn.execute('UPDATE business_payment_methods SET is_default=0 WHERE client_id=?', (client_id,))
-                    if cleaned_method['is_backup']:
-                        conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (client_id,))
-                    conn.execute(
-                        '''UPDATE business_payment_methods
-                           SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, card_number_enc=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
-                           WHERE id=? AND client_id=?''',
-                        (
-                            cleaned_method['method_type'],
-                            cleaned_method['label'],
-                            cleaned_method['status'],
-                            cleaned_method['is_default'],
-                            cleaned_method['is_backup'],
-                            cleaned_method['holder_name'],
-                            cleaned_method['brand_name'],
-                            cleaned_method['account_last4'],
-                            cleaned_method['expiry_display'],
-                            cleaned_method['account_type'],
-                            cleaned_method['card_number_enc'],
-                            cleaned_method['routing_number_enc'],
-                            cleaned_method['account_number_enc'],
-                            cleaned_method['details_note'],
-                            datetime.now().isoformat(timespec='seconds'),
-                            default_method['id'],
-                            client_id,
+                if cleaned_method:
+                    if cleaned_method['is_default'] != 1:
+                        cleaned_method['is_default'] = 1
+                    if default_method:
+                        if cleaned_method['is_default']:
+                            conn.execute('UPDATE business_payment_methods SET is_default=0 WHERE client_id=?', (client_id,))
+                        if cleaned_method['is_backup']:
+                            conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (client_id,))
+                        conn.execute(
+                            '''UPDATE business_payment_methods
+                               SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, card_number_enc=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
+                               WHERE id=? AND client_id=?''',
+                            (
+                                cleaned_method['method_type'],
+                                cleaned_method['label'],
+                                cleaned_method['status'],
+                                cleaned_method['is_default'],
+                                cleaned_method['is_backup'],
+                                cleaned_method['holder_name'],
+                                cleaned_method['brand_name'],
+                                cleaned_method['account_last4'],
+                                cleaned_method['expiry_display'],
+                                cleaned_method['account_type'],
+                                cleaned_method['card_number_enc'],
+                                cleaned_method['routing_number_enc'],
+                                cleaned_method['account_number_enc'],
+                                cleaned_method['details_note'],
+                                datetime.now().isoformat(timespec='seconds'),
+                                default_method['id'],
+                                client_id,
+                            )
                         )
-                    )
-                else:
-                    conn.execute(
-                        '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, card_number_enc, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                        (
-                            client_id,
-                            cleaned_method['method_type'],
-                            cleaned_method['label'],
-                            cleaned_method['status'],
-                            cleaned_method['is_default'],
-                            cleaned_method['is_backup'],
-                            cleaned_method['holder_name'],
-                            cleaned_method['brand_name'],
-                            cleaned_method['account_last4'],
-                            cleaned_method['expiry_display'],
-                            cleaned_method['account_type'],
-                            cleaned_method['card_number_enc'],
-                            cleaned_method['routing_number_enc'],
-                            cleaned_method['account_number_enc'],
-                            cleaned_method['details_note'],
-                            user['id'],
-                            datetime.now().isoformat(timespec='seconds'),
+                    else:
+                        conn.execute(
+                            '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, card_number_enc, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
+                               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                            (
+                                client_id,
+                                cleaned_method['method_type'],
+                                cleaned_method['label'],
+                                cleaned_method['status'],
+                                cleaned_method['is_default'],
+                                cleaned_method['is_backup'],
+                                cleaned_method['holder_name'],
+                                cleaned_method['brand_name'],
+                                cleaned_method['account_last4'],
+                                cleaned_method['expiry_display'],
+                                cleaned_method['account_type'],
+                                cleaned_method['card_number_enc'],
+                                cleaned_method['routing_number_enc'],
+                                cleaned_method['account_number_enc'],
+                                cleaned_method['details_note'],
+                                user['id'],
+                                datetime.now().isoformat(timespec='seconds'),
+                            )
                         )
-                    )
                 sync_client_payment_method_summary(conn, client_id)
                 conn.execute(
                     'UPDATE users SET preferred_language=? WHERE id=?',
