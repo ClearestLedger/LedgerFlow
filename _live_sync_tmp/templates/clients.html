@@ -10,9 +10,11 @@
       <div class='small' style='margin:12px 0'>New business records are now saved inside LedgerFlow with a permanent profile history once created.</div>
       <form method='post' class='form-grid'>
       <div><label>Business Name</label><input name='business_name' required></div>
-      <div><label>Business Type</label><select name='business_type' required>{% for option in business_types %}<option value='{{ option }}'>{{ option }}</option>{% endfor %}</select></div>
+      <div><label>Kind of Business</label><select name='business_category'><option value=''>Select one (optional)</option>{% for option in business_categories %}<option value='{{ option }}'>{{ option }}</option>{% endfor %}</select></div>
+      <div><label>Business Structure</label><select name='business_type' required>{% for option in business_structures %}<option value='{{ option }}'>{{ option }}</option>{% endfor %}</select></div>
       <div><label>EIN</label><input name='ein'></div>
       <div><label>Business Address</label><input name='address'></div>
+      <div style='grid-column:1 / -1'><label>Specialty / Short Description</label><input name='business_specialty' placeholder='Optional short description like house cleaning or interior painting'></div>
 
       <div><label>Service Level / Pricing Tier</label><select name='service_level'>{% for value, label in service_level_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
       <div><label>Access Level Granted</label><select name='access_service_level'>{% for value, label in service_level_access_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
@@ -82,6 +84,8 @@
     {% set business_search_blob = (
       (c.business_name or '') ~ ' ' ~
       (c.business_type or '') ~ ' ' ~
+      (c.business_category or '') ~ ' ' ~
+      (c.business_specialty or '') ~ ' ' ~
       (service_level_labels.get(c.service_level or 'self_service', 'Self-Service')) ~ ' ' ~
       (effective_service_level_label(c) or '') ~ ' ' ~
       (c.contact_name or '') ~ ' ' ~
@@ -95,7 +99,7 @@
       <summary class='business-directory-summary'>
         <div>
           <strong>{{ c.business_name }}</strong>
-          <div class='small'>{{ c.business_type or 'Type missing' }} | {{ service_level_labels.get(c.service_level or 'self_service', 'Self-Service') }} pricing{% if access_level_override_active(c) %} | {{ effective_service_level_label(c) }} access{% endif %} | EIN {{ c.ein or '-' }}</div>
+          <div class='small'>{{ c.business_category or 'Kind missing' }}{% if c.business_specialty %} - {{ c.business_specialty }}{% endif %}{% if c.business_type %} | {{ c.business_type }}{% endif %} | {{ service_level_labels.get(c.service_level or 'self_service', 'Self-Service') }} pricing{% if access_level_override_active(c) %} | {{ effective_service_level_label(c) }} access{% endif %} | EIN {{ c.ein or '-' }}</div>
           <div class='small'>{{ c.contact_name or 'Contact missing' }}{% if c.email %} | {{ c.email }}{% endif %}</div>
           <div class='small'>Subscription: {{ subscription_status_labels.get(c.subscription_status or 'inactive', 'Inactive') }}{% if c.subscription_amount %} | ${{ '%.2f'|format(c.subscription_amount or 0) }}/mo{% endif %}{% if c.default_payment_method_label %} | {{ c.default_payment_method_label }}{% endif %}</div>
           {% if access_level_override_active(c) %}
@@ -113,7 +117,7 @@
       <div class='card-head'>
         <div>
           <strong>{{ c.business_name }}</strong>
-          <div class='small'>{{ c.business_type or 'Type missing' }} | {{ service_level_labels.get(c.service_level or 'self_service', 'Self-Service') }} pricing{% if access_level_override_active(c) %} | {{ effective_service_level_label(c) }} access{% endif %} | EIN {{ c.ein or '-' }}</div>
+          <div class='small'>{{ c.business_category or 'Kind missing' }}{% if c.business_specialty %} - {{ c.business_specialty }}{% endif %}{% if c.business_type %} | {{ c.business_type }}{% endif %} | {{ service_level_labels.get(c.service_level or 'self_service', 'Self-Service') }} pricing{% if access_level_override_active(c) %} | {{ effective_service_level_label(c) }} access{% endif %} | EIN {{ c.ein or '-' }}</div>
           <div class='small'>{{ c.address or 'Address missing' }}</div>
           <div class='small'>Subscription: {{ subscription_status_labels.get(c.subscription_status or 'inactive', 'Inactive') }}{% if c.subscription_amount %} | ${{ '%.2f'|format(c.subscription_amount or 0) }}/mo{% endif %}{% if c.default_payment_method_label %} | {{ c.default_payment_method_label }}{% endif %}</div>
           {% if access_level_override_active(c) %}
@@ -127,9 +131,11 @@
         <input type='hidden' name='client_id' value='{{ c.id }}'>
 
         <div><label>Business Name</label><input name='business_name' value='{{ c.business_name }}' required></div>
-        <div><label>Business Type</label><select name='business_type'>{% for option in business_types %}<option value='{{ option }}' {% if c.business_type == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+        <div><label>Kind of Business</label><select name='business_category'><option value=''>Select one (optional)</option>{% for option in business_categories %}<option value='{{ option }}' {% if c.business_category == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+        <div><label>Business Structure</label><select name='business_type'>{% for option in business_structures %}<option value='{{ option }}' {% if c.business_type == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
         <div><label>EIN</label><input name='ein' value='{{ c.ein or "" }}'></div>
         <div><label>Business Address</label><input name='address' value='{{ c.address or "" }}'></div>
+        <div style='grid-column:1 / -1'><label>Specialty / Short Description</label><input name='business_specialty' value='{{ c.business_specialty or "" }}' placeholder='Optional short description like house cleaning or interior painting'></div>
 
         <div><label>Service Level / Pricing Tier</label><select name='service_level'>{% for value, label in service_level_options %}<option value='{{ value }}' {% if (c.service_level or 'self_service') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
         {% if is_admin %}
@@ -221,7 +227,7 @@
           <div class='card-head'>
             <div>
               <strong>{{ c.business_name }}</strong>
-              <div class='small'>{{ c.business_type or 'Type missing' }} | {{ c.contact_name or 'Contact missing' }}{% if c.email %} | {{ c.email }}{% endif %}</div>
+              <div class='small'>{{ c.business_category or 'Kind missing' }}{% if c.business_specialty %} - {{ c.business_specialty }}{% endif %}{% if c.business_type %} | {{ c.business_type }}{% endif %} | {{ c.contact_name or 'Contact missing' }}{% if c.email %} | {{ c.email }}{% endif %}</div>
               <div class='small'>Archived: {{ c.archived_at or 'Unknown date' }} | Reason: {{ archive_reason_labels.get(c.archive_reason or 'other', 'Other') }}</div>
               {% if c.last_rejoin_sent_at %}
               <div class='small'>Last rejoin email: <span class='status-chip {{ c.last_rejoin_status or "sent" }}'>{{ c.last_rejoin_status or 'sent' }}</span> | {{ c.last_rejoin_sent_at }}</div>

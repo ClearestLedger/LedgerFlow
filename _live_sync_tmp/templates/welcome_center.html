@@ -33,7 +33,11 @@
   <div class='card stat-card premium-stat'>
     <h3>{{ tr('Business Name') }}</h3>
     <div class='metric'>{{ business_name }}</div>
-    <div class='small'>{{ tr('Your LedgerFlow workspace business profile') }}</div>
+    <div class='small'>
+      {{ tr('Your LedgerFlow workspace business profile') }}
+      {% if client.business_category %} | {{ client.business_category }}{% endif %}
+      {% if client.business_specialty %} - {{ client.business_specialty }}{% endif %}
+    </div>
   </div>
   <div class='card stat-card premium-stat'>
     <h3>{{ tr('User Name') }}</h3>
@@ -58,6 +62,9 @@
     <div class='welcome-message-copy'>
       <p><strong>{{ user_name }}</strong>, {{ tr('welcome to LedgerFlow.') }}</p>
       <p>{{ tr('Your workspace for') }} <strong>{{ business_name }}</strong> {{ tr('is designed to keep billing, income records, team operations, payroll context, planning, and business coordination organized in one place.') }}</p>
+      {% if client.business_category or client.business_specialty %}
+      <p>{{ tr('Your business profile is currently tailored around') }} <strong>{{ client.business_category or tr('your service category') }}</strong>{% if client.business_specialty %} - {{ client.business_specialty }}{% endif %}.</p>
+      {% endif %}
       <p>{{ tr('Use this Welcome Center as your calm starting point. From here, you can move into the dashboard, review the overview, track income, manage team members, and later watch guided how-to videos built specifically for this software.') if is_trial_workspace else tr('Use this Welcome Center as your calm starting point. From here, you can move into the dashboard, review billing, track income, manage team members, and later watch guided how-to videos built specifically for this software.') }}</p>
     </div>
     <div class='benefits-mini-points' style='margin-top:14px'>

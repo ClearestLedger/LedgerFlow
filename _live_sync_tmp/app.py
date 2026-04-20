@@ -191,6 +191,31 @@ TRANSLATIONS = {
     'Set method on file': {'es': 'Define o mÃ©todo registrado', 'pt': 'Defina o mÃ©todo salvo'},
     'Business Name': {'es': 'Nombre del negocio', 'pt': 'Nome da empresa'},
     'Business Type': {'es': 'Tipo de negocio', 'pt': 'Tipo de empresa'},
+    'Business Structure': {'es': 'Estructura del negocio', 'pt': 'Estrutura da empresa'},
+    'Kind of Business': {'es': 'Clase de negocio', 'pt': 'Tipo de negocio'},
+    'Specialty / Short Description': {'es': 'Especialidad / descripcion corta', 'pt': 'Especialidade / descricao curta'},
+    'Select one (optional)': {'es': 'Seleccione uno (opcional)', 'pt': 'Selecione um (opcional)'},
+    'Business name, kind of business, structure, contact, language, EIN, address, and any helpful billing notes.': {
+        'es': 'Nombre, tipo de negocio, estructura, contacto, idioma, EIN, direccion y notas utiles.',
+        'pt': 'Nome, tipo de negocio, estrutura, contato, idioma, EIN, endereco e notas uteis.',
+    },
+    'Business name, kind of business, structure, contact, language, EIN, address, and admin notes.': {
+        'es': 'Nombre, tipo de negocio, estructura, contacto, idioma, EIN, direccion y notas administrativas.',
+        'pt': 'Nome, tipo de negocio, estrutura, contato, idioma, EIN, endereco e notas administrativas.',
+    },
+    'Used to personalize your welcome guidance, tips, and future recommendations.': {
+        'es': 'Se usa para personalizar la bienvenida, consejos y recomendaciones futuras.',
+        'pt': 'Usado para personalizar a boas-vindas, dicas e recomendacoes futuras.',
+    },
+    'Optional short description like house cleaning, interior painting, gel nails, or prenatal massage': {
+        'es': 'Descripcion opcional como limpieza de casas, pintura interior, unas en gel o masaje prenatal',
+        'pt': 'Descricao opcional como limpeza residencial, pintura interna, unhas em gel ou massagem pre-natal',
+    },
+    'Your business profile is currently tailored around': {
+        'es': 'El perfil de su negocio esta adaptado actualmente a',
+        'pt': 'O perfil da sua empresa esta atualmente adaptado a',
+    },
+    'your service category': {'es': 'su categoria de servicio', 'pt': 'sua categoria de servico'},
     'Primary Contact Name': {'es': 'Nombre del contacto principal', 'pt': 'Nome do contato principal'},
     'Business Email': {'es': 'Correo del negocio', 'pt': 'E-mail da empresa'},
     'Business Phone': {'es': 'TelÃ©fono del negocio', 'pt': 'Telefone da empresa'},
@@ -586,8 +611,38 @@ def mask_card_number(value: str) -> str:
     return ' '.join(groups)
 
 
+def business_structures():
+    return ['LLC', 'S-Corp', 'C-Corp', 'Sole Proprietor', 'Partnership', 'Nonprofit', 'Other']
+
+
 def business_types():
-    return ['LLC', 'S-Corp', 'C-Corp', 'Sole Proprietor']
+    return business_structures()
+
+
+def business_categories():
+    return [
+        'Cleaning',
+        'Painting',
+        'Nails / Beauty',
+        'Massage / Wellness',
+        'Construction',
+        'Landscaping',
+        'Home Services',
+        'Childcare',
+        'Consulting',
+        'Bookkeeping / Accounting',
+        'Retail / Boutique',
+        'Food / Catering',
+        'Fitness / Personal Training',
+        'Other',
+    ]
+
+
+def normalize_business_category(value: str) -> str:
+    cleaned = (value or '').strip()
+    if not cleaned:
+        return ''
+    return cleaned if cleaned in set(business_categories()) else 'Other'
 
 
 def filing_types():
@@ -3315,6 +3370,8 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 business_name TEXT NOT NULL,
                 business_type TEXT DEFAULT '',
+                business_category TEXT DEFAULT '',
+                business_specialty TEXT DEFAULT '',
                 service_level TEXT DEFAULT 'self_service',
                 access_service_level TEXT DEFAULT '',
                 access_override_note TEXT DEFAULT '',
@@ -3877,6 +3934,8 @@ def init_db():
         ensure_column(conn, 'workers', 'updated_by_user_id', 'INTEGER')
         ensure_column(conn, 'workers', 'preferred_language', "TEXT DEFAULT 'en'")
         ensure_column(conn, 'clients', 'business_type', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'business_category', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'business_specialty', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'eftps_status', "TEXT DEFAULT 'Not Enrolled'")
         ensure_column(conn, 'clients', 'eftps_login_reference', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'filing_type', "TEXT DEFAULT 'Both'")
@@ -7667,9 +7726,15 @@ def clients():
             if access_service_level == service_level:
                 access_service_level = ''
                 access_override_note = ''
+            business_name = request.form.get('business_name', '').strip()
+            business_structure = request.form.get('business_type', '').strip()
+            business_category = normalize_business_category(request.form.get('business_category', ''))
+            business_specialty = request.form.get('business_specialty', '').strip()[:120]
             values = (
-                request.form.get('business_name', '').strip(),
-                request.form.get('business_type', '').strip(),
+                business_name,
+                business_structure,
+                business_category,
+                business_specialty,
                 service_level,
                 access_service_level,
                 access_override_note,
@@ -7725,8 +7790,10 @@ def clients():
                     return redirect(url_for('clients'))
                 if user['role'] != 'admin':
                     values = (
-                        request.form.get('business_name', '').strip(),
-                        request.form.get('business_type', '').strip(),
+                        business_name,
+                        business_structure,
+                        business_category,
+                        business_specialty,
                         service_level,
                         normalize_access_service_level(existing['access_service_level'] or ''),
                         (existing['access_override_note'] or '').strip()[:300],
@@ -7772,7 +7839,7 @@ def clients():
                         '',
                     )
                 conn.execute(
-                    'UPDATE clients SET business_name=?, business_type=?, service_level=?, access_service_level=?, access_override_note=?, subscription_plan_code=?, subscription_status=?, subscription_amount=?, subscription_interval=?, subscription_autopay_enabled=?, subscription_next_billing_date=?, subscription_started_at=?, subscription_canceled_at=?, subscription_paused_at=?, default_payment_method_label=?, default_payment_method_status=?, backup_payment_method_label=?, billing_notes=?, contact_name=?, phone=?, email=?, address=?, ein=?, eftps_status=?, eftps_login_reference=?, filing_type=?, bank_name=?, bank_account_nickname=?, bank_account_last4=?, bank_account_holder_name=?, bank_account_number=?, bank_routing_number=?, credit_card_nickname=?, credit_card_last4=?, credit_card_holder_name=?, credit_card_number=?, payroll_contact_name=?, payroll_contact_phone=?, payroll_contact_email=?, state_tax_id=?, record_status=?, archive_reason=?, archived_at=?, archived_by_user_id=?, reactivated_at=?, updated_at=?, updated_by_user_id=? WHERE id=?',
+                    'UPDATE clients SET business_name=?, business_type=?, business_category=?, business_specialty=?, service_level=?, access_service_level=?, access_override_note=?, subscription_plan_code=?, subscription_status=?, subscription_amount=?, subscription_interval=?, subscription_autopay_enabled=?, subscription_next_billing_date=?, subscription_started_at=?, subscription_canceled_at=?, subscription_paused_at=?, default_payment_method_label=?, default_payment_method_status=?, backup_payment_method_label=?, billing_notes=?, contact_name=?, phone=?, email=?, address=?, ein=?, eftps_status=?, eftps_login_reference=?, filing_type=?, bank_name=?, bank_account_nickname=?, bank_account_last4=?, bank_account_holder_name=?, bank_account_number=?, bank_routing_number=?, credit_card_nickname=?, credit_card_last4=?, credit_card_holder_name=?, credit_card_number=?, payroll_contact_name=?, payroll_contact_phone=?, payroll_contact_email=?, state_tax_id=?, record_status=?, archive_reason=?, archived_at=?, archived_by_user_id=?, reactivated_at=?, updated_at=?, updated_by_user_id=? WHERE id=?',
                     values + (now_value, user['id'], client_id)
                 )
                 log_client_profile_history(conn, client_id=client_id, action='updated', changed_by_user_id=user['id'])
@@ -7780,7 +7847,7 @@ def clients():
                 flash('Business profile updated.', 'success')
                 return redirect(url_for('clients'))
             conn.execute(
-                f'INSERT INTO clients (business_name, business_type, service_level, access_service_level, access_override_note, subscription_plan_code, subscription_status, subscription_amount, subscription_interval, subscription_autopay_enabled, subscription_next_billing_date, subscription_started_at, subscription_canceled_at, subscription_paused_at, default_payment_method_label, default_payment_method_status, backup_payment_method_label, billing_notes, contact_name, phone, email, address, ein, eftps_status, eftps_login_reference, filing_type, bank_name, bank_account_nickname, bank_account_last4, bank_account_holder_name, bank_account_number, bank_routing_number, credit_card_nickname, credit_card_last4, credit_card_holder_name, credit_card_number, payroll_contact_name, payroll_contact_phone, payroll_contact_email, state_tax_id, record_status, archive_reason, archived_at, archived_by_user_id, reactivated_at, created_by_user_id, updated_at, updated_by_user_id) VALUES ({",".join(["?"] * 48)})',
+                f'INSERT INTO clients (business_name, business_type, business_category, business_specialty, service_level, access_service_level, access_override_note, subscription_plan_code, subscription_status, subscription_amount, subscription_interval, subscription_autopay_enabled, subscription_next_billing_date, subscription_started_at, subscription_canceled_at, subscription_paused_at, default_payment_method_label, default_payment_method_status, backup_payment_method_label, billing_notes, contact_name, phone, email, address, ein, eftps_status, eftps_login_reference, filing_type, bank_name, bank_account_nickname, bank_account_last4, bank_account_holder_name, bank_account_number, bank_routing_number, credit_card_nickname, credit_card_last4, credit_card_holder_name, credit_card_number, payroll_contact_name, payroll_contact_phone, payroll_contact_email, state_tax_id, record_status, archive_reason, archived_at, archived_by_user_id, reactivated_at, created_by_user_id, updated_at, updated_by_user_id) VALUES ({",".join(["?"] * 50)})',
                 values + (user['id'], now_value, user['id'])
             )
             client_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -7853,7 +7920,8 @@ def clients():
         prospect_clients=prospect_rows,
         archived_clients=archived_rows,
         archived_delete_blockers=archived_delete_blockers,
-        business_types=business_types(),
+        business_structures=business_structures(),
+        business_categories=business_categories(),
         service_level_options=service_level_options(),
         service_level_labels=service_level_label_map(),
         subscription_status_options=subscription_status_options(),
@@ -8873,7 +8941,9 @@ def business_onboarding():
             )
             session['preferred_language'] = selected_language
             business_name = request.form.get('business_name', '').strip()
-            business_type = request.form.get('business_type', '').strip()
+            business_structure = request.form.get('business_type', '').strip()
+            business_category = normalize_business_category(request.form.get('business_category', ''))
+            business_specialty = request.form.get('business_specialty', '').strip()[:120]
             contact_name = request.form.get('contact_name', '').strip()
             phone = request.form.get('phone', '').strip()
             email = request.form.get('email', '').strip().lower()
@@ -8928,7 +8998,7 @@ def business_onboarding():
                     autopay_enabled = 1 if request.form.get('subscription_autopay_enabled') in {'1', 'on', 'true', 'yes'} else 0
                 conn.execute(
                     '''UPDATE clients
-                       SET business_name=?, business_type=?, service_level=?, contact_name=?, phone=?, email=?, address=?, ein=?,
+                       SET business_name=?, business_type=?, business_category=?, business_specialty=?, service_level=?, contact_name=?, phone=?, email=?, address=?, ein=?,
                            subscription_plan_code=?, subscription_status='active', subscription_amount=?, subscription_interval='monthly',
                            subscription_autopay_enabled=?, subscription_next_billing_date=?, subscription_started_at=?,
                            subscription_canceled_at=?, subscription_paused_at=?, billing_notes=?, onboarding_status='completed',
@@ -8938,7 +9008,9 @@ def business_onboarding():
                        WHERE id=?''',
                     (
                         business_name,
-                        business_type,
+                        business_structure,
+                        business_category,
+                        business_specialty,
                         service_level,
                         contact_name,
                         phone,
@@ -9132,7 +9204,8 @@ def business_onboarding():
             'business_onboarding.html',
             client=client,
             suggested_subscription_amount=float(suggested_amount),
-            business_types=business_types(),
+            business_structures=business_structures(),
+            business_categories=business_categories(),
             service_level_options=service_level_options(),
             service_level_labels=service_level_label_map(),
             payment_method_type_options=payment_method_type_options(),
