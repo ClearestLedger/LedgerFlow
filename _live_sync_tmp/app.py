@@ -2153,7 +2153,7 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
         "",
         "LedgerFlow",
     ])
-    html = render_marketing_email(
+    email_html = render_marketing_email(
         eyebrow='Complimentary Trial Invite',
         title=f'Start your {trial_days}-day LedgerFlow trial',
         intro=f'Explore LedgerFlow for {business_name}, review the subscription options, and claim guided setup with a private client trial.',
@@ -2180,9 +2180,9 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
         subject=subject,
         to_email=to_email,
         plain_text=body,
-        html=html,
+        html=email_html,
     )
-    return {'subject': subject, 'body_text': body, 'body_html': html, 'email_type': 'prospect_trial_invite'}
+    return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'prospect_trial_invite'}
 
 
 def send_rejoin_email(to_email: str, to_name: str, business_name: str, rejoin_link: str):
