@@ -1,20 +1,23 @@
 {% extends 'base.html' %}
 {% block body %}
+{% set selected_level = request.form.get("service_level", client.service_level or "self_service") %}
+{% set selected_tier_meta = subscription_tier_map.get(selected_level, subscription_tier_map.get("self_service")) %}
+{% set selected_method_type = request.form.get("method_type", default_method.method_type if default_method else "card") %}
 <div class='login-wrap' style='max-width:1200px;margin:0 auto'>
   <div class='card hero-surface' style='margin-bottom:18px'>
     <div class='card-head'>
       <div>
         <div class='page-kicker'>{{ tr('Business Setup') }}</div>
         <div class='page-title'>{{ tr('Set up your LedgerFlow workspace') }}</div>
-        <div class='page-subtitle'>{{ tr('Complete your business profile, choose your subscription tier, add your method on file, and unlock full access.') }}</div>
+        <div class='page-subtitle'>{{ tr('A cleaner four-step setup: add business information, choose your subscription, set payment, then open your welcome tutorial.') }}</div>
       </div>
-      <span class='badge'>{{ tr('Step 1 of 1') }}</span>
+      <span class='badge'>{{ tr('4 Steps') }}</span>
     </div>
     <div class='summary-strip' style='margin-top:12px'>
-      <span class='summary-pill'>{{ tr('Create your business profile') }}</span>
-      <span class='summary-pill'>{{ tr('Choose subscription tier') }}</span>
-      <span class='summary-pill'>{{ tr('Set method on file') }}</span>
-      <span class='summary-pill'>{{ tr('Unlock workspace') }}</span>
+      <span class='summary-pill'>1. {{ tr('Business Info') }}</span>
+      <span class='summary-pill'>2. {{ tr('Subscription') }}</span>
+      <span class='summary-pill'>3. {{ tr('Payment') }}</span>
+      <span class='summary-pill'>4. {{ tr('Welcome Tutorial') }}</span>
     </div>
   </div>
   {% if trial_offer_days %}
@@ -23,7 +26,7 @@
       <h3>{{ tr('Complimentary Trial Active') }}</h3>
       <span class='badge'>{{ trial_offer_days }} {{ tr('Days') }}</span>
     </div>
-    <div class='small'>{{ tr('This business claimed a complimentary trial offer. Your subscription setup is being saved now so billing can start after the trial window ends.') }}</div>
+    <div class='small'>{{ tr('This business claimed a complimentary trial offer. Subscription setup is being saved now so billing can start after the trial window ends.') }}</div>
     {% if trial_ends_at %}
     <div class='summary-strip' style='margin-top:12px'>
       <span class='summary-pill'>{{ tr('Trial ends') }} {{ trial_ends_at[:10] }}</span>
@@ -33,103 +36,182 @@
   </div>
   {% endif %}
 
-  <form method='post' class='grid cards-2' style='align-items:start'>
-    <section class='card section-frame'>
-      <div class='card-head'><h3>{{ tr('Business Information') }}</h3><span class='badge'>{{ tr('Required') }}</span></div>
-      <div class='form-grid'>
-        <div><label>{{ tr('Business Name') }}</label><input name='business_name' value='{{ request.form.get("business_name", client.business_name or "") }}' required></div>
-        <div><label>{{ tr('Business Type') }}</label><select name='business_type'>{% for value in business_types %}<option value='{{ value }}' {% if request.form.get("business_type", client.business_type or "") == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></div>
-        <div><label>{{ tr('Primary Contact Name') }}</label><input name='contact_name' value='{{ request.form.get("contact_name", client.contact_name or current_user.full_name or "") }}' required></div>
-        <div><label>{{ tr('Business Email') }}</label><input name='email' value='{{ request.form.get("email", client.email or current_user.email or "") }}' required></div>
-        <div><label>{{ tr('Business Phone') }}</label><input name='phone' value='{{ request.form.get("phone", client.phone or "") }}' required></div>
-        <div><label>{{ tr('Preferred Language') }}</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if request.form.get("preferred_language", current_language) == option.code %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
-        <div><label>{{ tr('EIN') }}</label><input name='ein' value='{{ request.form.get("ein", client.ein or "") }}' placeholder='XX-XXXXXXX'></div>
-        <div style='grid-column:1 / -1'><label>{{ tr('Business Address') }}</label><input name='address' value='{{ request.form.get("address", client.address or "") }}' required></div>
-        <div style='grid-column:1 / -1'><label>{{ tr('Billing Notes (optional)') }}</label><input name='billing_notes' value='{{ request.form.get("billing_notes", client.billing_notes or "") }}' placeholder='{{ tr("Anything your administrator should know about billing or contact preferences") }}'></div>
-      </div>
-    </section>
-
-    <section class='card section-frame'>
-      <div class='card-head'><h3>{{ tr('Subscription Setup') }}</h3><span class='badge'>{{ tr('Choose Your Tier') }}</span></div>
-      {% set selected_level = request.form.get("service_level", client.service_level or "self_service") %}
-      <div class='subscription-tier-grid' style='margin-bottom:14px'>
-        {% for tier in subscription_tiers %}
-        <label class='subscription-tier-card{% if selected_level == tier.key %} selected{% endif %}'>
-          <input type='radio' name='service_level' value='{{ tier.key }}' {% if selected_level == tier.key %}checked{% endif %}>
-          <div class='subscription-tier-head'>
-            <div>
-              <div class='subscription-tier-label'>{{ tier.label }}</div>
-              <div class='subscription-tier-tagline'>{{ tier.tagline }}</div>
+  <form method='post' class='onboarding-flow'>
+    <details class='compact-details onboarding-step' open>
+      <summary>
+        <div class='onboarding-step-summary'>
+          <div class='onboarding-step-title'>
+            <span class='step-number'>1</span>
+            <div class='onboarding-step-copy'>
+              <strong>{{ tr('Add Business Info') }}</strong>
+              <span>{{ tr('Business name, contact, language, EIN, address, and admin notes.') }}</span>
             </div>
-            <div class='subscription-tier-price'>${{ '%.0f'|format(tier.monthly_amount) }}<span>/mo</span></div>
           </div>
-          <div class='subscription-tier-bestfor'>{{ tier.best_for }}</div>
-          <ul class='subscription-tier-list'>
-            {% for feature in tier.features %}
-            <li>{{ feature }}</li>
-            {% endfor %}
-          </ul>
-          {% if tier.coming_soon %}
-          <div class='subscription-tier-coming-soon'>
-            <strong>{{ tr('Coming Soon:') }}</strong> {{ tier.coming_soon|join(', ') }}
-          </div>
-          {% endif %}
-        </label>
-        {% endfor %}
-      </div>
-      <div class='grid cards-3'>
-        <div class='card stat-card premium-stat'>
-          <h3>{{ tr('Plan Code') }}</h3>
-          <div class='metric' id='planCodePreview'>{{ (client.subscription_plan_code or subscription_tier_map.get(selected_level, subscription_tier_map.get("self_service")).plan_code) if not request.form.get("service_level") else '' }}</div>
-          <div class='small'>{{ tr('Assigned automatically from your selected tier') }}</div>
+          <span class='status-chip pending'>{{ tr('Required') }}</span>
         </div>
-        <div class='card stat-card premium-stat premium-stat-accent'>
-          <h3>{{ tr('Monthly Subscription') }}</h3>
-          <div class='metric' id='subscriptionAmountPreview'>${{ '%.2f'|format(suggested_subscription_amount or 0) }}</div>
-          <div class='small'>{{ tr('Suggested monthly platform fee for your selected tier') }}</div>
-        </div>
-        <div class='card stat-card premium-stat'>
-          <h3>{{ tr('Billing Start Date') }}</h3>
-          <div class='metric'>
-            <input name='subscription_start_date' type='date' value='{{ default_subscription_start_date }}' required>
-          </div>
-          <div class='small'>{{ tr('This becomes your first recorded billing date') }}</div>
+      </summary>
+      <div class='onboarding-step-body'>
+        <div class='form-grid'>
+          <div><label>{{ tr('Business Name') }}</label><input name='business_name' value='{{ request.form.get("business_name", client.business_name or "") }}' required></div>
+          <div><label>{{ tr('Business Type') }}</label><select name='business_type'>{% for value in business_types %}<option value='{{ value }}' {% if request.form.get("business_type", client.business_type or "") == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></div>
+          <div><label>{{ tr('Primary Contact Name') }}</label><input name='contact_name' value='{{ request.form.get("contact_name", client.contact_name or current_user.full_name or "") }}' required></div>
+          <div><label>{{ tr('Business Email') }}</label><input name='email' value='{{ request.form.get("email", client.email or current_user.email or "") }}' required></div>
+          <div><label>{{ tr('Business Phone') }}</label><input name='phone' value='{{ request.form.get("phone", client.phone or "") }}' required></div>
+          <div><label>{{ tr('Preferred Language') }}</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if request.form.get("preferred_language", current_language) == option.code %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
+          <div><label>{{ tr('EIN') }}</label><input name='ein' value='{{ request.form.get("ein", client.ein or "") }}' placeholder='XX-XXXXXXX'></div>
+          <div style='grid-column:1 / -1'><label>{{ tr('Business Address') }}</label><input name='address' value='{{ request.form.get("address", client.address or "") }}' required></div>
+          <div style='grid-column:1 / -1'><label>{{ tr('Billing Notes (optional)') }}</label><input name='billing_notes' value='{{ request.form.get("billing_notes", client.billing_notes or "") }}' placeholder='{{ tr("Anything your administrator should know about billing or contact preferences") }}'></div>
         </div>
       </div>
-      <div class='tier-rollout-note' style='margin-top:12px'>
-        {{ tr('This private client rollout uses administrator-managed billing. Your selected plan, pricing, and method on file are saved now so billing can begin immediately, while self-service autopay and premium banking tools continue through final buildout.') }}
-      </div>
-      <label class='small' style='display:block;margin-top:10px'><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if request.form.get("subscription_autopay_enabled", '1' if client.subscription_autopay_enabled else '') %}checked{% endif %}> {{ tr('Keep this method on file for subscription billing.') }}</label>
-    </section>
+    </details>
 
-    <section class='card section-frame' style='grid-column:1 / -1'>
-      <div class='card-head'><h3>{{ tr('Method On File') }}</h3><span class='badge'>{{ tr('Required') }}</span></div>
-      <div class='small' style='margin-bottom:14px'>{{ tr('Add the payment method your business wants on file for subscription billing. This creates or updates your default billing method.') }}</div>
-      <div class='form-grid payment-method-form onboarding-method-form'>
-        <div><label>{{ tr('Method Type') }}</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if request.form.get("method_type", default_method.method_type if default_method else "card") == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-        <div><label>{{ tr('Method Label') }}</label><input name='label' value='{{ request.form.get("label", default_method.label if default_method else "") }}' placeholder='{{ tr("Primary business card or Operating ACH") }}' required></div>
-        <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank Name') }}</label><input name='brand_name' value='{{ request.form.get("brand_name", default_method.brand_name if default_method else "") }}' placeholder='{{ tr("Visa or Chase Business Checking") }}'></div>
-        <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Account Holder Name') }}</label><input name='holder_name' value='{{ request.form.get("holder_name", default_method.holder_name if default_method else client.contact_name or current_user.full_name or "") }}' placeholder='{{ tr("Business legal name") }}'></div>
-        <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Last 4 Digits') }}</label><input name='account_last4' value='{{ request.form.get("account_last4", default_method.account_last4 if default_method else "") }}' inputmode='numeric' maxlength='4' placeholder='4242'></div>
-        <div class='pm-field pm-card'><label>{{ tr('Expiration (MM/YY)') }}</label><input name='expiry_display' value='{{ request.form.get("expiry_display", default_method.expiry_display if default_method else "") }}' maxlength='5' placeholder='08/28'></div>
-        <div class='pm-field pm-ach'><label>{{ tr('Account Type') }}</label><select name='account_type'><option value='checking' {% if request.form.get("account_type", default_method.account_type if default_method else "checking") == "checking" %}selected{% endif %}>{{ tr('Checking') }}</option><option value='savings' {% if request.form.get("account_type", default_method.account_type if default_method else "") == "savings" %}selected{% endif %}>{{ tr('Savings') }}</option></select></div>
-        <div class='pm-field pm-ach'><label>{{ tr('Routing Number') }}</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='{% if default_method and default_method.method_type == "ach" %}{{ tr("Leave blank to keep current") }}{% else %}{{ tr("9 digits") }}{% endif %}'></div>
-        <div class='pm-field pm-ach'><label>{{ tr('Account Number') }}</label><input name='account_number' inputmode='numeric' placeholder='{% if default_method and default_method.method_type == "ach" %}{{ tr("Leave blank to keep current") }}{% else %}{{ tr("Enter account number") }}{% endif %}'></div>
-        <div class='pm-field pm-ach'><label>{{ tr('Confirm Account Number') }}</label><input name='confirm_account_number' inputmode='numeric' placeholder='{{ tr("Re-enter account number") }}'></div>
-        <div style='grid-column:1 / -1'><label>{{ tr('Note (optional)') }}</label><input name='details_note' value='{{ request.form.get("details_note", default_method.details_note if default_method else "") }}' placeholder='{{ tr("Optional billing contact or setup note") }}'></div>
-        <input type='hidden' name='status' value='active'>
-        <input type='hidden' name='is_default' value='1'>
+    <details class='compact-details onboarding-step' open>
+      <summary>
+        <div class='onboarding-step-summary'>
+          <div class='onboarding-step-title'>
+            <span class='step-number'>2</span>
+            <div class='onboarding-step-copy'>
+              <strong>{{ tr('Choose Your Subscription') }}</strong>
+              <span>{{ tr('Visible pricing first, then open the tier you want to review.') }}</span>
+            </div>
+          </div>
+          <div class='onboarding-step-metric'>
+            <span id='step2TierPreview'>{{ selected_tier_meta.label }}</span>
+            <strong id='step2PricePreview'>${{ '%.2f'|format(selected_tier_meta.monthly_amount or 0) }}/mo</strong>
+          </div>
+        </div>
+      </summary>
+      <div class='onboarding-step-body'>
+        <div class='small' style='margin-bottom:14px'>{{ tr('Open each tier to review what it includes. Select the one that fits your business, then choose when billing should begin.') }}</div>
+        <div class='onboarding-tier-stack'>
+          {% for tier in subscription_tiers %}
+          <details class='compact-details onboarding-tier-option{% if selected_level == tier.key %} selected{% endif %}' {% if selected_level == tier.key %}open{% endif %}>
+            <summary>
+              <div class='onboarding-tier-summary'>
+                <div>
+                  <div class='subscription-tier-label'>{{ tier.label }}</div>
+                  <div class='small'>{{ tier.best_for }}</div>
+                </div>
+                <div class='subscription-tier-price'>${{ '%.0f'|format(tier.monthly_amount) }}<span>/mo</span></div>
+              </div>
+            </summary>
+            <div class='onboarding-tier-body'>
+              <div class='subscription-tier-tagline'>{{ tier.tagline }}</div>
+              <ul class='subscription-tier-list'>
+                {% for feature in tier.features %}
+                <li>{{ feature }}</li>
+                {% endfor %}
+              </ul>
+              {% if tier.coming_soon %}
+              <div class='subscription-tier-coming-soon'>
+                <strong>{{ tr('Coming Soon:') }}</strong> {{ tier.coming_soon|join(', ') }}
+              </div>
+              {% endif %}
+              <label class='onboarding-tier-select'>
+                <input type='radio' name='service_level' value='{{ tier.key }}' {% if selected_level == tier.key %}checked{% endif %}>
+                <span>{{ tr('Choose') }} {{ tier.label }}</span>
+              </label>
+            </div>
+          </details>
+          {% endfor %}
+        </div>
+        <div class='grid cards-3' style='margin-top:14px'>
+          <div class='card stat-card premium-stat'>
+            <h3>{{ tr('Plan Code') }}</h3>
+            <div class='metric' id='planCodePreview'>{{ selected_tier_meta.plan_code }}</div>
+            <div class='small'>{{ tr('Assigned automatically from your selected tier') }}</div>
+          </div>
+          <div class='card stat-card premium-stat premium-stat-accent'>
+            <h3>{{ tr('Monthly Subscription') }}</h3>
+            <div class='metric' id='subscriptionAmountPreview'>${{ '%.2f'|format(suggested_subscription_amount or 0) }}</div>
+            <div class='small'>{{ tr('Visible price for the subscription you choose') }}</div>
+          </div>
+          <div class='card stat-card premium-stat'>
+            <h3>{{ tr('Billing Start Date') }}</h3>
+            <div class='metric'>
+              <input name='subscription_start_date' type='date' value='{{ default_subscription_start_date }}' required>
+            </div>
+            <div class='small'>{{ tr('This becomes your first recorded billing date') }}</div>
+          </div>
+        </div>
+        <div class='tier-rollout-note' style='margin-top:12px'>
+          {{ tr('This private client rollout uses administrator-managed billing. Your selected plan, pricing, and method on file are saved now so billing can begin immediately, while self-service autopay and premium banking tools continue through final buildout.') }}
+        </div>
+        <label class='small' style='display:block;margin-top:10px'><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if request.form.get("subscription_autopay_enabled", '1' if client.subscription_autopay_enabled else '') %}checked{% endif %}> {{ tr('Keep this method on file for subscription billing.') }}</label>
       </div>
-    </section>
+    </details>
 
-    <section class='card section-frame' style='grid-column:1 / -1'>
-      <div class='card-head'><h3>{{ tr('Finish Setup') }}</h3><span class='badge'>{{ tr('Unlock Access') }}</span></div>
-      <div class='small' style='margin-bottom:12px'>{{ tr('When you complete this step, LedgerFlow will save your business profile, activate your subscription record, save your method on file, and unlock your full business workspace.') }}</div>
-      <div style='display:flex;gap:10px;flex-wrap:wrap'>
-        <button type='submit'>{{ tr('Complete Setup & Unlock Workspace') }}</button>
-        <a class='btn btn-secondary' href='{{ url_for("logout") }}'>{{ tr('Finish Later') }}</a>
+    <details class='compact-details onboarding-step' open>
+      <summary>
+        <div class='onboarding-step-summary'>
+          <div class='onboarding-step-title'>
+            <span class='step-number'>3</span>
+            <div class='onboarding-step-copy'>
+              <strong>{{ tr('Make Payment Setup') }}</strong>
+              <span>{{ tr('Save the method on file that LedgerFlow will use for subscription billing.') }}</span>
+            </div>
+          </div>
+          <span class='status-chip processing'>{{ selected_method_type|replace('_', ' ')|title }}</span>
+        </div>
+      </summary>
+      <div class='onboarding-step-body'>
+        <div class='small' style='margin-bottom:14px'>{{ tr('Add the payment method your business wants on file for subscription billing. This creates or updates your default billing method.') }}</div>
+        <div class='form-grid payment-method-form onboarding-method-form'>
+          <div><label>{{ tr('Method Type') }}</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if request.form.get("method_type", default_method.method_type if default_method else "card") == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+          <div><label>{{ tr('Method Label') }}</label><input name='label' value='{{ request.form.get("label", default_method.label if default_method else "") }}' placeholder='{{ tr("Primary business card or Operating ACH") }}' required></div>
+          <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank Name') }}</label><input name='brand_name' value='{{ request.form.get("brand_name", default_method.brand_name if default_method else "") }}' placeholder='{{ tr("Visa or Chase Business Checking") }}'></div>
+          <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Account Holder Name') }}</label><input name='holder_name' value='{{ request.form.get("holder_name", default_method.holder_name if default_method else client.contact_name or current_user.full_name or "") }}' placeholder='{{ tr("Business legal name") }}'></div>
+          <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Last 4 Digits') }}</label><input name='account_last4' value='{{ request.form.get("account_last4", default_method.account_last4 if default_method else "") }}' inputmode='numeric' maxlength='4' placeholder='4242'></div>
+          <div class='pm-field pm-card'><label>{{ tr('Expiration (MM/YY)') }}</label><input name='expiry_display' value='{{ request.form.get("expiry_display", default_method.expiry_display if default_method else "") }}' maxlength='5' placeholder='08/28'></div>
+          <div class='pm-field pm-ach'><label>{{ tr('Account Type') }}</label><select name='account_type'><option value='checking' {% if request.form.get("account_type", default_method.account_type if default_method else "checking") == "checking" %}selected{% endif %}>{{ tr('Checking') }}</option><option value='savings' {% if request.form.get("account_type", default_method.account_type if default_method else "") == "savings" %}selected{% endif %}>{{ tr('Savings') }}</option></select></div>
+          <div class='pm-field pm-ach'><label>{{ tr('Routing Number') }}</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='{% if default_method and default_method.method_type == "ach" %}{{ tr("Leave blank to keep current") }}{% else %}{{ tr("9 digits") }}{% endif %}'></div>
+          <div class='pm-field pm-ach'><label>{{ tr('Account Number') }}</label><input name='account_number' inputmode='numeric' placeholder='{% if default_method and default_method.method_type == "ach" %}{{ tr("Leave blank to keep current") }}{% else %}{{ tr("Enter account number") }}{% endif %}'></div>
+          <div class='pm-field pm-ach'><label>{{ tr('Confirm Account Number') }}</label><input name='confirm_account_number' inputmode='numeric' placeholder='{{ tr("Re-enter account number") }}'></div>
+          <div style='grid-column:1 / -1'><label>{{ tr('Note (optional)') }}</label><input name='details_note' value='{{ request.form.get("details_note", default_method.details_note if default_method else "") }}' placeholder='{{ tr("Optional billing contact or setup note") }}'></div>
+          <input type='hidden' name='status' value='active'>
+          <input type='hidden' name='is_default' value='1'>
+        </div>
       </div>
-    </section>
+    </details>
+
+    <details class='compact-details onboarding-step onboarding-final-step' open>
+      <summary>
+        <div class='onboarding-step-summary'>
+          <div class='onboarding-step-title'>
+            <span class='step-number'>4</span>
+            <div class='onboarding-step-copy'>
+              <strong>{{ tr('Welcome Tutorial') }}</strong>
+              <span>{{ tr('After setup, LedgerFlow opens your Welcome Center with how-to guidance and next steps.') }}</span>
+            </div>
+          </div>
+          <span class='status-chip accepted'>{{ tr('Final Step') }}</span>
+        </div>
+      </summary>
+      <div class='onboarding-step-body'>
+        <div class='grid cards-2'>
+          <div class='card section-frame'>
+            <div class='page-kicker'>{{ tr('Welcome Center') }}</div>
+            <div class='page-title' style='font-size:1.45rem'>{{ tr('Start with the tutorial') }}</div>
+            <div class='small' style='margin-top:10px'>{{ tr('As soon as setup is complete, LedgerFlow takes you into the Welcome Center where the tutorial videos, onboarding walkthrough, and workspace overview live.') }}</div>
+            <div class='summary-strip' style='margin-top:14px'>
+              <span class='summary-pill'>{{ tr('Dashboard') }}</span>
+              <span class='summary-pill'>{{ tr('Billing') }}</span>
+              <span class='summary-pill'>{{ tr('Income Records') }}</span>
+              <span class='summary-pill'>{{ tr('Support Path') }}</span>
+            </div>
+          </div>
+          <div class='card section-frame'>
+            <div class='page-kicker'>{{ tr('Finish Setup') }}</div>
+            <div class='page-title' style='font-size:1.45rem'>{{ tr('Save and open your workspace') }}</div>
+            <div class='small' style='margin-top:10px'>{{ tr('LedgerFlow will save your business profile, subscription choice, and payment method, then unlock the workspace and open your Welcome Center tutorial.') }}</div>
+            <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:16px'>
+              <button type='submit'>{{ tr('Complete Setup & Open Welcome Center') }}</button>
+              <a class='btn btn-secondary' href='{{ url_for("logout") }}'>{{ tr('Finish Later') }}</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
   </form>
 </div>
 
@@ -138,22 +220,40 @@ document.addEventListener('DOMContentLoaded', function () {
   var planMap = {{ subscription_tier_map|tojson }};
   var planPreview = document.getElementById('planCodePreview');
   var amountPreview = document.getElementById('subscriptionAmountPreview');
+  var stepTierPreview = document.getElementById('step2TierPreview');
+  var stepPricePreview = document.getElementById('step2PricePreview');
+
   function refreshTierCardState() {
-    document.querySelectorAll('.subscription-tier-card').forEach(function (card) {
-      var radio = card.querySelector('input[type="radio"]');
-      card.classList.toggle('selected', !!(radio && radio.checked));
+    document.querySelectorAll('.onboarding-tier-option').forEach(function (panel) {
+      var radio = panel.querySelector('input[type="radio"]');
+      var checked = !!(radio && radio.checked);
+      panel.classList.toggle('selected', checked);
+      if (checked) {
+        panel.open = true;
+      }
     });
   }
+
   function updateSubscriptionPreview() {
     var selected = document.querySelector('input[name="service_level"]:checked');
     var key = selected ? selected.value : 'self_service';
     var meta = planMap[key] || planMap.self_service;
     if (planPreview) planPreview.textContent = meta.plan_code;
     if (amountPreview) amountPreview.textContent = '$' + Number(meta.monthly_amount || 0).toFixed(2);
+    if (stepTierPreview) stepTierPreview.textContent = meta.label;
+    if (stepPricePreview) stepPricePreview.textContent = '$' + Number(meta.monthly_amount || 0).toFixed(2) + '/mo';
     refreshTierCardState();
   }
-  document.querySelectorAll('input[name="service_level"]').forEach(function (radio) {
-    radio.addEventListener('change', updateSubscriptionPreview);
+
+  document.querySelectorAll('.onboarding-tier-option input[name="service_level"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      if (radio.checked) {
+        document.querySelectorAll('.onboarding-tier-option').forEach(function (panel) {
+          if (!panel.contains(radio)) panel.open = false;
+        });
+      }
+      updateSubscriptionPreview();
+    });
   });
   updateSubscriptionPreview();
 
