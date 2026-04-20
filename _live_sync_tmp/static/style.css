@@ -399,11 +399,14 @@ linear-gradient(180deg,#f4f8ff 0%,#f8fbff 52%,#f6fafc 100%)}
 .worker-login-marks .mark-four{bottom:27%;left:4%;color:rgba(21,26,44,.08)}
 .login-wrap-split{display:grid;grid-template-columns:1fr minmax(360px,520px);gap:28px;align-items:center;max-width:1220px;margin:0 auto;padding:32px;position:relative;z-index:1}
 .login-stage{padding:0 10px 20px 4px;align-self:start}
-.login-stage-brand,.login-card-brand{margin-bottom:18px}
-.login-stage-brand img{display:block;width:min(440px,100%);height:auto}
+.login-stage-hero{position:relative;display:flex;align-items:flex-start;min-height:220px;margin-bottom:22px}
+.login-stage-brand,.login-card-brand{margin-bottom:18px;position:relative;z-index:1}
+.login-stage-brand{margin-bottom:0}
+.login-stage-brand img{display:block;width:min(560px,100%);height:auto}
 .login-card-brand img{display:block;width:min(240px,100%);height:auto}
 .login-stage-kicker{font-size:22px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--primary-dark);margin-bottom:10px}
 .login-stage-title{font-family:"Segoe UI Variable Display","Aptos Display","Bahnschrift","Segoe UI",sans-serif;font-size:clamp(3rem,5vw,5rem);font-weight:900;letter-spacing:-.06em;color:var(--primary-dark);line-height:1}
+.login-stage-title-watermark{position:absolute;left:clamp(115px,10vw,170px);top:50%;transform:translateY(-50%);font-size:clamp(4.6rem,10vw,7.4rem);letter-spacing:-.08em;color:rgba(21,26,44,.10);white-space:nowrap;pointer-events:none;user-select:none;z-index:0}
 .login-stage-subtitle{font-size:18px;line-height:1.7;color:var(--ink-soft);max-width:620px;margin-top:16px}
 .invite-shell{align-items:center}
 .invite-standard-shell{max-width:640px;margin:0 auto}
@@ -778,8 +781,11 @@ body.messenger-open .messenger-drawer{transform:translateX(0);opacity:1;pointer-
   .welcome-panel-large{padding:18px 18px}
   .login-wrap-split{grid-template-columns:1fr;padding:20px}
   .login-stage{padding:0}
+  .login-stage-hero{min-height:150px;margin-bottom:18px}
   .login-brand-watermark{left:4%;bottom:6%}
   .login-brand-watermark img{width:260px}
+  .login-stage-brand img{width:min(360px,100%)}
+  .login-stage-title-watermark{left:84px;font-size:clamp(2.8rem,14vw,4.1rem)}
   .login-stage-kicker{font-size:18px}
   .invite-stage-points{margin-top:18px}
   .invite-detail-grid{grid-template-columns:1fr}

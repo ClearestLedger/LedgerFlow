@@ -16,9 +16,11 @@
   </div>
   <div class='login-wrap login-wrap-split'>
     <div class='login-stage'>
-      <div class='login-stage-brand'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
+      <div class='login-stage-hero'>
+        <div class='login-stage-title login-stage-title-watermark' aria-hidden='true'>{{ app_name }}</div>
+        <div class='login-stage-brand'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
+      </div>
       <div class='login-stage-kicker'>{{ tr('Welcome to') }}</div>
-      <div class='login-stage-title'>{{ app_name }}</div>
       <div class='login-stage-subtitle'>{{ tr('Professional billing, payroll tax readiness, calendar planning, and business financial management in one administrator-made platform.') }}</div>
     </div>
     <div class='login-card'>
