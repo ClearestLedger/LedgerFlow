@@ -7,7 +7,7 @@
   <link rel='stylesheet' href='{{ url_for("static", filename="style.css", v=static_asset_version("style.css")) }}'>
 </head>
 <body class='login-body'>
-  <div class='login-brand-watermark'>LEDGERFLOW</div>
+  <div class='login-brand-watermark'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
   <div class='login-floating-marks worker-login-marks' aria-hidden='true'>
     <span class='mark-one'>{{ tr('Worker Portal') }}</span>
     <span class='mark-two'>{{ tr('Pay Stubs') }}</span>
@@ -16,6 +16,7 @@
   </div>
   <div class='login-wrap'>
     <div class='login-card'>
+      <div class='login-card-brand'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
       <form method='post' action='{{ url_for("set_language") }}' class='language-inline-form login-language-form'>
         <input type='hidden' name='next' value='{{ request.path }}'>
         <input type='hidden' name='quiet' value='1'>

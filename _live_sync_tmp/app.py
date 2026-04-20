@@ -34,8 +34,11 @@ DB_PATH = Path(os.environ.get('DATABASE_PATH', str(DATA_DIR / 'rds_core_web.db')
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 EMAIL_CONFIG_PATH = DATA_DIR / 'email_runtime_config.json'
 
-APP_NAME = 'Ledger Upgrades'
-APP_SUBTITLE = 'Administrator-made financial system for small service businesses'
+APP_NAME = 'LedgerFlow'
+APP_SUBTITLE = 'Financial control for growing service businesses'
+BRAND_TAGLINE = 'Financial control for growing service businesses.'
+BRAND_LOGO_FILENAME = 'ledgerflow-logo.png'
+BRAND_MARK_FILENAME = 'ledgerflow-mark.png'
 ADMIN_LABEL = 'Businesses'
 CUSTOMER_LABEL = 'Customers'
 DEFAULT_HOME_ADDRESS = '3934 Brookside Dr, Sarasota, FL 34231'
@@ -1708,7 +1711,7 @@ def ensure_email_settings_profile_table():
                 smtp_host TEXT NOT NULL DEFAULT 'smtp.gmail.com',
                 smtp_port TEXT NOT NULL DEFAULT '587',
                 smtp_username TEXT NOT NULL DEFAULT '',
-                smtp_sender_name TEXT NOT NULL DEFAULT 'Ledger Upgrades',
+                smtp_sender_name TEXT NOT NULL DEFAULT 'LedgerFlow',
                 smtp_password_enc TEXT NOT NULL DEFAULT '',
                 app_base_url TEXT NOT NULL DEFAULT '',
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -1781,7 +1784,7 @@ def legacy_email_settings_values() -> dict:
         'smtp_host': (get_setting('smtp_host') or runtime_cfg.get('smtp_host', '')).strip() or 'smtp.gmail.com',
         'smtp_port': (get_setting('smtp_port') or runtime_cfg.get('smtp_port', '')).strip() or '587',
         'smtp_username': (get_setting('smtp_username') or runtime_cfg.get('smtp_username', '')).strip(),
-        'smtp_sender_name': (get_setting('smtp_sender_name') or runtime_cfg.get('smtp_sender_name', '')).strip() or 'Ledger Upgrades',
+        'smtp_sender_name': (get_setting('smtp_sender_name') or runtime_cfg.get('smtp_sender_name', '')).strip() or APP_NAME,
         'smtp_password_enc': get_setting('smtp_password_enc') or runtime_cfg.get('smtp_password_enc', ''),
         'app_base_url': (get_setting('app_base_url') or runtime_cfg.get('app_base_url', '')).strip().rstrip('/'),
     }
@@ -1831,7 +1834,7 @@ def load_email_settings_profile() -> dict:
         'smtp_host': 'smtp.gmail.com',
         'smtp_port': '587',
         'smtp_username': '',
-        'smtp_sender_name': 'Ledger Upgrades',
+        'smtp_sender_name': APP_NAME,
         'smtp_password_enc': '',
         'app_base_url': '',
         'updated_at': '',
@@ -1852,7 +1855,7 @@ def save_email_settings_profile(values: dict, updated_by_user_id=None):
         'smtp_host': (values.get('smtp_host') or '').strip() or 'smtp.gmail.com',
         'smtp_port': (values.get('smtp_port') or '').strip() or '587',
         'smtp_username': (values.get('smtp_username') or '').strip() or (values.get('smtp_email') or '').strip().lower(),
-        'smtp_sender_name': (values.get('smtp_sender_name') or '').strip() or 'Ledger Upgrades',
+        'smtp_sender_name': (values.get('smtp_sender_name') or '').strip() or APP_NAME,
         'smtp_password_enc': (values.get('smtp_password_enc') or current.get('smtp_password_enc') or '').strip(),
         'app_base_url': (values.get('app_base_url') or '').strip().rstrip('/'),
         'last_tested_at': current.get('last_tested_at', ''),
@@ -1917,7 +1920,7 @@ def record_email_settings_test_result(status: str, recipient_email: str = '', er
                 profile.get('smtp_host', 'smtp.gmail.com'),
                 profile.get('smtp_port', '587'),
                 profile.get('smtp_username', ''),
-                profile.get('smtp_sender_name', 'Ledger Upgrades'),
+                profile.get('smtp_sender_name', APP_NAME),
                 profile.get('smtp_password_enc', ''),
                 profile.get('app_base_url', ''),
                 profile.get('updated_by_user_id'),
@@ -2062,6 +2065,23 @@ def configured_base_url() -> str:
     return cleaned if cleaned else ''
 
 
+def static_asset_version_value(filename: str) -> int:
+    try:
+        return int((BASE_DIR / 'static' / filename).stat().st_mtime)
+    except OSError:
+        return 0
+
+
+def static_asset_url(filename: str) -> str:
+    return url_for('static', filename=filename, v=static_asset_version_value(filename))
+
+
+def static_asset_absolute_url(filename: str) -> str:
+    path = static_asset_url(filename)
+    base = configured_base_url().rstrip('/')
+    return f"{base}{path}" if base else path
+
+
 def require_configured_base_url() -> str:
     base = configured_base_url()
     if not base:
@@ -2083,7 +2103,7 @@ def smtp_config():
     profile = load_email_settings_profile()
     runtime_cfg = load_email_runtime_config()
     sender_email = (profile.get('smtp_email') or get_setting('smtp_email') or runtime_cfg.get('smtp_email', '')).strip()
-    sender_name = (profile.get('smtp_sender_name') or get_setting('smtp_sender_name') or runtime_cfg.get('smtp_sender_name', '')).strip() or 'Ledger Upgrades'
+    sender_name = (profile.get('smtp_sender_name') or get_setting('smtp_sender_name') or runtime_cfg.get('smtp_sender_name', '')).strip() or APP_NAME
     smtp_host = (profile.get('smtp_host') or get_setting('smtp_host') or runtime_cfg.get('smtp_host', '')).strip() or 'smtp.gmail.com'
     smtp_port_raw = (profile.get('smtp_port') or get_setting('smtp_port') or runtime_cfg.get('smtp_port', '')).strip() or '587'
     smtp_username = (profile.get('smtp_username') or get_setting('smtp_username') or runtime_cfg.get('smtp_username', '')).strip() or sender_email
@@ -2604,6 +2624,12 @@ def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: st
             f"<div style='color:#6e7f96;font-size:12px;line-height:1.7'>If the button does not open, copy and paste this link into your browser:<br><span style='color:#1f5db8;word-break:break-all'>{cta_link_text}</span></div>"
         )
     support_html = f"<p style='margin:22px 0 0;color:#6e7f96;font-size:13px;line-height:1.7'>{html.escape(support_note)}</p>" if support_note else ''
+    logo_url = html.escape(static_asset_absolute_url(BRAND_LOGO_FILENAME))
+    logo_block = (
+        f"<div style='display:inline-block;padding:14px 18px;border-radius:22px;background:linear-gradient(180deg,#ffffff,#f3f5f7);border:1px solid #d7e1ee;box-shadow:0 12px 30px rgba(21,26,44,.08)'>"
+        f"<img src='{logo_url}' alt='{html.escape(APP_NAME)}' style='display:block;width:280px;max-width:100%;height:auto'>"
+        f"</div>"
+    )
     details_block = (
         f"<div style='margin:22px 0 0;padding:18px 20px;border:1px solid #dbe6f5;border-radius:16px;background:#f8fbff'>"
         f"<table role='presentation' style='width:100%;border-collapse:collapse'>{details_html}</table>"
@@ -2623,8 +2649,8 @@ def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: st
         <td align="center" style="padding:0">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:680px;border-collapse:collapse">
             <tr>
-              <td style="padding:0 0 18px 0;text-align:center;color:#6b7d94;font-size:12px;letter-spacing:.18em;font-weight:800">
-                LEDGERFLOW
+              <td style="padding:0 0 18px 0;text-align:center">
+                {logo_block}
               </td>
             </tr>
             <tr>
@@ -2648,8 +2674,8 @@ def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: st
                 {extra_sections_html}
                 {support_html}
                 <div style="margin-top:26px;padding-top:18px;border-top:1px solid #e5edf7;color:#6b7d94;font-size:12px;line-height:1.7">
-                  <strong style="display:block;color:#193452;font-size:13px;letter-spacing:.08em">LEDGERFLOW</strong>
-                  Billing, income records, payroll tax, and planning for modern service businesses.
+                  <strong style="display:block;color:#193452;font-size:13px;letter-spacing:.08em">{html.escape(APP_NAME.upper())}</strong>
+                  {html.escape(BRAND_TAGLINE)}
                 </div>
               </td>
             </tr>
@@ -2691,14 +2717,29 @@ def send_password_reset_email(to_email: str, reset_link: str, account_label: str
     if not sender_email or not smtp_username or not smtp_password:
         raise RuntimeError('SMTP not configured')
     body = "\n".join([
-        "We received a password reset request for your ClearLedger %s." % account_label,
+        f"We received a password reset request for your {APP_NAME} {account_label}.",
         "",
         "Use the link below to set a new password:",
         reset_link,
         "",
         "This link expires in 60 minutes. If you did not request this, you can ignore this email.",
     ])
-    send_rich_email(cfg, subject='ClearLedger password reset request', to_email=to_email, plain_text=body)
+    email_html = render_marketing_email(
+        eyebrow='Password Reset',
+        title=f'{APP_NAME} password reset',
+        intro='Use the secure link below to choose a new password and get back into your workspace.',
+        greeting='We received a password reset request.',
+        body_lines=[
+            f'This request was submitted for your {APP_NAME} {account_label}.',
+            'Use the secure button below to set a new password.',
+            'This link expires in 60 minutes. If you did not request this, you can safely ignore this email.',
+        ],
+        cta_label='Reset Password',
+        cta_link=reset_link,
+        feature_tags=['Secure Access', 'Password Reset'],
+        support_note='If you continue having trouble signing in, contact your administrator for support.'
+    )
+    send_rich_email(cfg, subject=f'{APP_NAME} password reset request', to_email=to_email, plain_text=body, html=email_html)
 
 
 def public_app_url(path: str) -> str:
@@ -3682,7 +3723,7 @@ def init_db():
                 smtp_host TEXT NOT NULL DEFAULT 'smtp.gmail.com',
                 smtp_port TEXT NOT NULL DEFAULT '587',
                 smtp_username TEXT NOT NULL DEFAULT '',
-                smtp_sender_name TEXT NOT NULL DEFAULT 'Ledger Upgrades',
+                smtp_sender_name TEXT NOT NULL DEFAULT 'LedgerFlow',
                 smtp_password_enc TEXT NOT NULL DEFAULT '',
                 app_base_url TEXT NOT NULL DEFAULT '',
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -5726,6 +5767,9 @@ def inject_globals():
         'today': date.today().isoformat(),
         'app_name': APP_NAME,
         'app_subtitle': APP_SUBTITLE,
+        'brand_tagline': BRAND_TAGLINE,
+        'brand_logo_url': static_asset_url(BRAND_LOGO_FILENAME),
+        'brand_mark_url': static_asset_url(BRAND_MARK_FILENAME),
         'irs_mileage_rate': IRS_MILEAGE_RATE,
         'current_mode': current_mode,
         'active_client': active_client,
@@ -5753,10 +5797,7 @@ def inject_globals():
 @app.context_processor
 def inject_static_asset_version():
     def static_asset_version(filename: str) -> int:
-        try:
-            return int((BASE_DIR / 'static' / filename).stat().st_mtime)
-        except OSError:
-            return 0
+        return static_asset_version_value(filename)
 
     return {'static_asset_version': static_asset_version}
 
@@ -6205,7 +6246,7 @@ def forgot_password():
                         send_password_reset_email(email, reset_link, account_label)
                     except Exception:
                         pass
-        flash('If the email exists in ClearLedger, a password reset request has been submitted. Check your email if delivery is enabled, or contact your administrator.', 'success')
+        flash(f'If the email exists in {APP_NAME}, a password reset request has been submitted. Check your email if delivery is enabled, or contact your administrator.', 'success')
         return redirect(url_for('forgot_password'))
     return render_template('forgot_password.html')
 
@@ -8347,14 +8388,14 @@ def email_settings():
             smtp_host = smtp_host_input or (current_profile.get('smtp_host') or '').strip() or 'smtp.gmail.com'
             smtp_port = smtp_port_input or (current_profile.get('smtp_port') or '').strip() or '587'
             smtp_username = smtp_username_input or (current_profile.get('smtp_username') or '').strip() or smtp_email
-            sender_name = sender_name_input or (current_profile.get('smtp_sender_name') or '').strip() or 'Ledger Upgrades'
+            sender_name = sender_name_input or (current_profile.get('smtp_sender_name') or '').strip() or APP_NAME
             app_base_url = app_base_url_input or (current_profile.get('app_base_url') or '').strip().rstrip('/')
         else:
             smtp_email = smtp_email_input
             smtp_host = smtp_host_input or 'smtp.gmail.com'
             smtp_port = smtp_port_input or '587'
             smtp_username = smtp_username_input or smtp_email
-            sender_name = sender_name_input or 'Ledger Upgrades'
+            sender_name = sender_name_input or APP_NAME
             app_base_url = app_base_url_input
 
         runtime_values = {
@@ -8393,10 +8434,10 @@ def email_settings():
                     if not cfg['sender_email'] or not cfg['smtp_username'] or not cfg['smtp_password']:
                         raise RuntimeError('SMTP not configured')
                     msg = EmailMessage()
-                    msg['Subject'] = 'Ledger Upgrades test email'
+                    msg['Subject'] = f'{APP_NAME} test email'
                     msg['From'] = f"{cfg['sender_name']} <{cfg['sender_email']}>"
                     msg['To'] = test_email
-                    msg.set_content('This is a test email from Ledger Upgrades.')
+                    msg.set_content(f'This is a test email from {APP_NAME}.')
                     with smtplib.SMTP(cfg['smtp_host'], cfg['smtp_port']) as s:
                         s.ehlo()
                         s.starttls()
@@ -8417,7 +8458,7 @@ def email_settings():
     smtp_host = profile.get('smtp_host') or 'smtp.gmail.com'
     smtp_port = profile.get('smtp_port') or '587'
     smtp_username = profile.get('smtp_username') or smtp_email
-    sender_name = profile.get('smtp_sender_name') or 'Ledger Upgrades'
+    sender_name = profile.get('smtp_sender_name') or APP_NAME
     app_base_url = profile.get('app_base_url') or ''
     password_configured = bool(profile.get('smtp_password_enc'))
     with get_conn() as conn:

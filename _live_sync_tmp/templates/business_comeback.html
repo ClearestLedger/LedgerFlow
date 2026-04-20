@@ -7,7 +7,7 @@
   <link rel='stylesheet' href='{{ url_for("static", filename="style.css", v=static_asset_version("style.css")) }}'>
 </head>
 <body class='login-body'>
-  <div class='login-brand-watermark'>LEDGERFLOW</div>
+  <div class='login-brand-watermark'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
   <div class='login-floating-marks' aria-hidden='true'>
     <span class='mark-one'>We Missed You</span>
     <span class='mark-two'>Billing</span>
@@ -16,6 +16,7 @@
   </div>
   <div class='login-wrap login-wrap-split'>
     <div class='login-stage'>
+      <div class='login-stage-brand'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
       <div class='login-stage-kicker'>Welcome back, {{ user.full_name }}</div>
       <div class='login-stage-title'>{{ issue.business_name or 'LedgerFlow Workspace' }}</div>
       <div class='login-stage-subtitle'>{{ issue.headline }}</div>

@@ -6,11 +6,16 @@
   <title>{{ app_name }} &middot; {{ tr('Team Member Portal') }}</title>
   <link rel='stylesheet' href='{{ url_for("static", filename="style.css", v=static_asset_version("style.css")) }}'>
 </head>
-<body>
+<body class='app-shell-body'>
   <div class='header'>
-    <div>
-      <div class='brand'>{{ app_name }}</div>
-      <div class='sub'>{{ tr('Team Member Portal') }}</div>
+    <div class='brand-lockup brand-lockup-header'>
+      <div class='brand-lockup-mark'>
+        <img src='{{ brand_mark_url }}' alt='{{ app_name }}'>
+      </div>
+      <div class='brand-lockup-copy'>
+        <div class='brand'>{{ app_name }}</div>
+        <div class='sub'>{{ tr('Team Member Portal') }}</div>
+      </div>
     </div>
     <div class='header-right header-controls'>
       <form method='post' action='{{ url_for("set_language") }}' class='language-inline-form'>

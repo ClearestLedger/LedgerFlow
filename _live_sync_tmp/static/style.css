@@ -24,12 +24,21 @@ radial-gradient(circle at top left, rgba(114,129,154,.20), transparent 26%),
 radial-gradient(circle at top right, rgba(168,178,193,.18), transparent 24%),
 radial-gradient(circle at 50% 0%, rgba(114,129,154,.10), transparent 36%),
 linear-gradient(180deg,#F8F8F6 0%,#F3F5F7 48%,#E7E8E6 100%);color:var(--text);margin:0;line-height:1.58}
+body.app-shell-body{position:relative}
+body.app-shell-body:before{content:"";position:fixed;right:2.8%;bottom:3.5%;width:260px;height:260px;background:url('ledgerflow-mark.png') center/contain no-repeat;opacity:.045;pointer-events:none;z-index:0;filter:saturate(.86)}
 a{text-decoration:none;color:var(--primary-dark);transition:color .18s ease}
 a:hover{color:var(--primary)}
 .header{background:linear-gradient(135deg,#151A2C 0%,#1D2336 58%,#253149 100%);color:var(--soft);padding:24px 30px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 26px 58px rgba(12,14,18,.24);position:relative;overflow:hidden}
 .header:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.04),transparent 45%,rgba(255,255,255,.02) 70%,transparent 100%);pointer-events:none}
 .header:after{content:"";position:absolute;inset:auto -8% -55% auto;width:320px;height:320px;background:radial-gradient(circle, rgba(168,178,193,.20), transparent 60%);pointer-events:none}
 .brand{font-family:"Segoe UI Variable Display","Aptos Display","Bahnschrift","Segoe UI",sans-serif;font-size:32px;font-weight:800;letter-spacing:.01em;text-shadow:0 1px 0 rgba(255,255,255,.08)}.sub{color:rgba(248,248,246,.82);font-size:13px;margin-top:4px;max-width:640px;line-height:1.55}.header-right{font-size:14px;font-weight:700;background:rgba(248,248,246,.10);padding:9px 14px;border-radius:999px;border:1px solid rgba(168,178,193,.18)}.header-link{color:var(--soft);text-decoration:none;border-bottom:1px solid rgba(168,178,193,.30)}
+.brand-lockup{display:flex;align-items:center;gap:14px;min-width:0}
+.brand-lockup-mark{display:flex;align-items:center;justify-content:center;flex:0 0 auto;border-radius:18px;background:linear-gradient(180deg,#ffffff,#eff2f6);border:1px solid rgba(168,178,193,.34);box-shadow:0 12px 24px rgba(10,14,24,.16);padding:8px}
+.brand-lockup-mark img{display:block;height:auto}
+.brand-lockup-header .brand-lockup-mark img{width:46px}
+.brand-lockup-copy{min-width:0}
+.brand-lockup-footer{align-items:flex-start}
+.portal-footer-tagline{font-size:12px;line-height:1.45;color:rgba(231,232,230,.76);margin-top:2px}
 .header-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .language-inline-form{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0}
 .language-inline-form label{margin:0;font-size:11px;color:inherit;opacity:.92}
@@ -281,7 +290,8 @@ html,body{max-width:100%;overflow-x:hidden}
 .legal-grid{align-items:start}
 .legal-copy{margin:0;color:var(--ink-soft);line-height:1.68}
 
-.portal-footer{margin-top:22px;padding:18px 22px;border:1px solid rgba(116,130,155,.22);border-radius:22px;background:linear-gradient(180deg,#1A2236 0%,#141B2D 100%);box-shadow:var(--shadow-soft);display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.portal-footer{margin-top:22px;padding:18px 22px;border:1px solid rgba(116,130,155,.22);border-radius:22px;background:linear-gradient(180deg,#1A2236 0%,#141B2D 100%);box-shadow:var(--shadow-soft);display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;position:relative;overflow:hidden}
+.portal-footer:before{content:"";position:absolute;right:-30px;bottom:-48px;width:180px;height:180px;background:url('ledgerflow-mark.png') center/contain no-repeat;opacity:.06;pointer-events:none}
 .portal-footer-brand{max-width:760px;display:flex;flex-direction:column;gap:8px}
 .portal-footer-title{font-size:18px;font-weight:900;color:var(--soft);letter-spacing:-.02em}
 .portal-footer-copy,.portal-footer-disclaimer{font-size:13px;line-height:1.65;color:rgba(231,232,230,.78)}
@@ -375,19 +385,23 @@ overflow:hidden}
 radial-gradient(circle at 12% 18%, rgba(184,207,255,.46), transparent 24%),
 radial-gradient(circle at 84% 24%, rgba(168,178,193,.18), transparent 18%),
 linear-gradient(180deg,#f4f8ff 0%,#f8fbff 52%,#f6fafc 100%)}
-.login-brand-watermark{position:fixed;inset:auto auto 8% 6%;font-family:"Segoe UI Variable Display","Aptos Display","Bahnschrift","Segoe UI",sans-serif;font-size:clamp(4.2rem,10vw,9rem);font-weight:900;letter-spacing:.12em;color:rgba(16,41,94,.06);pointer-events:none;user-select:none;z-index:0}
+.login-brand-watermark{position:fixed;inset:auto auto 7% 5%;pointer-events:none;user-select:none;z-index:0;opacity:.16;filter:saturate(.9)}
+.login-brand-watermark img{display:block;width:clamp(250px,32vw,460px);height:auto}
 .login-floating-marks{position:fixed;inset:0;pointer-events:none;user-select:none;z-index:0}
 .login-floating-marks span{position:absolute;display:inline-flex;align-items:center;padding:0;border:none;background:transparent;box-shadow:none;font-family:"Segoe UI Variable Display","Aptos Display","Bahnschrift","Segoe UI",sans-serif;font-size:clamp(1.35rem,2vw,2.2rem);font-weight:900;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;line-height:1}
 .login-floating-marks .mark-one{top:12%;right:5%;color:rgba(36,83,212,.12)}
 .login-floating-marks .mark-two{top:32%;left:4%;color:rgba(16,41,94,.10)}
 .login-floating-marks .mark-three{bottom:12%;right:6%;color:rgba(114,129,154,.16)}
-.login-floating-marks .mark-four{bottom:27%;left:4%;color:rgba(15,118,110,.10)}
+.login-floating-marks .mark-four{bottom:27%;left:4%;color:rgba(21,26,44,.08)}
 .worker-login-marks .mark-one{top:13%;right:5%;color:rgba(36,83,212,.12)}
 .worker-login-marks .mark-two{top:32%;left:4%;color:rgba(16,41,94,.10)}
 .worker-login-marks .mark-three{bottom:12%;right:6%;color:rgba(114,129,154,.16)}
-.worker-login-marks .mark-four{bottom:27%;left:4%;color:rgba(15,118,110,.10)}
+.worker-login-marks .mark-four{bottom:27%;left:4%;color:rgba(21,26,44,.08)}
 .login-wrap-split{display:grid;grid-template-columns:1fr minmax(360px,520px);gap:28px;align-items:center;max-width:1220px;margin:0 auto;padding:32px;position:relative;z-index:1}
 .login-stage{padding:0 10px 20px 4px;align-self:start}
+.login-stage-brand,.login-card-brand{margin-bottom:18px}
+.login-stage-brand img{display:block;width:min(440px,100%);height:auto}
+.login-card-brand img{display:block;width:min(240px,100%);height:auto}
 .login-stage-kicker{font-size:22px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--primary-dark);margin-bottom:10px}
 .login-stage-title{font-family:"Segoe UI Variable Display","Aptos Display","Bahnschrift","Segoe UI",sans-serif;font-size:clamp(3rem,5vw,5rem);font-weight:900;letter-spacing:-.06em;color:var(--primary-dark);line-height:1}
 .login-stage-subtitle{font-size:18px;line-height:1.7;color:var(--ink-soft);max-width:620px;margin-top:16px}
@@ -764,7 +778,8 @@ body.messenger-open .messenger-drawer{transform:translateX(0);opacity:1;pointer-
   .welcome-panel-large{padding:18px 18px}
   .login-wrap-split{grid-template-columns:1fr;padding:20px}
   .login-stage{padding:0}
-  .login-brand-watermark{font-size:4.2rem;left:4%;bottom:6%}
+  .login-brand-watermark{left:4%;bottom:6%}
+  .login-brand-watermark img{width:260px}
   .login-stage-kicker{font-size:18px}
   .invite-stage-points{margin-top:18px}
   .invite-detail-grid{grid-template-columns:1fr}

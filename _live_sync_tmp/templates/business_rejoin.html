@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=static_asset_version('style.css')) }}">
 </head>
 <body class="login-body">
-  <div class="login-brand-watermark">LEDGERFLOW</div>
+  <div class="login-brand-watermark"><img src="{{ brand_logo_url }}" alt="{{ app_name }}"></div>
   <div class="login-floating-marks">
     <span class="float-mark float-mark-1">Rejoin</span>
     <span class="float-mark float-mark-2">Workspace</span>
@@ -17,6 +17,7 @@
 
   <main class="login-wrap login-wrap-split invite-shell">
     <section class="login-brand-panel">
+      <div class="login-stage-brand"><img src="{{ brand_logo_url }}" alt="{{ app_name }}"></div>
       <div class="login-kicker">Return to LedgerFlow</div>
       <h1 class="login-brand-title">Restore your business workspace access</h1>
       <p class="login-brand-copy">
