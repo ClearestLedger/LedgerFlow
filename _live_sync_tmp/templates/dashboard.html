@@ -40,7 +40,7 @@
   <div class='grid cards-4'>
     <div class='card stat-card premium-stat'><h3>{{ tr('Trial Plan') }}</h3><div class='metric'>{{ client.subscription_plan_code or tr('Not set') }}</div></div>
     <div class='card stat-card premium-stat'><h3>{{ tr('Trial Status') }}</h3><div class='metric'>{{ tr('Active') }}</div></div>
-    <div class='card stat-card premium-stat'><h3>{{ tr('Complimentary Period') }}</h3><div class='metric'>{{ client.trial_offer_days or 0 }} {{ tr('Days') }}</div></div>
+    <div class='card stat-card premium-stat'><h3>{{ tr('Access Level') }}</h3><div class='metric'>{{ effective_service_level_label(client) }}</div><div class='small'>{% if access_level_override_active(client) %}{{ tr('Administrator override active') }}{% else %}{{ tr('Matches pricing tier') }}{% endif %}</div></div>
     <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Trial Ends') }}</h3><div class='metric'>{{ client.trial_ends_at[:10] if client.trial_ends_at else (client.subscription_next_billing_date or '&mdash;') }}</div></div>
   </div>
   <div class='small' style='margin-top:10px'>{{ tr('Your complimentary trial is open now. Start with the overview and tutorial first. Billing can be added later before the first charge date.') }}</div>
@@ -57,9 +57,12 @@
     <div class='card stat-card premium-stat'><h3>{{ tr('Plan') }}</h3><div class='metric'>{{ client.subscription_plan_code or tr('Not set') }}</div></div>
     <div class='card stat-card premium-stat'><h3>{{ tr('Status') }}</h3><div class='metric'>{{ subscription_status_labels.get(client.subscription_status or 'inactive', 'Inactive') }}</div></div>
     <div class='card stat-card premium-stat'><h3>{{ tr('Monthly Fee') }}</h3><div class='metric'>${{ '%.2f'|format(client.subscription_amount or 0) }}</div></div>
-    <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Next Billing Date') }}</h3><div class='metric'>{{ client.subscription_next_billing_date or '&mdash;' }}</div></div>
+    <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Access Level') }}</h3><div class='metric'>{{ effective_service_level_label(client) }}</div><div class='small'>{% if access_level_override_active(client) %}{{ tr('Administrator override active') }}{% else %}{{ tr('Matches pricing tier') }}{% endif %}</div></div>
   </div>
   <div class='small' style='margin-top:10px'>{{ tr('Method on file') }}: <strong>{{ payment_method_summary.default_label or tr('No method recorded yet') }}</strong>{% if payment_method_summary.default_label %} ({{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}){% endif %}. {{ tr('Open Billing to manage the subscription method on file and any one-time administrator fees.') }}</div>
+  {% if access_level_override_active(client) %}
+  <div class='small' style='margin-top:6px'>{{ tr('You are currently billed on') }} <strong>{{ service_level_labels.get(client.service_level or 'self_service', 'Essential') }}</strong>, {{ tr('but your administrator granted') }} <strong>{{ effective_service_level_label(client) }}</strong> {{ tr('workspace access.') }}{% if client.access_override_note %} {{ client.access_override_note }}{% endif %}</div>
+  {% endif %}
 </div>
 {% endif %}
 {% if (not is_trial_workspace) and admin_fee_summary and admin_fee_summary.pending_count %}

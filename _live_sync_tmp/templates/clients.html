@@ -15,6 +15,8 @@
       <div><label>Business Address</label><input name='address'></div>
 
       <div><label>Service Level / Pricing Tier</label><select name='service_level'>{% for value, label in service_level_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Access Level Granted</label><select name='access_service_level'>{% for value, label in service_level_access_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+      <div style='grid-column:1 / -1'><label>Access Override Note</label><input name='access_override_note' placeholder='Optional note for internal override reason'></div>
       <div><label>Primary Contact Person</label><input name='contact_name'></div>
       <div><label>Phone Number</label><input name='phone'></div>
       <div><label>Email</label><input name='email'></div>
@@ -81,6 +83,7 @@
       (c.business_name or '') ~ ' ' ~
       (c.business_type or '') ~ ' ' ~
       (service_level_labels.get(c.service_level or 'self_service', 'Self-Service')) ~ ' ' ~
+      (effective_service_level_label(c) or '') ~ ' ' ~
       (c.contact_name or '') ~ ' ' ~
       (c.email or '') ~ ' ' ~
       (c.phone or '') ~ ' ' ~
@@ -92,9 +95,12 @@
       <summary class='business-directory-summary'>
         <div>
           <strong>{{ c.business_name }}</strong>
-          <div class='small'>{{ c.business_type or 'Type missing' }} | {{ service_level_labels.get(c.service_level or 'self_service', 'Self-Service') }} | EIN {{ c.ein or '-' }}</div>
+          <div class='small'>{{ c.business_type or 'Type missing' }} | {{ service_level_labels.get(c.service_level or 'self_service', 'Self-Service') }} pricing{% if access_level_override_active(c) %} | {{ effective_service_level_label(c) }} access{% endif %} | EIN {{ c.ein or '-' }}</div>
           <div class='small'>{{ c.contact_name or 'Contact missing' }}{% if c.email %} | {{ c.email }}{% endif %}</div>
           <div class='small'>Subscription: {{ subscription_status_labels.get(c.subscription_status or 'inactive', 'Inactive') }}{% if c.subscription_amount %} | ${{ '%.2f'|format(c.subscription_amount or 0) }}/mo{% endif %}{% if c.default_payment_method_label %} | {{ c.default_payment_method_label }}{% endif %}</div>
+          {% if access_level_override_active(c) %}
+          <div class='small'>Access override active: billed as {{ service_level_labels.get(c.service_level or 'self_service', 'Essential') }}, granted {{ effective_service_level_label(c) }}{% if c.access_override_note %} | {{ c.access_override_note }}{% endif %}</div>
+          {% endif %}
         </div>
       </summary>
       <div class='business-directory-actions'>
@@ -107,9 +113,12 @@
       <div class='card-head'>
         <div>
           <strong>{{ c.business_name }}</strong>
-          <div class='small'>{{ c.business_type or 'Type missing' }} | {{ service_level_labels.get(c.service_level or 'self_service', 'Self-Service') }} | EIN {{ c.ein or '-' }}</div>
+          <div class='small'>{{ c.business_type or 'Type missing' }} | {{ service_level_labels.get(c.service_level or 'self_service', 'Self-Service') }} pricing{% if access_level_override_active(c) %} | {{ effective_service_level_label(c) }} access{% endif %} | EIN {{ c.ein or '-' }}</div>
           <div class='small'>{{ c.address or 'Address missing' }}</div>
           <div class='small'>Subscription: {{ subscription_status_labels.get(c.subscription_status or 'inactive', 'Inactive') }}{% if c.subscription_amount %} | ${{ '%.2f'|format(c.subscription_amount or 0) }}/mo{% endif %}{% if c.default_payment_method_label %} | {{ c.default_payment_method_label }}{% endif %}</div>
+          {% if access_level_override_active(c) %}
+          <div class='small'>Access granted by administrator: {{ effective_service_level_label(c) }}</div>
+          {% endif %}
         </div>
       </div>
       <form method='post' class='form-grid'>
@@ -123,6 +132,10 @@
         <div><label>Business Address</label><input name='address' value='{{ c.address or "" }}'></div>
 
         <div><label>Service Level / Pricing Tier</label><select name='service_level'>{% for value, label in service_level_options %}<option value='{{ value }}' {% if (c.service_level or 'self_service') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        {% if is_admin %}
+        <div><label>Access Level Granted</label><select name='access_service_level'>{% for value, label in service_level_access_options %}<option value='{{ value }}' {% if (c.access_service_level or '') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div style='grid-column:1 / -1'><label>Access Override Note</label><input name='access_override_note' value='{{ c.access_override_note or "" }}' placeholder='Optional reason for giving higher access than the paid tier'></div>
+        {% endif %}
         <div><label>Primary Contact Person</label><input name='contact_name' value='{{ c.contact_name or "" }}'></div>
         <div><label>Phone Number</label><input name='phone' value='{{ c.phone or "" }}'></div>
         <div><label>Email</label><input name='email' value='{{ c.email or "" }}'></div>
@@ -164,6 +177,10 @@
           <strong>Saved in LedgerFlow</strong>
           <div style='margin-top:4px'>Created {{ c.created_at or 'Not recorded yet' }}{% if c.created_by_name %} by {{ c.created_by_name }}{% endif %}</div>
           <div>Last updated {{ c.updated_at or c.created_at or 'Not recorded yet' }}{% if c.updated_by_name %} by {{ c.updated_by_name }}{% endif %}</div>
+          <div>Pricing tier: {{ service_level_labels.get(c.service_level or 'self_service', 'Essential') }}{% if access_level_override_active(c) %} | Access granted: {{ effective_service_level_label(c) }}{% endif %}</div>
+          {% if c.access_override_note %}
+          <div>Override note: {{ c.access_override_note }}</div>
+          {% endif %}
         </div>
         <div class='business-form-actions' style='grid-column:1 / -1'>
           <button class='btn' type='submit'>Save Business Profile</button>

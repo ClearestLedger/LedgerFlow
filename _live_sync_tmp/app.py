@@ -677,6 +677,10 @@ def service_level_label_map():
     return dict(service_level_options())
 
 
+def service_level_access_options():
+    return [('', 'Match pricing tier')] + service_level_options()
+
+
 def default_service_level() -> str:
     return 'self_service'
 
@@ -685,6 +689,42 @@ def normalize_service_level(value: str) -> str:
     allowed = {key for key, _ in service_level_options()}
     cleaned = (value or '').strip().lower()
     return cleaned if cleaned in allowed else default_service_level()
+
+
+def normalize_access_service_level(value: str) -> str:
+    cleaned = (value or '').strip().lower()
+    if not cleaned:
+        return ''
+    return normalize_service_level(cleaned)
+
+
+def row_value(row, key: str, default=''):
+    if row is None:
+        return default
+    if isinstance(row, dict):
+        return row.get(key, default)
+    try:
+        return row[key]
+    except (KeyError, IndexError, TypeError):
+        return default
+
+
+def effective_service_level(client_row) -> str:
+    override_level = normalize_access_service_level(row_value(client_row, 'access_service_level', ''))
+    if override_level:
+        return override_level
+    return normalize_service_level(row_value(client_row, 'service_level', default_service_level()))
+
+
+def access_level_override_active(client_row) -> bool:
+    override_level = normalize_access_service_level(row_value(client_row, 'access_service_level', ''))
+    billed_level = normalize_service_level(row_value(client_row, 'service_level', default_service_level()))
+    return bool(override_level and override_level != billed_level)
+
+
+def effective_service_level_label(client_row) -> str:
+    level = effective_service_level(client_row)
+    return service_level_label_map().get(level, service_level_label_map().get(default_service_level(), 'Essential'))
 
 
 def service_level_plan_code(service_level: str) -> str:
@@ -3235,6 +3275,8 @@ def init_db():
                 business_name TEXT NOT NULL,
                 business_type TEXT DEFAULT '',
                 service_level TEXT DEFAULT 'self_service',
+                access_service_level TEXT DEFAULT '',
+                access_override_note TEXT DEFAULT '',
                 subscription_plan_code TEXT DEFAULT '',
                 subscription_status TEXT DEFAULT 'inactive',
                 subscription_amount REAL NOT NULL DEFAULT 0,
@@ -3812,6 +3854,8 @@ def init_db():
         ensure_column(conn, 'clients', 'payroll_contact_email', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'state_tax_id', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'service_level', "TEXT DEFAULT 'self_service'")
+        ensure_column(conn, 'clients', 'access_service_level', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'access_override_note', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'subscription_plan_code', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'subscription_status', "TEXT DEFAULT 'inactive'")
         ensure_column(conn, 'clients', 'subscription_amount', 'REAL NOT NULL DEFAULT 0')
@@ -5695,6 +5739,10 @@ def inject_globals():
         'ai_guide_visible': assistant_visible,
         'subscription_tiers': subscription_tier_view_data(),
         'subscription_tier_map': subscription_tier_view_map(),
+        'effective_service_level': effective_service_level,
+        'effective_service_level_label': effective_service_level_label,
+        'access_level_override_active': access_level_override_active,
+        'service_level_access_options': service_level_access_options(),
         'current_request_path': current_request_path(),
         'current_language': current_language,
         'language_options': language_options(),
@@ -7572,10 +7620,18 @@ def clients():
                 conn.commit()
                 flash(f'{existing["business_name"]} deleted permanently.', 'success')
                 return redirect(url_for('clients'))
+            service_level = normalize_service_level(request.form.get('service_level', default_service_level()))
+            access_service_level = normalize_access_service_level(request.form.get('access_service_level', '')) if user['role'] == 'admin' else ''
+            access_override_note = request.form.get('access_override_note', '').strip()[:300] if user['role'] == 'admin' else ''
+            if access_service_level == service_level:
+                access_service_level = ''
+                access_override_note = ''
             values = (
                 request.form.get('business_name', '').strip(),
                 request.form.get('business_type', '').strip(),
-                normalize_service_level(request.form.get('service_level', default_service_level())),
+                service_level,
+                access_service_level,
+                access_override_note,
                 request.form.get('subscription_plan_code', '').strip(),
                 normalize_subscription_status(request.form.get('subscription_status', default_subscription_status())),
                 float(normalize_money_amount(request.form.get('subscription_amount', '')) or Decimal('0.00')),
@@ -7626,8 +7682,56 @@ def clients():
                 if not existing:
                     flash('Business not found.', 'error')
                     return redirect(url_for('clients'))
+                if user['role'] != 'admin':
+                    values = (
+                        request.form.get('business_name', '').strip(),
+                        request.form.get('business_type', '').strip(),
+                        service_level,
+                        normalize_access_service_level(existing['access_service_level'] or ''),
+                        (existing['access_override_note'] or '').strip()[:300],
+                        request.form.get('subscription_plan_code', '').strip(),
+                        normalize_subscription_status(request.form.get('subscription_status', default_subscription_status())),
+                        float(normalize_money_amount(request.form.get('subscription_amount', '')) or Decimal('0.00')),
+                        'monthly',
+                        1 if request.form.get('subscription_autopay_enabled') in {'1', 'on', 'true', 'yes'} else 0,
+                        (parse_date(request.form.get('subscription_next_billing_date', '').strip()).isoformat() if parse_date(request.form.get('subscription_next_billing_date', '').strip()) else ''),
+                        request.form.get('subscription_started_at', '').strip(),
+                        request.form.get('subscription_canceled_at', '').strip(),
+                        request.form.get('subscription_paused_at', '').strip(),
+                        request.form.get('default_payment_method_label', '').strip(),
+                        normalize_payment_method_status(request.form.get('default_payment_method_status', 'missing')),
+                        request.form.get('backup_payment_method_label', '').strip(),
+                        request.form.get('billing_notes', '').strip(),
+                        request.form.get('contact_name', '').strip(),
+                        request.form.get('phone', '').strip(),
+                        request.form.get('email', '').strip().lower(),
+                        request.form.get('address', '').strip(),
+                        request.form.get('ein', '').strip(),
+                        request.form.get('eftps_status', 'Not Enrolled').strip(),
+                        request.form.get('eftps_login_reference', '').strip(),
+                        request.form.get('filing_type', 'Both').strip(),
+                        request.form.get('bank_name', '').strip(),
+                        request.form.get('bank_account_nickname', '').strip(),
+                        clean_last4(request.form.get('bank_account_last4', '').strip() or request.form.get('bank_account_number', '').strip()),
+                        request.form.get('bank_account_holder_name', '').strip(),
+                        clean_digits(request.form.get('bank_account_number', '').strip()),
+                        clean_digits(request.form.get('bank_routing_number', '').strip()),
+                        request.form.get('credit_card_nickname', '').strip(),
+                        clean_last4(request.form.get('credit_card_last4', '').strip() or request.form.get('credit_card_number', '').strip()),
+                        request.form.get('credit_card_holder_name', '').strip(),
+                        clean_digits(request.form.get('credit_card_number', '').strip()),
+                        request.form.get('payroll_contact_name', '').strip(),
+                        request.form.get('payroll_contact_phone', '').strip(),
+                        request.form.get('payroll_contact_email', '').strip().lower(),
+                        request.form.get('state_tax_id', '').strip(),
+                        'active',
+                        '',
+                        '',
+                        None,
+                        '',
+                    )
                 conn.execute(
-                    'UPDATE clients SET business_name=?, business_type=?, service_level=?, subscription_plan_code=?, subscription_status=?, subscription_amount=?, subscription_interval=?, subscription_autopay_enabled=?, subscription_next_billing_date=?, subscription_started_at=?, subscription_canceled_at=?, subscription_paused_at=?, default_payment_method_label=?, default_payment_method_status=?, backup_payment_method_label=?, billing_notes=?, contact_name=?, phone=?, email=?, address=?, ein=?, eftps_status=?, eftps_login_reference=?, filing_type=?, bank_name=?, bank_account_nickname=?, bank_account_last4=?, bank_account_holder_name=?, bank_account_number=?, bank_routing_number=?, credit_card_nickname=?, credit_card_last4=?, credit_card_holder_name=?, credit_card_number=?, payroll_contact_name=?, payroll_contact_phone=?, payroll_contact_email=?, state_tax_id=?, record_status=?, archive_reason=?, archived_at=?, archived_by_user_id=?, reactivated_at=?, updated_at=?, updated_by_user_id=? WHERE id=?',
+                    'UPDATE clients SET business_name=?, business_type=?, service_level=?, access_service_level=?, access_override_note=?, subscription_plan_code=?, subscription_status=?, subscription_amount=?, subscription_interval=?, subscription_autopay_enabled=?, subscription_next_billing_date=?, subscription_started_at=?, subscription_canceled_at=?, subscription_paused_at=?, default_payment_method_label=?, default_payment_method_status=?, backup_payment_method_label=?, billing_notes=?, contact_name=?, phone=?, email=?, address=?, ein=?, eftps_status=?, eftps_login_reference=?, filing_type=?, bank_name=?, bank_account_nickname=?, bank_account_last4=?, bank_account_holder_name=?, bank_account_number=?, bank_routing_number=?, credit_card_nickname=?, credit_card_last4=?, credit_card_holder_name=?, credit_card_number=?, payroll_contact_name=?, payroll_contact_phone=?, payroll_contact_email=?, state_tax_id=?, record_status=?, archive_reason=?, archived_at=?, archived_by_user_id=?, reactivated_at=?, updated_at=?, updated_by_user_id=? WHERE id=?',
                     values + (now_value, user['id'], client_id)
                 )
                 log_client_profile_history(conn, client_id=client_id, action='updated', changed_by_user_id=user['id'])
@@ -7635,7 +7739,7 @@ def clients():
                 flash('Business profile updated.', 'success')
                 return redirect(url_for('clients'))
             conn.execute(
-                f'INSERT INTO clients (business_name, business_type, service_level, subscription_plan_code, subscription_status, subscription_amount, subscription_interval, subscription_autopay_enabled, subscription_next_billing_date, subscription_started_at, subscription_canceled_at, subscription_paused_at, default_payment_method_label, default_payment_method_status, backup_payment_method_label, billing_notes, contact_name, phone, email, address, ein, eftps_status, eftps_login_reference, filing_type, bank_name, bank_account_nickname, bank_account_last4, bank_account_holder_name, bank_account_number, bank_routing_number, credit_card_nickname, credit_card_last4, credit_card_holder_name, credit_card_number, payroll_contact_name, payroll_contact_phone, payroll_contact_email, state_tax_id, record_status, archive_reason, archived_at, archived_by_user_id, reactivated_at, created_by_user_id, updated_at, updated_by_user_id) VALUES ({",".join(["?"] * 46)})',
+                f'INSERT INTO clients (business_name, business_type, service_level, access_service_level, access_override_note, subscription_plan_code, subscription_status, subscription_amount, subscription_interval, subscription_autopay_enabled, subscription_next_billing_date, subscription_started_at, subscription_canceled_at, subscription_paused_at, default_payment_method_label, default_payment_method_status, backup_payment_method_label, billing_notes, contact_name, phone, email, address, ein, eftps_status, eftps_login_reference, filing_type, bank_name, bank_account_nickname, bank_account_last4, bank_account_holder_name, bank_account_number, bank_routing_number, credit_card_nickname, credit_card_last4, credit_card_holder_name, credit_card_number, payroll_contact_name, payroll_contact_phone, payroll_contact_email, state_tax_id, record_status, archive_reason, archived_at, archived_by_user_id, reactivated_at, created_by_user_id, updated_at, updated_by_user_id) VALUES ({",".join(["?"] * 48)})',
                 values + (user['id'], now_value, user['id'])
             )
             client_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
