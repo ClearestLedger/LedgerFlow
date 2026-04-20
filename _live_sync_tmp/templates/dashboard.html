@@ -46,7 +46,8 @@
   <div class='small' style='margin-top:10px'>{{ tr('Your complimentary trial is open now. Start with the overview and tutorial first. Billing can be added later before the first charge date.') }}</div>
   <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:14px'>
     <a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>{{ tr('Open Welcome Tutorial') }}</a>
-    <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Open Income Records') }}</a>
+    <a class='btn btn-secondary btn-sm' href='{{ url_for("estimates", client_id=client_id) }}'>{{ tr('Open Estimates') }}</a>
+    <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Open Invoice Center') }}</a>
     <a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Add Billing Later') }}</a>
   </div>
 </div>
@@ -74,14 +75,14 @@
 {% endif %}
 
 <div class='grid cards-4'>
-  <div class='card stat-card'><h3>{{ tr('Income Snapshot') }}</h3><div class='metric big'>${{ '%.2f'|format(summary.gross_income) }}</div><div class='small'>{{ summary.invoice_count }} {{ tr('income records saved') }}</div></div>
+  <div class='card stat-card'><h3>{{ tr('Income Snapshot') }}</h3><div class='metric big'>${{ '%.2f'|format(summary.gross_income) }}</div><div class='small'>{{ summary.invoice_count }} {{ tr('invoice and income entries saved') }}</div></div>
   <div class='card stat-card'><h3>{{ tr('Expenses') }}</h3><div class='metric'>{{ tr('Gas') }}: ${{ '%.2f'|format(summary.gas_total) }}<br>{{ tr('Materials') }}: ${{ '%.2f'|format(summary.materials_total) }}<br>{{ tr('Team Members') }}: ${{ '%.2f'|format(summary.worker_total) }}</div></div>
   <div class='card stat-card'><h3>{{ tr('Tax Foundation') }}</h3><div class='metric'>{{ tr('Operating Profit') }}: ${{ '%.2f'|format(summary.operating_profit) }}<br>{{ tr('Adjusted Profit') }}: ${{ '%.2f'|format(summary.adjusted_profit) }}<br>{{ tr('SE Tax') }}: ${{ '%.2f'|format(summary.self_employment_tax_estimate) }}<br>{{ tr('Total Est.') }}: ${{ '%.2f'|format(summary.federal_plus_se_estimate) }}</div></div>
   <div class='card stat-card'><h3>{{ tr('Mileage Deduction') }}</h3><div class='metric'>{{ tr('Miles') }}: {{ '%.2f'|format(summary.mileage_miles) }}<br>{{ tr('Deduction') }}: ${{ '%.2f'|format(summary.mileage_deduction) }}</div></div>
 </div>
 <div class='grid cards-2' style='margin-top:16px'>
   <div class='card'>
-    <div class='card-head'><h3>{{ tr('Recent Income Records') }}</h3><a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Add Income Record') }}</a></div>
+    <div class='card-head'><h3>{{ tr('Recent Invoice Activity') }}</h3><div style='display:flex;gap:8px;flex-wrap:wrap'><a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}'>{{ tr('Estimates') }}</a><a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Open Invoice Center') }}</a></div></div>
     <table class='table'><tr><th>{{ tr('Job #') }}</th><th>{{ tr('Date') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Amount') }}</th></tr>{% for row in invoices %}<tr><td>{{ row.job_number or row.id }}</td><td>{{ row.invoice_date }}</td><td>{{ row.client_name }}</td><td>${{ '%.2f'|format(row.paid_amount or 0) }}</td></tr>{% endfor %}</table>
   </div>
   <div class='card'>

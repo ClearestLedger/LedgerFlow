@@ -2786,6 +2786,77 @@ def send_customer_invoice_reminder_email(
     return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'customer_invoice_reminder'}
 
 
+def send_customer_estimate_email(
+    *,
+    to_email: str,
+    to_name: str,
+    business_name: str,
+    estimate_number,
+    estimate_title: str,
+    estimate_link: str,
+    valid_until: str,
+    total_amount: float,
+):
+    cfg = smtp_config()
+    sender_email = cfg['sender_email']
+    smtp_username = cfg['smtp_username']
+    smtp_password = cfg['smtp_password']
+    if cfg.get('password_unreadable'):
+        raise RuntimeError('Saved SMTP password must be entered again once after the security-key update.')
+    if not sender_email or not smtp_username or not smtp_password:
+        raise RuntimeError('SMTP not configured')
+    greeting = f"Hi {to_name}," if to_name else 'Hi,'
+    title = estimate_title or 'Project Estimate'
+    valid_line = f'Valid through: {valid_until}' if valid_until else 'Review the estimate page for the current approval timeline.'
+    body = "\n".join([
+        greeting,
+        "",
+        f"{business_name} sent you estimate #{estimate_number}: {title}",
+        valid_line,
+        f"Estimated total: ${total_amount:.2f}",
+        "",
+        "Open your estimate here:",
+        estimate_link,
+        "",
+        "You can review the scope and approve or decline it directly from the hosted page.",
+        "",
+        "LedgerFlow",
+    ])
+    email_html = render_marketing_email(
+        eyebrow='Customer Estimate',
+        title=f'Estimate #{estimate_number} from {business_name}',
+        intro='Review the estimate, confirm the scope, and approve or decline it from the hosted page.',
+        greeting=greeting,
+        body_lines=[
+            f'{title} is ready for review.',
+            valid_line,
+            f'Estimated total: ${total_amount:.2f}.',
+            'Use the secure button below to open the hosted estimate page.',
+            'You can approve or decline it directly from that page.',
+        ],
+        cta_label='Open Estimate',
+        cta_link=estimate_link,
+        detail_rows=[
+            ('Business', business_name),
+            ('Estimate', f'#{estimate_number}'),
+            ('Estimate title', title),
+            ('Valid through', valid_until or 'Open estimate page'),
+            ('Estimated total', f'${total_amount:.2f}'),
+        ],
+        feature_tags=['Hosted Estimate', 'Approve Online', 'Decline Online', 'Paperless'],
+        support_note='If you were not expecting this estimate, contact the sender directly before responding.'
+    )
+    subject = f'Estimate #{estimate_number} from {business_name}'
+    send_rich_email(
+        cfg,
+        subject=subject,
+        to_email=to_email,
+        plain_text=body,
+        html=email_html,
+    )
+    return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'customer_estimate'}
+
+
 def smtp_email_ready() -> bool:
     cfg = smtp_config()
     return bool(cfg['sender_email'] and cfg['smtp_username'] and cfg['smtp_password'])
@@ -3580,6 +3651,7 @@ def init_db():
                 paid_amount REAL DEFAULT 0,
                 invoice_date TEXT,
                 due_date TEXT DEFAULT '',
+                estimate_expiration_date TEXT DEFAULT '',
                 invoice_status TEXT NOT NULL DEFAULT 'draft',
                 public_invoice_token TEXT DEFAULT '',
                 public_payment_link TEXT DEFAULT '',
@@ -3588,10 +3660,14 @@ def init_db():
                 reminder_count INTEGER NOT NULL DEFAULT 0,
                 customer_viewed_at TEXT DEFAULT '',
                 customer_paid_at TEXT DEFAULT '',
+                approved_at TEXT DEFAULT '',
+                declined_at TEXT DEFAULT '',
+                converted_invoice_id INTEGER,
                 payment_note TEXT DEFAULT '',
                 notes TEXT DEFAULT '',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(client_id) REFERENCES clients(id)
+                FOREIGN KEY(client_id) REFERENCES clients(id),
+                FOREIGN KEY(converted_invoice_id) REFERENCES invoices(id)
             );
             CREATE TABLE IF NOT EXISTS gas_entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -4197,6 +4273,7 @@ def init_db():
         ensure_column(conn, 'invoices', 'recipient_email', "TEXT DEFAULT ''")
         ensure_column(conn, 'invoices', 'invoice_total_amount', 'REAL NOT NULL DEFAULT 0')
         ensure_column(conn, 'invoices', 'due_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'estimate_expiration_date', "TEXT DEFAULT ''")
         ensure_column(conn, 'invoices', 'invoice_status', "TEXT NOT NULL DEFAULT 'draft'")
         ensure_column(conn, 'invoices', 'public_invoice_token', "TEXT DEFAULT ''")
         ensure_column(conn, 'invoices', 'public_payment_link', "TEXT DEFAULT ''")
@@ -4205,6 +4282,9 @@ def init_db():
         ensure_column(conn, 'invoices', 'reminder_count', 'INTEGER NOT NULL DEFAULT 0')
         ensure_column(conn, 'invoices', 'customer_viewed_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'invoices', 'customer_paid_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'approved_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'declined_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'converted_invoice_id', 'INTEGER')
         ensure_column(conn, 'invoices', 'payment_note', "TEXT DEFAULT ''")
         conn.execute("UPDATE invoices SET record_kind='income_record' WHERE COALESCE(record_kind,'')=''")
         conn.execute("UPDATE invoices SET invoice_total_amount=COALESCE(invoice_total_amount,0)+paid_amount WHERE COALESCE(invoice_total_amount,0)=0")
@@ -4212,6 +4292,7 @@ def init_db():
         conn.execute("UPDATE invoices SET invoice_status='paid' WHERE record_kind='customer_invoice' AND COALESCE(paid_amount,0) >= COALESCE(invoice_total_amount,0) AND COALESCE(invoice_total_amount,0) > 0")
         conn.execute("UPDATE invoices SET invoice_status='partial' WHERE record_kind='customer_invoice' AND COALESCE(paid_amount,0) > 0 AND COALESCE(paid_amount,0) < COALESCE(invoice_total_amount,0)")
         conn.execute("UPDATE invoices SET invoice_status='draft' WHERE record_kind='customer_invoice' AND COALESCE(invoice_status,'')=''")
+        conn.execute("UPDATE invoices SET invoice_status='draft' WHERE record_kind='estimate' AND COALESCE(invoice_status,'')=''")
 
         # Initialize base URL from environment for invite links in production
         env_base_url = (os.environ.get('APP_BASE_URL') or os.environ.get('RENDER_EXTERNAL_URL') or '').strip().rstrip('/')
@@ -4463,7 +4544,7 @@ def between_clause(column: str, start_date: str | None, end_date: str | None):
 
 def client_summary(client_id: int, start_date: str | None = None, end_date: str | None = None):
     with get_conn() as conn:
-        inv_where = ['client_id=?']
+        inv_where = ['client_id=?', "COALESCE(record_kind,'income_record')<>'estimate'"]
         inv_params = [client_id]
         add_clauses, add_params = between_clause('invoice_date', start_date, end_date)
         inv_where += add_clauses
@@ -7149,6 +7230,38 @@ def invoice_status_label_map():
     return dict(invoice_status_options())
 
 
+def estimate_status_options():
+    return [
+        ('draft', 'Draft'),
+        ('sent', 'Sent'),
+        ('viewed', 'Viewed'),
+        ('approved', 'Approved'),
+        ('declined', 'Declined'),
+        ('converted', 'Converted to Invoice'),
+        ('expired', 'Expired'),
+    ]
+
+
+def estimate_status_label_map():
+    return dict(estimate_status_options())
+
+
+def normalize_estimate_status(value: str, *, default: str = 'draft') -> str:
+    allowed = {key for key, _ in estimate_status_options()}
+    cleaned = (value or '').strip().lower()
+    return cleaned if cleaned in allowed else default
+
+
+def estimate_current_status(row) -> str:
+    base_status = normalize_estimate_status(row['invoice_status'] or '', default='draft')
+    if base_status in {'approved', 'declined', 'converted'}:
+        return base_status
+    expiration_date = (row['estimate_expiration_date'] or '').strip()
+    if expiration_date and expiration_date < date.today().isoformat():
+        return 'expired'
+    return base_status
+
+
 def normalize_invoice_status(value: str, *, default: str = 'draft') -> str:
     allowed = {key for key, _ in invoice_status_options()}
     cleaned = (value or '').strip().lower()
@@ -7202,6 +7315,10 @@ def public_invoice_url(token: str) -> str:
 
 def public_invoice_payment_url(token: str) -> str:
     return public_app_url(f'/customer-invoice/{token}/pay')
+
+
+def public_estimate_url(token: str) -> str:
+    return public_app_url(f'/customer-estimate/{token}')
 
 
 def invoice_line_items_for_ids(conn: sqlite3.Connection, invoice_ids) -> dict[int, list[sqlite3.Row]]:
@@ -7266,6 +7383,79 @@ def parse_invoice_line_items(form) -> tuple[list[dict], list[str]]:
 
 def invoice_subtotal(items: list[dict]) -> Decimal:
     return sum((Decimal(str(item['line_total'])) for item in items), Decimal('0.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+
+def convert_estimate_to_invoice_document(conn: sqlite3.Connection, estimate_row, line_items: list[sqlite3.Row], *, actor_user_id=None) -> int:
+    next_job = conn.execute('SELECT COALESCE(MAX(job_number),0)+1 n FROM invoices WHERE client_id=?', (estimate_row['client_id'],)).fetchone()['n']
+    token = generate_invoice_public_token()
+    while conn.execute('SELECT 1 FROM invoices WHERE public_invoice_token=? LIMIT 1', (token,)).fetchone():
+        token = generate_invoice_public_token()
+    due_date = (date.today() + timedelta(days=14)).isoformat()
+    cursor = conn.execute(
+        '''INSERT INTO invoices (
+            client_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
+            invoice_total_amount, paid_amount, invoice_date, due_date, estimate_expiration_date, invoice_status,
+            public_invoice_token, public_payment_link, sent_at, last_reminder_at, reminder_count,
+            customer_viewed_at, customer_paid_at, approved_at, declined_at, converted_invoice_id,
+            payment_note, notes, income_category, sales_tax_amount, sales_tax_paid
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+        (
+            estimate_row['client_id'],
+            next_job,
+            'customer_invoice',
+            estimate_row['invoice_title'] or 'Customer Invoice',
+            estimate_row['client_name'],
+            estimate_row['recipient_email'],
+            estimate_row['client_address'],
+            estimate_row['invoice_total_amount'] or 0,
+            0,
+            date.today().isoformat(),
+            due_date,
+            '',
+            'draft',
+            token,
+            estimate_row['public_payment_link'] or '',
+            '',
+            '',
+            0,
+            '',
+            '',
+            '',
+            '',
+            None,
+            '',
+            estimate_row['notes'] or '',
+            'service_income',
+            estimate_row['sales_tax_amount'] or 0,
+            0,
+        )
+    )
+    invoice_id = cursor.lastrowid
+    for item in line_items:
+        conn.execute(
+            '''INSERT INTO invoice_line_items (invoice_id, sort_order, description, quantity, unit_price, line_total)
+               VALUES (?,?,?,?,?,?)''',
+            (
+                invoice_id,
+                item['sort_order'],
+                item['description'],
+                item['quantity'],
+                item['unit_price'],
+                item['line_total'],
+            )
+        )
+    conn.execute(
+        '''UPDATE invoices
+           SET invoice_status='converted', converted_invoice_id=?, payment_note=?, approved_at=CASE WHEN COALESCE(approved_at,'')='' THEN ? ELSE approved_at END
+           WHERE id=?''',
+        (
+            invoice_id,
+            'Converted into a final invoice.',
+            now_iso(),
+            estimate_row['id'],
+        )
+    )
+    return invoice_id
 
 
 def automatic_invoice_reminders(conn: sqlite3.Connection, *, client_id: int, created_by_user_id=None) -> int:
@@ -7927,7 +8117,10 @@ def dashboard():
     client_id = selected_client_id(user, 'get')
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
-        invoices = conn.execute('SELECT * FROM invoices WHERE client_id=? ORDER BY invoice_date DESC, id DESC LIMIT 10', (client_id,)).fetchall()
+        invoices = conn.execute(
+            "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate' ORDER BY invoice_date DESC, id DESC LIMIT 10",
+            (client_id,),
+        ).fetchall()
         workers = conn.execute('SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name', (client_id,)).fetchall()
     mark_messages_read(client_id, user['id'])
     payment_summary = business_payment_summary(client_id)
@@ -7977,7 +8170,10 @@ def summary():
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         workers = conn.execute('SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name', (client_id,)).fetchall()
-        invoices = conn.execute('SELECT * FROM invoices WHERE client_id=? ORDER BY invoice_date DESC LIMIT 8', (client_id,)).fetchall()
+        invoices = conn.execute(
+            "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate' ORDER BY invoice_date DESC LIMIT 8",
+            (client_id,),
+        ).fetchall()
         mileage = conn.execute('SELECT * FROM mileage_entries WHERE client_id=? ORDER BY trip_date DESC LIMIT 8', (client_id,)).fetchall()
     return render_template('summary.html', client=client, client_id=client_id, workers=workers, invoices=invoices, mileage_entries=mileage, summary=client_summary(client_id, start_date or None, end_date or None), start_date=start_date, end_date=end_date)
 
@@ -9975,7 +10171,7 @@ def invoices():
             ORDER BY im.trip_date DESC, im.id DESC
         ''', (client_id,)).fetchall()
         customer_rows = [row for row in rows if (row['record_kind'] or 'income_record') == 'customer_invoice']
-        income_rows = [row for row in rows if (row['record_kind'] or 'income_record') != 'customer_invoice']
+        income_rows = [row for row in rows if (row['record_kind'] or 'income_record') == 'income_record']
         line_items_map = invoice_line_items_for_ids(conn, [row['id'] for row in customer_rows])
         customer_invoice_rows = []
         invoice_public_links = {}
@@ -10010,6 +10206,257 @@ def invoices():
     )
 
 
+@app.route('/estimates', methods=['GET', 'POST'])
+@login_required
+def estimates():
+    user = current_user()
+    client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    today_iso = date.today().isoformat()
+    default_valid_until = (date.today() + timedelta(days=14)).isoformat()
+    with get_conn() as conn:
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        if not client or not allowed_client(user, client_id):
+            abort(403)
+        if request.method == 'POST':
+            action = request.form.get('action', 'create_estimate').strip()
+            if action == 'create_estimate':
+                errors: list[str] = []
+                customer_name = request.form.get('client_name', '').strip()
+                recipient_email = request.form.get('recipient_email', '').strip().lower()
+                invoice_date = request.form.get('invoice_date', '').strip() or today_iso
+                valid_until = request.form.get('estimate_expiration_date', '').strip()
+                estimate_title = request.form.get('invoice_title', '').strip() or 'Project Estimate'
+                client_address = request.form.get('client_address', '').strip()
+                notes = request.form.get('notes', '').strip()
+                items, item_errors = parse_invoice_line_items(request.form)
+                errors.extend(item_errors)
+                if not customer_name:
+                    errors.append('Customer name is required.')
+                if not recipient_email or '@' not in recipient_email:
+                    errors.append('A valid recipient email is required.')
+                if not parse_date(invoice_date):
+                    errors.append('Estimate date is invalid.')
+                if valid_until and not parse_date(valid_until):
+                    errors.append('Valid-until date is invalid.')
+                sales_tax_amount = normalize_money_amount(request.form.get('sales_tax_amount', '0') or '0')
+                if sales_tax_amount is None or sales_tax_amount < 0:
+                    errors.append('Sales tax amount is invalid.')
+                subtotal = invoice_subtotal(items) if not item_errors else Decimal('0.00')
+                total_amount = (subtotal + (sales_tax_amount or Decimal('0.00'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                if total_amount <= 0:
+                    errors.append('Estimate total must be above zero.')
+                if errors:
+                    for error in errors:
+                        flash(error, 'error')
+                    return redirect(url_for('estimates', client_id=client_id))
+                next_job = conn.execute('SELECT COALESCE(MAX(job_number),0)+1 n FROM invoices WHERE client_id=?', (client_id,)).fetchone()['n']
+                token = generate_invoice_public_token()
+                while conn.execute('SELECT 1 FROM invoices WHERE public_invoice_token=? LIMIT 1', (token,)).fetchone():
+                    token = generate_invoice_public_token()
+                cursor = conn.execute(
+                    '''INSERT INTO invoices (
+                        client_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
+                        invoice_total_amount, paid_amount, invoice_date, due_date, estimate_expiration_date, invoice_status,
+                        public_invoice_token, public_payment_link, sent_at, last_reminder_at, reminder_count,
+                        customer_viewed_at, customer_paid_at, approved_at, declined_at, converted_invoice_id,
+                        payment_note, notes, income_category, sales_tax_amount, sales_tax_paid
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    (
+                        client_id,
+                        next_job,
+                        'estimate',
+                        estimate_title,
+                        customer_name,
+                        recipient_email,
+                        client_address,
+                        float(total_amount),
+                        0,
+                        invoice_date,
+                        '',
+                        valid_until,
+                        'draft',
+                        token,
+                        '',
+                        '',
+                        '',
+                        0,
+                        '',
+                        '',
+                        '',
+                        '',
+                        None,
+                        '',
+                        notes,
+                        'service_income',
+                        float(sales_tax_amount or Decimal('0.00')),
+                        0,
+                    )
+                )
+                estimate_id = cursor.lastrowid
+                for item in items:
+                    conn.execute(
+                        '''INSERT INTO invoice_line_items (invoice_id, sort_order, description, quantity, unit_price, line_total)
+                           VALUES (?,?,?,?,?,?)''',
+                        (
+                            estimate_id,
+                            item['sort_order'],
+                            item['description'],
+                            item['quantity'],
+                            item['unit_price'],
+                            item['line_total'],
+                        )
+                    )
+                if request.form.get('send_now'):
+                    try:
+                        email_result = send_customer_estimate_email(
+                            to_email=recipient_email,
+                            to_name=customer_name,
+                            business_name=client['business_name'],
+                            estimate_number=next_job,
+                            estimate_title=estimate_title,
+                            estimate_link=public_estimate_url(token),
+                            valid_until=valid_until,
+                            total_amount=float(total_amount),
+                        )
+                        conn.execute(
+                            'UPDATE invoices SET invoice_status=?, sent_at=? WHERE id=?',
+                            ('expired' if valid_until and valid_until < today_iso else 'sent', now_iso(), estimate_id),
+                        )
+                        log_email_delivery(
+                            client_id=client_id,
+                            email_type=email_result['email_type'],
+                            recipient_email=recipient_email,
+                            recipient_name=customer_name,
+                            subject=email_result['subject'],
+                            body_text=email_result['body_text'],
+                            body_html=email_result['body_html'],
+                            status='sent',
+                            created_by_user_id=user['id'],
+                        )
+                        flash('Estimate saved and sent.', 'success')
+                    except Exception as exc:
+                        log_email_delivery(
+                            client_id=client_id,
+                            email_type='customer_estimate',
+                            recipient_email=recipient_email,
+                            recipient_name=customer_name,
+                            subject=f'Estimate #{next_job} from {client["business_name"]}',
+                            status='failed',
+                            error_message=str(exc)[:500],
+                            created_by_user_id=user['id'],
+                        )
+                        flash(f'Estimate saved, but sending failed: {exc}', 'error')
+                else:
+                    flash('Estimate saved.', 'success')
+                conn.commit()
+                return redirect(url_for('estimates', client_id=client_id))
+            if action == 'send_estimate':
+                estimate_id = request.form.get('estimate_id', type=int)
+                row = conn.execute(
+                    "SELECT i.*, c.business_name FROM invoices i JOIN clients c ON c.id=i.client_id WHERE i.id=? AND i.client_id=? AND COALESCE(i.record_kind,'')='estimate'",
+                    (estimate_id, client_id),
+                ).fetchone()
+                if not row:
+                    flash('Estimate not found.', 'error')
+                    return redirect(url_for('estimates', client_id=client_id))
+                token = ensure_invoice_public_token(conn, row['id'])
+                try:
+                    email_result = send_customer_estimate_email(
+                        to_email=row['recipient_email'],
+                        to_name=row['client_name'],
+                        business_name=row['business_name'],
+                        estimate_number=row['job_number'] or row['id'],
+                        estimate_title=row['invoice_title'] or 'Project Estimate',
+                        estimate_link=public_estimate_url(token),
+                        valid_until=row['estimate_expiration_date'] or '',
+                        total_amount=money(row['invoice_total_amount'] or 0),
+                    )
+                    conn.execute(
+                        'UPDATE invoices SET invoice_status=?, sent_at=? WHERE id=?',
+                        ('expired' if (row['estimate_expiration_date'] or '') and (row['estimate_expiration_date'] or '') < today_iso else 'sent', now_iso(), row['id']),
+                    )
+                    log_email_delivery(
+                        client_id=client_id,
+                        email_type=email_result['email_type'],
+                        recipient_email=row['recipient_email'],
+                        recipient_name=row['client_name'],
+                        subject=email_result['subject'],
+                        body_text=email_result['body_text'],
+                        body_html=email_result['body_html'],
+                        status='sent',
+                        created_by_user_id=user['id'],
+                    )
+                    conn.commit()
+                    flash('Estimate sent.', 'success')
+                except Exception as exc:
+                    log_email_delivery(
+                        client_id=client_id,
+                        email_type='customer_estimate',
+                        recipient_email=row['recipient_email'],
+                        recipient_name=row['client_name'],
+                        subject=f'Estimate #{row["job_number"] or row["id"]} from {row["business_name"]}',
+                        status='failed',
+                        error_message=str(exc)[:500],
+                        created_by_user_id=user['id'],
+                    )
+                    conn.commit()
+                    flash(f'Estimate send failed: {exc}', 'error')
+                return redirect(url_for('estimates', client_id=client_id))
+            if action == 'convert_estimate_to_invoice':
+                estimate_id = request.form.get('estimate_id', type=int)
+                row = conn.execute(
+                    "SELECT * FROM invoices WHERE id=? AND client_id=? AND COALESCE(record_kind,'')='estimate'",
+                    (estimate_id, client_id),
+                ).fetchone()
+                if not row:
+                    flash('Estimate not found.', 'error')
+                    return redirect(url_for('estimates', client_id=client_id))
+                items = conn.execute(
+                    'SELECT * FROM invoice_line_items WHERE invoice_id=? ORDER BY sort_order, id',
+                    (estimate_id,),
+                ).fetchall()
+                invoice_id = convert_estimate_to_invoice_document(conn, row, items, actor_user_id=user['id'])
+                conn.commit()
+                flash('Estimate converted into a customer invoice.', 'success')
+                return redirect(url_for('invoice_print', invoice_id=invoice_id))
+
+        conn.execute(
+            """UPDATE invoices
+               SET invoice_status='expired'
+               WHERE client_id=?
+                 AND COALESCE(record_kind,'')='estimate'
+                 AND COALESCE(invoice_status,'draft') IN ('draft','sent','viewed')
+                 AND COALESCE(estimate_expiration_date,'')<>''
+                 AND estimate_expiration_date < ?""",
+            (client_id, today_iso),
+        )
+        rows = conn.execute(
+            "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'')='estimate' ORDER BY job_number DESC, id DESC",
+            (client_id,),
+        ).fetchall()
+        line_items_map = invoice_line_items_for_ids(conn, [row['id'] for row in rows])
+        estimate_rows = []
+        estimate_public_links = {}
+        for row in rows:
+            token = ensure_invoice_public_token(conn, row['id'])
+            row_dict = dict(row)
+            row_dict['invoice_status'] = estimate_current_status(row)
+            estimate_rows.append(row_dict)
+            estimate_public_links[row['id']] = public_estimate_url(token)
+        conn.commit()
+    return render_template(
+        'estimates.html',
+        client=client,
+        client_id=client_id,
+        estimates=estimate_rows,
+        estimate_line_items_map=line_items_map,
+        estimate_public_links=estimate_public_links,
+        estimate_status_labels=estimate_status_label_map(),
+        today=today_iso,
+        default_valid_until=default_valid_until,
+    )
+
+
 @app.route('/invoice/<int:invoice_id>')
 @login_required
 def invoice_print(invoice_id):
@@ -10028,15 +10475,16 @@ def invoice_print(invoice_id):
         ).fetchall()
     if not row or not allowed_client(user, row['client_id']):
         abort(403)
-    status = invoice_payment_progress_status(row)
+    record_kind = row['record_kind'] or 'income_record'
+    status = estimate_current_status(row) if record_kind == 'estimate' else invoice_payment_progress_status(row)
     token = (row['public_invoice_token'] or '').strip()
     return render_template(
         'invoice_print.html',
         invoice=row,
         line_items=line_items,
-        invoice_status_label=invoice_status_label_map().get(status, 'Draft'),
+        invoice_status_label=(estimate_status_label_map().get(status, 'Draft') if record_kind == 'estimate' else invoice_status_label_map().get(status, 'Draft')),
         balance_due=invoice_balance_due(row),
-        public_invoice_link=public_invoice_url(token) if token else '',
+        public_invoice_link=(public_estimate_url(token) if token and record_kind == 'estimate' else (public_invoice_url(token) if token else '')),
         pay_online_link=(row['public_payment_link'] or '').strip(),
     )
 
@@ -10098,6 +10546,58 @@ def customer_invoice_pay(token):
         )
         conn.commit()
     return redirect(payment_link)
+
+
+@app.route('/customer-estimate/<token>', methods=['GET', 'POST'])
+def customer_estimate_public(token):
+    with get_conn() as conn:
+        row = conn.execute(
+            '''SELECT i.*, c.business_name, c.contact_name business_contact_name, c.email business_email, c.phone business_phone, c.address business_address
+               FROM invoices i
+               JOIN clients c ON c.id = i.client_id
+               WHERE i.public_invoice_token=? AND COALESCE(i.record_kind,'')='estimate' ''',
+            ((token or '').strip(),),
+        ).fetchone()
+        if not row:
+            abort(404)
+        line_items = conn.execute(
+            'SELECT * FROM invoice_line_items WHERE invoice_id=? ORDER BY sort_order, id',
+            (row['id'],),
+        ).fetchall()
+        status = estimate_current_status(row)
+        viewed_at = row['customer_viewed_at'] or now_iso()
+        if request.method == 'POST':
+            action = request.form.get('action', '').strip()
+            if action == 'approve' and status not in {'converted', 'approved', 'declined'}:
+                status = 'approved'
+                conn.execute(
+                    "UPDATE invoices SET invoice_status='approved', approved_at=?, customer_viewed_at=? WHERE id=?",
+                    (now_iso(), viewed_at, row['id']),
+                )
+                conn.commit()
+            elif action == 'decline' and status not in {'converted', 'approved', 'declined'}:
+                status = 'declined'
+                conn.execute(
+                    "UPDATE invoices SET invoice_status='declined', declined_at=?, customer_viewed_at=? WHERE id=?",
+                    (now_iso(), viewed_at, row['id']),
+                )
+                conn.commit()
+            return redirect(url_for('customer_estimate_public', token=(token or '').strip()))
+        updated_status = status
+        if status in {'draft', 'sent'}:
+            updated_status = 'expired' if (row['estimate_expiration_date'] or '').strip() and (row['estimate_expiration_date'] or '') < date.today().isoformat() else 'viewed'
+        conn.execute(
+            'UPDATE invoices SET customer_viewed_at=?, invoice_status=? WHERE id=?',
+            (viewed_at, updated_status, row['id']),
+        )
+        conn.commit()
+    return render_template(
+        'estimate_public.html',
+        estimate=row,
+        line_items=line_items,
+        estimate_status_label=estimate_status_label_map().get(updated_status, 'Draft'),
+        estimate_status_code=updated_status,
+    )
 
 
 @app.route('/workers', methods=['GET', 'POST'])
@@ -10587,7 +11087,10 @@ def reports():
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         workers = conn.execute('SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name', (client_id,)).fetchall()
-        invoices = conn.execute('SELECT * FROM invoices WHERE client_id=? ORDER BY job_number DESC, id DESC', (client_id,)).fetchall()
+        invoices = conn.execute(
+            "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate' ORDER BY job_number DESC, id DESC",
+            (client_id,),
+        ).fetchall()
 
         context = {
             'client': client,
@@ -10623,7 +11126,7 @@ def reports():
             query += ' ORDER BY wp.payment_date DESC'
             context['rows'] = conn.execute(query, tuple(params)).fetchall()
         elif report_type == 'invoices':
-            query = 'SELECT * FROM invoices WHERE client_id=?'
+            query = "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate'"
             params = [client_id]
             if invoice_id:
                 query += ' AND id=?'

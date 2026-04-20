@@ -7,7 +7,58 @@
     {% if pay_online_link and (invoice.record_kind or 'income_record') == 'customer_invoice' %}<a class='btn btn-secondary' href='{{ pay_online_link }}' target='_blank'>Pay Online Link</a>{% endif %}
   </div>
 
-  {% if (invoice.record_kind or 'income_record') == 'customer_invoice' %}
+  {% if (invoice.record_kind or 'income_record') == 'estimate' %}
+  <h2>{{ invoice.invoice_title or 'Project Estimate' }} #{{ invoice.job_number }}</h2>
+  <div class='grid cards-3'>
+    <div class='card'>
+      <strong>Business</strong><br>
+      {{ invoice.business_name }}<br>
+      {{ invoice.business_address or '&mdash;' }}<br>
+      {% if invoice.business_email %}{{ invoice.business_email }}<br>{% endif %}
+      {% if invoice.business_phone %}{{ invoice.business_phone }}{% endif %}
+    </div>
+    <div class='card'>
+      <strong>Prepared For</strong><br>
+      {{ invoice.client_name }}<br>
+      {{ invoice.client_address or '&mdash;' }}<br>
+      {{ invoice.recipient_email or '&mdash;' }}
+    </div>
+    <div class='card'>
+      <strong>Estimate Date</strong><br>{{ invoice.invoice_date or '&mdash;' }}<br><br>
+      <strong>Valid Until</strong><br>{{ invoice.estimate_expiration_date or '&mdash;' }}<br><br>
+      <strong>Status</strong><br>{{ invoice_status_label }}
+    </div>
+  </div>
+
+  <div class='card' style='margin-top:16px'>
+    <strong>Line Items</strong>
+    <table class='table' style='margin-top:12px'>
+      <tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr>
+      {% for item in line_items %}
+      <tr>
+        <td>{{ item.description }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>${{ '%.2f'|format(item.unit_price or 0) }}</td>
+        <td>${{ '%.2f'|format(item.line_total or 0) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan='4'>No line items saved.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class='grid cards-2' style='margin-top:16px'>
+    <div class='card'>
+      <strong>Estimate Notes</strong><br>
+      {{ invoice.notes or '&mdash;' }}
+    </div>
+    <div class='card'>
+      <strong>Estimated Total</strong>
+      <div class='metric big'>${{ '%.2f'|format(invoice.invoice_total_amount or 0) }}</div>
+      <strong>Sales Tax Portion</strong><br>${{ '%.2f'|format(invoice.sales_tax_amount or 0) }}
+    </div>
+  </div>
+  {% elif (invoice.record_kind or 'income_record') == 'customer_invoice' %}
   <h2>{{ invoice.invoice_title or 'Customer Invoice' }} #{{ invoice.job_number }}</h2>
   <div class='grid cards-3'>
     <div class='card'>

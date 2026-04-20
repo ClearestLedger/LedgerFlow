@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ estimate.invoice_title or 'Project Estimate' }} #{{ estimate.job_number }} · LedgerFlow</title>
+    <style>
+      body{margin:0;background:#f4f6f8;font-family:Arial,'Segoe UI',sans-serif;color:#151A2C}
+      .page{max-width:920px;margin:0 auto;padding:32px 18px 48px}
+      .surface{background:#fff;border:1px solid #dde5ef;border-radius:28px;box-shadow:0 18px 45px rgba(21,26,44,.08);overflow:hidden}
+      .hero{padding:28px 30px;background:linear-gradient(180deg,#f9fbfd,#eef3f8)}
+      .hero img{max-width:280px;width:100%;height:auto;display:block}
+      .hero h1{margin:18px 0 8px;font-size:36px;line-height:1.08}
+      .hero p{margin:0;color:#607089;font-size:16px;line-height:1.7}
+      .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;padding:0 30px}
+      .card{border:1px solid #e4ebf3;border-radius:18px;background:#fff;padding:18px 20px}
+      .table-wrap{padding:0 30px 30px}
+      table{width:100%;border-collapse:collapse}
+      th,td{padding:12px 10px;border-bottom:1px solid #e8edf4;text-align:left;vertical-align:top}
+      th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#72819A}
+      .totals{padding:0 30px 30px;display:grid;grid-template-columns:1.4fr .8fr;gap:16px}
+      .metric{font-size:34px;font-weight:800;line-height:1.1}
+      .actions{display:flex;gap:12px;flex-wrap:wrap;padding:0 30px 30px}
+      .btn{display:inline-block;padding:14px 18px;border-radius:14px;text-decoration:none;font-weight:700;border:none;cursor:pointer}
+      .btn-primary{background:#151A2C;color:#fff}
+      .btn-secondary{background:#eef3f8;color:#151A2C;border:1px solid #d9e1ec}
+      .btn-danger{background:#fff;color:#8a2434;border:1px solid #e4b8c0}
+      .status{display:inline-block;padding:8px 12px;border-radius:999px;background:#eef3f8;color:#24364f;font-size:13px;font-weight:700}
+      @media (max-width:720px){.totals{grid-template-columns:1fr}.hero h1{font-size:28px}}
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="surface">
+        <div class="hero">
+          <img src="{{ url_for('static', filename='ledgerflow-logo.png') }}" alt="LedgerFlow">
+          <h1>{{ estimate.invoice_title or 'Project Estimate' }} #{{ estimate.job_number }}</h1>
+          <p>{{ estimate.business_name }} sent you a hosted project estimate. Review the scope, total, and timeline, then approve or decline it directly from this page.</p>
+        </div>
+
+        <div class="grid" style="padding-top:26px;padding-bottom:18px">
+          <div class="card">
+            <strong>Business</strong><br>
+            {{ estimate.business_name }}<br>
+            {{ estimate.business_address or '&mdash;' }}<br>
+            {% if estimate.business_email %}{{ estimate.business_email }}<br>{% endif %}
+            {% if estimate.business_phone %}{{ estimate.business_phone }}{% endif %}
+          </div>
+          <div class="card">
+            <strong>Prepared For</strong><br>
+            {{ estimate.client_name }}<br>
+            {{ estimate.client_address or '&mdash;' }}<br>
+            {{ estimate.recipient_email or '&mdash;' }}
+          </div>
+          <div class="card">
+            <strong>Estimate Date</strong><br>{{ estimate.invoice_date or '&mdash;' }}<br><br>
+            <strong>Valid Until</strong><br>{{ estimate.estimate_expiration_date or '&mdash;' }}<br><br>
+            <strong>Status</strong><br><span class="status">{{ estimate_status_label }}</span>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr>
+            {% for item in line_items %}
+            <tr>
+              <td>{{ item.description }}</td>
+              <td>{{ item.quantity }}</td>
+              <td>${{ '%.2f'|format(item.unit_price or 0) }}</td>
+              <td>${{ '%.2f'|format(item.line_total or 0) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4">No line items were saved with this estimate.</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+
+        <div class="totals">
+          <div class="card">
+            <strong>Notes</strong><br>
+            {{ estimate.notes or '&mdash;' }}
+          </div>
+          <div class="card">
+            <strong>Estimated Total</strong>
+            <div class="metric">${{ '%.2f'|format(estimate.invoice_total_amount or 0) }}</div>
+            <div style="margin-top:14px"><strong>Sales Tax Portion</strong><br>${{ '%.2f'|format(estimate.sales_tax_amount or 0) }}</div>
+          </div>
+        </div>
+
+        {% if estimate_status_code not in ['approved','declined','converted','expired'] %}
+        <div class="actions">
+          <form method="post" style="display:inline">
+            <input type="hidden" name="action" value="approve">
+            <button class="btn btn-primary" type="submit">Approve Estimate</button>
+          </form>
+          <form method="post" style="display:inline">
+            <input type="hidden" name="action" value="decline">
+            <button class="btn btn-danger" type="submit">Decline Estimate</button>
+          </form>
+        </div>
+        {% elif estimate_status_code == 'approved' %}
+        <div class="actions"><span class="status">Approved</span></div>
+        {% elif estimate_status_code == 'declined' %}
+        <div class="actions"><span class="status">Declined</span></div>
+        {% elif estimate_status_code == 'converted' %}
+        <div class="actions"><span class="status">Converted to invoice</span></div>
+        {% else %}
+        <div class="actions"><span class="status">Expired</span></div>
+        {% endif %}
+      </div>
+    </div>
+  </body>
+</html>

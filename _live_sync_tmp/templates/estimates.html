@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Estimates</div>
+    <div class='page-title'>{{ client.business_name }}</div>
+    <div class='page-subtitle'>Create polished project estimates, send a hosted approval page, track who viewed it, and convert approved work into a real customer invoice.</div>
+  </div>
+  <button onclick='window.print()' class='btn btn-secondary' type='button'>Print This Page</button>
+</div>
+
+<div class='card section-frame' style='margin-bottom:16px'>
+  <div class='summary-strip'>
+    <span class='summary-pill'>Hosted estimate page</span>
+    <span class='summary-pill'>Customer approve / decline</span>
+    <span class='summary-pill'>Convert to invoice</span>
+    <span class='summary-pill'>Wave-style estimate workflow</span>
+  </div>
+  <div class='small' style='margin-top:10px'>Use estimates before billing starts. Once the customer approves, convert the estimate into a customer invoice without rebuilding the line items.</div>
+</div>
+
+<div class='grid cards-2'>
+  <div class='card section-frame'>
+    <details class='compact-details' open>
+      <summary>Create Estimate</summary>
+      <div class='small' style='margin:12px 0'>Build the scope, send the hosted estimate, and let the customer approve or decline it from a clean page.</div>
+      <form method='post' class='form-grid' id='estimateForm'>
+        <input type='hidden' name='action' value='create_estimate'>
+        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <div><label>Estimate Title</label><input name='invoice_title' value='Project Estimate'></div>
+        <div><label>Customer Name</label><input name='client_name' required></div>
+        <div><label>Recipient Email</label><input name='recipient_email' type='email' required></div>
+        <div><label>Customer Address</label><input name='client_address'></div>
+        <div><label>Estimate Date</label><input name='invoice_date' type='date' value='{{ today }}'></div>
+        <div><label>Valid Until</label><input name='estimate_expiration_date' type='date' value='{{ default_valid_until }}'></div>
+        <div><label>Sales Tax</label><input id='estimate_sales_tax' name='sales_tax_amount' type='number' step='0.01' min='0' value='0.00'></div>
+        <div style='grid-column:1/-1'>
+          <label>Line Items</label>
+          <div class='scroll-x'>
+            <table class='table' id='estimateLineItemsTable'>
+              <tr><th>Description</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr>
+              {% for idx in range(4) %}
+              <tr>
+                <td><input name='line_description' placeholder='Service, visit, scope item, or phase'></td>
+                <td><input name='line_quantity' type='number' min='0.01' step='0.01' value='{% if idx == 0 %}1{% endif %}'></td>
+                <td><input name='line_unit_price' type='number' min='0' step='0.01'></td>
+                <td><input class='estimate-line-total' type='text' readonly value='$0.00'></td>
+              </tr>
+              {% endfor %}
+            </table>
+          </div>
+        </div>
+        <div><label>Subtotal</label><input id='estimate_subtotal' type='text' readonly value='$0.00'></div>
+        <div><label>Total Estimate</label><input id='estimate_total' type='text' readonly value='$0.00'></div>
+        <div style='grid-column:1/-1'><label>Notes</label><textarea name='notes' placeholder='Scope note, exclusions, or customer-facing context'></textarea></div>
+        <div style='grid-column:1/-1'><label><input type='checkbox' name='send_now' value='1' checked> Send estimate email immediately after saving</label></div>
+        <div><button type='submit'>Save Estimate</button></div>
+      </form>
+    </details>
+  </div>
+
+  <div class='card section-frame'>
+    <div class='card-head'><h3>How Estimate Flow Works</h3><span class='badge'>Sales Workflow</span></div>
+    <ol style='margin:0;padding-left:18px;line-height:1.9;color:#425067'>
+      <li>Create the estimate with line items and send it to the customer.</li>
+      <li>The customer opens a hosted page and can approve or decline it.</li>
+      <li>Once approved, convert it into a real invoice in one click.</li>
+      <li>Send the final invoice from the invoice center when work is ready to bill.</li>
+    </ol>
+    <div class='small' style='margin-top:12px'>This keeps the estimate phase separate from income tracking, so your reports and billing stay accurate.</div>
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-top:16px'>
+  <div class='card-head'><h3>Saved Estimates</h3><div class='small'>Hosted estimates waiting for customer response or ready for invoice conversion</div></div>
+  <div class='scroll-x'>
+    <table class='table'>
+      <tr><th>Estimate #</th><th>Customer</th><th>Status</th><th>Total</th><th>Valid Until</th><th>Actions</th></tr>
+      {% for row in estimates %}
+      {% set line_items = estimate_line_items_map.get(row.id, []) %}
+      <tr>
+        <td>#{{ row.job_number or row.id }}</td>
+        <td>
+          <strong>{{ row.client_name }}</strong>
+          <div class='small'>{{ row.recipient_email }}</div>
+          <div class='small'>{{ line_items|length }} item{% if line_items|length != 1 %}s{% endif %}{% if row.sent_at %} &middot; sent {{ row.sent_at[:10] }}{% endif %}{% if row.customer_viewed_at %} &middot; viewed {{ row.customer_viewed_at[:10] }}{% endif %}</div>
+        </td>
+        <td>{{ estimate_status_labels.get(row.invoice_status, row.invoice_status|title) }}</td>
+        <td>${{ '%.2f'|format(row.invoice_total_amount or 0) }}</td>
+        <td>{{ row.estimate_expiration_date or 'Not set' }}</td>
+        <td>
+          <div style='display:flex;gap:8px;flex-wrap:wrap'>
+            <a class='btn btn-secondary btn-sm' href='{{ estimate_public_links.get(row.id) }}' target='_blank'>Open Hosted</a>
+            <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>Print</a>
+            {% if row.invoice_status not in ['converted', 'approved', 'declined', 'expired'] %}
+            <form method='post' style='display:inline'>
+              <input type='hidden' name='action' value='send_estimate'>
+              <input type='hidden' name='estimate_id' value='{{ row.id }}'>
+              <button class='btn btn-secondary btn-sm' type='submit'>Send</button>
+            </form>
+            {% endif %}
+            {% if row.invoice_status in ['approved', 'sent', 'viewed'] %}
+            <form method='post' style='display:inline'>
+              <input type='hidden' name='action' value='convert_estimate_to_invoice'>
+              <input type='hidden' name='estimate_id' value='{{ row.id }}'>
+              <button class='btn btn-secondary btn-sm' type='submit'>Convert to Invoice</button>
+            </form>
+            {% endif %}
+            {% if row.converted_invoice_id %}
+            <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.converted_invoice_id) }}' target='_blank'>Open Invoice</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan='6' class='small'>No estimates saved yet.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<script>
+(function(){
+  function recalcEstimate(){
+    var rows = document.querySelectorAll('#estimateLineItemsTable tr');
+    var subtotal = 0;
+    rows.forEach(function(row, idx){
+      if (idx === 0) return;
+      var qtyInput = row.querySelector('input[name=\"line_quantity\"]');
+      var priceInput = row.querySelector('input[name=\"line_unit_price\"]');
+      var totalField = row.querySelector('.estimate-line-total');
+      var qty = parseFloat(qtyInput && qtyInput.value || '0') || 0;
+      var unit = parseFloat(priceInput && priceInput.value || '0') || 0;
+      var lineTotal = qty * unit;
+      subtotal += lineTotal;
+      if (totalField) totalField.value = '$' + lineTotal.toFixed(2);
+    });
+    var tax = parseFloat(document.getElementById('estimate_sales_tax')?.value || '0') || 0;
+    var subtotalField = document.getElementById('estimate_subtotal');
+    var totalField = document.getElementById('estimate_total');
+    if (subtotalField) subtotalField.value = '$' + subtotal.toFixed(2);
+    if (totalField) totalField.value = '$' + (subtotal + tax).toFixed(2);
+  }
+  document.querySelectorAll('#estimateLineItemsTable input, #estimate_sales_tax').forEach(function(el){
+    el.addEventListener('input', recalcEstimate);
+    el.addEventListener('change', recalcEstimate);
+  });
+  recalcEstimate();
+})();
+</script>
+{% endblock %}
