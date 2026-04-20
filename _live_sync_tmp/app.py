@@ -692,6 +692,41 @@ def service_level_plan_code(service_level: str) -> str:
     return subscription_tier_details_map().get(normalized, subscription_tier_details_map()[default_service_level()])['plan_code']
 
 
+def default_trial_offer_days() -> int:
+    return 7
+
+
+def normalize_invite_kind(value: str) -> str:
+    cleaned = (value or '').strip().lower()
+    return cleaned if cleaned in {'business_access', 'prospect_trial'} else 'business_access'
+
+
+def invite_kind_label(value: str) -> str:
+    return {
+        'business_access': 'Business Access Invite',
+        'prospect_trial': f'{default_trial_offer_days()}-Day Trial Invite',
+    }.get(normalize_invite_kind(value), 'Business Access Invite')
+
+
+def trial_date_window(started_at: str, trial_days: int) -> tuple[str, str]:
+    base = datetime.utcnow()
+    if started_at:
+        try:
+            base = datetime.fromisoformat(started_at.replace('Z', '+00:00')).replace(tzinfo=None)
+        except ValueError:
+            try:
+                base = datetime.strptime(started_at[:19], '%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                try:
+                    base = datetime.strptime(started_at[:19], '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    base = datetime.utcnow()
+    if trial_days <= 0:
+        trial_days = default_trial_offer_days()
+    end = base + timedelta(days=trial_days)
+    return base.isoformat(timespec='seconds'), end.isoformat(timespec='seconds')
+
+
 def business_archive_reason_options():
     return [
         ('business_canceled', 'Business Canceled'),
@@ -713,44 +748,71 @@ def normalize_business_archive_reason(value: str) -> str:
 
 
 def prospect_pipeline_stage(row) -> dict:
+    invite_kind = normalize_invite_kind(row['invite_kind'])
     invite_status = (row['invite_status'] or '').strip().lower()
     onboarding_status = (row['onboarding_status'] or 'completed').strip().lower()
     accepted_user_id = row['invite_accepted_user_id']
+    trial_days = int(row['trial_days'] or row['trial_offer_days'] or 0)
+    is_trial = invite_kind == 'prospect_trial' and trial_days > 0
 
     if invite_status == 'failed':
         return {
             'key': 'delivery_failed',
-            'label': 'Delivery Failed',
-            'detail': 'Email delivery failed. Review the issue or resend the invite.',
+            'label': 'Trial Invite Failed' if is_trial else 'Delivery Failed',
+            'detail': (
+                f'The {trial_days}-day trial email did not deliver. Review the issue or resend the invite.'
+                if is_trial else
+                'Email delivery failed. Review the issue or resend the invite.'
+            ),
         }
     if invite_status == 'expired':
         return {
             'key': 'invite_expired',
-            'label': 'Invite Expired',
-            'detail': 'The invite link expired before login setup was completed.',
+            'label': 'Trial Offer Expired' if is_trial else 'Invite Expired',
+            'detail': (
+                'The complimentary trial offer expired before secure login setup was completed.'
+                if is_trial else
+                'The invite link expired before login setup was completed.'
+            ),
         }
     if accepted_user_id and onboarding_status == 'in_progress':
         return {
             'key': 'setup_in_progress',
-            'label': 'Setup In Progress',
-            'detail': 'The business login exists and setup has started, but onboarding is not finished yet.',
+            'label': 'Trial Setup In Progress' if is_trial else 'Setup In Progress',
+            'detail': (
+                f'The {trial_days}-day trial was claimed and LedgerFlow setup is underway.'
+                if is_trial else
+                'The business login exists and setup has started, but onboarding is not finished yet.'
+            ),
         }
     if accepted_user_id:
         return {
             'key': 'login_created',
-            'label': 'Login Created',
-            'detail': 'The business login was created and is waiting to complete LedgerFlow setup.',
+            'label': 'Trial Claimed' if is_trial else 'Login Created',
+            'detail': (
+                f'The business claimed the {trial_days}-day trial and is ready to complete setup.'
+                if is_trial else
+                'The business login was created and is waiting to complete LedgerFlow setup.'
+            ),
         }
     if invite_status in {'sent', 'pending'}:
         return {
             'key': 'invite_sent',
-            'label': 'Invite Sent',
-            'detail': 'Waiting for the business to open the invite and create its login.',
+            'label': 'Trial Invite Sent' if is_trial else 'Invite Sent',
+            'detail': (
+                f'Waiting for the business to open its {trial_days}-day complimentary trial invite and create secure access.'
+                if is_trial else
+                'Waiting for the business to open the invite and create its login.'
+            ),
         }
     return {
         'key': 'prospect',
-        'label': 'Prospect',
-        'detail': 'Prospect record created and waiting for the next outreach action.',
+        'label': 'Trial Prospect' if is_trial else 'Prospect',
+        'detail': (
+            'Trial-ready prospect record created and waiting for the next outreach action.'
+            if is_trial else
+            'Prospect record created and waiting for the next outreach action.'
+        ),
     }
 
 
@@ -2035,6 +2097,94 @@ def send_invite_email(to_email: str, to_name: str, business_name: str, invite_li
     return {'subject': subject, 'body_text': body, 'body_html': html, 'email_type': 'business_invite'}
 
 
+def send_trial_invite_email(to_email: str, to_name: str, business_name: str, invite_link: str, trial_days: int = 0):
+    cfg = smtp_config()
+    sender_email = cfg['sender_email']
+    smtp_username = cfg['smtp_username']
+    smtp_password = cfg['smtp_password']
+    if cfg.get('password_unreadable'):
+        raise RuntimeError('Saved SMTP password must be entered again once after the security-key update.')
+    if not sender_email or not smtp_username or not smtp_password:
+        raise RuntimeError('SMTP not configured')
+    if trial_days <= 0:
+        trial_days = default_trial_offer_days()
+    greeting = f"Hi {to_name}," if to_name else "Hi,"
+    tier_rows = []
+    for tier in subscription_tier_catalog():
+        feature_preview = ', '.join(tier['features'][:3])
+        coming_soon = ''
+        if tier.get('coming_soon'):
+            coming_soon = (
+                f"<div style='margin-top:6px;color:#7f5f1d;font-size:12px;line-height:1.6'><strong>Coming Soon:</strong> "
+                f"{html.escape(', '.join(tier['coming_soon']))}</div>"
+            )
+        tier_rows.append(
+            f"<tr>"
+            f"<td style='padding:14px 12px;border-bottom:1px solid #e3e7ee;color:#16314f;font-size:14px;font-weight:800'>{html.escape(tier['label'])}</td>"
+            f"<td style='padding:14px 12px;border-bottom:1px solid #e3e7ee;color:#16314f;font-size:14px;font-weight:800'>${float(tier['monthly_amount']):.0f}/mo</td>"
+            f"<td style='padding:14px 12px;border-bottom:1px solid #e3e7ee;color:#4b5e79;font-size:13px;line-height:1.6'>{html.escape(tier['best_for'])}<br>{html.escape(feature_preview)}{coming_soon}</td>"
+            f"</tr>"
+        )
+    trial_summary_html = (
+        f"<div style='margin-top:22px;padding:18px 20px;border:1px solid #d7dce7;border-radius:18px;background:#f7f1e7'>"
+        f"<div style='color:#141b2d;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase'>Complimentary Trial Offer</div>"
+        f"<div style='margin-top:8px;color:#141b2d;font-size:24px;line-height:1.25;font-weight:800'>{trial_days}-day free guided trial</div>"
+        f"<div style='margin-top:10px;color:#48546a;font-size:14px;line-height:1.7'>Review the subscription options below, create your secure login, and complete setup when you are ready. Billing begins only after the complimentary trial window ends.</div>"
+        f"</div>"
+        f"<div style='margin-top:18px;padding:18px 20px;border:1px solid #dbe3ef;border-radius:18px;background:#ffffff'>"
+        f"<div style='color:#141b2d;font-size:14px;font-weight:800;margin-bottom:12px'>Subscription options preview</div>"
+        f"<table role='presentation' style='width:100%;border-collapse:collapse'>"
+        f"<tr><th align='left' style='padding:0 12px 10px 12px;color:#74829b;font-size:12px;letter-spacing:.08em;text-transform:uppercase'>Tier</th><th align='left' style='padding:0 12px 10px 12px;color:#74829b;font-size:12px;letter-spacing:.08em;text-transform:uppercase'>Price</th><th align='left' style='padding:0 12px 10px 12px;color:#74829b;font-size:12px;letter-spacing:.08em;text-transform:uppercase'>Designed For</th></tr>"
+        f"{''.join(tier_rows)}"
+        f"</table>"
+        f"</div>"
+    )
+    body = "\n".join([
+        greeting,
+        "",
+        f"You've been invited to try LedgerFlow with a {trial_days}-day complimentary business trial for {business_name}.",
+        "",
+        "Use the secure link below to review the subscription options, create your business login, and continue into guided setup:",
+        invite_link,
+        "",
+        "During setup, you'll choose the best-fit subscription tier and method on file. Billing begins only after the complimentary trial window ends.",
+        "",
+        "If you were not expecting this invitation, you can ignore this email.",
+        "",
+        "LedgerFlow",
+    ])
+    html = render_marketing_email(
+        eyebrow='Complimentary Trial Invite',
+        title=f'Start your {trial_days}-day LedgerFlow trial',
+        intro=f'Explore LedgerFlow for {business_name}, review the subscription options, and claim guided setup with a private client trial.',
+        greeting=greeting,
+        body_lines=[
+            f'You have a {trial_days}-day complimentary window to explore the LedgerFlow business portal before monthly billing begins.',
+            'Use the secure button below to review the offer, create your login, and continue into guided setup.',
+            'Your administrator remains directly involved, so the rollout feels white-glove from the first step.',
+        ],
+        cta_label=f'Claim {trial_days}-Day Trial',
+        cta_link=invite_link,
+        detail_rows=[
+            ('Business', business_name),
+            ('Trial Offer', f'{trial_days} complimentary days'),
+            ('Invite Email', to_email),
+        ],
+        feature_tags=['7-Day Trial', 'Subscription Options', 'Guided Setup', 'Video Walkthrough Space'],
+        support_note='If you were not expecting this invitation, you can ignore this email.',
+        extra_sections_html=trial_summary_html,
+    )
+    subject = f"Start your {trial_days}-day LedgerFlow trial for {business_name}"
+    send_rich_email(
+        cfg,
+        subject=subject,
+        to_email=to_email,
+        plain_text=body,
+        html=html,
+    )
+    return {'subject': subject, 'body_text': body, 'body_html': html, 'email_type': 'prospect_trial_invite'}
+
+
 def send_rejoin_email(to_email: str, to_name: str, business_name: str, rejoin_link: str):
     cfg = smtp_config()
     sender_email = cfg['sender_email']
@@ -2095,7 +2245,7 @@ def smtp_email_ready() -> bool:
     return bool(cfg['sender_email'] and cfg['smtp_username'] and cfg['smtp_password'])
 
 
-def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: str, body_lines: list[str], cta_label: str = '', cta_link: str = '', detail_rows: list[tuple[str, str]] | None = None, feature_tags: list[str] | None = None, support_note: str = '') -> str:
+def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: str, body_lines: list[str], cta_label: str = '', cta_link: str = '', detail_rows: list[tuple[str, str]] | None = None, feature_tags: list[str] | None = None, support_note: str = '', extra_sections_html: str = '') -> str:
     detail_rows = detail_rows or []
     feature_tags = feature_tags or []
     eyebrow_text = html.escape(eyebrow or '')
@@ -2170,6 +2320,7 @@ def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: st
                 {cta_html}
                 {details_block}
                 {features_block}
+                {extra_sections_html}
                 {support_html}
                 <div style="margin-top:26px;padding-top:18px;border-top:1px solid #e5edf7;color:#6b7d94;font-size:12px;line-height:1.7">
                   <strong style="display:block;color:#193452;font-size:13px;letter-spacing:.08em">LEDGERFLOW</strong>
@@ -3430,6 +3581,11 @@ def init_db():
         ensure_column(conn, 'business_payment_methods', 'created_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
         ensure_column(conn, 'business_payment_methods', 'updated_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
         ensure_column(conn, 'business_invites', 'invite_error', "TEXT DEFAULT ''")
+        ensure_column(conn, 'business_invites', 'invite_kind', "TEXT DEFAULT 'business_access'")
+        ensure_column(conn, 'business_invites', 'trial_days', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'clients', 'trial_offer_days', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'clients', 'trial_started_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'trial_ends_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'invoices', 'notes', "TEXT DEFAULT ''")
         ensure_column(conn, 'invoices', 'income_category', "TEXT DEFAULT 'service_income'")
         ensure_column(conn, 'invoices', 'sales_tax_amount', 'REAL NOT NULL DEFAULT 0')
@@ -7403,13 +7559,116 @@ def client_users():
                     )
                     flash(f'New customer invite email failed: {str(e)[:180]}', 'error')
                 return redirect(url_for('client_users'))
+            if action == 'send_trial_invite':
+                business_name = request.form.get('business_name', '').strip()
+                invite_name = request.form.get('full_name', '').strip()
+                invite_email = request.form.get('email', '').strip().lower()
+                trial_days = default_trial_offer_days()
+                if not business_name or not invite_name or not invite_email:
+                    flash('Enter business name, contact name, and email before sending the trial invite.', 'error')
+                    return redirect(url_for('client_users'))
+                existing_user = conn.execute('SELECT id FROM users WHERE lower(email)=?', (invite_email,)).fetchone()
+                if existing_user:
+                    flash('That email already has an account. Use a different email for this trial invite.', 'error')
+                    return redirect(url_for('client_users'))
+                existing_prospect = conn.execute(
+                    "SELECT id FROM clients WHERE lower(email)=? AND COALESCE(record_status,'active')='prospect' ORDER BY id DESC LIMIT 1",
+                    (invite_email,)
+                ).fetchone()
+                if existing_prospect:
+                    flash('A prospect invite for this email already exists. Open Prospect Invite Pipeline to resend it.', 'error')
+                    return redirect(url_for('client_users'))
+                token = generate_invite_token()
+                expires_at = (datetime.utcnow() + timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')
+                now_value = datetime.now().isoformat(timespec='seconds')
+                conn.execute(
+                    '''INSERT INTO clients (
+                           business_name, business_type, service_level, subscription_plan_code, subscription_status,
+                           subscription_amount, subscription_interval, subscription_autopay_enabled, subscription_next_billing_date,
+                           subscription_started_at, subscription_canceled_at, subscription_paused_at, onboarding_status,
+                           onboarding_started_at, onboarding_completed_at, onboarding_completed_by_user_id, record_status,
+                           archive_reason, archived_at, archived_by_user_id, reactivated_at, contact_name, email, billing_notes,
+                           trial_offer_days, trial_started_at, trial_ends_at
+                       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    (
+                        business_name,
+                        'Prospect',
+                        default_service_level(),
+                        service_level_plan_code(default_service_level()),
+                        default_subscription_status(),
+                        0.0,
+                        'monthly',
+                        0,
+                        '',
+                        '',
+                        '',
+                        '',
+                        'invited',
+                        now_value,
+                        '',
+                        None,
+                        'prospect',
+                        '',
+                        '',
+                        None,
+                        '',
+                        invite_name,
+                        invite_email,
+                        f'{trial_days}-day complimentary trial invite created before full business setup.',
+                        trial_days,
+                        '',
+                        '',
+                    )
+                )
+                client_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+                conn.execute(
+                    '''INSERT INTO business_invites (
+                           client_id, invited_email, invited_name, token, status, created_by_user_id, expires_at, invite_error, invite_kind, trial_days
+                       ) VALUES (?,?,?,?,?,?,?,?,?,?)''',
+                    (client_id, invite_email, invite_name, token, 'pending', user['id'], expires_at, '', 'prospect_trial', trial_days)
+                )
+                invite_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+                invite_link = build_invite_link(token)
+                try:
+                    invite_payload = send_trial_invite_email(invite_email, invite_name, business_name, invite_link, trial_days=trial_days)
+                    conn.execute('UPDATE business_invites SET status="sent", invite_error="" WHERE id=?', (invite_id,))
+                    conn.commit()
+                    log_email_delivery(
+                        client_id=client_id,
+                        email_type=invite_payload['email_type'],
+                        recipient_email=invite_email,
+                        recipient_name=invite_name,
+                        subject=invite_payload['subject'],
+                        body_text=invite_payload['body_text'],
+                        body_html=invite_payload['body_html'],
+                        status='sent',
+                        created_by_user_id=user['id'],
+                        related_invite_id=invite_id,
+                    )
+                    flash('7-day trial invite sent. The prospect is now tracked in the pipeline until setup is completed.', 'success')
+                except Exception as e:
+                    conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (str(e)[:500], invite_id))
+                    conn.commit()
+                    log_email_delivery(
+                        client_id=client_id,
+                        email_type='prospect_trial_invite',
+                        recipient_email=invite_email,
+                        recipient_name=invite_name,
+                        subject=f"Start your {trial_days}-day LedgerFlow trial for {business_name}",
+                        status='failed',
+                        error_message=str(e)[:500],
+                        created_by_user_id=user['id'],
+                        related_invite_id=invite_id,
+                    )
+                    flash(f'Trial invite email failed: {str(e)[:180]}', 'error')
+                return redirect(url_for('client_users'))
             if action == 'send_invite':
                 client_id = request.form.get('client_id', type=int)
                 token = generate_invite_token()
                 expires_at = (datetime.utcnow() + timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')
                 conn.execute(
-                    'INSERT INTO business_invites (client_id, invited_email, invited_name, token, status, created_by_user_id, expires_at, invite_error) VALUES (?,?,?,?,?,?,?,?)',
-                    (client_id, request.form.get('email', '').strip().lower(), request.form.get('full_name', '').strip(), token, 'pending', user['id'], expires_at, '')
+                    'INSERT INTO business_invites (client_id, invited_email, invited_name, token, status, created_by_user_id, expires_at, invite_error, invite_kind, trial_days) VALUES (?,?,?,?,?,?,?,?,?,?)',
+                    (client_id, request.form.get('email', '').strip().lower(), request.form.get('full_name', '').strip(), token, 'pending', user['id'], expires_at, '', 'business_access', 0)
                 )
                 invite_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
                 business = conn.execute('SELECT business_name FROM clients WHERE id=?', (client_id,)).fetchone()
@@ -7455,7 +7714,16 @@ def client_users():
                     return redirect(url_for('client_users'))
                 invite_link = build_invite_link(inv['token'])
                 try:
-                    invite_payload = send_invite_email(inv['invited_email'], inv['invited_name'], inv['business_name'], invite_link)
+                    if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial':
+                        invite_payload = send_trial_invite_email(
+                            inv['invited_email'],
+                            inv['invited_name'],
+                            inv['business_name'],
+                            invite_link,
+                            trial_days=int(inv['trial_days'] or 0),
+                        )
+                    else:
+                        invite_payload = send_invite_email(inv['invited_email'], inv['invited_name'], inv['business_name'], invite_link)
                     conn.execute('UPDATE business_invites SET status="sent", invite_error="" WHERE id=?', (invite_id,))
                     conn.commit()
                     log_email_delivery(
@@ -7476,10 +7744,14 @@ def client_users():
                     conn.commit()
                     log_email_delivery(
                         client_id=inv['client_id'],
-                        email_type='business_invite',
+                        email_type='prospect_trial_invite' if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else 'business_invite',
                         recipient_email=inv['invited_email'],
                         recipient_name=inv['invited_name'],
-                        subject=f"Welcome to LedgerFlow - set up your business access for {inv['business_name']}",
+                        subject=(
+                            f"Start your {int(inv['trial_days'] or default_trial_offer_days())}-day LedgerFlow trial for {inv['business_name']}"
+                            if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else
+                            f"Welcome to LedgerFlow - set up your business access for {inv['business_name']}"
+                        ),
                         status='failed',
                         error_message=str(e)[:500],
                         created_by_user_id=user['id'],
@@ -7500,6 +7772,8 @@ def client_users():
                    bi.status invite_status,
                    bi.accepted_user_id invite_accepted_user_id,
                    bi.invite_error,
+                   bi.invite_kind,
+                   bi.trial_days,
                    bi.created_at invite_created_at,
                    bi.expires_at invite_expires_at,
                    bi.used_at invite_used_at,
@@ -7507,7 +7781,7 @@ def client_users():
                        SELECT edl.id
                        FROM email_delivery_log edl
                        WHERE edl.client_id = c.id
-                         AND edl.email_type = 'business_invite'
+                         AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
                    ) AS last_invite_email_id,
@@ -7515,15 +7789,23 @@ def client_users():
                        SELECT edl.status
                        FROM email_delivery_log edl
                        WHERE edl.client_id = c.id
-                         AND edl.email_type = 'business_invite'
+                         AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
                    ) AS last_invite_email_status,
                    (
+                       SELECT edl.email_type
+                       FROM email_delivery_log edl
+                       WHERE edl.client_id = c.id
+                         AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS last_invite_email_type,
+                   (
                        SELECT edl.created_at
                        FROM email_delivery_log edl
                        WHERE edl.client_id = c.id
-                         AND edl.email_type = 'business_invite'
+                         AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
                    ) AS last_invite_email_sent_at
@@ -7763,14 +8045,28 @@ def business_invite(token):
     if session.get('user_id') or session.get('worker_id'):
         session.clear()
     with get_conn() as conn:
-        invite = conn.execute('SELECT bi.*, c.business_name FROM business_invites bi JOIN clients c ON c.id=bi.client_id WHERE bi.token=?', (token,)).fetchone()
+        invite = conn.execute(
+            '''SELECT bi.*, c.business_name, c.contact_name, c.email client_email, c.record_status, c.service_level,
+                      c.subscription_plan_code, c.trial_offer_days, c.trial_started_at, c.trial_ends_at
+               FROM business_invites bi
+               JOIN clients c ON c.id=bi.client_id
+               WHERE bi.token=?''',
+            (token,)
+        ).fetchone()
         if not invite:
             abort(404)
         expires_at = datetime.strptime(invite['expires_at'], '%Y-%m-%d %H:%M:%S')
         if invite['status'] != 'accepted' and datetime.utcnow() > expires_at:
             conn.execute('UPDATE business_invites SET status="expired" WHERE id=?', (invite['id'],))
             conn.commit()
-            invite = conn.execute('SELECT bi.*, c.business_name FROM business_invites bi JOIN clients c ON c.id=bi.client_id WHERE bi.token=?', (token,)).fetchone()
+            invite = conn.execute(
+                '''SELECT bi.*, c.business_name, c.contact_name, c.email client_email, c.record_status, c.service_level,
+                          c.subscription_plan_code, c.trial_offer_days, c.trial_started_at, c.trial_ends_at
+                   FROM business_invites bi
+                   JOIN clients c ON c.id=bi.client_id
+                   WHERE bi.token=?''',
+                (token,)
+            ).fetchone()
         if request.method == 'POST' and invite['status'] in ('pending','sent','failed'):
             email = request.form.get('email', '').strip().lower()
             full_name = request.form.get('full_name', '').strip()
@@ -7803,6 +8099,21 @@ def business_invite(token):
                                updated_by_user_id=?
                            WHERE id=?''',
                         (full_name, email, login_created_at, new_user['id'], invite['client_id'])
+                    )
+                if normalize_invite_kind(invite['invite_kind']) == 'prospect_trial':
+                    trial_days = int(invite['trial_days'] or client_row['trial_offer_days'] or default_trial_offer_days())
+                    trial_started_at_value = client_row['trial_started_at'] or login_created_at
+                    trial_started_at_value, trial_ends_at_value = trial_date_window(trial_started_at_value, trial_days)
+                    conn.execute(
+                        '''UPDATE clients
+                           SET trial_offer_days=CASE WHEN COALESCE(trial_offer_days, 0)=0 THEN ? ELSE trial_offer_days END,
+                               trial_started_at=CASE WHEN COALESCE(trial_started_at,'')='' THEN ? ELSE trial_started_at END,
+                               trial_ends_at=CASE WHEN COALESCE(trial_ends_at,'')='' THEN ? ELSE trial_ends_at END,
+                               subscription_next_billing_date=CASE WHEN COALESCE(subscription_next_billing_date,'')='' THEN ? ELSE subscription_next_billing_date END,
+                               updated_at=?,
+                               updated_by_user_id=?
+                           WHERE id=?''',
+                        (trial_days, trial_started_at_value, trial_ends_at_value, trial_ends_at_value[:10], login_created_at, new_user['id'], invite['client_id'])
                     )
                 onboarding_needed = not client_onboarding_is_complete(conn, client_row)
                 if onboarding_needed:
@@ -7852,7 +8163,15 @@ def business_invite(token):
                 else:
                     flash('Business login created. Sign in below.', 'success')
                 return redirect(url_for('dashboard'))
-    return render_template('business_invite.html', invite=invite)
+    trial_offer_days = int(invite['trial_days'] or invite['trial_offer_days'] or 0)
+    return render_template(
+        'business_invite.html',
+        invite=invite,
+        is_trial_invite=normalize_invite_kind(invite['invite_kind']) == 'prospect_trial' and trial_offer_days > 0,
+        trial_offer_days=trial_offer_days or default_trial_offer_days(),
+        subscription_tiers=subscription_tier_view_data(),
+        invite_kind_label=invite_kind_label(invite['invite_kind']),
+    )
 
 
 @app.route('/business-rejoin/<token>', methods=['GET', 'POST'])
@@ -7931,6 +8250,9 @@ def business_onboarding():
                ORDER BY is_default DESC, updated_at DESC, id DESC''',
             (client_id,)
         ).fetchone()
+        trial_offer_days = int(client['trial_offer_days'] or 0)
+        trial_ends_at = (client['trial_ends_at'] or '').strip()
+        trial_billing_start = trial_ends_at[:10] if trial_offer_days and trial_ends_at else ''
         if request.method == 'POST':
             selected_language = normalize_language(
                 request.form.get('preferred_language')
@@ -8135,6 +8457,9 @@ def business_onboarding():
             payment_method_type_options=payment_method_type_options(),
             default_method=default_method,
             payment_method_type_labels=payment_method_type_label_map(),
+            trial_offer_days=trial_offer_days,
+            trial_ends_at=trial_ends_at,
+            default_subscription_start_date=(request.form.get('subscription_start_date', '').strip() or client['subscription_next_billing_date'] or trial_billing_start or today),
         )
 
 

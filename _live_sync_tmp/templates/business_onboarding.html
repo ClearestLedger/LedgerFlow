@@ -17,6 +17,21 @@
       <span class='summary-pill'>{{ tr('Unlock workspace') }}</span>
     </div>
   </div>
+  {% if trial_offer_days %}
+  <div class='card section-frame trial-onboarding-note' style='margin-bottom:18px'>
+    <div class='card-head'>
+      <h3>{{ tr('Complimentary Trial Active') }}</h3>
+      <span class='badge'>{{ trial_offer_days }} {{ tr('Days') }}</span>
+    </div>
+    <div class='small'>{{ tr('This business claimed a complimentary trial offer. Your subscription setup is being saved now so billing can start after the trial window ends.') }}</div>
+    {% if trial_ends_at %}
+    <div class='summary-strip' style='margin-top:12px'>
+      <span class='summary-pill'>{{ tr('Trial ends') }} {{ trial_ends_at[:10] }}</span>
+      <span class='summary-pill'>{{ tr('Suggested first billing date') }} {{ default_subscription_start_date }}</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
 
   <form method='post' class='grid cards-2' style='align-items:start'>
     <section class='card section-frame'>
@@ -76,7 +91,7 @@
         <div class='card stat-card premium-stat'>
           <h3>{{ tr('Billing Start Date') }}</h3>
           <div class='metric'>
-            <input name='subscription_start_date' type='date' value='{{ request.form.get("subscription_start_date", client.subscription_next_billing_date or today) }}' required>
+            <input name='subscription_start_date' type='date' value='{{ default_subscription_start_date }}' required>
           </div>
           <div class='small'>{{ tr('This becomes your first recorded billing date') }}</div>
         </div>

@@ -46,6 +46,17 @@
     </form>
     </details>
     <details class='compact-details users-console-panel' style='margin-top:12px'>
+      <summary><span>Send 7-Day Trial Invite</span></summary>
+      <div class='small' style='margin:12px 0'>Use this elite outreach flow for a potential business. LedgerFlow will send a polished trial email, show pricing and a video section on the landing page, and start a 7-day complimentary period once the business claims the invite.</div>
+      <form method='post' class='form-grid'>
+      <input type='hidden' name='action' value='send_trial_invite'>
+      <div><label>Business Name</label><input name='business_name' required></div>
+      <div><label>Primary Contact Name</label><input name='full_name' required></div>
+      <div><label>Primary Contact Email</label><input name='email' required></div>
+      <div><button>Send 7-Day Trial Invite</button></div>
+    </form>
+    </details>
+    <details class='compact-details users-console-panel' style='margin-top:12px'>
       <summary><span>Create Business Login Directly</span></summary>
       <div class='small' style='margin:12px 0'>Use only when you want to create the login immediately instead of sending an invite first.</div>
       <form method='post' class='form-grid'>
@@ -81,9 +92,9 @@
       <summary>
         <span>Open Invite Delivery History</span>
       </summary>
-      <div class='invite-history-head'>
-        <div class='small'>Review invite results without keeping the full log open on the page.</div>
-        <div class='invite-metrics'>
+    <div class='invite-history-head'>
+      <div class='small'>Review invite results without keeping the full log open on the page.</div>
+      <div class='invite-metrics'>
           <span class='status-chip sent'>Sent {{ invite_sent_count }}</span>
           <span class='status-chip failed'>Failed {{ invite_failed_count }}</span>
           <span class='status-chip pending'>Pending {{ invite_pending_count }}</span>
@@ -95,10 +106,11 @@
       </div>
       {% if invites %}
       <table class='table'>
-        <tr><th>Business</th><th>Email</th><th>Status</th><th>Invite Link</th><th>Action</th><th>Error</th></tr>
+        <tr><th>Business</th><th>Offer</th><th>Email</th><th>Status</th><th>Invite Link</th><th>Action</th><th>Error</th></tr>
         {% for invite in invites %}
-        <tr data-search-text='{{ (invite.business_name or "")|lower }} {{ (invite.invited_email or "")|lower }} {{ (invite.status or "")|lower }} {{ (invite.invited_name or "")|lower }} {{ (invite.invite_error or "")|lower }}'>
+        <tr data-search-text='{{ (invite.business_name or "")|lower }} {{ (invite.invited_email or "")|lower }} {{ (invite.status or "")|lower }} {{ (invite.invited_name or "")|lower }} {{ (invite.invite_error or "")|lower }} {{ (invite.invite_kind or "")|lower }}'>
           <td>{{ invite.business_name }}</td>
+          <td>{% if invite.invite_kind == 'prospect_trial' %}{{ invite.trial_days or 7 }}-Day Trial{% else %}Business Access{% endif %}</td>
           <td>{{ invite.invited_email }}</td>
           <td><span class='status-chip {{ invite.status or "pending" }}'>{{ invite.status or 'pending' }}</span></td>
           <td><input value='{{ build_invite_link(invite.token) if app_base_url else "Set APP_BASE_URL in Email Settings" }}' readonly></td>
@@ -141,6 +153,7 @@
           <div>
             <strong>{{ c.business_name }}</strong>
             <div class='small'>{{ c.contact_name or 'Contact missing' }}{% if c.email %} | {{ c.email }}{% endif %}</div>
+            <div class='small'>Offer: {% if c.invite_kind == 'prospect_trial' %}<span class='status-chip accepted'>{{ c.trial_days or 7 }}-Day Trial</span>{% else %}<span class='status-chip pending'>Prospect Invite</span>{% endif %}</div>
             <div class='small'>Pipeline Stage: <span class='status-chip {{ c.pipeline_stage.key }}'>{{ c.pipeline_stage.label }}</span></div>
             <div class='small'>{{ c.pipeline_stage.detail }}</div>
             {% if c.invite_created_at %}
@@ -153,7 +166,7 @@
             <div class='small'>Setup started: {{ c.onboarding_started_at }}</div>
             {% endif %}
             {% if c.last_invite_email_sent_at %}
-            <div class='small'>Last email log: <span class='status-chip {{ c.last_invite_email_status or "sent" }}'>{{ c.last_invite_email_status or 'sent' }}</span> | {{ c.last_invite_email_sent_at }}</div>
+            <div class='small'>Last email log: <span class='status-chip {{ c.last_invite_email_status or "sent" }}'>{{ c.last_invite_email_status or 'sent' }}</span> | {{ c.last_invite_email_sent_at }}{% if c.last_invite_email_type %} | {{ c.last_invite_email_type|replace('_', ' ')|title }}{% endif %}</div>
             {% endif %}
             {% if c.invite_error %}
             <div class='small' style='color:#a4342b'>Last delivery issue: {{ c.invite_error }}</div>
