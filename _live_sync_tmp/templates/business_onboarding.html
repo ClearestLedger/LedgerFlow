@@ -36,28 +36,36 @@
 
     <section class='card section-frame'>
       <div class='card-head'><h3>{{ tr('Subscription Setup') }}</h3><span class='badge'>{{ tr('Choose Your Tier') }}</span></div>
-      <div class='grid cards-3' style='margin-bottom:14px'>
-        {% for value, label in service_level_options %}
-        {% set selected_level = request.form.get("service_level", client.service_level or "self_service") %}
-        <label class='card' style='box-shadow:none;border:1px solid {% if selected_level == value %}#bfd4f6{% else %}#E6ECF2{% endif %};padding:16px;cursor:pointer;background:{% if selected_level == value %}#f7fbff{% else %}#fff{% endif %}'>
-          <input type='radio' name='service_level' value='{{ value }}' {% if selected_level == value %}checked{% endif %} style='margin-right:8px'>
-          <strong>{{ label }}</strong>
-          <div class='small' style='margin-top:8px'>
-            {% if value == 'self_service' %}
-            Core billing, records, and self-managed organization.
-            {% elif value == 'assisted_service' %}
-            More guidance, support, and workflow help.
-            {% else %}
-            Highest-touch support and principal-level service.
-            {% endif %}
+      {% set selected_level = request.form.get("service_level", client.service_level or "self_service") %}
+      <div class='subscription-tier-grid' style='margin-bottom:14px'>
+        {% for tier in subscription_tiers %}
+        <label class='subscription-tier-card{% if selected_level == tier.key %} selected{% endif %}'>
+          <input type='radio' name='service_level' value='{{ tier.key }}' {% if selected_level == tier.key %}checked{% endif %}>
+          <div class='subscription-tier-head'>
+            <div>
+              <div class='subscription-tier-label'>{{ tier.label }}</div>
+              <div class='subscription-tier-tagline'>{{ tier.tagline }}</div>
+            </div>
+            <div class='subscription-tier-price'>${{ '%.0f'|format(tier.monthly_amount) }}<span>/mo</span></div>
           </div>
+          <div class='subscription-tier-bestfor'>{{ tier.best_for }}</div>
+          <ul class='subscription-tier-list'>
+            {% for feature in tier.features %}
+            <li>{{ feature }}</li>
+            {% endfor %}
+          </ul>
+          {% if tier.coming_soon %}
+          <div class='subscription-tier-coming-soon'>
+            <strong>Coming Soon:</strong> {{ tier.coming_soon|join(', ') }}
+          </div>
+          {% endif %}
         </label>
         {% endfor %}
       </div>
       <div class='grid cards-3'>
         <div class='card stat-card premium-stat'>
           <h3>{{ tr('Plan Code') }}</h3>
-          <div class='metric' id='planCodePreview'>{{ (client.subscription_plan_code or 'self-service-monthly') if not request.form.get("service_level") else '' }}</div>
+          <div class='metric' id='planCodePreview'>{{ (client.subscription_plan_code or subscription_tier_map.get(selected_level, subscription_tier_map.get("self_service")).plan_code) if not request.form.get("service_level") else '' }}</div>
           <div class='small'>Assigned automatically from your selected tier</div>
         </div>
         <div class='card stat-card premium-stat premium-stat-accent'>
@@ -73,7 +81,9 @@
           <div class='small'>This becomes your first recorded billing date</div>
         </div>
       </div>
-      <div class='small' style='margin-top:12px'>Live autopay is not executed inside the app yet. Your subscription method on file is recorded here so the administrator can manage billing properly.</div>
+      <div class='tier-rollout-note' style='margin-top:12px'>
+        This private client rollout uses administrator-managed billing. Your selected plan, pricing, and method on file are saved now so billing can begin immediately, while self-service autopay and premium banking tools continue through final buildout.
+      </div>
       <label class='small' style='display:block;margin-top:10px'><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if request.form.get("subscription_autopay_enabled", '1' if client.subscription_autopay_enabled else '') %}checked{% endif %}> {{ tr('Keep this method on file for subscription billing.') }}</label>
     </section>
 
@@ -110,19 +120,22 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  var planMap = {
-    self_service: { plan: 'self-service-monthly', amount: 49.00 },
-    assisted_service: { plan: 'assisted-service-monthly', amount: 79.00 },
-    premium_principal: { plan: 'premium-principal-monthly', amount: 149.00 }
-  };
+  var planMap = {{ subscription_tier_map|tojson }};
   var planPreview = document.getElementById('planCodePreview');
   var amountPreview = document.getElementById('subscriptionAmountPreview');
+  function refreshTierCardState() {
+    document.querySelectorAll('.subscription-tier-card').forEach(function (card) {
+      var radio = card.querySelector('input[type="radio"]');
+      card.classList.toggle('selected', !!(radio && radio.checked));
+    });
+  }
   function updateSubscriptionPreview() {
     var selected = document.querySelector('input[name="service_level"]:checked');
     var key = selected ? selected.value : 'self_service';
     var meta = planMap[key] || planMap.self_service;
-    if (planPreview) planPreview.textContent = meta.plan;
-    if (amountPreview) amountPreview.textContent = '$' + meta.amount.toFixed(2);
+    if (planPreview) planPreview.textContent = meta.plan_code;
+    if (amountPreview) amountPreview.textContent = '$' + Number(meta.monthly_amount || 0).toFixed(2);
+    refreshTierCardState();
   }
   document.querySelectorAll('input[name="service_level"]').forEach(function (radio) {
     radio.addEventListener('change', updateSubscriptionPreview);

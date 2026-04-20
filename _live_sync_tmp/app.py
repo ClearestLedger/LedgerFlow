@@ -332,12 +332,82 @@ def eftps_statuses():
     return ['Not Enrolled', 'Pending', 'Enrolled']
 
 
-def service_level_options():
+def subscription_tier_catalog():
     return [
-        ('self_service', 'Self-Service'),
-        ('assisted_service', 'Assisted Service'),
-        ('premium_principal', 'Premium / Principal Level'),
+        {
+            'key': 'self_service',
+            'label': 'Essential',
+            'plan_code': 'essential-client-monthly',
+            'monthly_amount': Decimal('59.00'),
+            'tagline': 'Private client workspace for owner-led service businesses that need clean billing, records, and calendar visibility.',
+            'best_for': 'Best for smaller direct-admin client accounts.',
+            'features': [
+                'Business workspace dashboard',
+                'Billing center with method on file',
+                'Income records and expense tracking',
+                'Calendar and work schedule access',
+                'Direct administrator support',
+            ],
+            'coming_soon': [],
+        },
+        {
+            'key': 'assisted_service',
+            'label': 'Growth',
+            'plan_code': 'growth-client-monthly',
+            'monthly_amount': Decimal('99.00'),
+            'tagline': 'Adds team tools and stronger operational support for growing businesses with active payroll coordination.',
+            'best_for': 'Best for businesses managing staff and payroll visibility.',
+            'features': [
+                'Everything in Essential',
+                'Team member portal access',
+                'Team member payouts and pay stubs',
+                'Policies, notices, and requests',
+                'Expanded administrator guidance',
+            ],
+            'coming_soon': [],
+        },
+        {
+            'key': 'premium_principal',
+            'label': 'Premium',
+            'plan_code': 'premium-client-monthly',
+            'monthly_amount': Decimal('149.00'),
+            'tagline': 'Highest-touch private client tier with premium onboarding, priority support, and principal-level oversight.',
+            'best_for': 'Best for clients who want concierge support and deeper administrator involvement.',
+            'features': [
+                'Everything in Growth',
+                'Priority support response',
+                'Premium onboarding review',
+                'Principal-level workspace oversight',
+                'Higher-touch billing coordination',
+            ],
+            'coming_soon': [
+                'Live bank connection',
+                'Check printing workflow',
+            ],
+        },
     ]
+
+
+def subscription_tier_details_map():
+    return {item['key']: item for item in subscription_tier_catalog()}
+
+
+def subscription_tier_view_data():
+    return [
+        {
+            **item,
+            'monthly_amount': float(item['monthly_amount']),
+        }
+        for item in subscription_tier_catalog()
+    ]
+
+
+def subscription_tier_view_map():
+    return {item['key']: item for item in subscription_tier_view_data()}
+
+
+def service_level_options():
+    return [(item['key'], item['label']) for item in subscription_tier_catalog()]
 
 
 def service_level_label_map():
@@ -355,12 +425,8 @@ def normalize_service_level(value: str) -> str:
 
 
 def service_level_plan_code(service_level: str) -> str:
-    mapping = {
-        'self_service': 'self-service-monthly',
-        'assisted_service': 'assisted-service-monthly',
-        'premium_principal': 'premium-principal-monthly',
-    }
-    return mapping.get(normalize_service_level(service_level), 'self-service-monthly')
+    normalized = normalize_service_level(service_level)
+    return subscription_tier_details_map().get(normalized, subscription_tier_details_map()[default_service_level()])['plan_code']
 
 
 def business_archive_reason_options():
@@ -487,27 +553,28 @@ def normalize_payment_type(value: str) -> str:
 
 
 def suggested_payment_amount(service_level: str, payment_type: str) -> Decimal | None:
+    tier_map = subscription_tier_details_map()
     pricing = {
         'self_service': {
-            'bookkeeping': Decimal('150.00'),
-            'extra_login_fee': Decimal('25.00'),
-            'assisted_service_fee': Decimal('75.00'),
-            'monthly_platform_fee': Decimal('49.00'),
-            'cleanup_reconstruction': Decimal('300.00'),
+            'bookkeeping': Decimal('195.00'),
+            'extra_login_fee': Decimal('29.00'),
+            'assisted_service_fee': Decimal('89.00'),
+            'monthly_platform_fee': tier_map['self_service']['monthly_amount'],
+            'cleanup_reconstruction': Decimal('350.00'),
         },
         'assisted_service': {
-            'bookkeeping': Decimal('250.00'),
-            'extra_login_fee': Decimal('35.00'),
-            'assisted_service_fee': Decimal('95.00'),
-            'monthly_platform_fee': Decimal('79.00'),
-            'cleanup_reconstruction': Decimal('450.00'),
+            'bookkeeping': Decimal('325.00'),
+            'extra_login_fee': Decimal('39.00'),
+            'assisted_service_fee': Decimal('129.00'),
+            'monthly_platform_fee': tier_map['assisted_service']['monthly_amount'],
+            'cleanup_reconstruction': Decimal('550.00'),
         },
         'premium_principal': {
-            'bookkeeping': Decimal('500.00'),
-            'extra_login_fee': Decimal('50.00'),
-            'assisted_service_fee': Decimal('150.00'),
-            'monthly_platform_fee': Decimal('149.00'),
-            'cleanup_reconstruction': Decimal('750.00'),
+            'bookkeeping': Decimal('550.00'),
+            'extra_login_fee': Decimal('59.00'),
+            'assisted_service_fee': Decimal('189.00'),
+            'monthly_platform_fee': tier_map['premium_principal']['monthly_amount'],
+            'cleanup_reconstruction': Decimal('900.00'),
         },
     }
     return pricing.get(normalize_service_level(service_level), {}).get(normalize_payment_type(payment_type))
@@ -2254,6 +2321,15 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = IS_PRODUCTION or os.environ.get('SESSION_COOKIE_SECURE', '0') == '1'
+
+
+def ai_guide_visible() -> bool:
+    raw = (os.environ.get('AI_GUIDE_VISIBLE') or '').strip().lower()
+    if raw in {'1', 'true', 'yes', 'on'}:
+        return True
+    if raw in {'0', 'false', 'no', 'off'}:
+        return False
+    return not IS_PRODUCTION
 
 
 def get_conn():
@@ -4840,7 +4916,8 @@ def inject_globals():
     pending_alert_count = len(pending_review_alerts()) if user and user['role'] == 'admin' else 0
     shell_messenger = internal_shell_messenger_context(user, active_client, clients) if user else {'enabled': False}
     worker_shell_messenger = worker_shell_messenger_context(worker) if worker else {'enabled': False}
-    shell_assistant = shell_assistant_context(user, worker, active_client, current_mode)
+    assistant_visible = ai_guide_visible()
+    shell_assistant = shell_assistant_context(user, worker, active_client, current_mode) if assistant_visible else {'enabled': False}
     current_language = current_language_code(user, worker)
     def tr(text: str, **kwargs) -> str:
         return translate_text(text, current_language, **kwargs)
@@ -4862,6 +4939,9 @@ def inject_globals():
         'shell_messenger': shell_messenger,
         'worker_shell_messenger': worker_shell_messenger,
         'shell_assistant': shell_assistant,
+        'ai_guide_visible': assistant_visible,
+        'subscription_tiers': subscription_tier_view_data(),
+        'subscription_tier_map': subscription_tier_view_map(),
         'current_request_path': current_request_path(),
         'current_language': current_language,
         'language_options': language_options(),
@@ -4891,6 +4971,11 @@ def index():
     if user['role'] == 'client' and user_requires_business_onboarding(user):
         return redirect(url_for('business_onboarding'))
     return redirect(url_for('cpa_dashboard' if user['role']=='admin' else 'dashboard'))
+
+
+@app.route('/trust-and-policies')
+def trust_center():
+    return render_template('trust_center.html')
 
 
 @app.route('/set-language', methods=['POST'])
@@ -7216,6 +7301,8 @@ def email_settings():
 @app.route('/ai-guide-settings', methods=['GET', 'POST'])
 @admin_required
 def ai_guide_settings():
+    if not ai_guide_visible():
+        abort(404)
     ensure_ai_assistant_profile_table()
     user = current_user()
     profile = load_ai_assistant_profile()
@@ -7267,6 +7354,8 @@ def ai_guide_settings():
 
 @app.route('/assistant/respond', methods=['POST'])
 def assistant_respond():
+    if not ai_guide_visible():
+        return jsonify({'ok': False, 'error': 'AI Guide is not enabled for this portal.'}), 404
     user = current_user()
     worker = current_worker()
     if not user and not worker:

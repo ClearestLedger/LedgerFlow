@@ -103,7 +103,9 @@
         <a class='app-nav-link {% if request.endpoint=="clients" %}active{% endif %}' href='{{ url_for("clients") }}'>{{ tr('Businesses') }}</a>
         <a class='app-nav-link {% if request.endpoint=="client_users" %}active{% endif %}' href='{{ url_for("client_users") }}'>{{ tr('Business Users') }}</a>
         <a class='app-nav-link {% if request.endpoint=="email_settings" %}active{% endif %}' href='{{ url_for("email_settings") }}'>{{ tr('Email Settings') }}</a>
+        {% if ai_guide_visible %}
         <a class='app-nav-link {% if request.endpoint=="ai_guide_settings" %}active{% endif %}' href='{{ url_for("ai_guide_settings") }}'>{{ tr('AI Guide Settings') }}</a>
+        {% endif %}
         <a class='app-nav-link {% if request.endpoint=="admin_calendar" %}active{% endif %}' href='{{ url_for("admin_calendar") }}'>{{ tr('Calendar') }}</a>
         <a class='app-nav-link {% if request.endpoint=="admin_tasks" %}active{% endif %}' href='{{ url_for("admin_tasks") }}'>{{ tr('Admin Tasks') }}</a>
       </div>
@@ -204,6 +206,28 @@
     <section class='workspace-main'>
   {% endif %}
   {% block body %}{% endblock %}
+  <footer class='portal-footer'>
+    <div class='portal-footer-brand'>
+      <div class='portal-footer-title'>{{ app_name }}</div>
+      <div class='portal-footer-copy'>Private client portal currently in final invited-client rollout. Core workspace functions are live, permission-based, and may continue to improve as the platform is finalized.</div>
+      <div class='portal-footer-disclaimer'>This portal uses secured account controls and active administrator oversight. It does not claim formal security certification or guarantee uninterrupted service.</div>
+    </div>
+    <div class='portal-footer-links'>
+      <a href='{{ url_for("trust_center") }}#rollout'>Rollout Notice</a>
+      <a href='{{ url_for("trust_center") }}#privacy'>Privacy Notice</a>
+      <a href='{{ url_for("trust_center") }}#terms'>Terms of Use</a>
+      <a href='{{ url_for("trust_center") }}#security'>Security &amp; Data</a>
+      {% if current_user %}
+        {% if current_user.role == 'admin' %}
+        <a href='{{ url_for("help_center") }}'>Support</a>
+        {% elif active_client %}
+        <a href='{{ url_for("help_center", client_id=active_client.id) }}'>Support</a>
+        {% endif %}
+      {% else %}
+      <a href='{{ url_for("main_portal") }}'>Main Portal</a>
+      {% endif %}
+    </div>
+  </footer>
   {% if admin_business_workspace %}
     </section>
   </div>
@@ -214,7 +238,9 @@
 </div>
 {% endif %}
 
+{% if ai_guide_visible %}
 {% include '_shell_assistant.html' %}
+{% endif %}
 {% include '_shell_messenger.html' %}
 
 <script>

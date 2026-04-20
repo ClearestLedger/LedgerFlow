@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Trust &amp; Policies</div>
+    <div class='page-title'>Private Client Rollout Notice</div>
+    <div class='page-subtitle'>Core LedgerFlow client functions are live for invited clients while final platform refinements continue under administrator oversight.</div>
+  </div>
+  <a class='btn btn-secondary' href='{{ url_for("main_portal") }}'>Main Portal</a>
+</div>
+
+<div class='grid cards-2 legal-grid'>
+  <section class='card section-frame' id='rollout'>
+    <div class='card-head'><h3>Final Rollout Notice</h3><span class='badge'>Live Now</span></div>
+    <p class='legal-copy'>This private client portal is active for invited clients and administrator-managed accounts. Core workspace tools are live, and some non-critical experience improvements may continue during the final rollout stage.</p>
+    <ul class='subscription-tier-list'>
+      <li>Client access is permission-based and controlled by the administrator.</li>
+      <li>Billing, records, schedules, and workspace management functions are active.</li>
+      <li>Some advanced or premium features may still be labeled coming soon.</li>
+    </ul>
+  </section>
+
+  <section class='card section-frame' id='privacy'>
+    <div class='card-head'><h3>Privacy Notice</h3><span class='badge'>Client Data</span></div>
+    <p class='legal-copy'>LedgerFlow stores business, team-member, billing, and account-access records needed to operate the portal for invited clients. Information is used to manage the platform, support billing workflows, and maintain administrator-supervised client service.</p>
+    <ul class='subscription-tier-list'>
+      <li>Access is limited to authorized accounts and administrator-managed workflows.</li>
+      <li>Stored information may include contact details, business records, notices, payment-method references, and email-delivery logs.</li>
+      <li>Clients should contact their administrator for record corrections, support questions, or account changes.</li>
+    </ul>
+  </section>
+
+  <section class='card section-frame' id='terms'>
+    <div class='card-head'><h3>Terms of Use</h3><span class='badge'>Portal Use</span></div>
+    <p class='legal-copy'>Use of this portal is limited to invited and authorized client accounts. Users must keep login credentials private, use accurate business information, and avoid unauthorized sharing, misuse, or interference with the portal.</p>
+    <ul class='subscription-tier-list'>
+      <li>Subscriptions, billing arrangements, and service scope are managed directly through the administrator.</li>
+      <li>Access may be suspended or changed if service is canceled, permissions are removed, or account use becomes improper.</li>
+      <li>The platform may continue to improve through normal updates during final rollout.</li>
+    </ul>
+  </section>
+
+  <section class='card section-frame' id='security'>
+    <div class='card-head'><h3>Security &amp; Data Notice</h3><span class='badge'>Important</span></div>
+    <p class='legal-copy'>LedgerFlow uses secured account controls, environment-level application secrets, and administrator-managed access policies. This notice does not represent formal certification, third-party audit attestation, or an absolute guarantee of uninterrupted operation.</p>
+    <ul class='subscription-tier-list'>
+      <li>Security-sensitive settings are managed through protected administrator controls.</li>
+      <li>Clients should report suspicious activity immediately to their administrator.</li>
+      <li>Email delivery and billing workflows depend on active third-party service availability.</li>
+    </ul>
+  </section>
+</div>
+{% endblock %}
