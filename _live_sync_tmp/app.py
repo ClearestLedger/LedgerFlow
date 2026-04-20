@@ -3516,14 +3516,23 @@ def allowed_migration_files() -> set[str]:
     return {'rds_core_web.db', 'email_runtime_config.json', '.local_secret_key'}
 
 
+def migration_target_paths() -> dict[str, Path]:
+    return {
+        'rds_core_web.db': DB_PATH,
+        'email_runtime_config.json': EMAIL_CONFIG_PATH,
+        '.local_secret_key': DATA_DIR / '.local_secret_key',
+    }
+
+
 def backup_existing_migration_files() -> Path | None:
-    existing = [name for name in allowed_migration_files() if (DATA_DIR / name).exists()]
+    targets = migration_target_paths()
+    existing = [name for name, path in targets.items() if path.exists()]
     if not existing:
         return None
     backup_dir = DATA_DIR / f"pre_import_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     backup_dir.mkdir(parents=True, exist_ok=True)
     for name in existing:
-        shutil.copy2(DATA_DIR / name, backup_dir / name)
+        shutil.copy2(targets[name], backup_dir / name)
     return backup_dir
 
 
@@ -3540,12 +3549,48 @@ def apply_migration_bundle(bundle_path: Path) -> tuple[list[str], Path | None]:
         raise RuntimeError('Migration bundle must include rds_core_web.db.')
     backup_dir = backup_existing_migration_files()
     written: list[str] = []
+    targets = migration_target_paths()
     for name, raw in extracted.items():
-        target = DATA_DIR / name
+        target = targets[name]
+        target.parent.mkdir(parents=True, exist_ok=True)
         with open(target, 'wb') as fh:
             fh.write(raw)
         written.append(name)
     return written, backup_dir
+
+
+def production_import_status_snapshot() -> dict:
+    db_exists = DB_PATH.exists()
+    admin_count = 0
+    user_count = 0
+    worker_count = 0
+    client_count = 0
+    db_error = ''
+    if db_exists:
+        try:
+            with get_conn() as conn:
+                admin_count = int(conn.execute("SELECT COUNT(*) FROM users WHERE role='admin'").fetchone()[0] or 0)
+                user_count = int(conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] or 0)
+                worker_count = int(conn.execute("SELECT COUNT(*) FROM workers").fetchone()[0] or 0)
+                client_count = int(conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0] or 0)
+        except Exception as exc:
+            db_error = str(exc)
+    return {
+        'data_dir': str(DATA_DIR),
+        'db_path': str(DB_PATH),
+        'email_config_path': str(EMAIL_CONFIG_PATH),
+        'db_exists': db_exists,
+        'db_size': DB_PATH.stat().st_size if db_exists else 0,
+        'email_config_exists': EMAIL_CONFIG_PATH.exists(),
+        'secret_key_exists': (DATA_DIR / '.local_secret_key').exists(),
+        'admin_count': admin_count,
+        'user_count': user_count,
+        'worker_count': worker_count,
+        'client_count': client_count,
+        'database_path_env': (os.environ.get('DATABASE_PATH') or '').strip(),
+        'data_dir_env': (os.environ.get('DATA_DIR') or '').strip(),
+        'db_error': db_error,
+    }
 
 
 def current_language_code(user=None, worker=None) -> str:
@@ -5407,7 +5452,7 @@ def production_import():
                     try:
                         written_files, backup_dir = apply_migration_bundle(bundle_path)
                         backup_path = str(backup_dir) if backup_dir else ''
-                        success_text = 'Migration imported successfully. Restart the Render service now so the imported database and secret key are loaded cleanly.'
+                        success_text = 'Migration imported successfully. Restart the Render service now so the imported database and secret key are loaded cleanly, then open /production-import-status to verify the live database.'
                     except Exception as exc:
                         error_text = str(exc)
     return render_template_string(
@@ -5470,6 +5515,79 @@ def production_import():
         success_text=success_text,
         backup_path=backup_path,
         written_files=written_files,
+    )
+
+
+@app.route('/production-import-status')
+def production_import_status():
+    if not production_import_enabled():
+        abort(404)
+    snapshot = production_import_status_snapshot()
+    return render_template_string(
+        """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LedgerFlow Production Import Status</title>
+  <style>
+    body { margin: 0; font-family: Georgia, 'Times New Roman', serif; background: #141B2D; color: #F4F1E8; }
+    .shell { max-width: 880px; margin: 48px auto; padding: 32px; background: rgba(26,34,54,0.94); border: 1px solid rgba(116,130,155,0.38); border-radius: 22px; box-shadow: 0 26px 60px rgba(34,37,43,0.35); }
+    h1 { margin: 0 0 10px; font-size: 30px; }
+    p, li { color: #E6E7E8; line-height: 1.6; }
+    .eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: 12px; color: #74829B; margin-bottom: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 14px; margin: 20px 0; }
+    .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(116,130,155,0.28); border-radius: 18px; padding: 16px; }
+    .label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #74829B; margin-bottom: 8px; }
+    .metric { font-size: 28px; font-weight: 700; color: #F4F1E8; }
+    code { display:block; white-space:pre-wrap; word-break:break-word; background: rgba(255,255,255,0.06); color: #E6E7E8; border-radius: 12px; padding: 12px; margin-top: 8px; }
+    .ok { color: #9dd29f; }
+    .bad { color: #ffb4b4; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="eyebrow">LedgerFlow Production Import Status</div>
+    <h1>Live database verification</h1>
+    <p>Use this page after import and restart. If <strong>Admin Count</strong> is still <strong>0</strong>, this Render service is still reading an empty database.</p>
+    <div class="grid">
+      <div class="card"><div class="label">Admin Count</div><div class="metric">{{ snapshot.admin_count }}</div></div>
+      <div class="card"><div class="label">Users</div><div class="metric">{{ snapshot.user_count }}</div></div>
+      <div class="card"><div class="label">Businesses</div><div class="metric">{{ snapshot.client_count }}</div></div>
+      <div class="card"><div class="label">Team Members</div><div class="metric">{{ snapshot.worker_count }}</div></div>
+    </div>
+    <div class="card">
+      <div class="label">Database File</div>
+      <div class="{{ 'ok' if snapshot.db_exists else 'bad' }}">{{ 'Present' if snapshot.db_exists else 'Missing' }}</div>
+      <code>{{ snapshot.db_path }}</code>
+      <div class="label" style="margin-top:12px">Database Size</div>
+      <div>{{ snapshot.db_size }} bytes</div>
+    </div>
+    <div class="card">
+      <div class="label">Data Directory</div>
+      <code>{{ snapshot.data_dir }}</code>
+      <div class="label" style="margin-top:12px">Environment DATA_DIR</div>
+      <code>{{ snapshot.data_dir_env or '(not set)' }}</code>
+      <div class="label" style="margin-top:12px">Environment DATABASE_PATH</div>
+      <code>{{ snapshot.database_path_env or '(not set)' }}</code>
+    </div>
+    <div class="card">
+      <div class="label">Email Config File</div>
+      <div class="{{ 'ok' if snapshot.email_config_exists else 'bad' }}">{{ 'Present' if snapshot.email_config_exists else 'Missing' }}</div>
+      <code>{{ snapshot.email_config_path }}</code>
+      <div class="label" style="margin-top:12px">Local Secret Key</div>
+      <div class="{{ 'ok' if snapshot.secret_key_exists else 'bad' }}">{{ 'Present' if snapshot.secret_key_exists else 'Missing' }}</div>
+    </div>
+    {% if snapshot.db_error %}
+    <div class="card">
+      <div class="label">Database Error</div>
+      <code>{{ snapshot.db_error }}</code>
+    </div>
+    {% endif %}
+  </div>
+</body>
+</html>""",
+        snapshot=snapshot,
     )
 
 
