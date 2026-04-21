@@ -3,38 +3,52 @@
 <head>
   <meta charset='utf-8'>
   <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <title>{{ app_name }} &middot; Workspace Status</title>
+  <title>{{ app_name }} &middot; {{ tr('Workspace Status') }}</title>
   <link rel='stylesheet' href='{{ url_for("static", filename="style.css", v=static_asset_version("style.css")) }}'>
 </head>
 <body class='login-body'>
+  <div class='mobile-status-banner' role='status' aria-live='polite'>
+    <strong>{{ tr('Mobile experience update') }}</strong>
+    <span>{{ tr("We're still working here for you. The phone version will be ready soon.") }}</span>
+  </div>
   <div class='login-brand-watermark'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
   <div class='login-floating-marks' aria-hidden='true'>
-    <span class='mark-one'>We Missed You</span>
-    <span class='mark-two'>Billing</span>
-    <span class='mark-three'>Income Records</span>
-    <span class='mark-four'>Come Back</span>
+    <span class='mark-one'>{{ tr('We Missed You') }}</span>
+    <span class='mark-two'>{{ tr('Billing') }}</span>
+    <span class='mark-three'>{{ tr('Income Records') }}</span>
+    <span class='mark-four'>{{ tr('Come Back') }}</span>
   </div>
   <div class='login-wrap login-wrap-split'>
     <div class='login-stage'>
       <div class='login-stage-brand'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
-      <div class='login-stage-kicker'>Welcome back, {{ user.full_name }}</div>
-      <div class='login-stage-title'>{{ issue.business_name or 'LedgerFlow Workspace' }}</div>
+      <div class='login-stage-kicker'>{{ tr('Welcome back, {full_name}', full_name=user.full_name) }}</div>
+      <div class='login-stage-title'>{{ issue.business_name or tr('LedgerFlow Workspace') }}</div>
       <div class='login-stage-subtitle'>{{ issue.headline }}</div>
     </div>
     <div class='login-card'>
-      <div class='badge'>Workspace Status</div>
-      <div class='login-kicker'>We Missed You</div>
-      <h1>Access is paused for now</h1>
+      <form method='post' action='{{ url_for("set_language") }}' class='language-inline-form login-language-form'>
+        <input type='hidden' name='next' value='{{ request.path }}'>
+        <input type='hidden' name='quiet' value='1'>
+        <label for='comeback-language'>{{ tr('Language') }}</label>
+        <select id='comeback-language' name='preferred_language' onchange='this.form.submit()'>
+          {% for option in language_options %}
+          <option value='{{ option.code }}' {% if current_language == option.code %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <div class='badge'>{{ tr('Workspace Status') }}</div>
+      <div class='login-kicker'>{{ tr('We Missed You') }}</div>
+      <h1>{{ tr('Access is paused for now') }}</h1>
       <p class='small'>{{ issue.detail }}</p>
       <div class='card section-frame' style='box-shadow:none;margin:16px 0;padding:16px 18px'>
-        <div class='small-label'>WHAT TO DO NEXT</div>
-        <div style='font-weight:800;color:var(--primary-dark);margin-top:8px'>Contact your LedgerFlow administrator to restore access.</div>
-        <div class='small' style='margin-top:6px'>Once your workspace is reactivated, you can sign back in and continue where you left off.</div>
+        <div class='small-label'>{{ tr('What to do next')|upper }}</div>
+        <div style='font-weight:800;color:var(--primary-dark);margin-top:8px'>{{ tr('Contact your LedgerFlow administrator to restore access.') }}</div>
+        <div class='small' style='margin-top:6px'>{{ tr('Once your workspace is reactivated, you can sign back in and continue where you left off.') }}</div>
       </div>
       <div class='login-actions' style='justify-content:flex-start'>
-        <a class='btn btn-secondary' href='{{ url_for("main_portal") }}'>Return to Main Portal</a>
-        <a class='btn btn-secondary' href='{{ url_for("forgot_password") }}'>Forgot Password</a>
-        <a class='btn btn-secondary' href='{{ url_for("logout") }}'>Sign Out</a>
+        <a class='btn btn-secondary' href='{{ url_for("main_portal") }}'>{{ tr('Return to Main Portal') }}</a>
+        <a class='btn btn-secondary' href='{{ url_for("forgot_password") }}'>{{ tr('Forgot Password') }}</a>
+        <a class='btn btn-secondary' href='{{ url_for("logout") }}'>{{ tr('Sign Out') }}</a>
       </div>
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}

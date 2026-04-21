@@ -13,10 +13,10 @@
   </div>
   <div class='login-brand-watermark'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
   <div class='login-floating-marks' aria-hidden='true'>
-    <span class='mark-one'>Jobs</span>
-    <span class='mark-two'>Dispatch</span>
-    <span class='mark-three'>Team</span>
-    <span class='mark-four'>Schedule</span>
+    <span class='mark-one'>{{ tr('Jobs') }}</span>
+    <span class='mark-two'>{{ tr('Dispatch') }}</span>
+    <span class='mark-three'>{{ tr('Team') }}</span>
+    <span class='mark-four'>{{ tr('Schedule') }}</span>
   </div>
   <div class='login-wrap login-wrap-split'>
     <div class='login-stage'>
@@ -52,9 +52,9 @@
         <label style='margin-top:12px'>{{ tr('Email') }}</label>
         <input name='email' type='email' required>
         <label style='margin-top:12px'>{{ tr('Password') }}</label>
-        <div class='password-field'><input type='password' name='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div>
+        <div class='password-field'><input type='password' name='password' required><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div>
         <label style='margin-top:12px'>{{ tr('Confirm Password') }}</label>
-        <div class='password-field'><input type='password' name='confirm_password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div>
+        <div class='password-field'><input type='password' name='confirm_password' required><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div>
         <button style='margin-top:16px;width:100%'>{{ tr('Create Administrator Account') }}</button>
       </form>
       {% else %}
@@ -63,7 +63,7 @@
         <label>{{ tr('Email') }}</label>
         <input name='email' required>
         <label style='margin-top:12px'>{{ tr('Password') }}</label>
-        <div class='password-field'><input type='password' name='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div>
+        <div class='password-field'><input type='password' name='password' required><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div>
         <button style='margin-top:16px;width:100%'>{{ tr('Sign In') }}</button>
         <div style='margin-top:10px;text-align:right'><a class='small' href='{{ url_for("forgot_password") }}'>{{ tr('Forgot Password?') }}</a></div>
       </form>
@@ -83,12 +83,12 @@
     </div>
   </div>
   <div class='login-bottom-rail' aria-label='Platform functions'>
-    <span>Jobs</span>
-    <span>Dispatch</span>
-    <span>Schedule</span>
-    <span>Team</span>
-    <span>Availability</span>
-    <span>Activity</span>
+    <span>{{ tr('Jobs') }}</span>
+    <span>{{ tr('Dispatch') }}</span>
+    <span>{{ tr('Schedule') }}</span>
+    <span>{{ tr('Team') }}</span>
+    <span>{{ tr('Availability') }}</span>
+    <span>{{ tr('Activity') }}</span>
     <span>{{ tr('Worker Portal') }}</span>
     <a href='{{ url_for("create_account_info") }}'>{{ tr('Marketing Video Coming Soon') }}</a>
   </div>
@@ -103,6 +103,8 @@
   </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  var showPasswordLabel = {{ tr('Show password')|tojson }};
+  var hidePasswordLabel = {{ tr('Hide password')|tojson }};
   function attach(field){
     var input = field.querySelector('input');
     var toggle = field.querySelector('.password-toggle');
@@ -113,8 +115,8 @@ document.addEventListener('DOMContentLoaded', function () {
       var visible = input.type === 'text';
       input.type = visible ? 'password' : 'text';
       field.classList.toggle('is-visible', !visible);
-      toggle.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
-      toggle.setAttribute('title', visible ? 'Show password' : 'Hide password');
+      toggle.setAttribute('aria-label', visible ? showPasswordLabel : hidePasswordLabel);
+      toggle.setAttribute('title', visible ? showPasswordLabel : hidePasswordLabel);
     });
   }
   document.querySelectorAll('.password-field').forEach(attach);

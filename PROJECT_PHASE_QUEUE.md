@@ -46,6 +46,10 @@
   - invoices and income
   - estimates
   - premium sales workflow wording and copy-link controls
+- Language hardening phase completed on 2026-04-21 for login and recovery flows:
+  - per-login language changes no longer overwrite the saved business default language
+  - guest business invite and rejoin pages now seed from the business default language
+  - login, worker login, create-account, forgot-password, reset-password, comeback, and rejoin surfaces now have stronger translation coverage and cleaner password-toggle language handling
 - Next language follow-up: verify live email surfaces and the remaining deeper administrator-only pages after the new business workspace translations are deployed.
 - Active palette source of truth for the current visual refinement pass:
   - Deep Navy `#151A2C`

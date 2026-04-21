@@ -48,7 +48,7 @@
         <label>{{ tr('Email') }}</label>
         <input name='email' type='email' required>
         <label style='margin-top:12px'>{{ tr('Password') }}</label>
-        <div class='password-field'><input type='password' name='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div>
+        <div class='password-field'><input type='password' name='password' required><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div>
         <button style='margin-top:16px;width:100%'>{{ tr('Sign In to Worker Portal') }}</button>
         <div style='margin-top:10px;text-align:right'><a class='small' href='{{ url_for("forgot_password") }}'>{{ tr('Forgot Password?') }}</a></div>
       </form>
@@ -66,6 +66,8 @@
   </div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  var showPasswordLabel = {{ tr('Show password')|tojson }};
+  var hidePasswordLabel = {{ tr('Hide password')|tojson }};
   document.querySelectorAll('.password-field').forEach(function (field) {
     var input = field.querySelector('input');
     var toggle = field.querySelector('.password-toggle');
@@ -76,8 +78,8 @@ document.addEventListener('DOMContentLoaded', function () {
       var visible = input.type === 'text';
       input.type = visible ? 'password' : 'text';
       field.classList.toggle('is-visible', !visible);
-      toggle.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
-      toggle.setAttribute('title', visible ? 'Show password' : 'Hide password');
+      toggle.setAttribute('aria-label', visible ? showPasswordLabel : hidePasswordLabel);
+      toggle.setAttribute('title', visible ? showPasswordLabel : hidePasswordLabel);
     });
   });
 });

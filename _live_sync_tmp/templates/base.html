@@ -288,6 +288,8 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+  var showPasswordLabel = {{ tr('Show password')|tojson }};
+  var hidePasswordLabel = {{ tr('Hide password')|tojson }};
   function attach(field){
     var input = field.querySelector('input');
     var toggle = field.querySelector('.password-toggle');
@@ -298,8 +300,8 @@ document.addEventListener('DOMContentLoaded', function () {
       var visible = input.type === 'text';
       input.type = visible ? 'password' : 'text';
       field.classList.toggle('is-visible', !visible);
-      toggle.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
-      toggle.setAttribute('title', visible ? 'Show password' : 'Hide password');
+      toggle.setAttribute('aria-label', visible ? showPasswordLabel : hidePasswordLabel);
+      toggle.setAttribute('title', visible ? showPasswordLabel : hidePasswordLabel);
     });
   }
 
@@ -313,8 +315,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'password-toggle';
-    btn.setAttribute('aria-label','Show password');
-    btn.setAttribute('title','Show password');
+    btn.setAttribute('aria-label', showPasswordLabel);
+    btn.setAttribute('title', showPasswordLabel);
     btn.innerHTML = '<span class="toggle-show">ðŸ‘</span><span class="toggle-hide">ðŸ™ˆ</span>';
     wrapper.appendChild(btn);
     attach(wrapper);

@@ -1342,6 +1342,190 @@ TRANSLATIONS.update({
     'No estimates saved yet.': {'es': 'Aun no hay presupuestos guardados.', 'pt': 'Ainda nao ha orcamentos salvos.'},
 })
 
+TRANSLATIONS.update({
+    'English': {'es': 'Ingles', 'pt': 'Ingles'},
+    'Español': {'es': 'Español', 'pt': 'Espanhol'},
+    'Português': {'es': 'Portugués', 'pt': 'Português'},
+    'Show': {'es': 'Mostrar', 'pt': 'Mostrar'},
+    'Hide': {'es': 'Ocultar', 'pt': 'Ocultar'},
+    'Show password': {'es': 'Mostrar contraseña', 'pt': 'Mostrar senha'},
+    'Hide password': {'es': 'Ocultar contraseña', 'pt': 'Ocultar senha'},
+    'Jobs': {'es': 'Trabajos', 'pt': 'Servicos'},
+    'Dispatch': {'es': 'Despacho', 'pt': 'Despacho'},
+    'Schedule': {'es': 'Calendario', 'pt': 'Agenda'},
+    'Team': {'es': 'Equipo', 'pt': 'Equipe'},
+    'Availability': {'es': 'Disponibilidad', 'pt': 'Disponibilidade'},
+    'Activity': {'es': 'Actividad', 'pt': 'Atividade'},
+    'Invite Access': {'es': 'Acceso por invitacion', 'pt': 'Acesso por convite'},
+    'Secure Setup': {'es': 'Configuracion segura', 'pt': 'Configuracao segura'},
+    'Business Login': {'es': 'Acceso del negocio', 'pt': 'Login da empresa'},
+    'Guided Access': {'es': 'Acceso guiado', 'pt': 'Acesso guiado'},
+    'Account Setup': {'es': 'Configuracion de cuenta', 'pt': 'Configuracao de conta'},
+    'Create your business login': {'es': 'Crea tu acceso empresarial', 'pt': 'Crie o login da sua empresa'},
+    'Business accounts are created with an invite link sent by your administrator. This keeps access restricted to approved businesses only.': {
+        'es': 'Las cuentas empresariales se crean con un link de invitacion enviado por tu administrador. Esto mantiene el acceso restringido solo a negocios aprobados.',
+        'pt': 'As contas empresariais sao criadas com um link de convite enviado pelo seu administrador. Isso mantem o acesso restrito apenas a empresas aprovadas.',
+    },
+    'How to create your account': {'es': 'Como crear tu cuenta', 'pt': 'Como criar sua conta'},
+    'Ask your administrator to send your invite email.': {'es': 'Pide a tu administrador que envie tu correo de invitacion.', 'pt': 'Peca ao seu administrador para enviar o email de convite.'},
+    'Open the invite link from that email.': {'es': 'Abre el link de invitacion de ese correo.', 'pt': 'Abra o link de convite desse email.'},
+    'Enter your name, email, and password.': {'es': 'Ingresa tu nombre, correo y contraseña.', 'pt': 'Digite seu nome, email e senha.'},
+    'Return to the login page and sign in.': {'es': 'Vuelve a la pagina de acceso e inicia sesion.', 'pt': 'Volte para a pagina de login e entre.'},
+    'Back to Login': {'es': 'Volver al login', 'pt': 'Voltar ao login'},
+    'Forgot Password': {'es': 'Olvide mi contraseña', 'pt': 'Esqueci minha senha'},
+    'Password Reset': {'es': 'Restablecer contraseña', 'pt': 'Redefinir senha'},
+    'Submit Reset Request': {'es': 'Enviar solicitud de restablecimiento', 'pt': 'Enviar solicitacao de redefinicao'},
+    'Back to Main Login': {'es': 'Volver al login principal', 'pt': 'Voltar ao login principal'},
+    'Reset Password': {'es': 'Restablecer contraseña', 'pt': 'Redefinir senha'},
+    'Set New Password': {'es': 'Definir nueva contraseña', 'pt': 'Definir nova senha'},
+    'Choose a new password for your LedgerFlow account.': {'es': 'Elige una nueva contraseña para tu cuenta de LedgerFlow.', 'pt': 'Escolha uma nova senha para sua conta LedgerFlow.'},
+    'New Password': {'es': 'Nueva contraseña', 'pt': 'Nova senha'},
+    'Confirm New Password': {'es': 'Confirmar nueva contraseña', 'pt': 'Confirmar nova senha'},
+    'Save New Password': {'es': 'Guardar nueva contraseña', 'pt': 'Salvar nova senha'},
+    'Restore Workspace Access': {'es': 'Restaurar acceso al espacio de trabajo', 'pt': 'Restaurar acesso ao espaco de trabalho'},
+    'Rejoin': {'es': 'Regresar', 'pt': 'Retornar'},
+    'Workspace': {'es': 'Espacio de trabajo', 'pt': 'Workspace'},
+    'Return': {'es': 'Volver', 'pt': 'Retornar'},
+    'Return to LedgerFlow': {'es': 'Volver a LedgerFlow', 'pt': 'Voltar para LedgerFlow'},
+    'Restore your business workspace access': {'es': 'Restaura el acceso al espacio de trabajo de tu negocio', 'pt': 'Restaure o acesso ao workspace da sua empresa'},
+    'LedgerFlow can bring {business_name} back online without rebuilding your records. Use this step to restore access safely and continue with your normal workspace.': {
+        'es': 'LedgerFlow puede volver a poner {business_name} en linea sin reconstruir tus registros. Usa este paso para restaurar el acceso de forma segura y continuar con tu workspace normal.',
+        'pt': 'O LedgerFlow pode colocar {business_name} de volta online sem reconstruir seus registros. Use esta etapa para restaurar o acesso com seguranca e continuar com seu workspace normal.',
+    },
+    'Restore access': {'es': 'Restaurar acceso', 'pt': 'Restaurar acesso'},
+    'Reactivate the archived workspace record.': {'es': 'Reactiva el registro archivado del espacio de trabajo.', 'pt': 'Reative o registro arquivado do workspace.'},
+    'Continue securely': {'es': 'Continuar con seguridad', 'pt': 'Continuar com seguranca'},
+    'Sign back in with your existing business login.': {'es': 'Vuelve a entrar con tu acceso empresarial existente.', 'pt': 'Entre novamente com o login empresarial ja existente.'},
+    'Create your business login if one has not been created yet.': {'es': 'Crea tu acceso empresarial si aun no existe.', 'pt': 'Crie o login da empresa se ele ainda nao existir.'},
+    'Resume operations': {'es': 'Retomar operaciones', 'pt': 'Retomar operacoes'},
+    'Return to billing, income records, payroll tools, and the business calendar.': {'es': 'Vuelve a facturacion, registros de ingresos, herramientas de nomina y calendario del negocio.', 'pt': 'Volte para cobranca, registros de renda, ferramentas de folha e calendario da empresa.'},
+    'Workspace Rejoin': {'es': 'Reingreso al workspace', 'pt': 'Retorno ao workspace'},
+    'Restore access for {business_name}': {'es': 'Restaurar acceso para {business_name}', 'pt': 'Restaurar acesso para {business_name}'},
+    'This rejoin link has expired. Ask your administrator to send a new one.': {'es': 'Este link de reingreso ha expirado. Pide a tu administrador que envie uno nuevo.', 'pt': 'Este link de retorno expirou. Peca ao seu administrador para enviar um novo.'},
+    'This workspace has already been restored. Sign in below to continue.': {'es': 'Este espacio de trabajo ya fue restaurado. Inicia sesion abajo para continuar.', 'pt': 'Este workspace ja foi restaurado. Entre abaixo para continuar.'},
+    'We found an existing business login for this workspace. Restore access, then sign in with your current email.': {'es': 'Encontramos un acceso empresarial existente para este espacio de trabajo. Restaura el acceso y luego entra con tu correo actual.', 'pt': 'Encontramos um login empresarial existente para este workspace. Restaure o acesso e depois entre com seu email atual.'},
+    'Restore the workspace first, then continue into secure business login creation.': {'es': 'Restaura primero el espacio de trabajo y luego continua con la creacion segura del acceso empresarial.', 'pt': 'Restaure primeiro o workspace e depois continue para a criacao segura do login empresarial.'},
+    'Status': {'es': 'Estado', 'pt': 'Status'},
+    'Existing Login': {'es': 'Acceso existente', 'pt': 'Login existente'},
+    'Restore and Sign In': {'es': 'Restaurar e iniciar sesion', 'pt': 'Restaurar e entrar'},
+    'Restore and Continue': {'es': 'Restaurar y continuar', 'pt': 'Restaurar e continuar'},
+    'Open Login': {'es': 'Abrir login', 'pt': 'Abrir login'},
+    'Workspace Status': {'es': 'Estado del workspace', 'pt': 'Status do workspace'},
+    'We Missed You': {'es': 'Te echamos de menos', 'pt': 'Sentimos sua falta'},
+    'Income Records': {'es': 'Registros de ingresos', 'pt': 'Registros de renda'},
+    'Come Back': {'es': 'Volver', 'pt': 'Voltar'},
+    'Welcome back, {full_name}': {'es': 'Bienvenido de nuevo, {full_name}', 'pt': 'Bem-vindo de volta, {full_name}'},
+    'LedgerFlow Workspace': {'es': 'Workspace LedgerFlow', 'pt': 'Workspace LedgerFlow'},
+    'Access is paused for now': {'es': 'El acceso esta pausado por ahora', 'pt': 'O acesso esta pausado por enquanto'},
+    'What to do next': {'es': 'Que hacer ahora', 'pt': 'O que fazer agora'},
+    'Contact your LedgerFlow administrator to restore access.': {'es': 'Contacta a tu administrador de LedgerFlow para restaurar el acceso.', 'pt': 'Entre em contato com o administrador do LedgerFlow para restaurar o acesso.'},
+    'Once your workspace is reactivated, you can sign back in and continue where you left off.': {'es': 'Cuando tu workspace se reactive, podras volver a entrar y continuar donde lo dejaste.', 'pt': 'Quando seu workspace for reativado, voce podera entrar novamente e continuar de onde parou.'},
+    'Sign Out': {'es': 'Cerrar sesion', 'pt': 'Sair'},
+    'Language saved: {language_label}.': {'es': 'Idioma guardado: {language_label}.', 'pt': 'Idioma salvo: {language_label}.'},
+    'Full name is required.': {'es': 'El nombre completo es obligatorio.', 'pt': 'O nome completo e obrigatorio.'},
+    'Email is required.': {'es': 'El correo es obligatorio.', 'pt': 'O email e obrigatorio.'},
+    'Password must be at least 8 characters.': {'es': 'La contraseña debe tener al menos 8 caracteres.', 'pt': 'A senha deve ter pelo menos 8 caracteres.'},
+    'Passwords do not match.': {'es': 'Las contraseñas no coinciden.', 'pt': 'As senhas nao coincidem.'},
+    'Email already exists.': {'es': 'Ese correo ya existe.', 'pt': 'Esse email ja existe.'},
+    'Administrator account created. Sign in below.': {'es': 'Cuenta de administrador creada. Inicia sesion abajo.', 'pt': 'Conta de administrador criada. Entre abaixo.'},
+    'Invalid email or password.': {'es': 'Correo o contraseña invalidos.', 'pt': 'Email ou senha invalidos.'},
+    'Worker portal access is pending administrator approval.': {'es': 'El acceso al portal del trabajador esta pendiente de aprobacion del administrador.', 'pt': 'O acesso ao portal do trabalhador esta aguardando aprovacao do administrador.'},
+    'Worker portal access needs correction from the business before you can sign in.': {'es': 'El acceso al portal del trabajador necesita correccion del negocio antes de iniciar sesion.', 'pt': 'O acesso ao portal do trabalhador precisa de correcao da empresa antes do login.'},
+    'Team member portal access is no longer active.': {'es': 'El acceso del portal del miembro del equipo ya no esta activo.', 'pt': 'O acesso do portal do membro da equipe nao esta mais ativo.'},
+    'Team member portal access is pending administrator approval.': {'es': 'El acceso del portal del miembro del equipo esta pendiente de aprobacion del administrador.', 'pt': 'O acesso do portal do membro da equipe esta aguardando aprovacao do administrador.'},
+    'Team member portal access needs correction before you can sign in.': {'es': 'El acceso del portal del miembro del equipo necesita correccion antes de iniciar sesion.', 'pt': 'O acesso do portal do membro da equipe precisa de correcao antes do login.'},
+    'Invalid team member email or password.': {'es': 'Correo o contraseña del miembro del equipo invalidos.', 'pt': 'Email ou senha do membro da equipe invalidos.'},
+    'If the email exists in {app_name}, a password reset request has been submitted. Check your email if delivery is enabled, or contact your administrator.': {
+        'es': 'Si el correo existe en {app_name}, se envio una solicitud para restablecer la contraseña. Revisa tu correo si la entrega esta habilitada o contacta a tu administrador.',
+        'pt': 'Se o email existir no {app_name}, uma solicitacao de redefinicao de senha foi enviada. Verifique seu email se o envio estiver habilitado ou fale com seu administrador.',
+    },
+    'This reset link is invalid or has already been used.': {'es': 'Este link de restablecimiento es invalido o ya fue usado.', 'pt': 'Este link de redefinicao e invalido ou ja foi usado.'},
+    'This reset link has expired. Submit a new reset request.': {'es': 'Este link de restablecimiento expirou. Envia una nueva solicitud.', 'pt': 'Este link de redefinicao expirou. Envie uma nova solicitacao.'},
+    'Password reset complete. Sign in with your new password.': {'es': 'Restablecimiento completo. Inicia sesion con tu nueva contraseña.', 'pt': 'Redefinicao concluida. Entre com sua nova senha.'},
+    'That email already has an account. Sign in instead, or use Forgot Password if needed.': {'es': 'Ese correo ya tiene una cuenta. Inicia sesion o usa Olvide mi contraseña si es necesario.', 'pt': 'Esse email ja tem uma conta. Entre normalmente ou use Esqueci minha senha se precisar.'},
+    'Trial claimed. Start in the Welcome Center, review the guided overview, and finish the quick setup when you are ready.': {
+        'es': 'Prueba activada. Empieza en el Centro de Bienvenida, revisa la guia y termina la configuracion rapida cuando estes listo.',
+        'pt': 'Teste ativado. Comece no Centro de Boas-Vindas, revise a orientacao guiada e termine a configuracao rapida quando estiver pronto.',
+    },
+    'Business login created. Complete setup to unlock your full LedgerFlow workspace.': {
+        'es': 'Acceso empresarial creado. Completa la configuracion para desbloquear todo tu workspace LedgerFlow.',
+        'pt': 'Login empresarial criado. Complete a configuracao para liberar todo o seu workspace LedgerFlow.',
+    },
+    'Trial claimed. Your LedgerFlow workspace is ready to explore.': {'es': 'Prueba activada. Tu workspace de LedgerFlow esta listo para explorar.', 'pt': 'Teste ativado. Seu workspace LedgerFlow esta pronto para explorar.'},
+    'Business login created. Welcome email sent. Sign in below.': {'es': 'Acceso empresarial creado. El email de bienvenida fue enviado. Inicia sesion abajo.', 'pt': 'Login empresarial criado. O email de boas-vindas foi enviado. Entre abaixo.'},
+    'Business login created, but welcome email failed: {error_message}': {'es': 'El acceso empresarial fue creado, pero fallo el email de bienvenida: {error_message}', 'pt': 'O login empresarial foi criado, mas o email de boas-vindas falhou: {error_message}'},
+    'Business login created. Sign in below.': {'es': 'Acceso empresarial creado. Inicia sesion abajo.', 'pt': 'Login empresarial criado. Entre abaixo.'},
+    'Your LedgerFlow workspace has been restored. Sign in to continue.': {'es': 'Tu workspace de LedgerFlow fue restaurado. Inicia sesion para continuar.', 'pt': 'Seu workspace LedgerFlow foi restaurado. Entre para continuar.'},
+    'Workspace restored. Create your business login to continue.': {'es': 'Workspace restaurado. Crea tu acceso empresarial para continuar.', 'pt': 'Workspace restaurado. Crie seu login empresarial para continuar.'},
+    'Start Your Trial': {'es': 'Empieza tu prueba', 'pt': 'Comece seu teste'},
+    'Create Business Login': {'es': 'Crear acceso empresarial', 'pt': 'Criar login empresarial'},
+    'Secure Access': {'es': 'Acceso seguro', 'pt': 'Acesso seguro'},
+    'Subscription': {'es': 'Suscripcion', 'pt': 'Assinatura'},
+    'Upgrade Later': {'es': 'Mejorar despues', 'pt': 'Fazer upgrade depois'},
+    'Billing Ready': {'es': 'Facturacion lista', 'pt': 'Cobranca pronta'},
+    'Complimentary Trial': {'es': 'Prueba gratuita', 'pt': 'Teste gratuito'},
+    '{trial_offer_days}-Day Trial': {'es': 'Prueba de {trial_offer_days} dias', 'pt': 'Teste de {trial_offer_days} dias'},
+    'Start your {trial_offer_days}-day LedgerFlow trial': {'es': 'Empieza tu prueba de {trial_offer_days} dias de LedgerFlow', 'pt': 'Comece seu teste de {trial_offer_days} dias do LedgerFlow'},
+    'A cleaner guided start for {business_name}: review the workspace experience, explore the subscription tiers, create secure access, and continue the trial now. Upgrade later when you are ready.': {
+        'es': 'Un inicio guiado y mas limpio para {business_name}: revisa la experiencia del workspace, explora los niveles de suscripcion, crea acceso seguro y continua la prueba ahora. Mejora despues cuando estes listo.',
+        'pt': 'Um inicio guiado e mais organizado para {business_name}: revise a experiencia do workspace, explore os niveis de assinatura, crie acesso seguro e continue o teste agora. Faca upgrade depois quando estiver pronto.',
+    },
+    '{trial_offer_days} Days': {'es': '{trial_offer_days} dias', 'pt': '{trial_offer_days} dias'},
+    'No card required to begin': {'es': 'No se requiere tarjeta para empezar', 'pt': 'Nenhum cartao e necessario para comecar'},
+    'Video tutorial ready': {'es': 'Tutorial en video listo', 'pt': 'Tutorial em video pronto'},
+    'Choose subscription now': {'es': 'Elige la suscripcion ahora', 'pt': 'Escolha a assinatura agora'},
+    'Upgrade later': {'es': 'Mejora despues', 'pt': 'Faca upgrade depois'},
+    'Welcome Tutorial Preview': {'es': 'Vista previa del tutorial de bienvenida', 'pt': 'Previa do tutorial de boas-vindas'},
+    'Drop your marketing or welcome video here later': {'es': 'Coloca aqui tu video de marketing o bienvenida mas tarde', 'pt': 'Coloque aqui seu video de marketing ou boas-vindas depois'},
+    'This top section is reserved for the welcome/tutorial video that introduces the workspace, explains the 7-day complimentary period, and shows the first steps clearly.': {
+        'es': 'Esta seccion superior esta reservada para el video de bienvenida/tutorial que presenta el workspace, explica el periodo de 7 dias y muestra claramente los primeros pasos.',
+        'pt': 'Esta secao superior fica reservada para o video de boas-vindas/tutorial que apresenta o workspace, explica o periodo de 7 dias e mostra claramente os primeiros passos.',
+    },
+    'How the Trial Works': {'es': 'Como funciona la prueba', 'pt': 'Como o teste funciona'},
+    '4 Steps': {'es': '4 pasos', 'pt': '4 passos'},
+    '1. Review the workspace': {'es': '1. Revisa el workspace', 'pt': '1. Revise o workspace'},
+    'Start with the overview, tutorial, and pricing so the offer feels clear before you create anything.': {'es': 'Empieza con la vista general, el tutorial y los precios para que la oferta quede clara antes de crear nada.', 'pt': 'Comece pela visao geral, tutorial e precos para que a oferta fique clara antes de criar qualquer coisa.'},
+    '2. Create secure access': {'es': '2. Crea acceso seguro', 'pt': '2. Crie acesso seguro'},
+    'Create the business owner login for {business_name} and open the Welcome Center.': {'es': 'Crea el acceso del propietario para {business_name} y abre el Centro de Bienvenida.', 'pt': 'Crie o login do proprietario para {business_name} e abra o Centro de Boas-Vindas.'},
+    '3. Choose your subscription': {'es': '3. Elige tu suscripcion', 'pt': '3. Escolha sua assinatura'},
+    'Select the tier that fits your business now, with full pricing visible and no pressure to enter billing today.': {'es': 'Selecciona el nivel que mejor encaje con tu negocio, con precios visibles y sin presion para agregar cobro hoy.', 'pt': 'Selecione o nivel que melhor atende sua empresa, com os precos visiveis e sem pressao para adicionar cobranca hoje.'},
+    '4. Continue the free trial': {'es': '4. Continua la prueba gratis', 'pt': '4. Continue o teste gratis'},
+    'Enter business details, explore the workspace, and upgrade later before the complimentary period ends.': {'es': 'Ingresa los datos del negocio, explora el workspace y mejora despues antes de que termine el periodo gratuito.', 'pt': 'Informe os dados da empresa, explore o workspace e faca upgrade depois antes do fim do periodo gratuito.'},
+    'Choose your growth path now': {'es': 'Elige ahora tu camino de crecimiento', 'pt': 'Escolha agora seu caminho de crescimento'},
+    'Each tier opens separately so the pricing stays visible first and the details stay organized.': {'es': 'Cada nivel se abre por separado para que el precio quede visible primero y los detalles se mantengan organizados.', 'pt': 'Cada nivel abre separadamente para que o preco fique visivel primeiro e os detalhes continuem organizados.'},
+    'Subscription Options': {'es': 'Opciones de suscripcion', 'pt': 'Opcoes de assinatura'},
+    'Coming Soon:': {'es': 'Proximamente:', 'pt': 'Em breve:'},
+    'Claim Trial & Create Login': {'es': 'Activa la prueba y crea tu acceso', 'pt': 'Ative o teste e crie seu login'},
+    'Continue with the free trial now': {'es': 'Continua con la prueba gratis ahora', 'pt': 'Continue com o teste gratis agora'},
+    'The trial workspace opens first. Billing can be added later before the complimentary period ends.': {'es': 'El workspace de prueba se abre primero. La facturacion puede agregarse despues antes de que termine el periodo gratuito.', 'pt': 'O workspace de teste abre primeiro. A cobranca pode ser adicionada depois antes do fim do periodo gratuito.'},
+    'Trial Offer': {'es': 'Oferta de prueba', 'pt': 'Oferta de teste'},
+    '{trial_offer_days} complimentary days': {'es': '{trial_offer_days} dias gratuitos', 'pt': '{trial_offer_days} dias gratuitos'},
+    'After Login': {'es': 'Despues del acceso', 'pt': 'Depois do login'},
+    'Welcome Center first, then quick setup': {'es': 'Centro de Bienvenida primero y luego configuracion rapida', 'pt': 'Centro de Boas-Vindas primeiro e depois configuracao rapida'},
+    'Create Password': {'es': 'Crear contraseña', 'pt': 'Criar senha'},
+    'Continue with Free Trial': {'es': 'Continuar con la prueba gratis', 'pt': 'Continuar com o teste gratis'},
+    'No payment required today.': {'es': 'No se requiere pago hoy.', 'pt': 'Nenhum pagamento e necessario hoje.'},
+    'Create the login now, open the Welcome Center, and complete the quick setup when you are ready. You can upgrade and add billing later before the complimentary period ends.': {
+        'es': 'Crea el acceso ahora, abre el Centro de Bienvenida y completa la configuracion rapida cuando estes listo. Puedes mejorar y agregar facturacion despues antes de que termine el periodo gratuito.',
+        'pt': 'Crie o login agora, abra o Centro de Boas-Vindas e conclua a configuracao rapida quando estiver pronto. Voce pode fazer upgrade e adicionar cobranca depois antes do fim do periodo gratuito.',
+    },
+    'This business login has already been created. Sign in with the email you used for setup.': {'es': 'Este acceso empresarial ya fue creado. Inicia sesion con el correo usado en la configuracion.', 'pt': 'Este login empresarial ja foi criado. Entre com o email usado na configuracao.'},
+    'This invite is no longer available.': {'es': 'Esta invitacion ya no esta disponible.', 'pt': 'Este convite nao esta mais disponivel.'},
+    'Your administrator has invited you to begin secure access setup for this LedgerFlow workspace.': {'es': 'Tu administrador te invito a comenzar la configuracion de acceso seguro para este workspace LedgerFlow.', 'pt': 'Seu administrador convidou voce para iniciar a configuracao de acesso seguro deste workspace LedgerFlow.'},
+    'Invite expires {expires_at}.': {'es': 'La invitacion expira {expires_at}.', 'pt': 'O convite expira em {expires_at}.'},
+    'Next Step': {'es': 'Siguiente paso', 'pt': 'Proximo passo'},
+    'Create login and continue to setup': {'es': 'Crea el acceso y continua con la configuracion', 'pt': 'Crie o login e continue para a configuracao'},
+    'This invite creates your login first. It does not open the full workspace until setup is completed.': {'es': 'Esta invitacion crea primero tu acceso. No abre el workspace completo hasta que la configuracion este terminada.', 'pt': 'Este convite cria primeiro o seu login. Ele nao abre o workspace completo ate a configuracao ser concluida.'},
+    'Business Access': {'es': 'Acceso empresarial', 'pt': 'Acesso empresarial'},
+    'Invite Email': {'es': 'Email de invitacion', 'pt': 'Email de convite'},
+    'Billing Center': {'es': 'Central de facturacion', 'pt': 'Central de faturamento'},
+    'Payroll Tax': {'es': 'Impuesto de nomina', 'pt': 'Imposto da folha'},
+    'Enter your email and submit a reset request. If your account exists, LedgerFlow will process the request safely.': {
+        'es': 'Ingresa tu correo y envia una solicitud de restablecimiento. Si tu cuenta existe, LedgerFlow procesara la solicitud de forma segura.',
+        'pt': 'Digite seu email e envie uma solicitacao de redefinicao. Se sua conta existir, o LedgerFlow vai processar a solicitacao com seguranca.',
+    },
+})
+
 
 def business_color(client_id: int | None) -> str:
     if not client_id:
@@ -1361,7 +1545,19 @@ def language_options():
 
 def translate_text(text: str, lang: str = 'en', **kwargs) -> str:
     source = str(text or '')
-    translated = TRANSLATIONS.get(source, {}).get(normalize_language(lang), source)
+    candidates = [source]
+    stripped = source.strip()
+    normalized_whitespace = re.sub(r'\s+', ' ', stripped)
+    for candidate in (stripped, normalized_whitespace):
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+    translated = None
+    for candidate in candidates:
+        translated = TRANSLATIONS.get(candidate, {}).get(normalize_language(lang))
+        if translated is not None:
+            break
+    if translated is None:
+        translated = source
     if kwargs:
         try:
             return translated.format(**kwargs)
@@ -5687,10 +5883,10 @@ def current_worker():
                    JOIN clients c ON c.id = w.client_id
                    WHERE w.id=?''',
                 (worker_id,)
-            ).fetchone()
+        ).fetchone()
         if not row or not worker_portal_access_allowed(row):
             session.pop('worker_id', None)
-            flash('Team member portal access is no longer active.', 'error')
+            flash(translate_text('Team member portal access is no longer active.', normalize_language(session.get('preferred_language'))), 'error')
             return None
         return row
     except sqlite3.Error:
@@ -5802,6 +5998,16 @@ def current_language_code(user=None, worker=None, client=None) -> str:
     if client and (client['preferred_language'] or '').strip():
         return normalize_language(client['preferred_language'])
     return 'en'
+
+
+def seed_guest_language(preferred_language: str | None) -> str:
+    if session.get('user_id') or session.get('worker_id'):
+        return normalize_language(session.get('preferred_language'))
+    if session.get('language_override_active'):
+        return normalize_language(session.get('preferred_language'))
+    language = normalize_language(preferred_language)
+    session['preferred_language'] = language
+    return language
 
 
 def safe_next_path(path: str | None, fallback: str = '/main-portal') -> str:
@@ -8594,24 +8800,27 @@ def trust_center():
 def set_language():
     language = normalize_language(request.form.get('preferred_language'))
     session['preferred_language'] = language
+    session['language_override_active'] = 1
     quiet = request.form.get('quiet') in {'1', 'true', 'on', 'yes'}
     user = current_user()
     worker = current_worker()
     if user:
         with get_conn() as conn:
             conn.execute('UPDATE users SET preferred_language=? WHERE id=?', (language, user['id']))
-            if user['role'] == 'client' and user['client_id']:
-                conn.execute(
-                    'UPDATE clients SET preferred_language=?, updated_at=?, updated_by_user_id=? WHERE id=?',
-                    (language, now_iso(), user['id'], user['client_id'])
-                )
             conn.commit()
     elif worker:
         with get_conn() as conn:
             conn.execute('UPDATE workers SET preferred_language=? WHERE id=?', (language, worker['id']))
             conn.commit()
     if not quiet:
-        flash(f'Language saved: {dict(LANGUAGE_OPTIONS).get(language, "English")}.', 'success')
+        flash(
+            translate_text(
+                'Language saved: {language_label}.',
+                language,
+                language_label=dict(LANGUAGE_OPTIONS).get(language, 'English'),
+            ),
+            'success',
+        )
     return redirect(safe_next_path(request.form.get('next'), '/main-portal'))
 
 
@@ -8629,24 +8838,24 @@ def login():
                 password = request.form.get('password', '').strip()
                 confirm_password = request.form.get('confirm_password', '').strip()
                 if not full_name:
-                    flash('Full name is required.', 'error')
+                    flash(translate_text('Full name is required.', selected_language), 'error')
                 elif not email:
-                    flash('Email is required.', 'error')
+                    flash(translate_text('Email is required.', selected_language), 'error')
                 elif len(password) < 8:
-                    flash('Password must be at least 8 characters.', 'error')
+                    flash(translate_text('Password must be at least 8 characters.', selected_language), 'error')
                 elif password != confirm_password:
-                    flash('Passwords do not match.', 'error')
+                    flash(translate_text('Passwords do not match.', selected_language), 'error')
                 else:
                     with get_conn() as conn:
                         if conn.execute("SELECT 1 FROM users WHERE lower(email)=?", (email,)).fetchone():
-                            flash('Email already exists.', 'error')
+                            flash(translate_text('Email already exists.', selected_language), 'error')
                         else:
                             conn.execute(
                                 'INSERT INTO users (email, password_hash, full_name, role, client_id, preferred_language) VALUES (?,?,?,?,?,?)',
                                 (email, generate_password_hash(password), full_name, 'admin', None, selected_language)
                             )
                             conn.commit()
-                            flash('Administrator account created. Sign in below.', 'success')
+                            flash(translate_text('Administrator account created. Sign in below.', selected_language), 'success')
                             return redirect(url_for('login'))
         else:
             email = request.form.get('email', '').strip().lower()
@@ -8726,13 +8935,13 @@ def login():
             has_terminated = any((w['status'] or 'active') != 'active' for w in workers) if 'workers' in locals() else False
             has_approved = bool(approved_workers) if 'approved_workers' in locals() else False
             if has_pending and not has_approved:
-                flash('Worker portal access is pending administrator approval.', 'error')
+                flash(translate_text('Worker portal access is pending administrator approval.', selected_language), 'error')
             elif has_needs_correction and not has_approved:
-                flash('Worker portal access needs correction from the business before you can sign in.', 'error')
+                flash(translate_text('Worker portal access needs correction from the business before you can sign in.', selected_language), 'error')
             elif has_terminated and not has_approved:
-                flash('Team member portal access is no longer active.', 'error')
+                flash(translate_text('Team member portal access is no longer active.', selected_language), 'error')
             else:
-                flash('Invalid email or password.', 'error')
+                flash(translate_text('Invalid email or password.', selected_language), 'error')
     return render_template('login.html', setup_required=setup_required)
 
 
@@ -8978,13 +9187,13 @@ def worker_login():
             has_terminated = any((w['status'] or 'active') != 'active' for w in workers)
             has_approved = bool(approved_workers)
             if has_pending and not has_approved:
-                flash('Team member portal access is pending administrator approval.', 'error')
+                flash(translate_text('Team member portal access is pending administrator approval.', selected_language), 'error')
             elif has_needs_correction and not has_approved:
-                flash('Team member portal access needs correction before you can sign in.', 'error')
+                flash(translate_text('Team member portal access needs correction before you can sign in.', selected_language), 'error')
             elif has_terminated and not has_approved:
-                flash('Team member portal access is no longer active.', 'error')
+                flash(translate_text('Team member portal access is no longer active.', selected_language), 'error')
             else:
-                flash('Invalid team member email or password.', 'error')
+                flash(translate_text('Invalid team member email or password.', selected_language), 'error')
     return render_template('worker_login.html')
 
 
@@ -8992,6 +9201,8 @@ def worker_login():
 def forgot_password():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
+        selected_language = normalize_language(request.form.get('preferred_language') or session.get('preferred_language'))
+        session['preferred_language'] = selected_language
         with get_conn() as conn:
             user = conn.execute('SELECT id, role FROM users WHERE lower(email)=?', (email,)).fetchone() if email else None
             approved_worker = conn.execute(
@@ -9030,7 +9241,14 @@ def forgot_password():
                         send_password_reset_email(email, reset_link, account_label)
                     except Exception:
                         pass
-        flash(f'If the email exists in {APP_NAME}, a password reset request has been submitted. Check your email if delivery is enabled, or contact your administrator.', 'success')
+        flash(
+            translate_text(
+                'If the email exists in {app_name}, a password reset request has been submitted. Check your email if delivery is enabled, or contact your administrator.',
+                selected_language,
+                app_name=APP_NAME,
+            ),
+            'success',
+        )
         return redirect(url_for('forgot_password'))
     return render_template('forgot_password.html')
 
@@ -9042,8 +9260,9 @@ def reset_password(token):
             "SELECT * FROM password_reset_requests WHERE token=? AND status='pending' ORDER BY id DESC LIMIT 1",
             (token,)
         ).fetchone()
+        selected_language = normalize_language(session.get('preferred_language'))
         if not reset_row:
-            flash('This reset link is invalid or has already been used.', 'error')
+            flash(translate_text('This reset link is invalid or has already been used.', selected_language), 'error')
             return redirect(url_for('forgot_password'))
         try:
             expires_at = datetime.fromisoformat((reset_row['expires_at'] or '').replace('Z', ''))
@@ -9052,16 +9271,18 @@ def reset_password(token):
         if not expires_at or expires_at < datetime.utcnow():
             conn.execute("UPDATE password_reset_requests SET status='expired' WHERE id=?", (reset_row['id'],))
             conn.commit()
-            flash('This reset link has expired. Submit a new reset request.', 'error')
+            flash(translate_text('This reset link has expired. Submit a new reset request.', selected_language), 'error')
             return redirect(url_for('forgot_password'))
 
         if request.method == 'POST':
+            selected_language = normalize_language(request.form.get('preferred_language') or session.get('preferred_language'))
+            session['preferred_language'] = selected_language
             password = request.form.get('password', '').strip()
             confirm_password = request.form.get('confirm_password', '').strip()
             if len(password) < 8:
-                flash('Password must be at least 8 characters.', 'error')
+                flash(translate_text('Password must be at least 8 characters.', selected_language), 'error')
             elif password != confirm_password:
-                flash('Passwords do not match.', 'error')
+                flash(translate_text('Passwords do not match.', selected_language), 'error')
             else:
                 password_hash = generate_password_hash(password)
                 if reset_row['account_kind'] == 'user':
@@ -9073,7 +9294,7 @@ def reset_password(token):
                     (reset_row['id'],)
                 )
                 conn.commit()
-                flash('Password reset complete. Sign in with your new password.', 'success')
+                flash(translate_text('Password reset complete. Sign in with your new password.', selected_language), 'success')
                 return redirect(url_for('login' if reset_row['account_kind'] == 'user' else 'worker_login'))
 
     return render_template('reset_password.html', token=token)
@@ -12788,6 +13009,7 @@ def business_invite(token):
         ).fetchone()
         if not invite:
             abort(404)
+        invite_language = seed_guest_language(invite['preferred_language'])
         expires_at = datetime.strptime(invite['expires_at'], '%Y-%m-%d %H:%M:%S')
         if invite['status'] != 'accepted' and datetime.utcnow() > expires_at:
             conn.execute('UPDATE business_invites SET status="expired" WHERE id=?', (invite['id'],))
@@ -12800,6 +13022,7 @@ def business_invite(token):
                    WHERE bi.token=?''',
                 (token,)
             ).fetchone()
+            invite_language = seed_guest_language(invite['preferred_language'])
         if request.method == 'POST' and invite['status'] in ('pending','sent','failed'):
             email = request.form.get('email', '').strip().lower()
             full_name = request.form.get('full_name', '').strip()
@@ -12807,15 +13030,15 @@ def business_invite(token):
             confirm_password = request.form.get('confirm_password', '').strip()
             existing = conn.execute('SELECT id FROM users WHERE email=?', (email,)).fetchone()
             if not full_name:
-                flash('Full name is required.', 'error')
+                flash(translate_text('Full name is required.', invite_language), 'error')
             elif not email:
-                flash('Email is required.', 'error')
+                flash(translate_text('Email is required.', invite_language), 'error')
             elif existing:
-                flash('That email already has an account. Sign in instead, or use Forgot Password if needed.', 'error')
+                flash(translate_text('That email already has an account. Sign in instead, or use Forgot Password if needed.', invite_language), 'error')
             elif len(password) < 8:
-                flash('Password must be at least 8 characters.', 'error')
+                flash(translate_text('Password must be at least 8 characters.', invite_language), 'error')
             elif password != confirm_password:
-                flash('Passwords do not match.', 'error')
+                flash(translate_text('Passwords do not match.', invite_language), 'error')
             else:
                 conn.execute(
                     'INSERT INTO users (email, password_hash, full_name, role, client_id, preferred_language) VALUES (?,?,?,?,?,?)',
@@ -12825,7 +13048,7 @@ def business_invite(token):
                         full_name,
                         'client',
                         invite['client_id'],
-                        normalize_language((invite['preferred_language'] or '') or 'en'),
+                        normalize_language(invite_language or (invite['preferred_language'] or '') or 'en'),
                     )
                 )
                 new_user = conn.execute('SELECT id FROM users WHERE email=?', (email,)).fetchone()
@@ -12893,6 +13116,7 @@ def business_invite(token):
                 conn.commit()
                 session.clear()
                 session['user_id'] = new_user['id']
+                session['preferred_language'] = normalize_language(invite_language or (invite['preferred_language'] or '') or 'en')
                 if is_trial_claim and smtp_email_ready():
                     trial_end_row = conn.execute(
                         'SELECT trial_ends_at FROM clients WHERE id=?',
@@ -12973,12 +13197,12 @@ def business_invite(token):
                             )
                 if onboarding_needed:
                     if is_trial_claim:
-                        flash('Trial claimed. Start in the Welcome Center, review the guided overview, and finish the quick setup when you are ready.', 'success')
+                        flash(translate_text('Trial claimed. Start in the Welcome Center, review the guided overview, and finish the quick setup when you are ready.', invite_language), 'success')
                         return redirect(url_for('welcome_center'))
-                    flash('Business login created. Complete setup to unlock your full LedgerFlow workspace.', 'success')
+                    flash(translate_text('Business login created. Complete setup to unlock your full LedgerFlow workspace.', invite_language), 'success')
                     return redirect(url_for('business_onboarding'))
                 if is_trial_claim:
-                    flash('Trial claimed. Your LedgerFlow workspace is ready to explore.', 'success')
+                    flash(translate_text('Trial claimed. Your LedgerFlow workspace is ready to explore.', invite_language), 'success')
                     return redirect(url_for('welcome_center'))
                 welcome_sent = False
                 welcome_error = ''
@@ -12995,11 +13219,11 @@ def business_invite(token):
                     except Exception as e:
                         welcome_error = str(e)[:200]
                 if welcome_sent:
-                    flash('Business login created. Welcome email sent. Sign in below.', 'success')
+                    flash(translate_text('Business login created. Welcome email sent. Sign in below.', invite_language), 'success')
                 elif smtp_email_ready():
-                    flash(f'Business login created, but welcome email failed: {welcome_error}', 'error')
+                    flash(translate_text('Business login created, but welcome email failed: {error_message}', invite_language, error_message=welcome_error), 'error')
                 else:
-                    flash('Business login created. Sign in below.', 'success')
+                    flash(translate_text('Business login created. Sign in below.', invite_language), 'success')
                 return redirect(url_for('dashboard'))
     trial_offer_days = int(invite['trial_days'] or invite['trial_offer_days'] or 0)
     return render_template(
@@ -13018,19 +13242,21 @@ def business_rejoin(token):
         session.clear()
     with get_conn() as conn:
         invite = conn.execute(
-            'SELECT bi.*, c.business_name, c.record_status, c.onboarding_status FROM business_invites bi JOIN clients c ON c.id=bi.client_id WHERE bi.token=?',
+            'SELECT bi.*, c.business_name, c.record_status, c.onboarding_status, c.preferred_language FROM business_invites bi JOIN clients c ON c.id=bi.client_id WHERE bi.token=?',
             (token,)
         ).fetchone()
         if not invite:
             abort(404)
+        invite_language = seed_guest_language(invite['preferred_language'])
         expires_at = datetime.strptime(invite['expires_at'], '%Y-%m-%d %H:%M:%S')
         if invite['status'] != 'accepted' and datetime.utcnow() > expires_at:
             conn.execute('UPDATE business_invites SET status="expired" WHERE id=?', (invite['id'],))
             conn.commit()
             invite = conn.execute(
-                'SELECT bi.*, c.business_name, c.record_status, c.onboarding_status FROM business_invites bi JOIN clients c ON c.id=bi.client_id WHERE bi.token=?',
+                'SELECT bi.*, c.business_name, c.record_status, c.onboarding_status, c.preferred_language FROM business_invites bi JOIN clients c ON c.id=bi.client_id WHERE bi.token=?',
                 (token,)
             ).fetchone()
+            invite_language = seed_guest_language(invite['preferred_language'])
         existing_login = conn.execute(
             'SELECT id, email, full_name FROM users WHERE role="client" AND client_id=? ORDER BY id DESC LIMIT 1',
             (invite['client_id'],)
@@ -13063,9 +13289,9 @@ def business_rejoin(token):
             )
             conn.commit()
             if existing_login:
-                flash('Your LedgerFlow workspace has been restored. Sign in to continue.', 'success')
+                flash(translate_text('Your LedgerFlow workspace has been restored. Sign in to continue.', invite_language), 'success')
                 return redirect(url_for('main_portal'))
-            flash('Workspace restored. Create your business login to continue.', 'success')
+            flash(translate_text('Workspace restored. Create your business login to continue.', invite_language), 'success')
             return redirect(url_for('business_invite', token=token))
     return render_template('business_rejoin.html', invite=invite, existing_login=existing_login)
 

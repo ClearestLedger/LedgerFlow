@@ -3,17 +3,21 @@
 <head>
   <meta charset='utf-8'>
   <meta name='viewport' content='width=device-width,initial-scale=1'>
-  <title>{% if is_trial_invite %}Start Your Trial{% else %}Create Business Login{% endif %}</title>
+  <title>{% if is_trial_invite %}{{ tr('Start Your Trial') }}{% else %}{{ tr('Create Business Login') }}{% endif %}</title>
   <link rel='stylesheet' href='{{ url_for("static", filename="style.css", v=static_asset_version("style.css")) }}'>
 </head>
 <body class='login-body'>
   {% set trial_mode = is_trial_invite %}
+  <div class='mobile-status-banner' role='status' aria-live='polite'>
+    <strong>{{ tr('Mobile experience update') }}</strong>
+    <span>{{ tr("We're still working here for you. The phone version will be ready soon.") }}</span>
+  </div>
   <div class='login-brand-watermark'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
   <div class='login-floating-marks' aria-hidden='true'>
-    <span class='mark-one'>{% if trial_mode %}{{ trial_offer_days }}-Day Trial{% else %}Secure Access{% endif %}</span>
-    <span class='mark-two'>Business Setup</span>
-    <span class='mark-three'>Subscription</span>
-    <span class='mark-four'>{% if trial_mode %}Upgrade Later{% else %}Billing Ready{% endif %}</span>
+    <span class='mark-one'>{% if trial_mode %}{{ tr('{trial_offer_days}-Day Trial', trial_offer_days=trial_offer_days) }}{% else %}{{ tr('Secure Access') }}{% endif %}</span>
+    <span class='mark-two'>{{ tr('Business Setup') }}</span>
+    <span class='mark-three'>{{ tr('Subscription') }}</span>
+    <span class='mark-four'>{% if trial_mode %}{{ tr('Upgrade Later') }}{% else %}{{ tr('Billing Ready') }}{% endif %}</span>
   </div>
 
   {% if trial_mode %}
@@ -21,51 +25,61 @@
     <section class='card hero-surface trial-landing-hero'>
       <div class='card-head'>
         <div>
-          <div class='page-kicker'>Complimentary Trial</div>
-          <div class='page-title'>Start your {{ trial_offer_days }}-day LedgerFlow trial</div>
-          <div class='page-subtitle'>A cleaner guided start for {{ invite.business_name }}: review the workspace experience, explore the subscription tiers, create secure access, and continue the trial now. Upgrade later when you are ready.</div>
+          <form method='post' action='{{ url_for("set_language") }}' class='language-inline-form login-language-form'>
+            <input type='hidden' name='next' value='{{ request.path }}'>
+            <input type='hidden' name='quiet' value='1'>
+            <label for='invite-language'>{{ tr('Language') }}</label>
+            <select id='invite-language' name='preferred_language' onchange='this.form.submit()'>
+              {% for option in language_options %}
+              <option value='{{ option.code }}' {% if current_language == option.code %}selected{% endif %}>{{ option.label }}</option>
+              {% endfor %}
+            </select>
+          </form>
+          <div class='page-kicker'>{{ tr('Complimentary Trial') }}</div>
+          <div class='page-title'>{{ tr('Start your {trial_offer_days}-day LedgerFlow trial', trial_offer_days=trial_offer_days) }}</div>
+          <div class='page-subtitle'>{{ tr('A cleaner guided start for {business_name}: review the workspace experience, explore the subscription tiers, create secure access, and continue the trial now. Upgrade later when you are ready.', business_name=invite.business_name) }}</div>
         </div>
-        <span class='badge'>{{ trial_offer_days }} Days</span>
+        <span class='badge'>{{ tr('{trial_offer_days} Days', trial_offer_days=trial_offer_days) }}</span>
       </div>
       <div class='summary-strip' style='margin-top:14px'>
-        <span class='summary-pill'>No card required to begin</span>
-        <span class='summary-pill'>Video tutorial ready</span>
-        <span class='summary-pill'>Choose subscription now</span>
-        <span class='summary-pill'>Upgrade later</span>
+        <span class='summary-pill'>{{ tr('No card required to begin') }}</span>
+        <span class='summary-pill'>{{ tr('Video tutorial ready') }}</span>
+        <span class='summary-pill'>{{ tr('Choose subscription now') }}</span>
+        <span class='summary-pill'>{{ tr('Upgrade later') }}</span>
       </div>
     </section>
 
     <div class='trial-landing-grid'>
       <section class='card section-frame trial-video-card'>
         <div class='card-head'>
-          <h3>Welcome Tutorial Preview</h3>
+          <h3>{{ tr('Welcome Tutorial Preview') }}</h3>
           <span class='badge'>Canva Ready</span>
         </div>
-        <div class='welcome-video-frame trial-video-frame'>Drop your marketing or welcome video here later</div>
-        <div class='small' style='margin-top:12px'>This top section is reserved for the welcome/tutorial video that introduces the workspace, explains the 7-day complimentary period, and shows the first steps clearly.</div>
+        <div class='welcome-video-frame trial-video-frame'>{{ tr('Drop your marketing or welcome video here later') }}</div>
+        <div class='small' style='margin-top:12px'>{{ tr('This top section is reserved for the welcome/tutorial video that introduces the workspace, explains the 7-day complimentary period, and shows the first steps clearly.') }}</div>
       </section>
 
       <section class='card section-frame'>
         <div class='card-head'>
-          <h3>How the Trial Works</h3>
-          <span class='badge'>4 Steps</span>
+          <h3>{{ tr('How the Trial Works') }}</h3>
+          <span class='badge'>{{ tr('4 Steps') }}</span>
         </div>
         <div class='trial-journey-grid'>
           <article class='trial-journey-step'>
-            <strong>1. Review the workspace</strong>
-            <span>Start with the overview, tutorial, and pricing so the offer feels clear before you create anything.</span>
+            <strong>{{ tr('1. Review the workspace') }}</strong>
+            <span>{{ tr('Start with the overview, tutorial, and pricing so the offer feels clear before you create anything.') }}</span>
           </article>
           <article class='trial-journey-step'>
-            <strong>2. Create secure access</strong>
-            <span>Create the business owner login for {{ invite.business_name }} and open the Welcome Center.</span>
+            <strong>{{ tr('2. Create secure access') }}</strong>
+            <span>{{ tr('Create the business owner login for {business_name} and open the Welcome Center.', business_name=invite.business_name) }}</span>
           </article>
           <article class='trial-journey-step'>
-            <strong>3. Choose your subscription</strong>
-            <span>Select the tier that fits your business now, with full pricing visible and no pressure to enter billing today.</span>
+            <strong>{{ tr('3. Choose your subscription') }}</strong>
+            <span>{{ tr('Select the tier that fits your business now, with full pricing visible and no pressure to enter billing today.') }}</span>
           </article>
           <article class='trial-journey-step'>
-            <strong>4. Continue the free trial</strong>
-            <span>Enter business details, explore the workspace, and upgrade later before the complimentary period ends.</span>
+            <strong>{{ tr('4. Continue the free trial') }}</strong>
+            <span>{{ tr('Enter business details, explore the workspace, and upgrade later before the complimentary period ends.') }}</span>
           </article>
         </div>
       </section>
@@ -74,9 +88,9 @@
     <section class='card section-frame'>
       <div class='card-head'>
         <div>
-          <div class='page-kicker'>Subscription Options</div>
-          <div class='page-title' style='font-size:1.55rem'>Choose your growth path now</div>
-          <div class='page-subtitle'>Each tier opens separately so the pricing stays visible first and the details stay organized.</div>
+          <div class='page-kicker'>{{ tr('Subscription Options') }}</div>
+          <div class='page-title' style='font-size:1.55rem'>{{ tr('Choose your growth path now') }}</div>
+          <div class='page-subtitle'>{{ tr('Each tier opens separately so the pricing stays visible first and the details stay organized.') }}</div>
         </div>
       </div>
       <div class='trial-pricing-stack'>
@@ -99,7 +113,7 @@
               {% endfor %}
             </ul>
             {% if tier.coming_soon %}
-            <div class='subscription-tier-coming-soon'><strong>Coming Soon:</strong> {{ tier.coming_soon|join(', ') }}</div>
+            <div class='subscription-tier-coming-soon'><strong>{{ tr('Coming Soon:') }}</strong> {{ tier.coming_soon|join(', ') }}</div>
             {% endif %}
           </div>
         </details>
@@ -110,9 +124,9 @@
     <section class='card section-frame trial-claim-card'>
       <div class='card-head'>
         <div>
-          <div class='page-kicker'>Claim Trial & Create Login</div>
-          <div class='page-title' style='font-size:1.65rem'>Continue with the free trial now</div>
-          <div class='page-subtitle'>The trial workspace opens first. Billing can be added later before the complimentary period ends.</div>
+          <div class='page-kicker'>{{ tr('Claim Trial & Create Login') }}</div>
+          <div class='page-title' style='font-size:1.65rem'>{{ tr('Continue with the free trial now') }}</div>
+          <div class='page-subtitle'>{{ tr('The trial workspace opens first. Billing can be added later before the complimentary period ends.') }}</div>
         </div>
         <span class='badge'>{{ invite.business_name }}</span>
       </div>
@@ -120,20 +134,20 @@
       <div class='invite-summary-card' style='margin-bottom:16px'>
         <div class='invite-detail-grid'>
           <div>
-            <span class='small-label'>Business</span>
+            <span class='small-label'>{{ tr('Business') }}</span>
             <strong>{{ invite.business_name }}</strong>
           </div>
           <div>
-            <span class='small-label'>Invite Email</span>
+            <span class='small-label'>{{ tr('Invite Email') }}</span>
             <strong>{{ invite.invited_email }}</strong>
           </div>
           <div>
-            <span class='small-label'>Trial Offer</span>
-            <strong>{{ trial_offer_days }} complimentary days</strong>
+            <span class='small-label'>{{ tr('Trial Offer') }}</span>
+            <strong>{{ tr('{trial_offer_days} complimentary days', trial_offer_days=trial_offer_days) }}</strong>
           </div>
           <div>
-            <span class='small-label'>After Login</span>
-            <strong>Welcome Center first, then quick setup</strong>
+            <span class='small-label'>{{ tr('After Login') }}</span>
+            <strong>{{ tr('Welcome Center first, then quick setup') }}</strong>
           </div>
         </div>
       </div>
@@ -150,26 +164,26 @@
 
       {% if invite.status in ['pending','sent','failed'] %}
       <form method='post' class='form-grid'>
-        <div><label>Full Name</label><input name='full_name' value='{{ request.form.get("full_name", invite.invited_name or "") }}' required></div>
-        <div><label>Email</label><input name='email' value='{{ request.form.get("email", invite.invited_email or "") }}' required></div>
-        <div><label>Create Password</label><div class='password-field'><input name='password' type='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
-        <div><label>Confirm Password</label><div class='password-field'><input name='confirm_password' type='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
-        <div><button>Continue with Free Trial</button></div>
+        <div><label>{{ tr('Full Name') }}</label><input name='full_name' value='{{ request.form.get("full_name", invite.invited_name or "") }}' required></div>
+        <div><label>{{ tr('Email') }}</label><input name='email' value='{{ request.form.get("email", invite.invited_email or "") }}' required></div>
+        <div><label>{{ tr('Create Password') }}</label><div class='password-field'><input name='password' type='password' required><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div></div>
+        <div><label>{{ tr('Confirm Password') }}</label><div class='password-field'><input name='confirm_password' type='password' required><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div></div>
+        <div><button>{{ tr('Continue with Free Trial') }}</button></div>
       </form>
       <div class='trial-note-callout'>
-        <strong>No payment required today.</strong>
-        <span>Create the login now, open the Welcome Center, and complete the quick setup when you are ready. You can upgrade and add billing later before the complimentary period ends.</span>
+        <strong>{{ tr('No payment required today.') }}</strong>
+        <span>{{ tr('Create the login now, open the Welcome Center, and complete the quick setup when you are ready. You can upgrade and add billing later before the complimentary period ends.') }}</span>
       </div>
       {% else %}
         {% if invite.status == 'accepted' %}
-        <p>This business login has already been created. Sign in with the email you used for setup.</p>
+        <p>{{ tr('This business login has already been created. Sign in with the email you used for setup.') }}</p>
         <div style='display:flex;gap:10px;flex-wrap:wrap'>
-          <a class='btn btn-secondary' href='{{ url_for("login") }}'>Sign In</a>
-          <a class='btn btn-secondary' href='{{ url_for("forgot_password") }}'>Forgot Password</a>
+          <a class='btn btn-secondary' href='{{ url_for("login") }}'>{{ tr('Sign In') }}</a>
+          <a class='btn btn-secondary' href='{{ url_for("forgot_password") }}'>{{ tr('Forgot Password') }}</a>
         </div>
         {% else %}
-        <p>This invite is no longer available.</p>
-        <a class='btn btn-secondary' href='{{ url_for("login") }}'>Back to Login</a>
+        <p>{{ tr('This invite is no longer available.') }}</p>
+        <a class='btn btn-secondary' href='{{ url_for("login") }}'>{{ tr('Back to Login') }}</a>
         {% endif %}
       {% endif %}
     </section>
@@ -177,23 +191,33 @@
   {% else %}
   <div class='login-wrap invite-standard-shell'>
     <section class='login-card'>
+      <form method='post' action='{{ url_for("set_language") }}' class='language-inline-form login-language-form'>
+        <input type='hidden' name='next' value='{{ request.path }}'>
+        <input type='hidden' name='quiet' value='1'>
+        <label for='invite-standard-language'>{{ tr('Language') }}</label>
+        <select id='invite-standard-language' name='preferred_language' onchange='this.form.submit()'>
+          {% for option in language_options %}
+          <option value='{{ option.code }}' {% if current_language == option.code %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </form>
       <div class='badge'>{{ invite_kind_label }}</div>
-      <div class='login-kicker'>Create Business Login</div>
+      <div class='login-kicker'>{{ tr('Create Business Login') }}</div>
       <h1>{{ invite.business_name }}</h1>
-      <p class='small'>Your administrator has invited you to begin secure access setup for this LedgerFlow workspace.{% if invite.expires_at %} Invite expires {{ invite.expires_at }}.{% endif %}</p>
+      <p class='small'>{{ tr('Your administrator has invited you to begin secure access setup for this LedgerFlow workspace.') }}{% if invite.expires_at %} {{ tr('Invite expires {expires_at}.', expires_at=invite.expires_at) }}{% endif %}</p>
       <div class='invite-summary-card'>
         <div class='invite-detail-grid'>
           <div>
-            <span class='small-label'>Business</span>
+            <span class='small-label'>{{ tr('Business') }}</span>
             <strong>{{ invite.business_name }}</strong>
           </div>
           <div>
-            <span class='small-label'>Invite Email</span>
+            <span class='small-label'>{{ tr('Invite Email') }}</span>
             <strong>{{ invite.invited_email }}</strong>
           </div>
           <div>
-            <span class='small-label'>Next Step</span>
-            <strong>Create login and continue to setup</strong>
+            <span class='small-label'>{{ tr('Next Step') }}</span>
+            <strong>{{ tr('Create login and continue to setup') }}</strong>
           </div>
         </div>
       </div>
@@ -208,23 +232,23 @@
       {% endwith %}
       {% if invite.status in ['pending','sent','failed'] %}
       <form method='post' class='form-grid'>
-        <div><label>Full Name</label><input name='full_name' value='{{ request.form.get("full_name", invite.invited_name or "") }}' required></div>
-        <div><label>Email</label><input name='email' value='{{ request.form.get("email", invite.invited_email or "") }}' required></div>
-        <div><label>Create Password</label><div class='password-field'><input name='password' type='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
-        <div><label>Confirm Password</label><div class='password-field'><input name='confirm_password' type='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>Show</span><span class='toggle-hide'>Hide</span></button></div></div>
-        <div><button>Create Business Login</button></div>
+        <div><label>{{ tr('Full Name') }}</label><input name='full_name' value='{{ request.form.get("full_name", invite.invited_name or "") }}' required></div>
+        <div><label>{{ tr('Email') }}</label><input name='email' value='{{ request.form.get("email", invite.invited_email or "") }}' required></div>
+        <div><label>{{ tr('Create Password') }}</label><div class='password-field'><input name='password' type='password' required><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div></div>
+        <div><label>{{ tr('Confirm Password') }}</label><div class='password-field'><input name='confirm_password' type='password' required><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div></div>
+        <div><button>{{ tr('Create Business Login') }}</button></div>
       </form>
-      <div class='small' style='margin-top:12px'>This invite creates your login first. It does not open the full workspace until setup is completed.</div>
+      <div class='small' style='margin-top:12px'>{{ tr('This invite creates your login first. It does not open the full workspace until setup is completed.') }}</div>
       {% else %}
         {% if invite.status == 'accepted' %}
-        <p>This business login has already been created. Sign in with the email you used for setup.</p>
+        <p>{{ tr('This business login has already been created. Sign in with the email you used for setup.') }}</p>
         <div style='display:flex;gap:10px;flex-wrap:wrap'>
-          <a class='btn btn-secondary' href='{{ url_for("login") }}'>Sign In</a>
-          <a class='btn btn-secondary' href='{{ url_for("forgot_password") }}'>Forgot Password</a>
+          <a class='btn btn-secondary' href='{{ url_for("login") }}'>{{ tr('Sign In') }}</a>
+          <a class='btn btn-secondary' href='{{ url_for("forgot_password") }}'>{{ tr('Forgot Password') }}</a>
         </div>
         {% else %}
-        <p>This invite is no longer available.</p>
-        <a class='btn btn-secondary' href='{{ url_for("login") }}'>Back to Login</a>
+        <p>{{ tr('This invite is no longer available.') }}</p>
+        <a class='btn btn-secondary' href='{{ url_for("login") }}'>{{ tr('Back to Login') }}</a>
         {% endif %}
       {% endif %}
     </section>
@@ -232,21 +256,25 @@
   {% endif %}
 
   <div class='login-bottom-rail' aria-label='Platform functions'>
-    <span>Billing Center</span>
-    <span>Income Records</span>
-    <span>Payroll Tax</span>
-    <span>Calendar</span>
-    <span>Secure Setup</span>
-    <span>Business Access</span>
+    <span>{{ tr('Billing Center') }}</span>
+    <span>{{ tr('Income Records') }}</span>
+    <span>{{ tr('Payroll Tax') }}</span>
+    <span>{{ tr('Calendar') }}</span>
+    <span>{{ tr('Secure Setup') }}</span>
+    <span>{{ tr('Business Access') }}</span>
   </div>
   <script>
     document.addEventListener('click', function (event) {
+      const showPasswordLabel = {{ tr('Show password')|tojson }};
+      const hidePasswordLabel = {{ tr('Hide password')|tojson }};
       const button = event.target.closest('.password-toggle');
       if (!button) return;
       const field = button.parentElement.querySelector('input');
       if (!field) return;
       field.type = field.type === 'password' ? 'text' : 'password';
       button.classList.toggle('visible', field.type === 'text');
+      button.setAttribute('aria-label', field.type === 'text' ? hidePasswordLabel : showPasswordLabel);
+      button.setAttribute('title', field.type === 'text' ? hidePasswordLabel : showPasswordLabel);
     });
   </script>
 </body>
