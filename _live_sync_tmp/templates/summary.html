@@ -2,41 +2,41 @@
 {% block body %}
 <div class='toolbar hero-toolbar'>
   <div>
-    <div class='page-kicker'>Financial Summary</div>
-    <div class='page-title'>Summary Center</div>
-    <div class='page-subtitle'>Income, expenses, mileage, and tax-readiness in one printable reporting view.</div>
+    <div class='page-kicker'>{{ tr('Financial Summary') }}</div>
+    <div class='page-title'>{{ tr('Summary Center') }}</div>
+    <div class='page-subtitle'>{{ tr('Income, expenses, mileage, and tax-readiness in one printable reporting view.') }}</div>
   </div>
   {% if current_user.role=='admin' %}
   <form method='get' class='inline-form'>
-    <label>Business</label>
+    <label>{{ tr('Business') }}</label>
     <select name='client_id'>
       {% for c in all_clients %}<option value='{{ c.id }}' {% if c.id==client_id %}selected{% endif %}>{{ c.business_name }}</option>{% endfor %}
     </select>
-    <label>From</label><input type='date' name='start_date' value='{{ start_date }}'>
-    <label>To</label><input type='date' name='end_date' value='{{ end_date }}'>
-    <button type='submit'>Apply</button>
+    <label>{{ tr('From') }}</label><input type='date' name='start_date' value='{{ start_date }}'>
+    <label>{{ tr('To') }}</label><input type='date' name='end_date' value='{{ end_date }}'>
+    <button type='submit'>{{ tr('Apply') }}</button>
   </form>
   {% else %}
   <form method='get' class='inline-form'>
     <input type='date' name='start_date' value='{{ start_date }}'>
     <input type='date' name='end_date' value='{{ end_date }}'>
-    <button type='submit'>Apply</button>
+    <button type='submit'>{{ tr('Apply') }}</button>
   </form>
   {% endif %}
-  <button onclick='window.print()' class='btn btn-dark' type='button'>Print Summary</button>
+  <button onclick='window.print()' class='btn btn-dark' type='button'>{{ tr('Print Summary') }}</button>
 </div>
 <div class='grid cards-4'>
-  <div class='card stat-card premium-stat'><h3>Income</h3><div class='metric big'>${{ '%.2f'|format(summary.gross_income) }}</div></div>
-  <div class='card stat-card premium-stat'><h3>Expenses</h3><div class='metric big'>${{ '%.2f'|format(summary.total_expenses) }}</div></div>
-  <div class='card stat-card premium-stat'><h3>Operating Profit</h3><div class='metric big'>${{ '%.2f'|format(summary.operating_profit) }}</div></div>
-  <div class='card stat-card premium-stat premium-stat-accent'><h3>Mileage Deduction</h3><div class='metric big'>${{ '%.2f'|format(summary.mileage_deduction) }}</div></div>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Income') }}</h3><div class='metric big'>${{ '%.2f'|format(summary.gross_income) }}</div></div>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Expenses') }}</h3><div class='metric big'>${{ '%.2f'|format(summary.total_expenses) }}</div></div>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Operating Profit') }}</h3><div class='metric big'>${{ '%.2f'|format(summary.operating_profit) }}</div></div>
+  <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Mileage Deduction') }}</h3><div class='metric big'>${{ '%.2f'|format(summary.mileage_deduction) }}</div></div>
 </div>
 <div class='grid cards-2' style='margin-top:16px'>
-  <div class='card'><h3>Tax Readiness Snapshot</h3><div class='metric'>Invoices: {{ summary.invoice_count }}<br>Workers: ${{ '%.2f'|format(summary.worker_total) }}<br>Gas: ${{ '%.2f'|format(summary.gas_total) }}<br>Materials: ${{ '%.2f'|format(summary.materials_total) }}<br>Adjusted Profit: ${{ '%.2f'|format(summary.adjusted_profit) }}<br>SE Tax Est.: ${{ '%.2f'|format(summary.self_employment_tax_estimate) }}<br>Total Est.: ${{ '%.2f'|format(summary.federal_plus_se_estimate) }}</div></div>
-  <div class='card'><h3>Quick Print Center</h3><div class='stack-actions'><a class='btn' href='{{ url_for("reports", client_id=client_id, report_type="summary", start_date=start_date, end_date=end_date) }}'>Open Report Center</a><a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}'>Estimates</a><a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}'>Invoices</a><a class='btn btn-secondary' href='{{ url_for("mileage", client_id=client_id) }}'>Mileage</a></div></div>
+  <div class='card'><h3>{{ tr('Tax Readiness Snapshot') }}</h3><div class='metric'>{{ tr('Invoices:') }} {{ summary.invoice_count }}<br>{{ tr('Workers:') }} ${{ '%.2f'|format(summary.worker_total) }}<br>{{ tr('Gas:') }} ${{ '%.2f'|format(summary.gas_total) }}<br>{{ tr('Materials:') }} ${{ '%.2f'|format(summary.materials_total) }}<br>{{ tr('Adjusted Profit:') }} ${{ '%.2f'|format(summary.adjusted_profit) }}<br>{{ tr('SE Tax Est.:') }} ${{ '%.2f'|format(summary.self_employment_tax_estimate) }}<br>{{ tr('Total Est.:') }} ${{ '%.2f'|format(summary.federal_plus_se_estimate) }}</div></div>
+  <div class='card'><h3>{{ tr('Quick Print Center') }}</h3><div class='stack-actions'><a class='btn' href='{{ url_for("reports", client_id=client_id, report_type="summary", start_date=start_date, end_date=end_date) }}'>{{ tr('Open Report Center') }}</a><a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}'>{{ tr('Estimates') }}</a><a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Invoices') }}</a><a class='btn btn-secondary' href='{{ url_for("mileage", client_id=client_id) }}'>{{ tr('Mileage') }}</a></div></div>
 </div>
 <div class='grid cards-2' style='margin-top:16px'>
-  <div class='card'><h3>Recent Invoices</h3><table class='table'><tr><th>Job #</th><th>Date</th><th>Customer</th><th>Amount</th></tr>{% for row in invoices %}<tr><td>{{ row.job_number }}</td><td>{{ row.invoice_date }}</td><td>{{ row.client_name }}</td><td>${{ '%.2f'|format(row.paid_amount or 0) }}</td></tr>{% endfor %}</table></div>
-  <div class='card'><h3>Recent Mileage</h3><table class='table'><tr><th>Date</th><th>Purpose</th><th>Miles</th><th>Deduction</th></tr>{% for row in mileage_entries %}<tr><td>{{ row.trip_date }}</td><td>{{ row.purpose }}</td><td>{{ '%.2f'|format(row.miles or 0) }}</td><td>${{ '%.2f'|format(row.deduction or 0) }}</td></tr>{% endfor %}</table></div>
+  <div class='card'><h3>{{ tr('Recent Invoices') }}</h3><table class='table'><tr><th>{{ tr('Job #') }}</th><th>{{ tr('Date') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Amount') }}</th></tr>{% for row in invoices %}<tr><td>{{ row.job_number }}</td><td>{{ row.invoice_date }}</td><td>{{ row.client_name }}</td><td>${{ '%.2f'|format(row.paid_amount or 0) }}</td></tr>{% endfor %}</table></div>
+  <div class='card'><h3>{{ tr('Recent Mileage') }}</h3><table class='table'><tr><th>{{ tr('Date') }}</th><th>{{ tr('Purpose') }}</th><th>{{ tr('Miles') }}</th><th>{{ tr('Deduction') }}</th></tr>{% for row in mileage_entries %}<tr><td>{{ row.trip_date }}</td><td>{{ row.purpose }}</td><td>{{ '%.2f'|format(row.miles or 0) }}</td><td>${{ '%.2f'|format(row.deduction or 0) }}</td></tr>{% endfor %}</table></div>
 </div>
 {% endblock %}

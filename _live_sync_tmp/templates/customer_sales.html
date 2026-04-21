@@ -2,62 +2,117 @@
 {% block body %}
 <div class='toolbar hero-toolbar'>
   <div>
-    <div class='page-kicker'>Clients &amp; Sales</div>
+    <div class='page-kicker'>{{ tr('Clients') }}</div>
     <div class='page-title'>{{ client.business_name }}</div>
-    <div class='page-subtitle'>One customer-facing workspace for estimates, invoices, hosted links, and the customers moving through your sales pipeline.</div>
+    <div class='page-subtitle'>{{ tr('Premium customer workspace for saved return clients, hosted estimates, customer invoices, and repeat billing relationships.') }}</div>
   </div>
   <div class='stack-actions'>
-    <a class='btn' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>Create Estimate</a>
-    <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'>Create Invoice</a>
+    <a class='btn' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>{{ tr('Create Estimate') }}</a>
+    <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'>{{ tr('Create Invoice') }}</a>
   </div>
 </div>
 
 <div class='grid cards-4'>
-  <div class='card stat-card premium-stat'><h3>Customers</h3><div class='metric big'>{{ metrics.customer_count }}</div></div>
-  <div class='card stat-card premium-stat'><h3>Open Estimates</h3><div class='metric big'>{{ metrics.open_estimates }}</div></div>
-  <div class='card stat-card premium-stat'><h3>Approved Estimates</h3><div class='metric big'>{{ metrics.approved_estimates }}</div></div>
-  <div class='card stat-card premium-stat premium-stat-accent'><h3>Open Invoices</h3><div class='metric big'>{{ metrics.open_invoices }}</div></div>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Saved Clients') }}</h3><div class='metric big'>{{ metrics.customer_count }}</div></div>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Open Estimates') }}</h3><div class='metric big'>{{ metrics.open_estimates }}</div></div>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Approved Estimates') }}</h3><div class='metric big'>{{ metrics.approved_estimates }}</div></div>
+  <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Open Invoices') }}</h3><div class='metric big'>{{ metrics.open_invoices }}</div></div>
 </div>
 
 <div class='grid cards-2' style='margin-top:16px'>
   <div class='card section-frame'>
-    <div class='card-head'><h3>How This Flow Works</h3><span class='badge'>Estimate → Invoice</span></div>
-    <ol class='trial-compact-list'>
-      <li>Create the estimate first when the customer still needs to review the scope or approve pricing.</li>
-      <li>Send or copy the hosted estimate link so the customer can review it online.</li>
-      <li>Convert approved work into the final invoice when you are ready to collect payment.</li>
-      <li>Use customer invoices and reminders for collections, and keep bookkeeping-only income records separate.</li>
-    </ol>
+    <div class='card-head'><h3>{{ tr('Add Saved Client') }}</h3><span class='badge'>{{ tr('Recurring Customers') }}</span></div>
+    <div class='small' style='margin-bottom:12px'>{{ tr('Keep repeat customers on file here so estimates and invoices can start faster the next time they come back.') }}</div>
+    <form method='post' class='form-grid'>
+      <input type='hidden' name='action' value='add_customer_contact'>
+      {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <div><label>{{ tr('Client Name') }}</label><input name='customer_name' required></div>
+      <div><label>{{ tr('Email') }}</label><input name='customer_email' type='email'></div>
+      <div><label>{{ tr('Phone') }}</label><input name='customer_phone'></div>
+      <div><label>{{ tr('Address') }}</label><input name='customer_address'></div>
+      <div style='grid-column:1/-1'><label>{{ tr('Notes') }}</label><textarea name='customer_notes' placeholder='{{ tr("Gate code, preferred contact method, favorite service, or follow-up notes") }}'></textarea></div>
+      <div><button type='submit'>{{ tr('Save Client') }}</button></div>
+    </form>
   </div>
 
   <div class='card section-frame'>
-    <div class='card-head'><h3>Quick Actions</h3><span class='badge'>Sales Tools</span></div>
-    <div class='stack-actions'>
-      <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}'>Open Estimates</a>
-      <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}'>Open Invoices</a>
-      <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'>Invoice a Customer</a>
-      <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>Quote a Customer</a>
+    <div class='card-head'><h3>{{ tr('How This Premium Flow Works') }}</h3><span class='badge'>{{ tr('Clients -> Estimates -> Invoices') }}</span></div>
+    <ol class='trial-compact-list'>
+      <li>{{ tr('Save repeat clients here once so their information is ready for future work.') }}</li>
+      <li>{{ tr('Create the estimate first when the scope or price still needs approval.') }}</li>
+      <li>{{ tr('Send or copy the hosted estimate link so the client can review it online.') }}</li>
+      <li>{{ tr('Convert approved work into the final invoice when you are ready to collect payment.') }}</li>
+    </ol>
+    <div class='stack-actions' style='margin-top:14px'>
+      <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}'>{{ tr('Open Estimates') }}</a>
+      <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Open Invoices') }}</a>
     </div>
-    <div class='small' style='margin-top:12px'>This tab is your customer-facing control center. Estimates and invoices still keep their full dedicated pages for creation, sending, and follow-up.</div>
   </div>
 </div>
 
 <div class='card section-frame' style='margin-top:16px'>
-  <div class='card-head'><h3>Customer Activity</h3><div class='small'>Recent customer relationships built from estimates and invoices</div></div>
+  <div class='card-head'><h3>{{ tr('Saved Client List') }}</h3><div class='small'>{{ tr('Premium-only customer records for return business and faster quoting') }}</div></div>
   <div class='scroll-x'>
     <table class='table'>
-      <tr><th>Customer</th><th>Estimates</th><th>Invoices</th><th>Last Estimate</th><th>Last Invoice</th><th>Open Balance</th></tr>
+      <tr><th>{{ tr('Client') }}</th><th>{{ tr('Phone') }}</th><th>{{ tr('Address') }}</th><th>{{ tr('Notes') }}</th><th>{{ tr('Actions') }}</th></tr>
+      {% for row in customer_contacts %}
+      <tr>
+        <td>
+          <strong>{{ row.customer_name }}</strong>
+          <div class='small'>{{ row.customer_email or tr('No email saved yet') }}</div>
+        </td>
+        <td>{{ row.customer_phone or '-' }}</td>
+        <td>{{ row.customer_address or '-' }}</td>
+        <td>{{ row.customer_notes or '-' }}</td>
+        <td>
+          <details class='compact-details client-inline-editor'>
+            <summary>{{ tr('Edit') }}</summary>
+            <form method='post' class='form-grid' style='margin-top:12px'>
+              <input type='hidden' name='action' value='update_customer_contact'>
+              <input type='hidden' name='contact_id' value='{{ row.id }}'>
+              {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+              <div><label>{{ tr('Client Name') }}</label><input name='customer_name' value='{{ row.customer_name }}' required></div>
+              <div><label>{{ tr('Email') }}</label><input name='customer_email' type='email' value='{{ row.customer_email or "" }}'></div>
+              <div><label>{{ tr('Phone') }}</label><input name='customer_phone' value='{{ row.customer_phone or "" }}'></div>
+              <div><label>{{ tr('Address') }}</label><input name='customer_address' value='{{ row.customer_address or "" }}'></div>
+              <div style='grid-column:1/-1'><label>{{ tr('Notes') }}</label><textarea name='customer_notes'>{{ row.customer_notes or "" }}</textarea></div>
+              <div><button type='submit' class='btn btn-secondary btn-sm'>{{ tr('Save Changes') }}</button></div>
+            </form>
+          </details>
+          <form method='post' style='margin-top:8px'>
+            <input type='hidden' name='action' value='archive_customer_contact'>
+            <input type='hidden' name='contact_id' value='{{ row.id }}'>
+            {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+            <button type='submit' class='btn btn-secondary btn-sm'>{{ tr('Archive') }}</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan='5' class='small'>{{ tr('No saved clients yet. Add recurring customers here so estimates and invoices can reuse their details.') }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-top:16px'>
+  <div class='card-head'><h3>{{ tr('Sales Activity Snapshot') }}</h3><div class='small'>{{ tr('Recent estimate and invoice relationships tied to your clients') }}</div></div>
+  <div class='scroll-x'>
+    <table class='table'>
+      <tr><th>{{ tr('Client') }}</th><th>{{ tr('Estimates') }}</th><th>{{ tr('Invoices') }}</th><th>{{ tr('Last Estimate') }}</th><th>{{ tr('Last Invoice') }}</th><th>{{ tr('Open Balance') }}</th></tr>
       {% for row in customer_activity %}
       <tr>
-        <td><strong>{{ row.customer_name }}</strong><div class='small'>{{ row.customer_email or 'No email saved yet' }}</div></td>
+        <td>
+          <strong>{{ row.customer_name }}</strong>
+          <div class='small'>{{ row.customer_email or tr('No email saved yet') }}</div>
+        </td>
         <td>{{ row.estimate_count }}</td>
         <td>{{ row.invoice_count }}</td>
-        <td>{{ estimate_status_labels.get(row.last_estimate_status, row.last_estimate_status|title) if row.last_estimate_status else '—' }}</td>
-        <td>{{ invoice_status_labels.get(row.last_invoice_status, row.last_invoice_status|title) if row.last_invoice_status else '—' }}</td>
+        <td>{{ estimate_status_labels.get(row.last_estimate_status, row.last_estimate_status|title) if row.last_estimate_status else '-' }}</td>
+        <td>{{ invoice_status_labels.get(row.last_invoice_status, row.last_invoice_status|title) if row.last_invoice_status else '-' }}</td>
         <td>${{ '%.2f'|format(row.open_balance or 0) }}</td>
       </tr>
       {% else %}
-      <tr><td colspan='6' class='small'>No customer-facing estimate or invoice activity yet.</td></tr>
+      <tr><td colspan='6' class='small'>{{ tr('No estimate or invoice activity yet.') }}</td></tr>
       {% endfor %}
     </table>
   </div>
@@ -65,45 +120,73 @@
 
 <div class='grid cards-2' style='margin-top:16px'>
   <div class='card section-frame'>
-    <div class='card-head'><h3>Recent Estimates</h3><div class='small'>Hosted link and approval workflow</div></div>
+    <div class='card-head'><h3>{{ tr('Recent Estimates') }}</h3><div class='small'>{{ tr('Hosted link and approval workflow') }}</div></div>
     <div class='estimate-preview-list'>
       {% for row in estimate_rows %}
       <div class='estimate-preview-item'>
         <div>
-          <strong>#{{ row.job_number or row.id }} · {{ row.client_name }}</strong>
-          <div class='small'>{{ estimate_status_labels.get(row.invoice_status, row.invoice_status|title) }} · ${{ '%.2f'|format(row.invoice_total_amount or 0) }}{% if row.recipient_email %} · {{ row.recipient_email }}{% endif %}</div>
+          <strong>#{{ row.job_number or row.id }} &middot; {{ row.client_name }}</strong>
+          <div class='small'>{{ estimate_status_labels.get(row.invoice_status, row.invoice_status|title) }} &middot; ${{ '%.2f'|format(row.invoice_total_amount or 0) }}{% if row.recipient_email %} &middot; {{ row.recipient_email }}{% endif %}</div>
         </div>
         <div class='estimate-preview-actions'>
-          <a class='btn btn-secondary btn-sm' href='{{ estimate_public_links.get(row.id) }}' target='_blank'>Open Link</a>
-          <button class='btn btn-secondary btn-sm copy-link-btn' type='button' data-copy-url='{{ estimate_public_links.get(row.id) }}'>Copy Link</button>
+          <a class='btn btn-secondary btn-sm' href='{{ estimate_public_links.get(row.id) }}' target='_blank'>{{ tr('Open Link') }}</a>
+          <button class='btn btn-secondary btn-sm copy-link-btn' type='button' data-copy-url='{{ estimate_public_links.get(row.id) }}' data-copy-label='{{ tr("Copy Link") }}' data-copied-label='{{ tr("Copied") }}'>{{ tr('Copy Link') }}</button>
         </div>
       </div>
       {% else %}
-      <div class='small'>No estimates yet.</div>
+      <div class='small'>{{ tr('No estimates yet.') }}</div>
       {% endfor %}
     </div>
   </div>
 
   <div class='card section-frame'>
-    <div class='card-head'><h3>Recent Invoices</h3><div class='small'>Hosted billing links and collection status</div></div>
+    <div class='card-head'><h3>{{ tr('Recent Invoices') }}</h3><div class='small'>{{ tr('Hosted billing links and collection status') }}</div></div>
     <div class='estimate-preview-list'>
       {% for row in invoice_rows %}
       <div class='estimate-preview-item'>
         <div>
-          <strong>#{{ row.job_number or row.id }} · {{ row.client_name }}</strong>
-          <div class='small'>{{ invoice_status_labels.get(row.invoice_status, row.invoice_status|title) }} · ${{ '%.2f'|format(row.invoice_total_amount or 0) }}{% if row.recipient_email %} · {{ row.recipient_email }}{% endif %}</div>
+          <strong>#{{ row.job_number or row.id }} &middot; {{ row.client_name }}</strong>
+          <div class='small'>{{ invoice_status_labels.get(row.invoice_status, row.invoice_status|title) }} &middot; ${{ '%.2f'|format(row.invoice_total_amount or 0) }}{% if row.recipient_email %} &middot; {{ row.recipient_email }}{% endif %}</div>
         </div>
         <div class='estimate-preview-actions'>
-          <a class='btn btn-secondary btn-sm' href='{{ invoice_public_links.get(row.id) }}' target='_blank'>Open Link</a>
-          <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>Print</a>
+          <a class='btn btn-secondary btn-sm' href='{{ invoice_public_links.get(row.id) }}' target='_blank'>{{ tr('Open Link') }}</a>
+          <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>{{ tr('Print') }}</a>
         </div>
       </div>
       {% else %}
-      <div class='small'>No customer invoices yet.</div>
+      <div class='small'>{{ tr('No customer invoices yet.') }}</div>
       {% endfor %}
     </div>
   </div>
 </div>
+
+{% if archived_customer_contacts %}
+<div class='card section-frame' style='margin-top:16px'>
+  <details class='compact-details'>
+    <summary>{{ tr('Archived Clients') }} ({{ archived_customer_contacts|length }})</summary>
+    <div class='scroll-x' style='margin-top:12px'>
+      <table class='table'>
+        <tr><th>{{ tr('Client') }}</th><th>{{ tr('Phone') }}</th><th>{{ tr('Address') }}</th><th>{{ tr('Actions') }}</th></tr>
+        {% for row in archived_customer_contacts %}
+        <tr>
+          <td><strong>{{ row.customer_name }}</strong><div class='small'>{{ row.customer_email or tr('No email saved yet') }}</div></td>
+          <td>{{ row.customer_phone or '-' }}</td>
+          <td>{{ row.customer_address or '-' }}</td>
+          <td>
+            <form method='post'>
+              <input type='hidden' name='action' value='restore_customer_contact'>
+              <input type='hidden' name='contact_id' value='{{ row.id }}'>
+              {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+              <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Restore') }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  </details>
+</div>
+{% endif %}
 
 <script>
 (function(){
@@ -124,8 +207,10 @@
   document.querySelectorAll('.copy-link-btn').forEach(function(btn){
     btn.addEventListener('click', function(){
       copyText(btn.getAttribute('data-copy-url') || '');
-      btn.textContent = 'Copied';
-      window.setTimeout(function(){ btn.textContent = 'Copy Link'; }, 1400);
+      var copiedLabel = btn.getAttribute('data-copied-label') || 'Copied';
+      var copyLabel = btn.getAttribute('data-copy-label') || 'Copy Link';
+      btn.textContent = copiedLabel;
+      window.setTimeout(function(){ btn.textContent = copyLabel; }, 1400);
     });
   });
 })();
