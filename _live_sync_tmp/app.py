@@ -225,6 +225,8 @@ TRANSLATIONS = {
     'Billing': {'es': 'Facturación', 'pt': 'Faturamento'},
     'Work Schedule': {'es': 'Programa de trabajo', 'pt': 'Agenda de trabalho'},
     'Reports': {'es': 'Reportes', 'pt': 'Relatórios'},
+    'Operations Overview': {'es': 'Resumen operativo', 'pt': 'Visão operacional'},
+    'Clients & Sales': {'es': 'Clientes y ventas', 'pt': 'Clientes e vendas'},
     'Expense Tracking': {'es': 'Control de gastos', 'pt': 'Controle de despesas'},
     'Gas': {'es': 'Gasolina', 'pt': 'Combustível'},
     'Materials': {'es': 'Materiales', 'pt': 'Materiais'},
@@ -7862,6 +7864,9 @@ def enforce_business_onboarding_gate():
 def current_mode_for_request(user) -> str:
     if not user:
         return 'guest'
+    workspace_requested = str(request.values.get('workspace', '') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+    if request.endpoint == 'clients' and (user['role'] != 'admin' or workspace_requested):
+        return 'business'
     if request.endpoint in {'clients', 'client_users', 'cpa_dashboard', 'admin_calendar', 'admin_tasks', 'email_settings', 'ai_guide_settings'}:
         return 'cpa'
     return 'business'
@@ -9958,8 +9963,51 @@ def dashboard():
     user = current_user()
     client_id = selected_client_id(user, 'get')
     with get_conn() as conn:
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        if not client or not allowed_client(user, client_id):
+            abort(403)
+        worker_rows = conn.execute(
+            'SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name',
+            (client_id,),
+        ).fetchall()
+        invoice_rows = conn.execute(
+            "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate' ORDER BY invoice_date DESC, id DESC LIMIT 8",
+            (client_id,),
+        ).fetchall()
+        payment_methods = conn.execute(
+            '''SELECT *
+               FROM business_payment_methods
+               WHERE client_id=?
+               ORDER BY is_default DESC, is_backup DESC, updated_at DESC, id DESC''',
+            (client_id,),
+        ).fetchall()
+    admin_fee_summary = business_payment_summary(client_id)
+    open_admin_fee_rows = [row for row in admin_fee_summary['rows'] if (row['status'] or 'pending') in {'pending', 'processing'}]
+    return render_template(
+        'dashboard.html',
+        client=client,
+        client_id=client_id,
+        workers=worker_rows,
+        invoices=invoice_rows,
+        summary=client_summary(client_id),
+        payment_method_summary=payment_method_summary(payment_methods),
+        subscription_status_labels=subscription_status_label_map(),
+        admin_fee_summary=admin_fee_summary,
+        open_fee_guidance=open_fee_guidance(open_admin_fee_rows),
+        review_request=latest_review_request(client_id),
+    )
+
+
+@app.route('/operations-overview')
+@login_required
+def ops_overview():
+    user = current_user()
+    client_id = selected_client_id(user, 'get')
+    with get_conn() as conn:
         prepare_ops_workspace(conn, client_id)
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        if not client or not allowed_client(user, client_id):
+            abort(403)
         worker_rows = ops_worker_rows(conn, client_id)
         dashboard_summary = ops_dashboard_summary(conn, client_id)
         service_types = ops_service_types(conn, client_id)
@@ -10908,6 +10956,7 @@ def benefits_obligations():
 @login_required
 def clients():
     user = current_user()
+    workspace_mode = str(request.values.get('workspace', '') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
     with get_conn() as conn:
         if request.method == 'POST':
             action = request.form.get('action', 'add').strip().lower()
@@ -11152,6 +11201,8 @@ def clients():
                 log_client_profile_history(conn, client_id=client_id, action='updated', changed_by_user_id=user['id'])
                 conn.commit()
                 flash('Business profile updated.', 'success')
+                if workspace_mode and user['role'] == 'admin':
+                    return redirect(url_for('clients', client_id=client_id, workspace=1))
                 return redirect(url_for('clients'))
             conn.execute(
                 f'INSERT INTO clients (business_name, business_type, business_category, business_specialty, preferred_language, service_level, access_service_level, access_override_note, subscription_plan_code, subscription_status, subscription_amount, subscription_interval, subscription_autopay_enabled, subscription_next_billing_date, subscription_started_at, subscription_canceled_at, subscription_paused_at, default_payment_method_label, default_payment_method_status, backup_payment_method_label, billing_notes, contact_name, phone, email, address, ein, eftps_status, eftps_login_reference, filing_type, bank_name, bank_account_nickname, bank_account_last4, bank_account_holder_name, bank_account_number, bank_routing_number, credit_card_nickname, credit_card_last4, credit_card_holder_name, credit_card_number, payroll_contact_name, payroll_contact_phone, payroll_contact_email, state_tax_id, record_status, archive_reason, archived_at, archived_by_user_id, reactivated_at, created_by_user_id, updated_at, updated_by_user_id) VALUES ({",".join(["?"] * 51)})',
@@ -11162,7 +11213,7 @@ def clients():
             conn.commit()
             flash('Business profile created.', 'success')
             return redirect(url_for('clients'))
-        if user['role'] == 'admin':
+        if user['role'] == 'admin' and not workspace_mode:
             rows = conn.execute(
                 """SELECT c.*, creator.full_name created_by_name, updater.full_name updated_by_name
                    FROM clients c
@@ -11209,13 +11260,14 @@ def clients():
             ).fetchall()
             archived_delete_blockers = {row['id']: client_delete_blockers(conn, row['id']) for row in archived_rows}
         else:
+            target_client_id = selected_client_id(user, 'get') if user['role'] == 'admin' else user['client_id']
             row = conn.execute(
                 """SELECT c.*, creator.full_name created_by_name, updater.full_name updated_by_name
                    FROM clients c
                    LEFT JOIN users creator ON creator.id = c.created_by_user_id
                    LEFT JOIN users updater ON updater.id = c.updated_by_user_id
                    WHERE c.id=?""",
-                (user['client_id'],)
+                (target_client_id,)
             ).fetchone()
             rows = [row] if row else []
             prospect_rows = []
@@ -11237,7 +11289,7 @@ def clients():
         archive_reason_labels=business_archive_reason_label_map(),
         filing_types=filing_types(),
         eftps_statuses=eftps_statuses(),
-        is_admin=(user['role']=='admin'),
+        is_admin=(user['role']=='admin' and not workspace_mode),
         mask_account_number=mask_account_number,
         mask_card_number=mask_card_number,
     )

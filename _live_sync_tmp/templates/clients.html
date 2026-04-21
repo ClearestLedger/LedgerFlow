@@ -130,6 +130,7 @@
     {% endif %}
         <input type='hidden' name='action' value='edit'>
         <input type='hidden' name='client_id' value='{{ c.id }}'>
+        {% if current_user.role == 'admin' and current_mode == 'business' %}<input type='hidden' name='workspace' value='1'>{% endif %}
 
         <div><label>{{ tr('Business Name') }}</label><input name='business_name' value='{{ c.business_name }}' required></div>
         <div><label>{{ tr('Kind of Business') }}</label><select name='business_category'><option value=''>{{ tr('Select one (optional)') }}</option>{% for option in business_categories %}<option value='{{ option }}' {% if c.business_category == option %}selected{% endif %}>{{ tr(option) }}</option>{% endfor %}</select></div>
