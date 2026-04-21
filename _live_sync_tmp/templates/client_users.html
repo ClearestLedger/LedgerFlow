@@ -51,6 +51,7 @@
       <form method='post' class='form-grid'>
       <input type='hidden' name='action' value='send_trial_invite'>
       <div><label>Business Name</label><input name='business_name' required></div>
+      <div><label>Kind of Business</label><select name='business_category'><option value=''>Select kind of business</option>{% for category in business_categories %}<option value='{{ category }}'>{{ category }}</option>{% endfor %}</select></div>
       <div><label>Primary Contact Name</label><input name='full_name' required></div>
       <div><label>Primary Contact Email</label><input name='email' required></div>
       <div><button>Send 7-Day Trial Invite</button></div>
@@ -108,12 +109,19 @@
       <table class='table'>
         <tr><th>Business</th><th>Offer</th><th>Invitee</th><th>Sent By</th><th>Claimed / Activated</th><th>Invite Link</th><th>Action</th><th>Error</th></tr>
         {% for invite in invites %}
-        <tr data-search-text='{{ (invite.business_name or "")|lower }} {{ (invite.invited_email or "")|lower }} {{ (invite.status or "")|lower }} {{ (invite.invited_name or "")|lower }} {{ (invite.invite_error or "")|lower }} {{ (invite.invite_kind or "")|lower }} {{ (invite.created_by_name or "")|lower }} {{ (invite.accepted_user_name or "")|lower }} {{ (invite.onboarding_completed_by_name or "")|lower }}'>
+        <tr data-search-text='{{ (invite.business_name or "")|lower }} {{ (invite.invited_email or "")|lower }} {{ (invite.status or "")|lower }} {{ (invite.invited_name or "")|lower }} {{ (invite.invite_error or "")|lower }} {{ (invite.invite_kind or "")|lower }} {{ (invite.created_by_name or "")|lower }} {{ (invite.accepted_user_name or "")|lower }} {{ (invite.onboarding_completed_by_name or "")|lower }} {{ (invite.followup_status or "")|lower }} {{ (invite.followup_error or "")|lower }}'>
           <td>
             <strong>{{ invite.business_name }}</strong>
             <div class='small'>{{ invite.created_at }}</div>
           </td>
-          <td>{% if invite.invite_kind == 'prospect_trial' %}{{ invite.trial_days or 7 }}-Day Trial{% else %}Business Access{% endif %}</td>
+          <td>
+            {% if invite.invite_kind == 'prospect_trial' %}{{ invite.trial_days or 7 }}-Day Trial{% else %}Business Access{% endif %}
+            {% if invite.followup_sent_at %}
+            <div class='small'>Follow-up sent: {{ invite.followup_sent_at }}</div>
+            {% elif invite.followup_status == 'failed' %}
+            <div class='small' style='color:#a4342b'>Follow-up failed</div>
+            {% endif %}
+          </td>
           <td>
             <strong>{{ invite.invited_email }}</strong>
             <div class='small'>{{ invite.invited_name or 'No name saved' }}</div>
@@ -169,7 +177,7 @@
     </div>
     <div class='stack-list'>
       {% for c in prospect_clients %}
-      <div class='stack-item' data-search-text='{{ (c.business_name or "")|lower }} {{ (c.contact_name or "")|lower }} {{ (c.email or "")|lower }} {{ (c.invite_status or "")|lower }} {{ (c.invite_error or "")|lower }}'>
+      <div class='stack-item' data-search-text='{{ (c.business_name or "")|lower }} {{ (c.contact_name or "")|lower }} {{ (c.email or "")|lower }} {{ (c.invite_status or "")|lower }} {{ (c.invite_error or "")|lower }} {{ (c.business_category or "")|lower }} {{ (c.followup_status or "")|lower }} {{ (c.followup_error or "")|lower }}'>
         <div class='card-head'>
           <div>
             <strong>{{ c.business_name }}</strong>
@@ -182,6 +190,9 @@
             {% endif %}
             {% if c.invite_created_at %}
             <div class='small'>Last invite sent: {{ c.invite_created_at }}</div>
+            {% endif %}
+            {% if c.business_category %}
+            <div class='small'>Category: {{ c.business_category }}</div>
             {% endif %}
             {% if c.invite_used_at %}
             <div class='small'>Invite accepted: {{ c.invite_used_at }}</div>
@@ -198,14 +209,27 @@
             {% if c.last_invite_email_sent_at %}
             <div class='small'>Last email log: <span class='status-chip {{ c.last_invite_email_status or "sent" }}'>{{ c.last_invite_email_status or 'sent' }}</span> | {{ c.last_invite_email_sent_at }}{% if c.last_invite_email_type %} | {{ c.last_invite_email_type|replace('_', ' ')|title }}{% endif %}</div>
             {% endif %}
+            {% if c.email_attention %}
+            <div class='small'>Email attention: <span class='status-chip {{ c.email_attention.tone or "pending" }}'>{{ c.email_attention.label }}</span></div>
+            <div class='small'>{{ c.email_attention.detail }}</div>
+            {% endif %}
+            {% if c.followup_sent_at %}
+            <div class='small'>Automatic follow-up sent: {{ c.followup_sent_at }}</div>
+            {% endif %}
             {% if c.invite_error %}
             <div class='small' style='color:#a4342b'>Last delivery issue: {{ c.invite_error }}</div>
+            {% endif %}
+            {% if c.followup_error %}
+            <div class='small' style='color:#a4342b'>Follow-up issue: {{ c.followup_error }}</div>
             {% endif %}
           </div>
           <div class='prospect-pipeline-actions'>
             <span class='status-chip {{ c.pipeline_stage.key }}'>{{ c.pipeline_stage.label }}</span>
             {% if c.last_invite_email_id %}
             <a class='btn btn-secondary btn-sm' href='{{ url_for("client_user_email_preview", email_id=c.last_invite_email_id) }}' target='_blank' rel='noopener'>View Last Invite Email</a>
+            {% endif %}
+            {% if c.followup_email_id %}
+            <a class='btn btn-secondary btn-sm' href='{{ url_for("client_user_email_preview", email_id=c.followup_email_id) }}' target='_blank' rel='noopener'>View Follow-Up Email</a>
             {% endif %}
             {% if c.invite_id and c.invite_status != 'accepted' %}
             <form method='post' style='margin:0'>

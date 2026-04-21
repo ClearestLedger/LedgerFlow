@@ -18,13 +18,13 @@ from decimal import Decimal, ROUND_HALF_UP
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from functools import wraps, lru_cache
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 from urllib import request as urlrequest, error as urlerror
 
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
 
-from flask import Flask, render_template, render_template_string, request, redirect, url_for, session, flash, abort, jsonify
+from flask import Flask, Response, render_template, render_template_string, request, redirect, url_for, session, flash, abort, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -39,6 +39,7 @@ APP_SUBTITLE = 'Operational command for growing service businesses'
 BRAND_TAGLINE = 'Jobs, dispatch, scheduling, and team coordination for service businesses.'
 BRAND_LOGO_FILENAME = 'ledgerflow-logo.png'
 BRAND_MARK_FILENAME = 'ledgerflow-mark.png'
+TRACKING_PIXEL_GIF = base64.b64decode('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==')
 ADMIN_LABEL = 'Businesses'
 CUSTOMER_LABEL = 'Customers'
 DEFAULT_HOME_ADDRESS = '3934 Brookside Dr, Sarasota, FL 34231'
@@ -1890,6 +1891,63 @@ def normalize_business_category(value: str) -> str:
     return cleaned if cleaned in set(business_categories()) else 'Other'
 
 
+def business_category_display(value: str) -> str:
+    normalized = normalize_business_category(value)
+    return normalized or 'Service Business'
+
+
+def prospect_visual_profile(category: str) -> dict:
+    normalized = normalize_business_category(category)
+    profiles = {
+        'Cleaning': {
+            'filename': 'marketing/prospect-cleaning.png',
+            'alt': 'LedgerFlow preview for cleaning businesses',
+            'headline': 'Keep recurring cleanings, billing, and cash flow organized.',
+            'invite_points': [
+                'See how recurring cleanings can stay visible without chasing spreadsheets.',
+                'Review the full pricing clearly and begin the trial with no card required.',
+                'Open a cleaner onboarding path with guided setup and direct administrator support.',
+            ],
+            'followup_points': [
+                'Recurring visits, billing, and profit visibility can start feeling organized right away.',
+                'Your team, schedule, and paid-vs-open work can stay in one calm workspace.',
+                'The complimentary trial lets you explore all of that before billing is added later.',
+            ],
+        },
+        'Painting': {
+            'filename': 'marketing/prospect-painting.png',
+            'alt': 'LedgerFlow preview for painting businesses',
+            'headline': 'Keep estimates, invoices, and cash flow under control.',
+            'invite_points': [
+                'Review the estimate-to-invoice flow and cleaner payment visibility before you decide.',
+                'Open the complimentary trial now and choose a subscription later with full pricing visible.',
+                'Use the guided setup to see how LedgerFlow can support project-based service work.',
+            ],
+            'followup_points': [
+                'Project pricing, invoice follow-up, and open-balance visibility are waiting inside the trial.',
+                'You can review business billing, schedule coordination, and reports without adding a card today.',
+                'If the first message was buried, this follow-up is the faster path back into your private trial.',
+            ],
+        },
+    }
+    default_profile = {
+        'filename': 'marketing/prospect-service-generic.png',
+        'alt': 'LedgerFlow preview for growing service businesses',
+        'headline': 'See how LedgerFlow can organize your service business in one workspace.',
+        'invite_points': [
+            'Review the guided setup, subscription options, and workspace overview before you decide.',
+            'Open the complimentary trial now with no card required and pricing visible from the start.',
+            'See a calmer way to manage billing, scheduling, and reports with direct administrator support.',
+        ],
+        'followup_points': [
+            'Billing, scheduling, reports, and client-facing workflow are all waiting inside the trial experience.',
+            'You can explore the workspace first and add billing later only if LedgerFlow feels right for your business.',
+            'If the first email was buried in Promotions or Spam, this follow-up gives you the short path back in.',
+        ],
+    }
+    return profiles.get(normalized, default_profile)
+
+
 def filing_types():
     return ['1099', 'W-2', 'Both']
 
@@ -2060,6 +2118,90 @@ def invite_kind_label(value: str) -> str:
     }.get(normalize_invite_kind(value), 'Business Access Invite')
 
 
+def tracked_email_click_link(tracking_token: str, target_url: str) -> str:
+    safe_target = (target_url or '').strip()
+    if not safe_target or not tracking_token:
+        return safe_target
+    return public_app_url(f"/email/click/{tracking_token}?{urlencode({'target': safe_target})}")
+
+
+def email_tracking_pixel_url(tracking_token: str) -> str:
+    if not tracking_token:
+        return ''
+    return public_app_url(f'/email/open/{tracking_token}.gif')
+
+
+def prospect_visual_card_html(business_category: str, business_name: str) -> str:
+    profile = prospect_visual_profile(business_category)
+    image_url = html.escape(static_asset_absolute_url(profile['filename']))
+    alt_text = html.escape(profile['alt'])
+    category_label = html.escape(business_category_display(business_category))
+    business_label = html.escape((business_name or 'Your business').strip() or 'Your business')
+    return (
+        f"<div style='margin-top:22px;padding:18px;border:1px solid #dbe3ef;border-radius:22px;background:#ffffff'>"
+        f"<img src='{image_url}' alt='{alt_text}' style='display:block;width:100%;height:auto;border-radius:16px'>"
+        f"<div style='margin-top:14px;color:#151a2c;font-size:18px;line-height:1.35;font-weight:800'>{html.escape(profile['headline'])}</div>"
+        f"<div style='margin-top:8px;color:#61718a;font-size:13px;line-height:1.7'>{business_label} is currently being invited as a <strong style='color:#1d2336'>{category_label}</strong> business.</div>"
+        f"</div>"
+    )
+
+
+def trial_subscription_preview_html() -> str:
+    tier_rows = []
+    for tier in subscription_tier_catalog():
+        feature_preview = ', '.join(tier['features'][:3])
+        coming_soon = ''
+        if tier.get('coming_soon'):
+            coming_soon = (
+                f"<div style='margin-top:6px;color:#7f5f1d;font-size:12px;line-height:1.6'><strong>Coming Soon:</strong> "
+                f"{html.escape(', '.join(tier['coming_soon']))}</div>"
+            )
+        tier_rows.append(
+            f"<tr>"
+            f"<td style='padding:14px 12px;border-bottom:1px solid #e3e7ee;color:#16314f;font-size:14px;font-weight:800'>{html.escape(tier['label'])}</td>"
+            f"<td style='padding:14px 12px;border-bottom:1px solid #e3e7ee;color:#16314f;font-size:14px;font-weight:800'>${float(tier['monthly_amount']):.0f}/mo</td>"
+            f"<td style='padding:14px 12px;border-bottom:1px solid #e3e7ee;color:#4b5e79;font-size:13px;line-height:1.6'>{html.escape(tier['best_for'])}<br>{html.escape(feature_preview)}{coming_soon}</td>"
+            f"</tr>"
+        )
+    return (
+        f"<div style='margin-top:18px;padding:18px 20px;border:1px solid #dbe3ef;border-radius:18px;background:#ffffff'>"
+        f"<div style='color:#141b2d;font-size:14px;font-weight:800;margin-bottom:12px'>Subscription options preview</div>"
+        f"<table role='presentation' style='width:100%;border-collapse:collapse'>"
+        f"<tr><th align='left' style='padding:0 12px 10px 12px;color:#74829b;font-size:12px;letter-spacing:.08em;text-transform:uppercase'>Tier</th><th align='left' style='padding:0 12px 10px 12px;color:#74829b;font-size:12px;letter-spacing:.08em;text-transform:uppercase'>Price</th><th align='left' style='padding:0 12px 10px 12px;color:#74829b;font-size:12px;letter-spacing:.08em;text-transform:uppercase'>Designed For</th></tr>"
+        f"{''.join(tier_rows)}"
+        f"</table>"
+        f"</div>"
+    )
+
+
+def trial_offer_value_stack_html(*, business_category: str, trial_days: int, stronger: bool = False) -> str:
+    profile = prospect_visual_profile(business_category)
+    point_source = profile['followup_points'] if stronger else profile['invite_points']
+    points_html = ''.join(
+        f"<li style='margin:0 0 10px;color:#4a576d;font-size:14px;line-height:1.7'>{html.escape(point)}</li>"
+        for point in point_source
+    )
+    intro_label = 'What you are missing inside the trial' if stronger else 'What the trial includes'
+    intro_copy = (
+        'No open signal was recorded after 3 days, so this follow-up is designed to show the value faster. '
+        'That can happen when a first email gets buried in an inbox tab, Promotions, or Spam, but SMTP cannot confirm the exact folder.'
+        if stronger else
+        'Review the subscription options below, create your secure login, and complete setup when you are ready. Billing begins only after the complimentary trial window ends.'
+    )
+    return (
+        f"<div style='margin-top:22px;padding:18px 20px;border:1px solid #d7dce7;border-radius:18px;background:#f7f1e7'>"
+        f"<div style='color:#141b2d;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase'>Complimentary Trial Offer</div>"
+        f"<div style='margin-top:8px;color:#141b2d;font-size:24px;line-height:1.25;font-weight:800'>{trial_days}-day free guided trial</div>"
+        f"<div style='margin-top:10px;color:#48546a;font-size:14px;line-height:1.7'>{html.escape(intro_copy)}</div>"
+        f"</div>"
+        f"<div style='margin-top:18px;padding:18px 20px;border:1px solid #dbe3ef;border-radius:18px;background:#ffffff'>"
+        f"<div style='color:#141b2d;font-size:14px;font-weight:800;margin-bottom:12px'>{html.escape(intro_label)}</div>"
+        f"<ul style='margin:0;padding-left:18px'>{points_html}</ul>"
+        f"</div>"
+        f"{trial_subscription_preview_html()}"
+    )
+
+
 def trial_date_window(started_at: str, trial_days: int) -> tuple[str, str]:
     base = datetime.utcnow()
     if started_at:
@@ -2102,6 +2244,7 @@ def normalize_business_archive_reason(value: str) -> str:
 def prospect_pipeline_stage(row) -> dict:
     invite_kind = normalize_invite_kind(row['invite_kind'])
     invite_status = (row['invite_status'] or '').strip().lower()
+    followup_status = (row_value(row, 'followup_status', '') or '').strip().lower()
     onboarding_status = (row['onboarding_status'] or 'completed').strip().lower()
     accepted_user_id = row['invite_accepted_user_id']
     trial_days = int(row['trial_days'] or row['trial_offer_days'] or 0)
@@ -2150,8 +2293,10 @@ def prospect_pipeline_stage(row) -> dict:
     if invite_status in {'sent', 'pending'}:
         return {
             'key': 'invite_sent',
-            'label': 'Trial Invite Sent' if is_trial else 'Invite Sent',
+            'label': 'Trial Follow-Up Sent' if is_trial and followup_status == 'sent' else 'Trial Invite Sent' if is_trial else 'Invite Sent',
             'detail': (
+                'A higher-value follow-up was sent after 3 days with no open signal. LedgerFlow is now waiting for the business to open the trial and create secure access.'
+                if is_trial and followup_status == 'sent' else
                 f'Waiting for the business to open its {trial_days}-day complimentary trial invite and create secure access.'
                 if is_trial else
                 'Waiting for the business to open the invite and create its login.'
@@ -3475,7 +3620,7 @@ def send_invite_email(to_email: str, to_name: str, business_name: str, invite_li
     return {'subject': subject, 'body_text': body, 'body_html': html, 'email_type': 'business_invite'}
 
 
-def send_trial_invite_email(to_email: str, to_name: str, business_name: str, invite_link: str, trial_days: int = 0):
+def send_trial_invite_email(to_email: str, to_name: str, business_name: str, invite_link: str, trial_days: int = 0, *, business_category: str = '', tracking_token: str = ''):
     cfg = smtp_config()
     sender_email = cfg['sender_email']
     smtp_username = cfg['smtp_username']
@@ -3487,23 +3632,12 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
     if trial_days <= 0:
         trial_days = default_trial_offer_days()
     greeting = f"Hi {to_name}," if to_name else "Hi,"
-    tier_rows = []
-    for tier in subscription_tier_catalog():
-        feature_preview = ', '.join(tier['features'][:3])
-        coming_soon = ''
-        if tier.get('coming_soon'):
-            coming_soon = (
-                f"<div style='margin-top:6px;color:#7f5f1d;font-size:12px;line-height:1.6'><strong>Coming Soon:</strong> "
-                f"{html.escape(', '.join(tier['coming_soon']))}</div>"
-            )
-        tier_rows.append(
-            f"<tr>"
-            f"<td style='padding:14px 12px;border-bottom:1px solid #e3e7ee;color:#16314f;font-size:14px;font-weight:800'>{html.escape(tier['label'])}</td>"
-            f"<td style='padding:14px 12px;border-bottom:1px solid #e3e7ee;color:#16314f;font-size:14px;font-weight:800'>${float(tier['monthly_amount']):.0f}/mo</td>"
-            f"<td style='padding:14px 12px;border-bottom:1px solid #e3e7ee;color:#4b5e79;font-size:13px;line-height:1.6'>{html.escape(tier['best_for'])}<br>{html.escape(feature_preview)}{coming_soon}</td>"
-            f"</tr>"
-        )
-    video_preview_html = (
+    category_label = business_category_display(business_category)
+    click_link = tracked_email_click_link(tracking_token, invite_link)
+    tracking_pixel_url = email_tracking_pixel_url(tracking_token)
+    trial_summary_html = (
+        prospect_visual_card_html(business_category, business_name) +
+        trial_offer_value_stack_html(business_category=business_category, trial_days=trial_days, stronger=False) +
         f"<div style='margin-top:20px;padding:18px 20px;border:1px solid #d7dce7;border-radius:18px;background:#ffffff'>"
         f"<div style='color:#141b2d;font-size:14px;font-weight:800'>Welcome tutorial preview</div>"
         f"<div style='margin-top:12px;display:flex;align-items:center;justify-content:center;min-height:160px;border-radius:16px;border:1px dashed #c9d2e0;background:linear-gradient(180deg,#f7f9fc,#eef2f6);color:#425067;font-size:14px;font-weight:700;text-align:center;padding:18px'>"
@@ -3512,25 +3646,11 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
         f"<div style='margin-top:10px;color:#5b687d;font-size:13px;line-height:1.7'>Email clients do not reliably play embedded video, so this preview block takes the business directly into the full trial page where the welcome tutorial and setup guidance live together.</div>"
         f"</div>"
     )
-    trial_summary_html = (
-        video_preview_html +
-        f"<div style='margin-top:22px;padding:18px 20px;border:1px solid #d7dce7;border-radius:18px;background:#f7f1e7'>"
-        f"<div style='color:#141b2d;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase'>Complimentary Trial Offer</div>"
-        f"<div style='margin-top:8px;color:#141b2d;font-size:24px;line-height:1.25;font-weight:800'>{trial_days}-day free guided trial</div>"
-        f"<div style='margin-top:10px;color:#48546a;font-size:14px;line-height:1.7'>Review the subscription options below, create your secure login, and complete setup when you are ready. Billing begins only after the complimentary trial window ends.</div>"
-        f"</div>"
-        f"<div style='margin-top:18px;padding:18px 20px;border:1px solid #dbe3ef;border-radius:18px;background:#ffffff'>"
-        f"<div style='color:#141b2d;font-size:14px;font-weight:800;margin-bottom:12px'>Subscription options preview</div>"
-        f"<table role='presentation' style='width:100%;border-collapse:collapse'>"
-        f"<tr><th align='left' style='padding:0 12px 10px 12px;color:#74829b;font-size:12px;letter-spacing:.08em;text-transform:uppercase'>Tier</th><th align='left' style='padding:0 12px 10px 12px;color:#74829b;font-size:12px;letter-spacing:.08em;text-transform:uppercase'>Price</th><th align='left' style='padding:0 12px 10px 12px;color:#74829b;font-size:12px;letter-spacing:.08em;text-transform:uppercase'>Designed For</th></tr>"
-        f"{''.join(tier_rows)}"
-        f"</table>"
-        f"</div>"
-    )
     body = "\n".join([
         greeting,
         "",
         f"You've been invited to try LedgerFlow with a {trial_days}-day complimentary business trial for {business_name}.",
+        f"Business category: {category_label}.",
         "",
         "Use the secure link below to review the subscription options, create your business login, and open the full trial experience:",
         invite_link,
@@ -3554,15 +3674,17 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
             'Your administrator remains directly involved, so the rollout feels white-glove from the first step.',
         ],
         cta_label=f'Open {trial_days}-Day Trial Experience',
-        cta_link=invite_link,
+        cta_link=click_link,
         detail_rows=[
             ('Business', business_name),
+            ('Category', category_label),
             ('Trial Offer', f'{trial_days} complimentary days'),
             ('Invite Email', to_email),
         ],
         feature_tags=['7-Day Trial', 'Subscription Options', 'Guided Setup', 'Video Walkthrough Space'],
         support_note='If you were not expecting this invitation, you can ignore this email.',
         extra_sections_html=trial_summary_html,
+        tracking_pixel_url=tracking_pixel_url,
     )
     subject = f"Start your {trial_days}-day LedgerFlow trial for {business_name}"
     send_rich_email(
@@ -3573,6 +3695,89 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
         html=email_html,
     )
     return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'prospect_trial_invite'}
+
+
+def send_trial_followup_email(
+    to_email: str,
+    to_name: str,
+    business_name: str,
+    invite_link: str,
+    *,
+    trial_days: int = 0,
+    business_category: str = '',
+    tracking_token: str = '',
+):
+    cfg = smtp_config()
+    sender_email = cfg['sender_email']
+    smtp_username = cfg['smtp_username']
+    smtp_password = cfg['smtp_password']
+    if cfg.get('password_unreadable'):
+        raise RuntimeError('Saved SMTP password must be entered again once after the security-key update.')
+    if not sender_email or not smtp_username or not smtp_password:
+        raise RuntimeError('SMTP not configured')
+    if trial_days <= 0:
+        trial_days = default_trial_offer_days()
+    category_label = business_category_display(business_category)
+    greeting = f"Hi {to_name}," if to_name else "Hi,"
+    click_link = tracked_email_click_link(tracking_token, invite_link)
+    tracking_pixel_url = email_tracking_pixel_url(tracking_token)
+    stronger_sections_html = (
+        prospect_visual_card_html(business_category, business_name) +
+        trial_offer_value_stack_html(business_category=business_category, trial_days=trial_days, stronger=True) +
+        f"<div style='margin-top:18px;padding:18px 20px;border:1px solid #dbe3ef;border-radius:18px;background:#ffffff'>"
+        f"<div style='color:#141b2d;font-size:14px;font-weight:800;margin-bottom:12px'>Still deciding?</div>"
+        f"<div style='color:#4a576d;font-size:14px;line-height:1.7'>Open the private trial page and you will see the pricing clearly, the guided setup path, and the exact LedgerFlow workspace your business would be stepping into. Nothing is charged today.</div>"
+        f"</div>"
+    )
+    body = "\n".join([
+        greeting,
+        "",
+        f"Your private {trial_days}-day LedgerFlow trial for {business_name} is still waiting.",
+        f"This version is tailored for a {category_label} business and is designed to show the value faster in case the first invite was buried in another inbox tab.",
+        "",
+        "Use the secure link below to open the trial, review what your business is missing, and claim the complimentary access:",
+        invite_link,
+        "",
+        "No payment method is required to begin the complimentary trial.",
+        "You can explore the workspace first and add billing later only if LedgerFlow feels right for your business.",
+        "",
+        "If you were not expecting this invitation, you can ignore this email.",
+        "",
+        "LedgerFlow",
+    ])
+    email_html = render_marketing_email(
+        eyebrow='Trial Follow-Up',
+        title=f'Your {trial_days}-day LedgerFlow trial is still waiting',
+        intro=f'Here is the faster view of what {business_name} can unlock inside LedgerFlow before the complimentary offer expires.',
+        greeting=greeting,
+        body_lines=[
+            f'Your private {trial_days}-day trial is still open for {business_name}.',
+            f'This follow-up is tailored for a {category_label} business and is designed to show the value faster.',
+            'No card is required today. Open the trial, review the subscription options, and decide later if LedgerFlow is the right fit.',
+            'If the first email was buried in Promotions or Spam, this is your shorter path back in.',
+        ],
+        cta_label='Open My Trial Now',
+        cta_link=click_link,
+        detail_rows=[
+            ('Business', business_name),
+            ('Category', category_label),
+            ('Trial Offer', f'{trial_days} complimentary days'),
+            ('Invite Email', to_email),
+        ],
+        feature_tags=['Higher-Value Follow-Up', 'No Card Required', 'Guided Setup', 'See What You Are Missing'],
+        support_note='If you have any questions before opening the trial, reply to this email and your administrator can help.',
+        extra_sections_html=stronger_sections_html,
+        tracking_pixel_url=tracking_pixel_url,
+    )
+    subject = f"Still interested? Your LedgerFlow trial for {business_name} is waiting"
+    send_rich_email(
+        cfg,
+        subject=subject,
+        to_email=to_email,
+        plain_text=body,
+        html=email_html,
+    )
+    return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'prospect_trial_followup'}
 
 
 def preferred_admin_notification_user_id(conn: sqlite3.Connection, client_id: int | None = None, fallback_user_id: int | None = None) -> int | None:
@@ -4103,7 +4308,7 @@ def smtp_email_ready() -> bool:
     return bool(cfg['sender_email'] and cfg['smtp_username'] and cfg['smtp_password'])
 
 
-def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: str, body_lines: list[str], cta_label: str = '', cta_link: str = '', detail_rows: list[tuple[str, str]] | None = None, feature_tags: list[str] | None = None, support_note: str = '', extra_sections_html: str = '') -> str:
+def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: str, body_lines: list[str], cta_label: str = '', cta_link: str = '', detail_rows: list[tuple[str, str]] | None = None, feature_tags: list[str] | None = None, support_note: str = '', extra_sections_html: str = '', tracking_pixel_url: str = '') -> str:
     detail_rows = detail_rows or []
     feature_tags = feature_tags or []
     eyebrow_text = html.escape(eyebrow or '')
@@ -4153,6 +4358,10 @@ def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: st
         f"<div style='margin:18px 0 0'>{feature_html}</div>"
         if feature_html else ''
     )
+    tracking_pixel_html = (
+        f"<img src='{html.escape(tracking_pixel_url)}' alt='' width='1' height='1' style='display:block;width:1px;height:1px;border:0;opacity:0'>"
+        if tracking_pixel_url else ''
+    )
     return f"""\
 <!doctype html>
 <html>
@@ -4175,6 +4384,7 @@ def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: st
             </tr>
             <tr>
               <td style="background:#ffffff;border:1px solid #dbe5f1;border-top:none;border-radius:0 0 24px 24px;padding:30px 32px 32px 32px">
+                {tracking_pixel_html}
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse">
                   <tr>
                     <td style="padding:0 0 18px 0;color:#16314f;font-size:15px;font-weight:700">{greeting_text}</td>
@@ -4639,32 +4849,62 @@ def log_account_activity(conn, *, client_id=None, account_type='login', account_
     )
 
 
-def log_email_delivery(*, client_id=None, email_type='', recipient_email='', recipient_name='', subject='', body_text='', body_html='', status='sent', error_message='', created_by_user_id=None, related_invite_id=None, related_user_id=None):
-    with get_conn() as conn:
-        conn.execute(
-            """INSERT INTO email_delivery_log
-               (client_id, email_type, recipient_email, recipient_name, subject, body_text, body_html, status, error_message, created_by_user_id, related_invite_id, related_user_id)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (
-                client_id,
-                (email_type or '').strip(),
-                (recipient_email or '').strip().lower(),
-                (recipient_name or '').strip(),
-                (subject or '').strip(),
-                body_text or '',
-                body_html or '',
-                (status or 'sent').strip(),
-                (error_message or '').strip()[:500],
-                created_by_user_id,
-                related_invite_id,
-                related_user_id,
-            )
+def log_email_delivery(*, client_id=None, email_type='', recipient_email='', recipient_name='', subject='', body_text='', body_html='', status='sent', error_message='', created_by_user_id=None, related_invite_id=None, related_user_id=None, tracking_token: str = '', opened_at: str = '', open_count: int = 0, clicked_at: str = '', click_count: int = 0, conn: sqlite3.Connection | None = None):
+    owns_connection = conn is None
+    db = conn or get_conn()
+    db.execute(
+        """INSERT INTO email_delivery_log
+           (client_id, email_type, recipient_email, recipient_name, subject, body_text, body_html, status, error_message, created_by_user_id, related_invite_id, related_user_id, tracking_token, opened_at, open_count, clicked_at, click_count)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            client_id,
+            (email_type or '').strip(),
+            (recipient_email or '').strip().lower(),
+            (recipient_name or '').strip(),
+            (subject or '').strip(),
+            body_text or '',
+            body_html or '',
+            (status or 'sent').strip(),
+            (error_message or '').strip()[:500],
+            created_by_user_id,
+            related_invite_id,
+            related_user_id,
+            (tracking_token or '').strip(),
+            (opened_at or '').strip(),
+            int(open_count or 0),
+            (clicked_at or '').strip(),
+            int(click_count or 0),
         )
-        conn.commit()
+    )
+    if owns_connection:
+        db.commit()
+        db.close()
 
 
 def now_iso() -> str:
     return datetime.now().isoformat(timespec='seconds')
+
+
+def parse_datetime_value(value: str) -> datetime | None:
+    text = (value or '').strip()
+    if not text:
+        return None
+    for candidate in (text, text.replace('Z', '+00:00')):
+        try:
+            parsed = datetime.fromisoformat(candidate)
+            return parsed.replace(tzinfo=None) if parsed.tzinfo else parsed
+        except ValueError:
+            continue
+    for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'):
+        try:
+            return datetime.strptime(text[:19], fmt)
+        except ValueError:
+            continue
+    return None
+
+
+def generate_email_tracking_token() -> str:
+    return secrets.token_urlsafe(24)
 
 
 def client_profile_snapshot(source) -> dict:
@@ -4739,6 +4979,220 @@ def email_preview_html(html_body: str) -> str:
         "Use this page to review the message only.</div>"
     )
     return preview_note + preview
+
+
+def record_email_open_event(tracking_token: str) -> bool:
+    token = (tracking_token or '').strip()
+    if not token:
+        return False
+    with get_conn() as conn:
+        row = conn.execute(
+            'SELECT id, status, open_count FROM email_delivery_log WHERE tracking_token=? ORDER BY id DESC LIMIT 1',
+            (token,),
+        ).fetchone()
+        if not row:
+            return False
+        opened_at = now_iso()
+        next_count = int(row['open_count'] or 0) + 1
+        next_status = row['status'] if row['status'] in {'clicked', 'failed'} else 'opened'
+        conn.execute(
+            'UPDATE email_delivery_log SET opened_at=CASE WHEN COALESCE(opened_at,"")="" THEN ? ELSE opened_at END, open_count=?, status=? WHERE id=?',
+            (opened_at, next_count, next_status, row['id']),
+        )
+        conn.commit()
+    return True
+
+
+def record_email_click_event(tracking_token: str) -> bool:
+    token = (tracking_token or '').strip()
+    if not token:
+        return False
+    with get_conn() as conn:
+        row = conn.execute(
+            'SELECT id, click_count FROM email_delivery_log WHERE tracking_token=? ORDER BY id DESC LIMIT 1',
+            (token,),
+        ).fetchone()
+        if not row:
+            return False
+        clicked_at = now_iso()
+        next_count = int(row['click_count'] or 0) + 1
+        conn.execute(
+            'UPDATE email_delivery_log SET clicked_at=CASE WHEN COALESCE(clicked_at,"")="" THEN ? ELSE clicked_at END, click_count=?, status="clicked" WHERE id=?',
+            (clicked_at, next_count, row['id']),
+        )
+        conn.commit()
+    return True
+
+
+def prospect_email_attention_state(row) -> dict:
+    initial_opened = bool((row.get('last_invite_email_opened_at') or '').strip() or int(row.get('last_invite_email_open_count') or 0) > 0)
+    initial_clicked = bool((row.get('last_invite_email_clicked_at') or '').strip() or int(row.get('last_invite_email_click_count') or 0) > 0)
+    followup_sent_at = (row.get('followup_sent_at') or '').strip()
+    followup_status = (row.get('followup_status') or '').strip().lower()
+    invite_created_at = parse_datetime_value(row.get('invite_created_at') or row.get('created_at') or '')
+    due_for_followup = bool(invite_created_at and datetime.utcnow() - invite_created_at >= timedelta(days=3))
+
+    if initial_clicked:
+        return {
+            'label': 'Clicked',
+            'detail': 'The prospect clicked into the trial experience from the email.',
+            'tone': 'accepted',
+        }
+    if initial_opened:
+        return {
+            'label': 'Opened',
+            'detail': 'The prospect opened the invite email, so a spam-box follow-up is not needed.',
+            'tone': 'sent',
+        }
+    if followup_status == 'sent' and followup_sent_at:
+        return {
+            'label': 'Follow-Up Sent',
+            'detail': 'No open signal was recorded after 3 days, so LedgerFlow sent a higher-value follow-up. This may mean the first email was ignored or buried in Promotions/Spam, but SMTP cannot confirm the exact folder.',
+            'tone': 'processing',
+        }
+    if followup_status == 'failed':
+        return {
+            'label': 'Follow-Up Failed',
+            'detail': row.get('followup_error') or 'The automatic follow-up attempted to send and failed.',
+            'tone': 'failed',
+        }
+    if due_for_followup:
+        return {
+            'label': 'No Open Signal',
+            'detail': 'No open was recorded after 3 days. That often means the first email was ignored or filtered into inbox tabs, Promotions, or Spam, but it cannot be confirmed from SMTP alone.',
+            'tone': 'pending',
+        }
+    return {
+        'label': 'Awaiting Open',
+        'detail': 'The invite email was sent and LedgerFlow is waiting for the first open or click signal.',
+        'tone': 'sent',
+    }
+
+
+def process_due_prospect_followups(triggered_by_user_id: int | None = None) -> dict:
+    if not smtp_email_ready():
+        return {'sent': 0, 'failed': 0, 'skipped': 0}
+    results = {'sent': 0, 'failed': 0, 'skipped': 0}
+    with get_conn() as conn:
+        due_rows = conn.execute(
+            """SELECT
+                   bi.*,
+                   c.business_name,
+                   c.business_category,
+                   c.contact_name,
+                   c.email AS client_email,
+                   COALESCE(c.trial_offer_days, bi.trial_days, 0) AS effective_trial_days,
+                   (
+                       SELECT edl.opened_at
+                       FROM email_delivery_log edl
+                       WHERE edl.related_invite_id = bi.id
+                         AND edl.email_type = 'prospect_trial_invite'
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS invite_opened_at,
+                   (
+                       SELECT edl.open_count
+                       FROM email_delivery_log edl
+                       WHERE edl.related_invite_id = bi.id
+                         AND edl.email_type = 'prospect_trial_invite'
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS invite_open_count,
+                   (
+                       SELECT edl.clicked_at
+                       FROM email_delivery_log edl
+                       WHERE edl.related_invite_id = bi.id
+                         AND edl.email_type = 'prospect_trial_invite'
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS invite_clicked_at,
+                   (
+                       SELECT edl.click_count
+                       FROM email_delivery_log edl
+                       WHERE edl.related_invite_id = bi.id
+                         AND edl.email_type = 'prospect_trial_invite'
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS invite_click_count
+               FROM business_invites bi
+               JOIN clients c ON c.id = bi.client_id
+               WHERE bi.invite_kind = 'prospect_trial'
+                 AND bi.status = 'sent'
+                 AND COALESCE(c.record_status, 'active') = 'prospect'
+                 AND COALESCE(bi.followup_status, 'pending') IN ('', 'pending')
+                 AND COALESCE(bi.followup_sent_at, '') = ''
+                 AND bi.accepted_user_id IS NULL
+                 AND datetime(bi.created_at) <= datetime('now', '-3 days')
+               ORDER BY bi.created_at ASC, bi.id ASC"""
+        ).fetchall()
+        for row in due_rows:
+            if (row['invite_opened_at'] or '').strip() or int(row['invite_open_count'] or 0) > 0 or (row['invite_clicked_at'] or '').strip() or int(row['invite_click_count'] or 0) > 0:
+                conn.execute(
+                    'UPDATE business_invites SET followup_status="not_needed", followup_error="" WHERE id=?',
+                    (row['id'],),
+                )
+                results['skipped'] += 1
+                continue
+            lock_value = now_iso()
+            updated = conn.execute(
+                'UPDATE business_invites SET followup_status="processing", followup_error="" WHERE id=? AND COALESCE(followup_status,"pending") IN ("", "pending") AND COALESCE(followup_sent_at,"")=""',
+                (row['id'],),
+            )
+            conn.commit()
+            if not updated.rowcount:
+                continue
+            tracking_token = generate_email_tracking_token()
+            try:
+                payload = send_trial_followup_email(
+                    row['invited_email'],
+                    row['invited_name'],
+                    row['business_name'],
+                    build_invite_link(row['token']),
+                    trial_days=int(row['effective_trial_days'] or default_trial_offer_days()),
+                    business_category=row['business_category'] or '',
+                    tracking_token=tracking_token,
+                )
+                conn.execute(
+                    'UPDATE business_invites SET followup_sent_at=?, followup_status="sent", followup_error="" WHERE id=?',
+                    (lock_value, row['id']),
+                )
+                log_email_delivery(
+                    client_id=row['client_id'],
+                    email_type=payload['email_type'],
+                    recipient_email=row['invited_email'],
+                    recipient_name=row['invited_name'],
+                    subject=payload['subject'],
+                    body_text=payload['body_text'],
+                    body_html=payload['body_html'],
+                    status='sent',
+                    created_by_user_id=triggered_by_user_id or row['created_by_user_id'],
+                    related_invite_id=row['id'],
+                    tracking_token=tracking_token,
+                    conn=conn,
+                )
+                conn.commit()
+                results['sent'] += 1
+            except Exception as exc:
+                conn.execute(
+                    'UPDATE business_invites SET followup_status="failed", followup_error=? WHERE id=?',
+                    (str(exc)[:500], row['id']),
+                )
+                log_email_delivery(
+                    client_id=row['client_id'],
+                    email_type='prospect_trial_followup',
+                    recipient_email=row['invited_email'],
+                    recipient_name=row['invited_name'],
+                    subject=f"Still interested? Your LedgerFlow trial for {row['business_name']} is waiting",
+                    status='failed',
+                    error_message=str(exc)[:500],
+                    created_by_user_id=triggered_by_user_id or row['created_by_user_id'],
+                    related_invite_id=row['id'],
+                    tracking_token=tracking_token,
+                    conn=conn,
+                )
+                conn.commit()
+                results['failed'] += 1
+    return results
 
 
 def recent_email_activity(ids=None, limit=30):
@@ -5308,6 +5762,9 @@ def init_db():
                 expires_at TEXT NOT NULL,
                 used_at TEXT DEFAULT '',
                 accepted_user_id INTEGER,
+                followup_sent_at TEXT DEFAULT '',
+                followup_status TEXT DEFAULT 'pending',
+                followup_error TEXT DEFAULT '',
                 FOREIGN KEY(client_id) REFERENCES clients(id),
                 FOREIGN KEY(created_by_user_id) REFERENCES users(id),
                 FOREIGN KEY(accepted_user_id) REFERENCES users(id)
@@ -5339,6 +5796,11 @@ def init_db():
                 created_by_user_id INTEGER,
                 related_invite_id INTEGER,
                 related_user_id INTEGER,
+                tracking_token TEXT DEFAULT '',
+                opened_at TEXT DEFAULT '',
+                open_count INTEGER NOT NULL DEFAULT 0,
+                clicked_at TEXT DEFAULT '',
+                click_count INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(client_id) REFERENCES clients(id),
                 FOREIGN KEY(created_by_user_id) REFERENCES users(id),
@@ -5366,6 +5828,9 @@ def init_db():
                     expires_at TEXT NOT NULL,
                     used_at TEXT DEFAULT '',
                     accepted_user_id INTEGER,
+                    followup_sent_at TEXT DEFAULT '',
+                    followup_status TEXT DEFAULT 'pending',
+                    followup_error TEXT DEFAULT '',
                     FOREIGN KEY(client_id) REFERENCES clients(id),
                     FOREIGN KEY(created_by_user_id) REFERENCES users(id),
                     FOREIGN KEY(accepted_user_id) REFERENCES users(id)
@@ -5522,9 +5987,17 @@ def init_db():
         ensure_column(conn, 'business_invites', 'invite_error', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_invites', 'invite_kind', "TEXT DEFAULT 'business_access'")
         ensure_column(conn, 'business_invites', 'trial_days', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'business_invites', 'followup_sent_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'business_invites', 'followup_status', "TEXT DEFAULT 'pending'")
+        ensure_column(conn, 'business_invites', 'followup_error', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'trial_offer_days', 'INTEGER NOT NULL DEFAULT 0')
         ensure_column(conn, 'clients', 'trial_started_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'trial_ends_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'email_delivery_log', 'tracking_token', "TEXT DEFAULT ''")
+        ensure_column(conn, 'email_delivery_log', 'opened_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'email_delivery_log', 'open_count', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'email_delivery_log', 'clicked_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'email_delivery_log', 'click_count', 'INTEGER NOT NULL DEFAULT 0')
         ensure_column(conn, 'invoices', 'notes', "TEXT DEFAULT ''")
         ensure_column(conn, 'invoices', 'income_category', "TEXT DEFAULT 'service_income'")
         ensure_column(conn, 'invoices', 'sales_tax_amount', 'REAL NOT NULL DEFAULT 0')
@@ -8654,6 +9127,24 @@ def touch_current_user_presence():
     except sqlite3.Error:
         if worker_id:
             session.pop('worker_id', None)
+
+
+@app.before_request
+def auto_send_due_prospect_followups():
+    user = current_user()
+    if not user or user['role'] != 'admin' or request.method != 'GET':
+        return
+    endpoint = request.endpoint or ''
+    if endpoint in {'static', 'email_open_tracking', 'email_click_tracking'}:
+        return
+    last_run = parse_datetime_value(session.get('prospect_followup_last_run', ''))
+    if last_run and (datetime.now() - last_run) < timedelta(minutes=15):
+        return
+    try:
+        process_due_prospect_followups(triggered_by_user_id=user['id'])
+    except Exception:
+        pass
+    session['prospect_followup_last_run'] = now_iso()
 
 
 @app.before_request
@@ -12479,6 +12970,7 @@ def client_users():
                 business_name = request.form.get('business_name', '').strip()
                 invite_name = request.form.get('full_name', '').strip()
                 invite_email = request.form.get('email', '').strip().lower()
+                business_category = normalize_business_category(request.form.get('business_category', ''))
                 trial_days = default_trial_offer_days()
                 if not business_name or not invite_name or not invite_email:
                     flash('Enter business name, contact name, and email before sending the trial invite.', 'error')
@@ -12504,8 +12996,8 @@ def client_users():
                            subscription_started_at, subscription_canceled_at, subscription_paused_at, onboarding_status,
                            onboarding_started_at, onboarding_completed_at, onboarding_completed_by_user_id, record_status,
                            archive_reason, archived_at, archived_by_user_id, reactivated_at, contact_name, email, billing_notes,
-                           trial_offer_days, trial_started_at, trial_ends_at
-                       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                           trial_offer_days, trial_started_at, trial_ends_at, business_category
+                       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                     (
                         business_name,
                         'Prospect',
@@ -12534,6 +13026,7 @@ def client_users():
                         trial_days,
                         '',
                         '',
+                        business_category,
                     )
                 )
                 client_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -12545,8 +13038,17 @@ def client_users():
                 )
                 invite_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
                 invite_link = build_invite_link(token)
+                tracking_token = generate_email_tracking_token()
                 try:
-                    invite_payload = send_trial_invite_email(invite_email, invite_name, business_name, invite_link, trial_days=trial_days)
+                    invite_payload = send_trial_invite_email(
+                        invite_email,
+                        invite_name,
+                        business_name,
+                        invite_link,
+                        trial_days=trial_days,
+                        business_category=business_category,
+                        tracking_token=tracking_token,
+                    )
                     conn.execute('UPDATE business_invites SET status="sent", invite_error="" WHERE id=?', (invite_id,))
                     conn.commit()
                     log_email_delivery(
@@ -12560,6 +13062,7 @@ def client_users():
                         status='sent',
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
+                        tracking_token=tracking_token,
                     )
                     flash('7-day trial invite sent. The prospect is now tracked in the pipeline until setup is completed.', 'success')
                 except Exception as e:
@@ -12575,6 +13078,7 @@ def client_users():
                         error_message=str(e)[:500],
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
+                        tracking_token=tracking_token,
                     )
                     flash(f'Trial invite email failed: {str(e)[:180]}', 'error')
                 return redirect(url_for('client_users'))
@@ -12624,11 +13128,13 @@ def client_users():
                 return redirect(url_for('client_users'))
             if action == 'resend_invite':
                 invite_id = request.form.get('invite_id', type=int)
-                inv = conn.execute('SELECT bi.*, c.business_name FROM business_invites bi JOIN clients c ON c.id=bi.client_id WHERE bi.id=?', (invite_id,)).fetchone()
+                inv = conn.execute('SELECT bi.*, c.business_name, c.business_category FROM business_invites bi JOIN clients c ON c.id=bi.client_id WHERE bi.id=?', (invite_id,)).fetchone()
                 if not inv:
                     flash('Invite not found.', 'error')
                     return redirect(url_for('client_users'))
                 invite_link = build_invite_link(inv['token'])
+                renewed_expires_at = (datetime.utcnow() + timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')
+                tracking_token = generate_email_tracking_token()
                 try:
                     if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial':
                         invite_payload = send_trial_invite_email(
@@ -12637,10 +13143,18 @@ def client_users():
                             inv['business_name'],
                             invite_link,
                             trial_days=int(inv['trial_days'] or 0),
+                            business_category=inv['business_category'] or '',
+                            tracking_token=tracking_token,
                         )
                     else:
                         invite_payload = send_invite_email(inv['invited_email'], inv['invited_name'], inv['business_name'], invite_link)
-                    conn.execute('UPDATE business_invites SET status="sent", invite_error="" WHERE id=?', (invite_id,))
+                    if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial':
+                        conn.execute(
+                            'UPDATE business_invites SET status="sent", invite_error="", created_at=CURRENT_TIMESTAMP, expires_at=?, followup_sent_at="", followup_status="pending", followup_error="" WHERE id=?',
+                            (renewed_expires_at, invite_id),
+                        )
+                    else:
+                        conn.execute('UPDATE business_invites SET status="sent", invite_error="" WHERE id=?', (invite_id,))
                     conn.commit()
                     log_email_delivery(
                         client_id=inv['client_id'],
@@ -12653,6 +13167,7 @@ def client_users():
                         status='sent',
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
+                        tracking_token=tracking_token if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else '',
                     )
                     flash('Invite re-sent. View it below in Recent Business Emails.', 'success')
                 except Exception as e:
@@ -12672,6 +13187,7 @@ def client_users():
                         error_message=str(e)[:500],
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
+                        tracking_token=tracking_token if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else '',
                     )
                     flash(f'Invite email failed: {str(e)[:180]}', 'error')
                 return redirect(url_for('client_users'))
@@ -12748,7 +13264,63 @@ def client_users():
                          AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
-                   ) AS last_invite_email_sent_at
+                   ) AS last_invite_email_sent_at,
+                   (
+                       SELECT edl.opened_at
+                       FROM email_delivery_log edl
+                       WHERE edl.client_id = c.id
+                         AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS last_invite_email_opened_at,
+                   (
+                       SELECT edl.open_count
+                       FROM email_delivery_log edl
+                       WHERE edl.client_id = c.id
+                         AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS last_invite_email_open_count,
+                   (
+                       SELECT edl.clicked_at
+                       FROM email_delivery_log edl
+                       WHERE edl.client_id = c.id
+                         AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS last_invite_email_clicked_at,
+                   (
+                       SELECT edl.click_count
+                       FROM email_delivery_log edl
+                       WHERE edl.client_id = c.id
+                         AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS last_invite_email_click_count,
+                   (
+                       SELECT edl.id
+                       FROM email_delivery_log edl
+                       WHERE edl.related_invite_id = bi.id
+                         AND edl.email_type = 'prospect_trial_followup'
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS followup_email_id,
+                   (
+                       SELECT edl.status
+                       FROM email_delivery_log edl
+                       WHERE edl.related_invite_id = bi.id
+                         AND edl.email_type = 'prospect_trial_followup'
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS followup_email_status,
+                   (
+                       SELECT edl.created_at
+                       FROM email_delivery_log edl
+                       WHERE edl.related_invite_id = bi.id
+                         AND edl.email_type = 'prospect_trial_followup'
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS followup_email_sent_at
                FROM clients c
                LEFT JOIN business_invites bi ON bi.id = (
                    SELECT bi2.id
@@ -12766,6 +13338,7 @@ def client_users():
     prospect_clients = [dict(row) for row in prospect_clients]
     for row in prospect_clients:
         row['pipeline_stage'] = prospect_pipeline_stage(row)
+        row['email_attention'] = prospect_email_attention_state(row)
     prospect_stage_counts = summarize_prospect_pipeline(prospect_clients)
     email_logs = recent_email_activity(visible_client_ids(user, include_non_active=True), limit=40)
     return render_template(
@@ -12778,6 +13351,7 @@ def client_users():
         build_invite_link=build_invite_link,
         app_base_url=configured_base_url(),
         email_logs=email_logs,
+        business_categories=business_categories(),
         subscription_status_labels=subscription_status_label_map(),
     )
 
@@ -12802,6 +13376,22 @@ def client_user_email_preview(email_id: int):
     preview_row = dict(row)
     preview_row['body_html'] = email_preview_html(row['body_html'] or '')
     return render_template('email_preview.html', email_row=preview_row)
+
+
+@app.route('/email/open/<tracking_token>.gif')
+def email_open_tracking(tracking_token: str):
+    record_email_open_event(tracking_token)
+    return Response(TRACKING_PIXEL_GIF, mimetype='image/gif', headers={'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'})
+
+
+@app.route('/email/click/<tracking_token>')
+def email_click_tracking(tracking_token: str):
+    target = (request.args.get('target') or '').strip()
+    parsed = urlparse(target)
+    if not target or parsed.scheme not in {'http', 'https'} or not parsed.netloc:
+        return redirect(public_app_url('/main-portal'))
+    record_email_click_event(tracking_token)
+    return redirect(target)
 
 
 @app.route('/email-settings', methods=['GET', 'POST'])

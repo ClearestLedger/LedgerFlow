@@ -79,6 +79,12 @@
   - phone layouts are still not launch-ready
   - mobile-only notice should stay visible while we continue mobile refinement
   - next mobile phase should focus on layout cleanup, spacing, navigation stacking, and form usability on small screens
+- Prospect follow-up automation phase completed on 2026-04-21:
+  - 7-day trial invites now support business-category selection at send time
+  - prospect trial emails now use tracked opens and tracked CTA clicks
+  - unopened trial invites now trigger an automatic higher-value follow-up after 3 days, when an administrator returns to the portal
+  - the follow-up uses category-matched visuals where available and explains what the prospect is missing inside the trial
+  - admin invite pipeline now shows email-attention state such as opened, clicked, no-open-signal, and follow-up sent
 
 ## Future Pricing Research Note
 
