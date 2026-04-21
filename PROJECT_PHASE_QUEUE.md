@@ -71,6 +71,10 @@
   - recurring service settings can now auto-generate future work-schedule visits
   - the business sales workspace now shows next visit timing and projected recurring revenue
   - recurring visits contribute to schedule planning, but do not auto-post booked income before the work is actually completed
+- Mobile readiness note:
+  - phone layouts are still not launch-ready
+  - mobile-only notice should stay visible while we continue mobile refinement
+  - next mobile phase should focus on layout cleanup, spacing, navigation stacking, and form usability on small screens
 
 ## Future Pricing Research Note
 

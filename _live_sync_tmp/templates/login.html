@@ -7,12 +7,16 @@
   <link rel='stylesheet' href='{{ url_for("static", filename="style.css", v=static_asset_version("style.css")) }}'>
 </head>
 <body class='login-body'>
+  <div class='mobile-status-banner' role='status' aria-live='polite'>
+    <strong>{{ tr('Mobile experience update') }}</strong>
+    <span>{{ tr("We're still working here for you. The phone version will be ready soon.") }}</span>
+  </div>
   <div class='login-brand-watermark'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
   <div class='login-floating-marks' aria-hidden='true'>
-    <span class='mark-one'>{{ tr('Billing') }}</span>
-    <span class='mark-two'>{{ tr('Payroll') }}</span>
-    <span class='mark-three'>{{ tr('Tax Ready') }}</span>
-    <span class='mark-four'>{{ tr('Calendar') }}</span>
+    <span class='mark-one'>Jobs</span>
+    <span class='mark-two'>Dispatch</span>
+    <span class='mark-three'>Team</span>
+    <span class='mark-four'>Schedule</span>
   </div>
   <div class='login-wrap login-wrap-split'>
     <div class='login-stage'>
@@ -21,7 +25,7 @@
         <div class='login-stage-brand'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
       </div>
       <div class='login-stage-kicker'>{{ tr('Welcome to') }}</div>
-      <div class='login-stage-subtitle'>{{ tr('Professional billing, payroll tax readiness, calendar planning, and business financial management in one administrator-made platform.') }}</div>
+      <div class='login-stage-subtitle'>{{ tr('Operational LedgerFlow gives service businesses a focused command center for jobs, dispatch, scheduling, team coordination, and field execution.') }}</div>
     </div>
     <div class='login-card'>
       <form method='post' action='{{ url_for("set_language") }}' class='language-inline-form login-language-form'>
@@ -37,7 +41,7 @@
       <div class='badge'>{{ tr('Administrator-Made Software') }}</div>
       <div class='login-kicker'>{{ tr('Welcome Administrator') }}</div>
       <h1>{{ tr('Sign in to {app_name}', app_name=app_name) }}</h1>
-      <p class='small'>{{ tr('Secure administrator and business access for the full financial workspace.') }}</p>
+      <p class='small'>{{ tr('Secure administrator and business access for the operational workspace.') }}</p>
       {% if setup_required %}
       <p class='small'>{{ tr('First launch detected. Create the administrator account for this isolated production deployment.') }}</p>
       <form method='post' action='{{ url_for("main_portal") }}'>
@@ -79,17 +83,17 @@
     </div>
   </div>
   <div class='login-bottom-rail' aria-label='Platform functions'>
-    <span>{{ tr('Payroll') }}</span>
-    <span>{{ tr('Income Records') }}</span>
-    <span>{{ tr('Billing') }}</span>
-    <span>Payroll Tax</span>
-    <span>{{ tr('Calendar') }}</span>
+    <span>Jobs</span>
+    <span>Dispatch</span>
+    <span>Schedule</span>
+    <span>Team</span>
+    <span>Availability</span>
+    <span>Activity</span>
     <span>{{ tr('Worker Portal') }}</span>
-    <span>{{ tr('Administrator Fees') }}</span>
     <a href='{{ url_for("create_account_info") }}'>{{ tr('Marketing Video Coming Soon') }}</a>
   </div>
   <div class='login-portal-footer'>
-    <div class='login-portal-footer-copy'>{{ tr('Private invited-client rollout. Core portal functions are live and actively administered while final improvements continue.') }}</div>
+    <div class='login-portal-footer-copy'>{{ tr('Operational LedgerFlow is the operations product in the LedgerFlow family, built for daily service-business execution.') }}</div>
     <div class='login-portal-footer-links'>
       <a href='{{ url_for("trust_center") }}#rollout'>{{ tr('Rollout Notice') }}</a>
       <a href='{{ url_for("trust_center") }}#privacy'>{{ tr('Privacy Notice') }}</a>

@@ -9,6 +9,10 @@
 <body class='app-shell-body'>
 {% set onboarding_locked = current_user and current_user.role != 'admin' and active_client and (active_client.onboarding_status or 'completed') != 'completed' %}
 {% set admin_business_workspace = current_user and current_user.role=='admin' and current_mode=='business' and active_client %}
+<div class='mobile-status-banner' role='status' aria-live='polite'>
+  <strong>{{ tr('Mobile experience update') }}</strong>
+  <span>{{ tr("We're still working here for you. The phone version will be ready soon.") }}</span>
+</div>
 <div class='header'>
   <div class='brand-lockup brand-lockup-header'>
     <div class='brand-lockup-mark'>

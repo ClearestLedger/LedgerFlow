@@ -332,6 +332,11 @@ TRANSLATIONS.update({
     'Tax Ready': {'es': 'Listo para impuestos', 'pt': 'Pronto para impostos'},
     'Administrator Fees': {'es': 'Cargos del administrador', 'pt': 'Taxas do administrador'},
     'Marketing Video Coming Soon': {'es': 'Video de marketing proximamente', 'pt': 'Video de marketing em breve'},
+    'Mobile experience update': {'es': 'Actualizacion de experiencia movil', 'pt': 'Atualizacao da experiencia mobile'},
+    "We're still working here for you. The phone version will be ready soon.": {
+        'es': 'Todavia estamos trabajando aqui para usted. La version para telefono estara lista pronto.',
+        'pt': 'Ainda estamos trabalhando aqui para voce. A versao para telefone estara pronta em breve.',
+    },
     'Operational LedgerFlow gives service businesses a focused command center for jobs, dispatch, scheduling, team coordination, and field execution.': {
         'es': 'Operational LedgerFlow ofrece a las empresas de servicios un centro de control enfocado para trabajos, despacho, agenda, coordinacion del equipo y ejecucion en campo.',
         'pt': 'A LedgerFlow Operacional oferece aos negocios de servicos um centro de comando focado em servicos, despacho, agenda, coordenacao da equipe e execucao em campo.',

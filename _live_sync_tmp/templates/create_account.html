@@ -7,6 +7,10 @@
   <link rel='stylesheet' href='{{ url_for("static", filename="style.css", v=static_asset_version("style.css")) }}'>
 </head>
 <body class='login-body'>
+  <div class='mobile-status-banner' role='status' aria-live='polite'>
+    <strong>{{ tr('Mobile experience update') }}</strong>
+    <span>{{ tr("We're still working here for you. The phone version will be ready soon.") }}</span>
+  </div>
   <div class='login-brand-watermark'><img src='{{ brand_logo_url }}' alt='{{ app_name }}'></div>
   <div class='login-floating-marks' aria-hidden='true'>
     <span class='mark-one'>Invite Access</span>
