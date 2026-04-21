@@ -255,6 +255,9 @@ TRANSLATIONS = {
     'Business Structure': {'es': 'Estructura del negocio', 'pt': 'Estrutura da empresa'},
     'Kind of Business': {'es': 'Clase de negocio', 'pt': 'Tipo de negocio'},
     'Specialty / Short Description': {'es': 'Especialidad / descripcion corta', 'pt': 'Especialidade / descricao curta'},
+    'Additional Owners / Owner Contacts': {'es': 'Propietarios adicionales / contactos de propietarios', 'pt': 'Proprietarios adicionais / contatos de proprietarios'},
+    'Job Scope / Service Scope': {'es': 'Alcance del trabajo / alcance del servicio', 'pt': 'Escopo do trabalho / escopo do servico'},
+    'Not added yet': {'es': 'Aun no agregado', 'pt': 'Ainda nao adicionado'},
     'Select one (optional)': {'es': 'Seleccione uno (opcional)', 'pt': 'Selecione um (opcional)'},
     'Business name, kind of business, structure, contact, language, EIN, address, and any helpful billing notes.': {
         'es': 'Nombre, tipo de negocio, estructura, contacto, idioma, EIN, direccion y notas utiles.',
@@ -267,6 +270,18 @@ TRANSLATIONS = {
     'Used to personalize your welcome guidance, tips, and future recommendations.': {
         'es': 'Se usa para personalizar la bienvenida, consejos y recomendaciones futuras.',
         'pt': 'Usado para personalizar a boas-vindas, dicas e recomendacoes futuras.',
+    },
+    'Add one owner per line or include name, role, phone, and email.': {
+        'es': 'Agrega un propietario por linea o incluye nombre, rol, telefono y correo.',
+        'pt': 'Adicione um proprietario por linha ou inclua nome, funcao, telefone e e-mail.',
+    },
+    'Add one job scope per line so estimates, schedules, and future job templates can reuse the wording.': {
+        'es': 'Agrega un alcance de trabajo por linea para reutilizarlo en presupuestos, agendas y futuras plantillas.',
+        'pt': 'Adicione um escopo de trabalho por linha para reutilizar em orcamentos, agendas e futuros modelos.',
+    },
+    'Example: exterior wash and wax, ceramic coating, interior detailing': {
+        'es': 'Ejemplo: lavado exterior y encerado, recubrimiento ceramico, detallado interior',
+        'pt': 'Exemplo: lavagem externa e enceramento, revestimento ceramico, detalhamento interno',
     },
     'Optional short description like house cleaning, interior painting, gel nails, or prenatal massage': {
         'es': 'Descripcion opcional como limpieza de casas, pintura interior, unas en gel o masaje prenatal',
@@ -837,6 +852,7 @@ TRANSLATIONS.update({
     'Construction': {'es': 'Construccion', 'pt': 'Construcao'},
     'Landscaping': {'es': 'Paisajismo', 'pt': 'Paisagismo'},
     'Floor Installation': {'es': 'Instalacion de pisos', 'pt': 'Instalacao de pisos'},
+    'Mobile Detailing': {'es': 'Detallado movil', 'pt': 'Detalhamento movel'},
     'Home Services': {'es': 'Servicios del hogar', 'pt': 'Servicos residenciais'},
     'Childcare': {'es': 'Cuidado infantil', 'pt': 'Cuidado infantil'},
     'Consulting': {'es': 'Consultoria', 'pt': 'Consultoria'},
@@ -1466,6 +1482,7 @@ def business_categories():
         'Construction',
         'Landscaping',
         'Floor Installation',
+        'Mobile Detailing',
         'Home Services',
         'Childcare',
         'Consulting',
@@ -5035,6 +5052,8 @@ def init_db():
         ensure_column(conn, 'clients', 'business_type', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'business_category', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'business_specialty', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'owner_contacts', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'job_scope_summary', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'eftps_status', "TEXT DEFAULT 'Not Enrolled'")
         ensure_column(conn, 'clients', 'eftps_login_reference', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'filing_type', "TEXT DEFAULT 'Both'")
@@ -11460,6 +11479,8 @@ def clients():
             business_structure = request.form.get('business_type', '').strip()
             business_category = normalize_business_category(request.form.get('business_category', ''))
             business_specialty = request.form.get('business_specialty', '').strip()[:120]
+            owner_contacts = request.form.get('owner_contacts', '').strip()[:1200]
+            job_scope_summary = request.form.get('job_scope_summary', '').strip()[:2000]
             values = (
                 business_name,
                 business_structure,
@@ -11574,6 +11595,7 @@ def clients():
                     'UPDATE clients SET business_name=?, business_type=?, business_category=?, business_specialty=?, preferred_language=?, service_level=?, access_service_level=?, access_override_note=?, subscription_plan_code=?, subscription_status=?, subscription_amount=?, subscription_interval=?, subscription_autopay_enabled=?, subscription_next_billing_date=?, subscription_started_at=?, subscription_canceled_at=?, subscription_paused_at=?, default_payment_method_label=?, default_payment_method_status=?, backup_payment_method_label=?, billing_notes=?, contact_name=?, phone=?, email=?, address=?, ein=?, eftps_status=?, eftps_login_reference=?, filing_type=?, bank_name=?, bank_account_nickname=?, bank_account_last4=?, bank_account_holder_name=?, bank_account_number=?, bank_routing_number=?, credit_card_nickname=?, credit_card_last4=?, credit_card_holder_name=?, credit_card_number=?, payroll_contact_name=?, payroll_contact_phone=?, payroll_contact_email=?, state_tax_id=?, record_status=?, archive_reason=?, archived_at=?, archived_by_user_id=?, reactivated_at=?, updated_at=?, updated_by_user_id=? WHERE id=?',
                     values + (now_value, user['id'], client_id)
                 )
+                conn.execute('UPDATE clients SET owner_contacts=?, job_scope_summary=? WHERE id=?', (owner_contacts, job_scope_summary, client_id))
                 if user['role'] != 'admin':
                     selected_language = normalize_language(request.form.get('preferred_language') or existing['preferred_language'] or 'en')
                     conn.execute('UPDATE users SET preferred_language=? WHERE id=?', (selected_language, user['id']))
@@ -11589,6 +11611,7 @@ def clients():
                 values + (user['id'], now_value, user['id'])
             )
             client_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+            conn.execute('UPDATE clients SET owner_contacts=?, job_scope_summary=? WHERE id=?', (owner_contacts, job_scope_summary, client_id))
             log_client_profile_history(conn, client_id=client_id, action='created', changed_by_user_id=user['id'])
             conn.commit()
             flash('Business profile created.', 'success')
@@ -12701,6 +12724,8 @@ def business_onboarding():
             business_structure = request.form.get('business_type', '').strip()
             business_category = normalize_business_category(request.form.get('business_category', ''))
             business_specialty = request.form.get('business_specialty', '').strip()[:120]
+            owner_contacts = request.form.get('owner_contacts', '').strip()[:1200]
+            job_scope_summary = request.form.get('job_scope_summary', '').strip()[:2000]
             contact_name = request.form.get('contact_name', '').strip()
             phone = request.form.get('phone', '').strip()
             email = request.form.get('email', '').strip().lower()
@@ -12792,6 +12817,7 @@ def business_onboarding():
                         client_id,
                     )
                 )
+                conn.execute('UPDATE clients SET owner_contacts=?, job_scope_summary=? WHERE id=?', (owner_contacts, job_scope_summary, client_id))
                 if cleaned_method:
                     if cleaned_method['is_default'] != 1:
                         cleaned_method['is_default'] = 1

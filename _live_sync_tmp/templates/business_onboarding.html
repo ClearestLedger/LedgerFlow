@@ -84,6 +84,10 @@
           <div style='grid-column:1 / -1'><label>{{ tr('Business Address') }}</label><input name='address' value='{{ request.form.get("address", client.address or "") }}' required></div>
           <div style='grid-column:1 / -1'><label>{{ tr('Specialty / Short Description') }}</label><input name='business_specialty' value='{{ request.form.get("business_specialty", client.business_specialty or "") }}' placeholder='{{ tr("Optional short description like house cleaning, interior painting, gel nails, or prenatal massage") }}'></div>
           <div class='small' style='grid-column:1 / -1'>{{ tr('Used to personalize your welcome guidance, tips, and future recommendations.') }}</div>
+          <div style='grid-column:1 / -1'><label>{{ tr('Additional Owners / Owner Contacts') }}</label><textarea name='owner_contacts' rows='3' placeholder='{{ tr("Add one owner per line or include name, role, phone, and email.") }}'>{{ request.form.get("owner_contacts", client.owner_contacts or "") }}</textarea></div>
+          <div class='small' style='grid-column:1 / -1'>{{ tr('Add one owner per line or include name, role, phone, and email.') }}</div>
+          <div style='grid-column:1 / -1'><label>{{ tr('Job Scope / Service Scope') }}</label><textarea name='job_scope_summary' rows='4' placeholder='{{ tr("Example: exterior wash and wax, ceramic coating, interior detailing") }}'>{{ request.form.get("job_scope_summary", client.job_scope_summary or "") }}</textarea></div>
+          <div class='small' style='grid-column:1 / -1'>{{ tr('Add one job scope per line so estimates, schedules, and future job templates can reuse the wording.') }}</div>
           <div style='grid-column:1 / -1'><label>{{ tr('Billing Notes (optional)') }}</label><input name='billing_notes' value='{{ request.form.get("billing_notes", client.billing_notes or "") }}' placeholder='{{ tr("Anything your administrator should know about billing or contact preferences") }}'></div>
         </div>
       </div>
@@ -257,6 +261,10 @@
           <div style='grid-column:1 / -1'><label>{{ tr('Business Address') }}</label><input name='address' value='{{ request.form.get("address", client.address or "") }}' required></div>
           <div style='grid-column:1 / -1'><label>{{ tr('Specialty / Short Description') }}</label><input name='business_specialty' value='{{ request.form.get("business_specialty", client.business_specialty or "") }}' placeholder='{{ tr("Optional short description like house cleaning, interior painting, gel nails, or prenatal massage") }}'></div>
           <div class='small' style='grid-column:1 / -1'>{{ tr('Used to personalize your welcome guidance, tips, and future recommendations.') }}</div>
+          <div style='grid-column:1 / -1'><label>{{ tr('Additional Owners / Owner Contacts') }}</label><textarea name='owner_contacts' rows='3' placeholder='{{ tr("Add one owner per line or include name, role, phone, and email.") }}'>{{ request.form.get("owner_contacts", client.owner_contacts or "") }}</textarea></div>
+          <div class='small' style='grid-column:1 / -1'>{{ tr('Add one owner per line or include name, role, phone, and email.') }}</div>
+          <div style='grid-column:1 / -1'><label>{{ tr('Job Scope / Service Scope') }}</label><textarea name='job_scope_summary' rows='4' placeholder='{{ tr("Example: exterior wash and wax, ceramic coating, interior detailing") }}'>{{ request.form.get("job_scope_summary", client.job_scope_summary or "") }}</textarea></div>
+          <div class='small' style='grid-column:1 / -1'>{{ tr('Add one job scope per line so estimates, schedules, and future job templates can reuse the wording.') }}</div>
           <div style='grid-column:1 / -1'><label>{{ tr('Billing Notes (optional)') }}</label><input name='billing_notes' value='{{ request.form.get("billing_notes", client.billing_notes or "") }}' placeholder='{{ tr("Anything your administrator should know about billing or contact preferences") }}'></div>
         </div>
       </div>

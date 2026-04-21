@@ -62,6 +62,10 @@
 - Sales workspace ownership rule: saved clients, estimates, and customer invoices belong to the business-side portal experience, not the administrator-facing side.
 - Admin can supervise and manage billing access, but the primary customer relationship workflow should remain attached to each business workspace.
 - Business profile expansion note: add support for more than one owner under a business and more than one reusable job scope / service scope entry.
+- Business profile expansion phase completed on 2026-04-21:
+  - `Mobile Detailing` added as a business category option
+  - administrator and business setup flows now save additional owners / owner contacts
+  - administrator and business setup flows now save reusable job scope / service scope notes
 
 ## Future Pricing Research Note
 

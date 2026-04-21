@@ -16,6 +16,10 @@
       <div><label>{{ tr('EIN') }}</label><input name='ein'></div>
       <div><label>{{ tr('Business Address') }}</label><input name='address'></div>
       <div style='grid-column:1 / -1'><label>{{ tr('Specialty / Short Description') }}</label><input name='business_specialty' placeholder='{{ tr("Optional short description like house cleaning or interior painting") }}'></div>
+      <div style='grid-column:1 / -1'><label>{{ tr('Additional Owners / Owner Contacts') }}</label><textarea name='owner_contacts' rows='3' placeholder='{{ tr("Add one owner per line or include name, role, phone, and email.") }}'></textarea></div>
+      <div class='small' style='grid-column:1 / -1'>{{ tr('Add one owner per line or include name, role, phone, and email.') }}</div>
+      <div style='grid-column:1 / -1'><label>{{ tr('Job Scope / Service Scope') }}</label><textarea name='job_scope_summary' rows='4' placeholder='{{ tr("Example: exterior wash and wax, ceramic coating, interior detailing") }}'></textarea></div>
+      <div class='small' style='grid-column:1 / -1'>{{ tr('Add one job scope per line so estimates, schedules, and future job templates can reuse the wording.') }}</div>
 
       <div><label>{{ tr('Service Level / Pricing Tier') }}</label><select name='service_level'>{% for value, label in service_level_options %}<option value='{{ value }}'>{{ tr(label) }}</option>{% endfor %}</select></div>
       <div><label>{{ tr('Access Level Granted') }}</label><select name='access_service_level'>{% for value, label in service_level_access_options %}<option value='{{ value }}'>{{ tr(label) }}</option>{% endfor %}</select></div>
@@ -93,7 +97,9 @@
       (c.email or '') ~ ' ' ~
       (c.phone or '') ~ ' ' ~
       (c.ein or '') ~ ' ' ~
-      (c.address or '')
+      (c.address or '') ~ ' ' ~
+      (c.owner_contacts or '') ~ ' ' ~
+      (c.job_scope_summary or '')
     )|lower %}
     {% if is_admin %}
     <details class='compact-details business-directory-item' data-business-card data-search='{{ business_search_blob|e }}' style='margin-bottom:14px;'>
@@ -139,6 +145,10 @@
         <div><label>{{ tr('EIN') }}</label><input name='ein' value='{{ c.ein or "" }}'></div>
         <div><label>{{ tr('Business Address') }}</label><input name='address' value='{{ c.address or "" }}'></div>
         <div style='grid-column:1 / -1'><label>{{ tr('Specialty / Short Description') }}</label><input name='business_specialty' value='{{ c.business_specialty or "" }}' placeholder='{{ tr("Optional short description like house cleaning or interior painting") }}'></div>
+        <div style='grid-column:1 / -1'><label>{{ tr('Additional Owners / Owner Contacts') }}</label><textarea name='owner_contacts' rows='3' placeholder='{{ tr("Add one owner per line or include name, role, phone, and email.") }}'>{{ c.owner_contacts or "" }}</textarea></div>
+        <div class='small' style='grid-column:1 / -1'>{{ tr('Add one owner per line or include name, role, phone, and email.') }}</div>
+        <div style='grid-column:1 / -1'><label>{{ tr('Job Scope / Service Scope') }}</label><textarea name='job_scope_summary' rows='4' placeholder='{{ tr("Example: exterior wash and wax, ceramic coating, interior detailing") }}'>{{ c.job_scope_summary or "" }}</textarea></div>
+        <div class='small' style='grid-column:1 / -1'>{{ tr('Add one job scope per line so estimates, schedules, and future job templates can reuse the wording.') }}</div>
 
         <div><label>{{ tr('Service Level / Pricing Tier') }}</label><select name='service_level'>{% for value, label in service_level_options %}<option value='{{ value }}' {% if (c.service_level or 'self_service') == value %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
         {% if is_admin %}
