@@ -982,6 +982,63 @@ TRANSLATIONS.update({
         'pt': 'Codigo de acesso, metodo de contato preferido, servico favorito ou notas de acompanhamento',
     },
     'Save Client': {'es': 'Guardar cliente', 'pt': 'Salvar cliente'},
+    'Recurring Service': {'es': 'Servicio recurrente', 'pt': 'Servico recorrente'},
+    'Use this for return clients whose work repeats on a regular schedule.': {
+        'es': 'Usa esto para clientes recurrentes cuyo trabajo se repite en un horario regular.',
+        'pt': 'Use isto para clientes recorrentes cujo trabalho se repete em uma agenda regular.',
+    },
+    'One-time / no repeat': {'es': 'Una vez / sin repeticion', 'pt': 'Uma vez / sem repeticao'},
+    'Weekly': {'es': 'Semanal', 'pt': 'Semanal'},
+    'Every 2 Weeks': {'es': 'Cada 2 semanas', 'pt': 'A cada 2 semanas'},
+    'Monthly': {'es': 'Mensual', 'pt': 'Mensal'},
+    'Monday': {'es': 'Lunes', 'pt': 'Segunda-feira'},
+    'Tuesday': {'es': 'Martes', 'pt': 'Terca-feira'},
+    'Wednesday': {'es': 'Miercoles', 'pt': 'Quarta-feira'},
+    'Thursday': {'es': 'Jueves', 'pt': 'Quinta-feira'},
+    'Friday': {'es': 'Viernes', 'pt': 'Sexta-feira'},
+    'Saturday': {'es': 'Sabado', 'pt': 'Sabado'},
+    'Sunday': {'es': 'Domingo', 'pt': 'Domingo'},
+    'Preferred Service Day': {'es': 'Dia preferido del servicio', 'pt': 'Dia preferido do servico'},
+    'Service Start Date': {'es': 'Fecha de inicio del servicio', 'pt': 'Data de inicio do servico'},
+    'Service End Date (optional)': {'es': 'Fecha final del servicio (opcional)', 'pt': 'Data final do servico (opcional)'},
+    'Default Service Name': {'es': 'Nombre predeterminado del servicio', 'pt': 'Nome padrao do servico'},
+    'Default Visit Price': {'es': 'Precio predeterminado por visita', 'pt': 'Preco padrao por visita'},
+    'Auto-add upcoming visits to calendar': {'es': 'Agregar automaticamente las proximas visitas al calendario', 'pt': 'Adicionar automaticamente as proximas visitas ao calendario'},
+    'Recurring weekly cleaning, biweekly detailing, monthly visit, etc.': {
+        'es': 'Limpieza semanal, detallado quincenal, visita mensual, etc.',
+        'pt': 'Limpeza semanal, detalhamento quinzenal, visita mensal etc.',
+    },
+    'Projected recurring revenue': {'es': 'Ingresos recurrentes proyectados', 'pt': 'Receita recorrente projetada'},
+    'Upcoming recurring visits': {'es': 'Proximas visitas recurrentes', 'pt': 'Proximas visitas recorrentes'},
+    'Next Visit': {'es': 'Proxima visita', 'pt': 'Proxima visita'},
+    'Recurrence': {'es': 'Recurrencia', 'pt': 'Recorrencia'},
+    'Projected Monthly': {'es': 'Proyectado mensual', 'pt': 'Projetado mensal'},
+    'Expected amount': {'es': 'Monto esperado', 'pt': 'Valor esperado'},
+    'Open Work Schedule': {'es': 'Abrir agenda de trabajo', 'pt': 'Abrir agenda de trabalho'},
+    'No recurring plan': {'es': 'Sin plan recurrente', 'pt': 'Sem plano recorrente'},
+    'No upcoming visit generated yet': {'es': 'Aun no se genero ninguna proxima visita', 'pt': 'Ainda nao foi gerada nenhuma proxima visita'},
+    'Automatic schedule created': {'es': 'Agenda automatica creada', 'pt': 'Agenda automatica criada'},
+    'Generated from recurring client profile.': {'es': 'Generado desde el perfil recurrente del cliente.', 'pt': 'Gerado a partir do perfil recorrente do cliente.'},
+    'Create and manage assigned job schedule entries.': {'es': 'Crea y administra trabajos programados.', 'pt': 'Crie e gerencie trabalhos agendados.'},
+    'Add Schedule Entry': {'es': 'Agregar entrada de agenda', 'pt': 'Adicionar entrada de agenda'},
+    'Assigned Worker(s)': {'es': 'Trabajador(es) asignado(s)', 'pt': 'Trabalhador(es) atribuido(s)'},
+    'No workers added yet.': {'es': 'Aun no hay trabajadores agregados.', 'pt': 'Ainda nao ha trabalhadores adicionados.'},
+    'Job Address': {'es': 'Direccion del trabajo', 'pt': 'Endereco do servico'},
+    'Scope of Work': {'es': 'Alcance del trabajo', 'pt': 'Escopo do trabalho'},
+    'Notes / Instructions': {'es': 'Notas / instrucciones', 'pt': 'Notas / instrucoes'},
+    'Save Schedule Entry': {'es': 'Guardar entrada de agenda', 'pt': 'Salvar entrada de agenda'},
+    'Upcoming Assigned Jobs': {'es': 'Proximos trabajos asignados', 'pt': 'Proximos servicos atribuidos'},
+    'Assigned': {'es': 'Asignado', 'pt': 'Atribuido'},
+    'No schedule entries yet.': {'es': 'Aun no hay entradas de agenda.', 'pt': 'Ainda nao ha entradas de agenda.'},
+    'Add a job schedule on the left to start assigning workers.': {'es': 'Agrega un trabajo a la izquierda para empezar a asignar trabajadores.', 'pt': 'Adicione um servico a esquerda para comecar a atribuir trabalhadores.'},
+    'Saved Schedule Entries': {'es': 'Entradas de agenda guardadas', 'pt': 'Entradas de agenda salvas'},
+    'Job': {'es': 'Trabajo', 'pt': 'Servico'},
+    'Scope': {'es': 'Alcance', 'pt': 'Escopo'},
+    'Time': {'es': 'Hora', 'pt': 'Hora'},
+    'Action': {'es': 'Accion', 'pt': 'Acao'},
+    'Delete': {'es': 'Eliminar', 'pt': 'Excluir'},
+    'No schedule entries saved yet.': {'es': 'Aun no hay entradas de agenda guardadas.', 'pt': 'Ainda nao ha entradas de agenda salvas.'},
+    'Unassigned': {'es': 'Sin asignar', 'pt': 'Sem atribuicao'},
     'How This Premium Flow Works': {'es': 'Como funciona este flujo premium', 'pt': 'Como este fluxo premium funciona'},
     'Clients -> Estimates -> Invoices': {'es': 'Clientes -> Presupuestos -> Facturas', 'pt': 'Clientes -> Orcamentos -> Faturas'},
     'Save repeat clients here once so their information is ready for future work.': {
@@ -1436,6 +1493,137 @@ def upsert_customer_contact(
         ),
     )
     return cursor.lastrowid
+
+
+def recurring_frequency_options():
+    return [
+        ('', 'One-time / no repeat'),
+        ('weekly', 'Weekly'),
+        ('biweekly', 'Every 2 Weeks'),
+        ('monthly', 'Monthly'),
+    ]
+
+
+def recurring_weekday_options():
+    return [(str(i), day) for i, day in enumerate(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'])]
+
+
+def projected_recurring_monthly_amount(contact) -> float:
+    amount = money((contact['recurring_expected_amount'] if 'recurring_expected_amount' in contact.keys() else 0) or 0)
+    frequency = ((contact['recurring_frequency'] if 'recurring_frequency' in contact.keys() else '') or '').strip().lower()
+    if amount <= 0:
+        return 0.0
+    if frequency == 'weekly':
+        return money(amount * 4.33)
+    if frequency == 'biweekly':
+        return money(amount * 2.17)
+    if frequency == 'monthly':
+        return money(amount)
+    return 0.0
+
+
+def recurring_occurrence_dates(contact, window_start: date | None = None, horizon_days: int = 42, limit: int = 18):
+    frequency = ((contact['recurring_frequency'] if 'recurring_frequency' in contact.keys() else '') or '').strip().lower()
+    if frequency not in {'weekly', 'biweekly', 'monthly'}:
+        return []
+    start_date = parse_date((contact['recurring_start_date'] if 'recurring_start_date' in contact.keys() else '') or '') or date.today()
+    end_date = parse_date((contact['recurring_end_date'] if 'recurring_end_date' in contact.keys() else '') or '')
+    window_start = max(window_start or date.today(), start_date)
+    horizon_end = window_start + timedelta(days=max(horizon_days, 1))
+    if end_date and end_date < window_start:
+        return []
+
+    results: list[date] = []
+    if frequency in {'weekly', 'biweekly'}:
+        weekday_value = str((contact['recurring_weekday'] if 'recurring_weekday' in contact.keys() else '') or '').strip()
+        target_weekday = int(weekday_value) if weekday_value.isdigit() else start_date.weekday()
+        anchor = start_date
+        if anchor.weekday() != target_weekday:
+            anchor = anchor + timedelta(days=(target_weekday - anchor.weekday()) % 7)
+        current = window_start + timedelta(days=(target_weekday - window_start.weekday()) % 7)
+        step_days = 7
+        while current <= horizon_end and len(results) < limit:
+            if current >= anchor:
+                weeks_between = (current - anchor).days // 7
+                if frequency == 'weekly' or weeks_between % 2 == 0:
+                    if not end_date or current <= end_date:
+                        results.append(current)
+            current += timedelta(days=step_days)
+    else:
+        import calendar as pycal
+        target_day = start_date.day
+        current_month = date(window_start.year, window_start.month, 1)
+        while current_month <= horizon_end and len(results) < limit:
+            last_day = pycal.monthrange(current_month.year, current_month.month)[1]
+            candidate = date(current_month.year, current_month.month, min(target_day, last_day))
+            if candidate >= window_start and candidate >= start_date and (not end_date or candidate <= end_date):
+                results.append(candidate)
+            if current_month.month == 12:
+                current_month = date(current_month.year + 1, 1, 1)
+            else:
+                current_month = date(current_month.year, current_month.month + 1, 1)
+    return results
+
+
+def ensure_recurring_schedule_entries(conn: sqlite3.Connection, client_id: int, actor_user_id: int | None = None, horizon_days: int = 42) -> int:
+    today = date.today()
+    contact_rows = conn.execute(
+        '''SELECT *
+           FROM customer_contacts
+           WHERE client_id=?
+             AND COALESCE(status,'active')='active'
+             AND COALESCE(auto_add_to_calendar,0)=1
+             AND COALESCE(recurring_frequency,'')<>''',
+        (client_id,),
+    ).fetchall()
+    created_count = 0
+    for row in contact_rows:
+        expected_amount = money(row['recurring_expected_amount'] or 0)
+        job_name = ((row['recurring_job_name'] or '').strip() or (row['customer_name'] or '').strip() or 'Recurring Service').strip()
+        scope = ((row['recurring_scope'] or '').strip() or (row['customer_notes'] or '').strip())
+        note_parts = ['Generated from recurring client profile.']
+        if expected_amount > 0:
+            note_parts.append(f'Expected amount ${expected_amount:.2f}')
+        notes = ' '.join(note_parts).strip()
+        for occurrence in recurring_occurrence_dates(row, window_start=today, horizon_days=horizon_days):
+            existing = conn.execute(
+                '''SELECT id
+                   FROM work_schedule_entries
+                   WHERE client_id=?
+                     AND customer_contact_id=?
+                     AND schedule_date=?
+                     AND COALESCE(auto_generated,0)=1
+                   LIMIT 1''',
+                (client_id, row['id'], occurrence.isoformat()),
+            ).fetchone()
+            if existing:
+                continue
+            conn.execute(
+                '''INSERT INTO work_schedule_entries (
+                    client_id, customer_contact_id, job_name, job_address, scope_of_work, schedule_date,
+                    start_time, end_time, estimated_duration, assigned_worker_ids, assigned_worker_names,
+                    notes, created_by_user_id, auto_generated, expected_amount
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                (
+                    client_id,
+                    row['id'],
+                    job_name,
+                    (row['customer_address'] or '').strip(),
+                    scope,
+                    occurrence.isoformat(),
+                    (row['recurring_start_time'] or '').strip(),
+                    (row['recurring_end_time'] or '').strip(),
+                    (row['recurring_estimated_duration'] or '').strip(),
+                    '',
+                    '',
+                    notes,
+                    actor_user_id,
+                    1,
+                    expected_amount,
+                ),
+            )
+            created_count += 1
+    return created_count
 
 
 def clean_last4(value: str) -> str:
@@ -5162,10 +5350,24 @@ def init_db():
         ensure_column(conn, 'customer_contacts', 'customer_address', "TEXT DEFAULT ''")
         ensure_column(conn, 'customer_contacts', 'customer_notes', "TEXT DEFAULT ''")
         ensure_column(conn, 'customer_contacts', 'status', "TEXT DEFAULT 'active'")
+        ensure_column(conn, 'customer_contacts', 'recurring_frequency', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'recurring_weekday', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'recurring_start_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'recurring_end_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'recurring_job_name', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'recurring_scope', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'recurring_start_time', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'recurring_end_time', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'recurring_estimated_duration', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'recurring_expected_amount', 'REAL DEFAULT 0')
+        ensure_column(conn, 'customer_contacts', 'auto_add_to_calendar', 'INTEGER NOT NULL DEFAULT 0')
         ensure_column(conn, 'customer_contacts', 'created_by_user_id', 'INTEGER')
         ensure_column(conn, 'customer_contacts', 'updated_by_user_id', 'INTEGER')
         ensure_column(conn, 'customer_contacts', 'created_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
         ensure_column(conn, 'customer_contacts', 'updated_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'work_schedule_entries', 'customer_contact_id', 'INTEGER')
+        ensure_column(conn, 'work_schedule_entries', 'auto_generated', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'work_schedule_entries', 'expected_amount', 'REAL DEFAULT 0')
 
         conn.executescript(
             '''
@@ -10093,6 +10295,8 @@ def business_calendar():
 
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        ensure_recurring_schedule_entries(conn, client_id=client_id, actor_user_id=user['id'])
+        conn.commit()
 
 
     from datetime import date
@@ -11103,6 +11307,8 @@ def summary():
 def customer_sales():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    frequency_values = {value for value, _label in recurring_frequency_options()}
+    weekday_values = {value for value, _label in recurring_weekday_options()}
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
@@ -11117,11 +11323,41 @@ def customer_sales():
                 customer_phone = request.form.get('customer_phone', '').strip()
                 customer_address = request.form.get('customer_address', '').strip()
                 customer_notes = request.form.get('customer_notes', '').strip()
+                recurring_frequency = (request.form.get('recurring_frequency', '') or '').strip().lower()
+                recurring_weekday = (request.form.get('recurring_weekday', '') or '').strip()
+                recurring_start_date = (request.form.get('recurring_start_date', '') or '').strip()
+                recurring_end_date = (request.form.get('recurring_end_date', '') or '').strip()
+                recurring_job_name = (request.form.get('recurring_job_name', '') or '').strip()
+                recurring_scope = (request.form.get('recurring_scope', '') or '').strip()
+                recurring_start_time = (request.form.get('recurring_start_time', '') or '').strip()
+                recurring_end_time = (request.form.get('recurring_end_time', '') or '').strip()
+                recurring_estimated_duration = (request.form.get('recurring_estimated_duration', '') or '').strip()
+                recurring_expected_amount = request.form.get('recurring_expected_amount', type=float)
+                if recurring_expected_amount is None:
+                    recurring_expected_amount = 0.0
                 if not customer_name:
                     flash('Client name is required.', 'error')
                     return redirect(url_for('customer_sales', client_id=client_id))
                 if customer_email and '@' not in customer_email:
                     flash('Enter a valid client email or leave it blank.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_frequency not in frequency_values:
+                    flash('Choose a valid recurring frequency.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_weekday and recurring_weekday not in weekday_values:
+                    flash('Choose a valid service day.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_start_date and not parse_date(recurring_start_date):
+                    flash('Service start date is invalid.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_end_date and not parse_date(recurring_end_date):
+                    flash('Service end date is invalid.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_end_date and recurring_start_date and parse_date(recurring_end_date) and parse_date(recurring_start_date) and parse_date(recurring_end_date) < parse_date(recurring_start_date):
+                    flash('Service end date must be on or after the start date.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_expected_amount < 0:
+                    flash('Default visit price cannot be negative.', 'error')
                     return redirect(url_for('customer_sales', client_id=client_id))
                 upsert_customer_contact(
                     conn,
@@ -11133,8 +11369,56 @@ def customer_sales():
                     customer_notes=customer_notes,
                     created_by_user_id=user['id'],
                 )
+                saved_contact = conn.execute(
+                    '''SELECT id
+                       FROM customer_contacts
+                       WHERE client_id=?
+                         AND LOWER(TRIM(customer_name))=?
+                       ORDER BY id DESC
+                       LIMIT 1''',
+                    (client_id, customer_name.lower()),
+                ).fetchone()
+                if saved_contact:
+                    conn.execute(
+                        '''UPDATE customer_contacts
+                           SET recurring_frequency=?,
+                               recurring_weekday=?,
+                               recurring_start_date=?,
+                               recurring_end_date=?,
+                               recurring_job_name=?,
+                               recurring_scope=?,
+                               recurring_start_time=?,
+                               recurring_end_time=?,
+                               recurring_estimated_duration=?,
+                               recurring_expected_amount=?,
+                               auto_add_to_calendar=?,
+                               updated_at=?,
+                               updated_by_user_id=?
+                           WHERE id=? AND client_id=?''',
+                        (
+                            recurring_frequency,
+                            recurring_weekday if recurring_frequency else '',
+                            recurring_start_date if recurring_frequency else '',
+                            recurring_end_date if recurring_frequency else '',
+                            recurring_job_name if recurring_frequency else '',
+                            recurring_scope if recurring_frequency else '',
+                            recurring_start_time if recurring_frequency else '',
+                            recurring_end_time if recurring_frequency else '',
+                            recurring_estimated_duration if recurring_frequency else '',
+                            money(recurring_expected_amount or 0),
+                            1 if (recurring_frequency and request.form.get('auto_add_to_calendar')) else 0,
+                            now_iso(),
+                            user['id'],
+                            saved_contact['id'],
+                            client_id,
+                        ),
+                    )
+                created_schedule_count = ensure_recurring_schedule_entries(conn, client_id=client_id, actor_user_id=user['id'])
                 conn.commit()
-                flash('Client saved.', 'success')
+                if created_schedule_count:
+                    flash(f'Client saved. {created_schedule_count} recurring visit(s) were added to the calendar.', 'success')
+                else:
+                    flash('Client saved.', 'success')
                 return redirect(url_for('customer_sales', client_id=client_id))
             if action == 'update_customer_contact':
                 contact_id = request.form.get('contact_id', type=int)
@@ -11147,11 +11431,41 @@ def customer_sales():
                     return redirect(url_for('customer_sales', client_id=client_id))
                 customer_name = request.form.get('customer_name', '').strip()
                 customer_email = request.form.get('customer_email', '').strip().lower()
+                recurring_frequency = (request.form.get('recurring_frequency', '') or '').strip().lower()
+                recurring_weekday = (request.form.get('recurring_weekday', '') or '').strip()
+                recurring_start_date = (request.form.get('recurring_start_date', '') or '').strip()
+                recurring_end_date = (request.form.get('recurring_end_date', '') or '').strip()
+                recurring_job_name = (request.form.get('recurring_job_name', '') or '').strip()
+                recurring_scope = (request.form.get('recurring_scope', '') or '').strip()
+                recurring_start_time = (request.form.get('recurring_start_time', '') or '').strip()
+                recurring_end_time = (request.form.get('recurring_end_time', '') or '').strip()
+                recurring_estimated_duration = (request.form.get('recurring_estimated_duration', '') or '').strip()
+                recurring_expected_amount = request.form.get('recurring_expected_amount', type=float)
+                if recurring_expected_amount is None:
+                    recurring_expected_amount = 0.0
                 if not customer_name:
                     flash('Client name is required.', 'error')
                     return redirect(url_for('customer_sales', client_id=client_id))
                 if customer_email and '@' not in customer_email:
                     flash('Enter a valid client email or leave it blank.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_frequency not in frequency_values:
+                    flash('Choose a valid recurring frequency.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_weekday and recurring_weekday not in weekday_values:
+                    flash('Choose a valid service day.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_start_date and not parse_date(recurring_start_date):
+                    flash('Service start date is invalid.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_end_date and not parse_date(recurring_end_date):
+                    flash('Service end date is invalid.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_end_date and recurring_start_date and parse_date(recurring_end_date) and parse_date(recurring_start_date) and parse_date(recurring_end_date) < parse_date(recurring_start_date):
+                    flash('Service end date must be on or after the start date.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if recurring_expected_amount < 0:
+                    flash('Default visit price cannot be negative.', 'error')
                     return redirect(url_for('customer_sales', client_id=client_id))
                 conn.execute(
                     '''UPDATE customer_contacts
@@ -11160,6 +11474,17 @@ def customer_sales():
                            customer_phone=?,
                            customer_address=?,
                            customer_notes=?,
+                           recurring_frequency=?,
+                           recurring_weekday=?,
+                           recurring_start_date=?,
+                           recurring_end_date=?,
+                           recurring_job_name=?,
+                           recurring_scope=?,
+                           recurring_start_time=?,
+                           recurring_end_time=?,
+                           recurring_estimated_duration=?,
+                           recurring_expected_amount=?,
+                           auto_add_to_calendar=?,
                            updated_at=?,
                            updated_by_user_id=?
                        WHERE id=? AND client_id=?''',
@@ -11169,14 +11494,29 @@ def customer_sales():
                         request.form.get('customer_phone', '').strip(),
                         request.form.get('customer_address', '').strip(),
                         request.form.get('customer_notes', '').strip(),
+                        recurring_frequency,
+                        recurring_weekday if recurring_frequency else '',
+                        recurring_start_date if recurring_frequency else '',
+                        recurring_end_date if recurring_frequency else '',
+                        recurring_job_name if recurring_frequency else '',
+                        recurring_scope if recurring_frequency else '',
+                        recurring_start_time if recurring_frequency else '',
+                        recurring_end_time if recurring_frequency else '',
+                        recurring_estimated_duration if recurring_frequency else '',
+                        money(recurring_expected_amount or 0),
+                        1 if (recurring_frequency and request.form.get('auto_add_to_calendar')) else 0,
                         now_iso(),
                         user['id'],
                         contact_id,
                         client_id,
                     ),
                 )
+                created_schedule_count = ensure_recurring_schedule_entries(conn, client_id=client_id, actor_user_id=user['id'])
                 conn.commit()
-                flash('Client updated.', 'success')
+                if created_schedule_count:
+                    flash(f'Client updated. {created_schedule_count} recurring visit(s) were added to the calendar.', 'success')
+                else:
+                    flash('Client updated.', 'success')
                 return redirect(url_for('customer_sales', client_id=client_id))
             if action in {'archive_customer_contact', 'restore_customer_contact'}:
                 contact_id = request.form.get('contact_id', type=int)
@@ -11195,6 +11535,8 @@ def customer_sales():
                 else:
                     flash('Client record not found.', 'error')
                 return redirect(url_for('customer_sales', client_id=client_id))
+        ensure_recurring_schedule_entries(conn, client_id=client_id, actor_user_id=user['id'])
+        conn.commit()
         contact_rows = conn.execute(
             '''SELECT *
                FROM customer_contacts
@@ -11218,11 +11560,28 @@ def customer_sales():
         invoice_rows = []
         invoice_public_links = {}
         customer_activity_map: dict[tuple[str, str], dict] = {}
+        recurring_schedule_map = {
+            row['customer_contact_id']: dict(row) for row in conn.execute(
+                '''SELECT customer_contact_id,
+                          COUNT(*) upcoming_count,
+                          MIN(schedule_date) next_visit,
+                          COALESCE(SUM(expected_amount),0) projected_window_amount
+                   FROM work_schedule_entries
+                   WHERE client_id=?
+                     AND COALESCE(auto_generated,0)=1
+                     AND schedule_date>=?
+                     AND customer_contact_id IS NOT NULL
+                   GROUP BY customer_contact_id''',
+                (client_id, date.today().isoformat()),
+            ).fetchall()
+        }
         metrics = {
             'customer_count': 0,
             'open_estimates': 0,
             'approved_estimates': 0,
             'open_invoices': 0,
+            'projected_recurring_revenue': 0.0,
+            'upcoming_recurring_visits': 0,
         }
 
         for contact in contact_rows:
@@ -11316,6 +11675,19 @@ def customer_sales():
         key=lambda item: (item['last_activity_at'] or '', item['customer_name'].lower()),
         reverse=True,
     )
+    recurring_frequency_labels = dict(recurring_frequency_options())
+    for contact in active_contacts:
+        schedule_rollup = recurring_schedule_map.get(contact['id'])
+        contact['projected_monthly'] = projected_recurring_monthly_amount(contact)
+        if (contact.get('recurring_frequency') or '').strip():
+            next_dates = recurring_occurrence_dates(contact, window_start=date.today(), horizon_days=42, limit=1)
+            contact['next_visit'] = (schedule_rollup or {}).get('next_visit') or (next_dates[0].isoformat() if next_dates else '')
+        else:
+            contact['next_visit'] = ''
+        contact['upcoming_recurring_visits'] = int((schedule_rollup or {}).get('upcoming_count') or 0)
+        contact['projected_window_amount'] = money((schedule_rollup or {}).get('projected_window_amount') or 0)
+        metrics['projected_recurring_revenue'] += float(contact['projected_monthly'] or 0)
+        metrics['upcoming_recurring_visits'] += int(contact['upcoming_recurring_visits'] or 0)
     metrics['customer_count'] = len(active_contacts)
     return render_template(
         'customer_sales.html',
@@ -11331,6 +11703,9 @@ def customer_sales():
         invoice_public_links=invoice_public_links,
         invoice_status_labels=invoice_status_label_map(),
         metrics=metrics,
+        recurring_frequency_options=recurring_frequency_options(),
+        recurring_frequency_labels=recurring_frequency_labels,
+        recurring_weekday_options=recurring_weekday_options(),
     )
 
 
@@ -14590,6 +14965,8 @@ def work_schedule():
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        ensure_recurring_schedule_entries(conn, client_id=client_id, actor_user_id=user['id'])
+        conn.commit()
         workers = conn.execute('SELECT id, name, status FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name', (client_id,)).fetchall()
         valid_worker_ids = {int(w['id']) for w in workers}
         worker_names_by_id = {int(w['id']): w['name'] for w in workers}

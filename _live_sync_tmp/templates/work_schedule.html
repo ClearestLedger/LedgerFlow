@@ -1,60 +1,61 @@
 {% extends 'base.html' %}
 {% block body %}
 <div class='toolbar'>
-  <div class='small'><strong>Work Schedule</strong> · {{ client.business_name }}</div>
-  <div class='small'>Create and manage assigned job schedule entries.</div>
+  <div class='small'><strong>{{ tr('Work Schedule') }}</strong> &middot; {{ client.business_name }}</div>
+  <div class='small'>{{ tr('Create and manage assigned job schedule entries.') }}</div>
 </div>
 <div class='grid cards-2' style='align-items:start'>
   <div class='card'>
-    <div class='card-head'><h3 style='margin:0'>Add Schedule Entry</h3><span class='badge'>Business</span></div>
+    <div class='card-head'><h3 style='margin:0'>{{ tr('Add Schedule Entry') }}</h3><span class='badge'>{{ tr('Business') }}</span></div>
     <form method='post' class='form-grid'>
-      <div><label>Job Name</label><input name='job_name' required placeholder='Interior repaint, pressure wash, deep clean'></div>
-      <div><label>Date</label><input type='date' name='schedule_date' required value='{{ today }}'></div>
-      <div><label>Start Time</label><input type='time' name='start_time'></div>
-      <div><label>End Time</label><input type='time' name='end_time'></div>
-      <div><label>Estimated Duration</label><input name='estimated_duration' placeholder='4 hours or full day'></div>
-      <div><label>Assigned Worker(s)</label>
+      <div><label>{{ tr('Job Name') }}</label><input name='job_name' required placeholder='Interior repaint, pressure wash, deep clean'></div>
+      <div><label>{{ tr('Date') }}</label><input type='date' name='schedule_date' required value='{{ today }}'></div>
+      <div><label>{{ tr('Start Time') }}</label><input type='time' name='start_time'></div>
+      <div><label>{{ tr('End Time') }}</label><input type='time' name='end_time'></div>
+      <div><label>{{ tr('Estimated Duration') }}</label><input name='estimated_duration' placeholder='4 hours or full day'></div>
+      <div><label>{{ tr('Assigned Worker(s)') }}</label>
         <div class='schedule-worker-list'>
           {% for worker in workers %}
           <label class='schedule-worker-item'><input type='checkbox' name='assigned_worker_ids' value='{{ worker.id }}'> <span>{{ worker.name }}</span> <small>{{ worker.status or 'active' }}</small></label>
           {% else %}
-          <div class='small'>No workers added yet.</div>
+          <div class='small'>{{ tr('No workers added yet.') }}</div>
           {% endfor %}
         </div>
       </div>
-      <div style='grid-column:1 / -1'><label>Job Address</label><input name='job_address' placeholder='Street, city, state'></div>
-      <div style='grid-column:1 / -1'><label>Scope of Work</label><input name='scope_of_work' placeholder='Exterior prep, paint walls, move furniture, turnover cleaning'></div>
-      <div style='grid-column:1 / -1'><label>Notes / Instructions</label><textarea name='notes' placeholder='Gate code, materials, customer contact, arrival note'></textarea></div>
-      <div style='grid-column:1 / -1'><button type='submit'>Save Schedule Entry</button></div>
+      <div style='grid-column:1 / -1'><label>{{ tr('Job Address') }}</label><input name='job_address' placeholder='Street, city, state'></div>
+      <div style='grid-column:1 / -1'><label>{{ tr('Scope of Work') }}</label><input name='scope_of_work' placeholder='Exterior prep, paint walls, move furniture, turnover cleaning'></div>
+      <div style='grid-column:1 / -1'><label>{{ tr('Notes / Instructions') }}</label><textarea name='notes' placeholder='Gate code, materials, customer contact, arrival note'></textarea></div>
+      <div style='grid-column:1 / -1'><button type='submit'>{{ tr('Save Schedule Entry') }}</button></div>
     </form>
   </div>
   <div class='card'>
-    <div class='card-head'><h3 style='margin:0'>Upcoming Assigned Jobs</h3><span class='badge'>{{ upcoming_entries|length }}</span></div>
+    <div class='card-head'><h3 style='margin:0'>{{ tr('Upcoming Assigned Jobs') }}</h3><span class='badge'>{{ upcoming_entries|length }}</span></div>
     {% if upcoming_entries %}
     <div class='schedule-list compact'>
       {% for entry in upcoming_entries[:8] %}
       <div class='schedule-item'>
         <div class='schedule-main'>
           <div class='schedule-title'>{{ entry.job_name }}</div>
-          <div class='schedule-meta'>{{ entry.schedule_date }}{% if entry.start_time %} · {{ entry.start_time }}{% endif %}{% if entry.end_time %} - {{ entry.end_time }}{% elif entry.estimated_duration %} · {{ entry.estimated_duration }}{% endif %}</div>
-          {% if entry.assigned_worker_names %}<div class='small'>Assigned: {{ entry.assigned_worker_names }}</div>{% endif %}
+          <div class='schedule-meta'>{{ entry.schedule_date }}{% if entry.start_time %} &middot; {{ entry.start_time }}{% endif %}{% if entry.end_time %} - {{ entry.end_time }}{% elif entry.estimated_duration %} &middot; {{ entry.estimated_duration }}{% endif %}</div>
+          {% if entry.auto_generated %}<div class='small'>{{ tr('Automatic schedule created') }}{% if entry.expected_amount %} &middot; ${{ '%.2f'|format(entry.expected_amount or 0) }}{% endif %}</div>{% endif %}
+          {% if entry.assigned_worker_names %}<div class='small'>{{ tr('Assigned') }}: {{ entry.assigned_worker_names }}</div>{% endif %}
           {% if entry.job_address %}<div class='small'>{{ entry.job_address }}</div>{% endif %}
         </div>
       </div>
       {% endfor %}
     </div>
     {% else %}
-    <div class='empty-state'><strong>No schedule entries yet.</strong><span>Add a job schedule on the left to start assigning workers.</span></div>
+    <div class='empty-state'><strong>{{ tr('No schedule entries yet.') }}</strong><span>{{ tr('Add a job schedule on the left to start assigning workers.') }}</span></div>
     {% endif %}
   </div>
 </div>
 
 <div class='card' style='margin-top:18px'>
-  <div class='card-head'><h3 style='margin:0'>Saved Schedule Entries</h3><span class='badge'>{{ entries|length }}</span></div>
+  <div class='card-head'><h3 style='margin:0'>{{ tr('Saved Schedule Entries') }}</h3><span class='badge'>{{ entries|length }}</span></div>
   {% if entries %}
   <div class='scroll-x'>
     <table class='table'>
-      <thead><tr><th>Date</th><th>Job</th><th>Address</th><th>Scope</th><th>Time</th><th>Assigned</th><th>Notes</th><th>Action</th></tr></thead>
+      <thead><tr><th>{{ tr('Date') }}</th><th>{{ tr('Job') }}</th><th>{{ tr('Address') }}</th><th>{{ tr('Scope') }}</th><th>{{ tr('Time') }}</th><th>{{ tr('Expected amount') }}</th><th>{{ tr('Assigned') }}</th><th>{{ tr('Notes') }}</th><th>{{ tr('Action') }}</th></tr></thead>
       <tbody>
         {% for entry in entries %}
         <tr>
@@ -62,14 +63,15 @@
           <td><strong>{{ entry.job_name }}</strong></td>
           <td>{{ entry.job_address or '—' }}</td>
           <td>{{ entry.scope_of_work or '—' }}</td>
-          <td>{% if entry.start_time %}{{ entry.start_time }}{% endif %}{% if entry.end_time %} - {{ entry.end_time }}{% elif entry.estimated_duration %} · {{ entry.estimated_duration }}{% endif %}{% if not entry.start_time and not entry.end_time and not entry.estimated_duration %}—{% endif %}</td>
-          <td>{{ entry.assigned_worker_names or 'Unassigned' }}</td>
-          <td class='expense-entry-note'>{{ entry.notes or '—' }}</td>
+          <td>{% if entry.start_time %}{{ entry.start_time }}{% endif %}{% if entry.end_time %} - {{ entry.end_time }}{% elif entry.estimated_duration %} &middot; {{ entry.estimated_duration }}{% endif %}{% if not entry.start_time and not entry.end_time and not entry.estimated_duration %}—{% endif %}</td>
+          <td>{% if entry.expected_amount %}${{ '%.2f'|format(entry.expected_amount or 0) }}{% else %}—{% endif %}</td>
+          <td>{{ entry.assigned_worker_names or tr('Unassigned') }}</td>
+          <td class='expense-entry-note'>{% if entry.auto_generated %}<strong>{{ tr('Automatic schedule created') }}</strong>{% if entry.notes %}<br>{% endif %}{% endif %}{{ entry.notes or '—' }}</td>
           <td>
             <form method='post' onsubmit='return confirm("Delete this schedule entry?")'>
               <input type='hidden' name='action' value='delete_schedule'>
               <input type='hidden' name='schedule_id' value='{{ entry.id }}'>
-              <button class='btn btn-secondary btn-sm' type='submit'>Delete</button>
+              <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Delete') }}</button>
             </form>
           </td>
         </tr>
@@ -78,7 +80,7 @@
     </table>
   </div>
   {% else %}
-  <div class='small'>No schedule entries saved yet.</div>
+  <div class='small'>{{ tr('No schedule entries saved yet.') }}</div>
   {% endif %}
 </div>
 {% endblock %}

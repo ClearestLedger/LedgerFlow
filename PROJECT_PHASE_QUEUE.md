@@ -66,6 +66,11 @@
   - `Mobile Detailing` added as a business category option
   - administrator and business setup flows now save additional owners / owner contacts
   - administrator and business setup flows now save reusable job scope / service scope notes
+- Recurring client automation phase completed on 2026-04-21:
+  - businesses add saved return clients from `Clients & Sales`
+  - recurring service settings can now auto-generate future work-schedule visits
+  - the business sales workspace now shows next visit timing and projected recurring revenue
+  - recurring visits contribute to schedule planning, but do not auto-post booked income before the work is actually completed
 
 ## Future Pricing Research Note
 
