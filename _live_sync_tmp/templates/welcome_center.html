@@ -10,7 +10,7 @@
   </div>
   <div class='toolbar hero-toolbar' style='margin-top:14px'>
     <div>
-      <div class='page-kicker'>Welcome Center</div>
+      <div class='page-kicker'>{{ tr('Welcome Center') }}</div>
       <div class='page-title'>{{ tr('Welcome to LedgerFlow') }}</div>
       <div class='page-subtitle'>{{ tr('A guided landing page for this business with a real overview, clear first steps, and a future-ready training area for how-to videos.') }}</div>
     </div>
@@ -51,7 +51,7 @@
   </div>
   <div class='card stat-card premium-stat premium-stat-accent'>
     <h3>{{ tr('Workspace Ready') }}</h3>
-    <div class='metric'>{{ worker_count }} Team{% if worker_count != 1 %} Members{% else %} Member{% endif %}</div>
+    <div class='metric'>{{ worker_count }} {{ tr('Team Members') }}</div>
     <div class='small'>{{ tr('Income records, overview tools, calendar, and operational tools are ready.') if is_trial_workspace else tr('Income records, billing, calendar, and operational tools are ready.') }}</div>
   </div>
 </div>
@@ -80,8 +80,8 @@
     <ol class='welcome-step-list'>
       <li>{{ tr('Start with this Welcome Center and review the business name, owner details, and current workspace status.') if needs_onboarding else tr('Review your main dashboard and confirm the business name, owner details, and current workspace status.') }}</li>
       <li>{{ tr('Use Continue Trial Setup to save the business profile and selected subscription when you are ready.') if needs_onboarding else (tr('Open the workspace overview and get familiar with the core sections you will use first.') if is_trial_workspace else tr('Open Billing to confirm the subscription tier, billing status, and method on file.')) }}</li>
-      <li>Use Income Records to begin saving business income in a tax-preparation-friendly format.</li>
-      <li>Open Team Members if you need to add, update, or organize staff and payout information.</li>
+      <li>{{ tr('Use Income Records to begin saving business income in a tax-preparation-friendly format.') }}</li>
+      <li>{{ tr('Open Team Members if you need to add, update, or organize staff and payout information.') }}</li>
       <li>{{ tr('Use the tutorial and overview cards here first, then add billing later before the trial period ends.') if is_trial_workspace else tr('Use Calendar and reports as your operational planning layer once the basics are in place.') }}</li>
     </ol>
     <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:14px'>

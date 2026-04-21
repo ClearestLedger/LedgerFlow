@@ -74,8 +74,8 @@
       <div class='onboarding-step-body'>
         <div class='form-grid'>
           <div><label>{{ tr('Business Name') }}</label><input name='business_name' value='{{ request.form.get("business_name", client.business_name or "") }}' required></div>
-          <div><label>{{ tr('Kind of Business') }}</label><select name='business_category'><option value=''>{{ tr('Select one (optional)') }}</option>{% for value in business_categories %}<option value='{{ value }}' {% if request.form.get("business_category", client.business_category or "") == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></div>
-          <div><label>{{ tr('Business Structure') }}</label><select name='business_type'>{% for value in business_structures %}<option value='{{ value }}' {% if request.form.get("business_type", client.business_type or "") == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></div>
+          <div><label>{{ tr('Kind of Business') }}</label><select name='business_category'><option value=''>{{ tr('Select one (optional)') }}</option>{% for value in business_categories %}<option value='{{ value }}' {% if request.form.get("business_category", client.business_category or "") == value %}selected{% endif %}>{{ tr(value) }}</option>{% endfor %}</select></div>
+          <div><label>{{ tr('Business Structure') }}</label><select name='business_type'>{% for value in business_structures %}<option value='{{ value }}' {% if request.form.get("business_type", client.business_type or "") == value %}selected{% endif %}>{{ tr(value) }}</option>{% endfor %}</select></div>
           <div><label>{{ tr('Primary Contact Name') }}</label><input name='contact_name' value='{{ request.form.get("contact_name", client.contact_name or current_user.full_name or "") }}' required></div>
           <div><label>{{ tr('Business Email') }}</label><input name='email' value='{{ request.form.get("email", client.email or current_user.email or "") }}' required></div>
           <div><label>{{ tr('Business Phone') }}</label><input name='phone' value='{{ request.form.get("phone", client.phone or "") }}' required></div>
@@ -114,21 +114,21 @@
               <div class='onboarding-tier-summary'>
                 <div>
                   <div class='subscription-tier-label'>{{ tier.label }}</div>
-                  <div class='small'>{{ tier.best_for }}</div>
+                  <div class='small'>{{ tr(tier.best_for) }}</div>
                 </div>
                 <div class='subscription-tier-price'>${{ '%.0f'|format(tier.monthly_amount) }}<span>/mo</span></div>
               </div>
             </summary>
             <div class='onboarding-tier-body'>
-              <div class='subscription-tier-tagline'>{{ tier.tagline }}</div>
+              <div class='subscription-tier-tagline'>{{ tr(tier.tagline) }}</div>
               <ul class='subscription-tier-list'>
                 {% for feature in tier.features %}
-                <li>{{ feature }}</li>
+                <li>{{ tr(feature) }}</li>
                 {% endfor %}
               </ul>
               {% if tier.coming_soon %}
               <div class='subscription-tier-coming-soon'>
-                <strong>{{ tr('Coming Soon:') }}</strong> {{ tier.coming_soon|join(', ') }}
+                <strong>{{ tr('Coming Soon:') }}</strong> {% for item in tier.coming_soon %}{{ tr(item) }}{% if not loop.last %}, {% endif %}{% endfor %}
               </div>
               {% endif %}
               <label class='onboarding-tier-select'>
@@ -247,12 +247,12 @@
       <div class='onboarding-step-body'>
         <div class='form-grid'>
           <div><label>{{ tr('Business Name') }}</label><input name='business_name' value='{{ request.form.get("business_name", client.business_name or "") }}' required></div>
-          <div><label>{{ tr('Kind of Business') }}</label><select name='business_category'><option value=''>{{ tr('Select one (optional)') }}</option>{% for value in business_categories %}<option value='{{ value }}' {% if request.form.get("business_category", client.business_category or "") == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></div>
-          <div><label>{{ tr('Business Structure') }}</label><select name='business_type'>{% for value in business_structures %}<option value='{{ value }}' {% if request.form.get("business_type", client.business_type or "") == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></div>
+          <div><label>{{ tr('Kind of Business') }}</label><select name='business_category'><option value=''>{{ tr('Select one (optional)') }}</option>{% for value in business_categories %}<option value='{{ value }}' {% if request.form.get("business_category", client.business_category or "") == value %}selected{% endif %}>{{ tr(value) }}</option>{% endfor %}</select></div>
+          <div><label>{{ tr('Business Structure') }}</label><select name='business_type'>{% for value in business_structures %}<option value='{{ value }}' {% if request.form.get("business_type", client.business_type or "") == value %}selected{% endif %}>{{ tr(value) }}</option>{% endfor %}</select></div>
           <div><label>{{ tr('Primary Contact Name') }}</label><input name='contact_name' value='{{ request.form.get("contact_name", client.contact_name or current_user.full_name or "") }}' required></div>
           <div><label>{{ tr('Business Email') }}</label><input name='email' value='{{ request.form.get("email", client.email or current_user.email or "") }}' required></div>
           <div><label>{{ tr('Business Phone') }}</label><input name='phone' value='{{ request.form.get("phone", client.phone or "") }}' required></div>
-          <div><label>{{ tr('Preferred Language') }}</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if request.form.get("preferred_language", client.preferred_language or current_language) == option.code %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
+        <div><label>{{ tr('Preferred Language') }}</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if request.form.get("preferred_language", client.preferred_language or current_language) == option.code %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
           <div><label>{{ tr('EIN') }}</label><input name='ein' value='{{ request.form.get("ein", client.ein or "") }}' placeholder='XX-XXXXXXX'></div>
           <div style='grid-column:1 / -1'><label>{{ tr('Business Address') }}</label><input name='address' value='{{ request.form.get("address", client.address or "") }}' required></div>
           <div style='grid-column:1 / -1'><label>{{ tr('Specialty / Short Description') }}</label><input name='business_specialty' value='{{ request.form.get("business_specialty", client.business_specialty or "") }}' placeholder='{{ tr("Optional short description like house cleaning, interior painting, gel nails, or prenatal massage") }}'></div>
@@ -287,21 +287,21 @@
               <div class='onboarding-tier-summary'>
                 <div>
                   <div class='subscription-tier-label'>{{ tier.label }}</div>
-                  <div class='small'>{{ tier.best_for }}</div>
+                  <div class='small'>{{ tr(tier.best_for) }}</div>
                 </div>
                 <div class='subscription-tier-price'>${{ '%.0f'|format(tier.monthly_amount) }}<span>/mo</span></div>
               </div>
             </summary>
             <div class='onboarding-tier-body'>
-              <div class='subscription-tier-tagline'>{{ tier.tagline }}</div>
+              <div class='subscription-tier-tagline'>{{ tr(tier.tagline) }}</div>
               <ul class='subscription-tier-list'>
                 {% for feature in tier.features %}
-                <li>{{ feature }}</li>
+                <li>{{ tr(feature) }}</li>
                 {% endfor %}
               </ul>
               {% if tier.coming_soon %}
               <div class='subscription-tier-coming-soon'>
-                <strong>{{ tr('Coming Soon:') }}</strong> {{ tier.coming_soon|join(', ') }}
+                <strong>{{ tr('Coming Soon:') }}</strong> {% for item in tier.coming_soon %}{{ tr(item) }}{% if not loop.last %}, {% endif %}{% endfor %}
               </div>
               {% endif %}
               <label class='onboarding-tier-select'>
@@ -354,7 +354,7 @@
       <div class='onboarding-step-body'>
         <div class='small' style='margin-bottom:14px'>{{ tr('Add the payment method your business wants on file for subscription billing. This creates or updates your default billing method.') }}</div>
         <div class='form-grid payment-method-form onboarding-method-form'>
-          <div><label>{{ tr('Method Type') }}</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if request.form.get("method_type", default_method.method_type if default_method else "card") == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+          <div><label>{{ tr('Method Type') }}</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if request.form.get("method_type", default_method.method_type if default_method else "card") == value %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
           <div><label>{{ tr('Method Label') }}</label><input name='label' value='{{ request.form.get("label", default_method.label if default_method else "") }}' placeholder='{{ tr("Primary business card or Operating ACH") }}' required></div>
           <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank Name') }}</label><input name='brand_name' value='{{ request.form.get("brand_name", default_method.brand_name if default_method else "") }}' placeholder='{{ tr("Visa or Chase Business Checking") }}'></div>
           <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Account Holder Name') }}</label><input name='holder_name' value='{{ request.form.get("holder_name", default_method.holder_name if default_method else client.contact_name or current_user.full_name or "") }}' placeholder='{{ tr("Business legal name") }}'></div>

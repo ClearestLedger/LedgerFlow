@@ -72,7 +72,7 @@
 <div class='active-business-strip{% if current_user.role != "admin" %} business-login-welcome-strip{% endif %}' style='border-left-color: {{ active_business_color }};'>
   <div>
     {% if current_user.role=='admin' %}
-      <div class='small-label'>ACTIVE BUSINESS</div>
+      <div class='small-label'>{{ tr('Active Business') }}</div>
       <div class='active-business-name'>{{ active_client.business_name }}</div>
       <div class='small'>{{ active_client.contact_name or "" }} {% if active_client.ein %}Â· EIN {{ active_client.ein }}{% endif %}</div>
     {% else %}
@@ -96,9 +96,9 @@
   {% if not admin_business_workspace %}
   <aside class='app-sidebar'>
     <div class='app-sidebar-card'>
-      <div class='app-sidebar-kicker'>{% if current_user.role == 'admin' %}{{ tr('Administrator Workspace') }}{% else %}{{ tr('Business Workspace') }}{% endif %}</div>
+      <div class='app-sidebar-kicker'>{{ app_name }}</div>
       <div class='app-sidebar-title'>{% if active_client %}{{ active_client.business_name }}{% else %}{{ current_user.full_name }}{% endif %}</div>
-      <div class='app-sidebar-subtitle'>{% if current_user.role == 'admin' %}{{ tr('Search less. Navigate faster. Keep the work area centered.') }}{% else %}{{ tr('Your full LedgerFlow workspace in one navigation rail.') }}{% endif %}</div>
+      <div class='app-sidebar-subtitle'>{% if current_user.role == 'admin' %}{{ tr('Supervise one business at a time without losing the operational view.') }}{% else %}{{ tr('Jobs, dispatch, scheduling, team coordination, and operational visibility in one focused workspace.') }}{% endif %}</div>
     </div>
     <nav class='app-nav'>
       {% if current_user.role=='admin' %}
@@ -118,38 +118,26 @@
 
       {% if active_client and current_user.role != 'admin' %}
       <div class='app-nav-group'>
+        <div class='app-nav-group-label'>{{ tr('Operations') }}</div>
+        <a class='app-nav-link {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Dashboard') }}</a>
+        <a class='app-nav-link {% if request.endpoint=="ops_jobs" %}active{% endif %}' href='{{ url_for("ops_jobs", client_id=active_client.id) }}'>{{ tr('Jobs') }}</a>
+        <a class='app-nav-link {% if request.endpoint=="ops_dispatch" %}active{% endif %}' href='{{ url_for("ops_dispatch", client_id=active_client.id) }}'>{{ tr('Dispatch') }}</a>
+        <a class='app-nav-link {% if request.endpoint=="ops_schedule" %}active{% endif %}' href='{{ url_for("ops_schedule", client_id=active_client.id) }}'>{{ tr('Schedule') }}</a>
+        <a class='app-nav-link {% if request.endpoint=="ops_team" %}active{% endif %}' href='{{ url_for("ops_team", client_id=active_client.id) }}'>{{ tr('Team') }}</a>
+        <a class='app-nav-link {% if request.endpoint=="ops_availability" %}active{% endif %}' href='{{ url_for("ops_availability", client_id=active_client.id) }}'>{{ tr('Availability') }}</a>
+        <a class='app-nav-link {% if request.endpoint=="ops_activity" %}active{% endif %}' href='{{ url_for("ops_activity", client_id=active_client.id) }}'>{{ tr('Activity') }}</a>
+      </div>
+
+      <div class='app-nav-group'>
+        <div class='app-nav-group-label'>{{ tr('Library') }}</div>
+        <a class='app-nav-link {% if request.endpoint=="ops_locations" %}active{% endif %}' href='{{ url_for("ops_locations", client_id=active_client.id) }}'>{{ tr('Locations') }}</a>
+        <a class='app-nav-link {% if request.endpoint=="ops_templates" %}active{% endif %}' href='{{ url_for("ops_templates", client_id=active_client.id) }}'>{{ tr('Templates') }}</a>
+      </div>
+
+      <div class='app-nav-group'>
         <div class='app-nav-group-label'>{{ tr('Workspace') }}</div>
-        <a class='app-nav-link {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Overview') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="welcome_center" %}active{% endif %}' href='{{ url_for("welcome_center", client_id=active_client.id) }}'>{{ tr('Welcome Center') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="summary" %}active{% endif %}' href='{{ url_for("summary", client_id=active_client.id) }}'>{{ tr('Summary') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="workers" %}active{% endif %}' href='{{ url_for("workers", client_id=active_client.id) }}'>{{ tr('Team Members') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="worker_payments" %}active{% endif %}' href='{{ url_for("worker_payments", client_id=active_client.id) }}'>{{ tr('Team Member Payouts') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="business_payments_page" %}active{% endif %}' href='{{ url_for("business_payments_page", client_id=active_client.id) }}'>{{ tr('Billing') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="business_calendar" %}active{% endif %}' href='{{ url_for("business_calendar", client_id=active_client.id) }}'>{{ tr('Calendar') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="work_schedule" %}active{% endif %}' href='{{ url_for("work_schedule", client_id=active_client.id) }}'>{{ tr('Work Schedule') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="reports" %}active{% endif %}' href='{{ url_for("reports", client_id=active_client.id) }}'>{{ tr('Reports') }}</a>
-      </div>
-
-      <div class='app-nav-group'>
-        <div class='app-nav-group-label'>{{ tr('Clients & Sales') }}</div>
-        <a class='app-nav-link {% if request.endpoint=="customer_sales" %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>{{ tr('Clients & Sales') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="estimates" %}active{% endif %}' href='{{ url_for("estimates", client_id=active_client.id) }}'>{{ tr('Estimates') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="invoices" %}active{% endif %}' href='{{ url_for("invoices", client_id=active_client.id) }}'>{{ tr('Invoices & Income') }}</a>
-      </div>
-
-      <div class='app-nav-group'>
-        <div class='app-nav-group-label'>{{ tr('Expense Tracking') }}</div>
-        <a class='app-nav-link {% if request.endpoint=="gas" %}active{% endif %}' href='{{ url_for("gas", client_id=active_client.id) }}'>{{ tr('Gas') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="materials" %}active{% endif %}' href='{{ url_for("materials", client_id=active_client.id) }}'>{{ tr('Materials') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="mileage" %}active{% endif %}' href='{{ url_for("mileage", client_id=active_client.id) }}'>{{ tr('Mileage') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="other_expenses" %}active{% endif %}' href='{{ url_for("other_expenses", client_id=active_client.id) }}'>{{ tr('Other Expenses') }}</a>
-      </div>
-
-      <div class='app-nav-group'>
-        <div class='app-nav-group-label'>{{ tr('Support') }}</div>
         <a class='app-nav-link {% if request.endpoint=="clients" %}active{% endif %}' href='{{ url_for("clients", client_id=active_client.id) }}'>{{ tr('Business Profile') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="benefits_obligations" %}active{% endif %}' href='{{ url_for("benefits_obligations", client_id=active_client.id) }}'>{{ tr('Benefits & Obligations') }}</a>
-        <a class='app-nav-link {% if request.endpoint=="irs_tips" %}active{% endif %}' href='{{ url_for("irs_tips") }}'>{{ tr('IRS Tips') }}</a>
+        <a class='app-nav-link {% if request.endpoint=="summary" %}active{% endif %}' href='{{ url_for("summary", client_id=active_client.id) }}'>{{ tr('Read-Only Summary') }}</a>
         <a class='app-nav-link {% if request.endpoint=="help_center" %}active{% endif %}' href='{{ url_for("help_center") }}'>{{ tr('Help') }}</a>
       </div>
       {% elif current_user.role=='admin' %}
@@ -177,7 +165,7 @@
   <div class='workspace-shell'>
     <aside class='workspace-sidebar'>
       <div class='workspace-sidebar-head'>
-        <div class='workspace-eyebrow'>{{ tr('Business Workspace') }}</div>
+        <div class='workspace-eyebrow'>{{ app_name }}</div>
         <div class='workspace-business'>{{ active_client.business_name }}</div>
         <div class='workspace-owner'>{{ active_client.contact_name or '' }}</div>
       </div>
@@ -188,32 +176,25 @@
         </select>
       </form>
       <div class='card' style='margin:14px 0;box-shadow:none;border:1px solid #E6ECF2'>
-        <div class='small-label'>ADMIN EXIT</div>
-        <div class='small' style='margin:6px 0 10px 0'>{{ tr('You are viewing a single business workspace. Use one of these to return to admin mode.') }}</div>
+        <div class='small-label'>{{ tr('Admin Exit') }}</div>
+        <div class='small' style='margin:6px 0 10px 0'>{{ tr('You are supervising a single Operational LedgerFlow workspace. Use one of these to return to administrator mode.') }}</div>
         <div style='display:flex;flex-direction:column;gap:8px'>
-          <a class='btn btn-secondary btn-sm' href='{{ url_for("cpa_dashboard", client_id=active_client.id) }}'>{{ tr('Open Billing Setup') }}</a>
+          <a class='btn btn-secondary btn-sm' href='{{ url_for("cpa_dashboard", client_id=active_client.id) }}'>{{ tr('Open Admin Controls') }}</a>
           <a class='btn btn-secondary btn-sm' href='{{ url_for("cpa_dashboard") }}'>{{ tr('Return to Administrator Dashboard') }}</a>
         </div>
       </div>
       <nav class='workspace-nav'>
-        <a class='workspace-link {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>Overview</a>
-        <a class='workspace-link {% if request.endpoint=="welcome_center" %}active{% endif %}' href='{{ url_for("welcome_center", client_id=active_client.id) }}'>Welcome Center</a>
-        <a class='workspace-link {% if request.endpoint=="clients" %}active{% endif %}' href='{{ url_for("clients", client_id=active_client.id) }}'>Business Profile</a>
-        <a class='workspace-link {% if request.endpoint=="summary" %}active{% endif %}' href='{{ url_for("summary", client_id=active_client.id) }}'>Summary</a>
-        <a class='workspace-link {% if request.endpoint=="customer_sales" %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>Clients &amp; Sales</a>
-        <a class='workspace-link {% if request.endpoint=="estimates" %}active{% endif %}' href='{{ url_for("estimates", client_id=active_client.id) }}'>Estimates</a>
-        <a class='workspace-link {% if request.endpoint=="invoices" %}active{% endif %}' href='{{ url_for("invoices", client_id=active_client.id) }}'>{{ tr('Invoices & Income') }}</a>
-        <a class='workspace-link {% if request.endpoint=="workers" %}active{% endif %}' href='{{ url_for("workers", client_id=active_client.id) }}'>Team Members</a>
-        <a class='workspace-link {% if request.endpoint=="worker_payments" %}active{% endif %}' href='{{ url_for("worker_payments", client_id=active_client.id) }}'>Team Member Payouts</a>
-        <a class='workspace-link {% if request.endpoint=="business_payments_page" %}active{% endif %}' href='{{ url_for("business_payments_page", client_id=active_client.id) }}'>{{ tr('Billing') }}</a>
-        <a class='workspace-link {% if request.endpoint=="benefits_obligations" %}active{% endif %}' href='{{ url_for("benefits_obligations", client_id=active_client.id) }}'>Benefits &amp; Obligations</a>
-        <a class='workspace-link {% if request.endpoint=="work_schedule" %}active{% endif %}' href='{{ url_for("work_schedule", client_id=active_client.id) }}'>Work Schedule</a>
-        <a class='workspace-link {% if request.endpoint=="payroll_tax" %}active{% endif %}' href='{{ url_for("payroll_tax", client_id=active_client.id) }}'>941 / Payroll Tax</a>
-        <a class='workspace-link {% if request.endpoint=="gas" %}active{% endif %}' href='{{ url_for("gas", client_id=active_client.id) }}'>Gas</a>
-        <a class='workspace-link {% if request.endpoint=="materials" %}active{% endif %}' href='{{ url_for("materials", client_id=active_client.id) }}'>Materials</a>
-        <a class='workspace-link {% if request.endpoint=="mileage" %}active{% endif %}' href='{{ url_for("mileage", client_id=active_client.id) }}'>Mileage</a>
-        <a class='workspace-link {% if request.endpoint=="other_expenses" %}active{% endif %}' href='{{ url_for("other_expenses", client_id=active_client.id) }}'>Other Expenses</a>
-        <a class='workspace-link {% if request.endpoint=="reports" %}active{% endif %}' href='{{ url_for("reports", client_id=active_client.id) }}'>Reports</a>
+        <a class='workspace-link {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Dashboard') }}</a>
+        <a class='workspace-link {% if request.endpoint=="ops_jobs" %}active{% endif %}' href='{{ url_for("ops_jobs", client_id=active_client.id) }}'>{{ tr('Jobs') }}</a>
+        <a class='workspace-link {% if request.endpoint=="ops_dispatch" %}active{% endif %}' href='{{ url_for("ops_dispatch", client_id=active_client.id) }}'>{{ tr('Dispatch') }}</a>
+        <a class='workspace-link {% if request.endpoint=="ops_schedule" %}active{% endif %}' href='{{ url_for("ops_schedule", client_id=active_client.id) }}'>{{ tr('Schedule') }}</a>
+        <a class='workspace-link {% if request.endpoint=="ops_team" %}active{% endif %}' href='{{ url_for("ops_team", client_id=active_client.id) }}'>{{ tr('Team') }}</a>
+        <a class='workspace-link {% if request.endpoint=="ops_availability" %}active{% endif %}' href='{{ url_for("ops_availability", client_id=active_client.id) }}'>{{ tr('Availability') }}</a>
+        <a class='workspace-link {% if request.endpoint=="ops_activity" %}active{% endif %}' href='{{ url_for("ops_activity", client_id=active_client.id) }}'>{{ tr('Activity') }}</a>
+        <a class='workspace-link {% if request.endpoint=="ops_locations" %}active{% endif %}' href='{{ url_for("ops_locations", client_id=active_client.id) }}'>{{ tr('Locations') }}</a>
+        <a class='workspace-link {% if request.endpoint=="ops_templates" %}active{% endif %}' href='{{ url_for("ops_templates", client_id=active_client.id) }}'>{{ tr('Templates') }}</a>
+        <a class='workspace-link {% if request.endpoint=="clients" %}active{% endif %}' href='{{ url_for("clients", client_id=active_client.id) }}'>{{ tr('Business Profile') }}</a>
+        <a class='workspace-link {% if request.endpoint=="summary" %}active{% endif %}' href='{{ url_for("summary", client_id=active_client.id) }}'>{{ tr('Read-Only Summary') }}</a>
       </nav>
     </aside>
     <section class='workspace-main'>
@@ -226,12 +207,12 @@
           <img src='{{ brand_mark_url }}' alt='{{ app_name }}'>
         </div>
         <div class='brand-lockup-copy'>
-          <div class='portal-footer-title'>{{ app_name }}</div>
-          <div class='portal-footer-tagline'>{{ brand_tagline }}</div>
+      <div class='portal-footer-title'>{{ app_name }}</div>
+      <div class='portal-footer-tagline'>{{ brand_tagline }}</div>
         </div>
       </div>
-      <div class='portal-footer-copy'>{{ tr('Private client portal currently in final invited-client rollout. Core workspace functions are live, permission-based, and may continue to improve as the platform is finalized.') }}</div>
-      <div class='portal-footer-disclaimer'>{{ tr('This portal uses secured account controls and active administrator oversight. It does not claim formal security certification or guarantee uninterrupted service.') }}</div>
+      <div class='portal-footer-copy'>{{ tr('Operational LedgerFlow is focused on jobs, dispatch, scheduling, team coordination, and field execution for service businesses.') }}</div>
+      <div class='portal-footer-disclaimer'>{{ tr('Operational data stays in the business workspace, administrator supervision remains business-scoped, and the worker portal stays separate and restricted.') }}</div>
     </div>
     <div class='portal-footer-links'>
       <a href='{{ url_for("trust_center") }}#rollout'>{{ tr('Rollout Notice') }}</a>

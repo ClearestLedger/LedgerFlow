@@ -34,9 +34,9 @@ DB_PATH = Path(os.environ.get('DATABASE_PATH', str(DATA_DIR / 'rds_core_web.db')
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 EMAIL_CONFIG_PATH = DATA_DIR / 'email_runtime_config.json'
 
-APP_NAME = 'LedgerFlow'
-APP_SUBTITLE = 'Financial control for growing service businesses'
-BRAND_TAGLINE = 'Financial control for growing service businesses.'
+APP_NAME = 'Operational LedgerFlow'
+APP_SUBTITLE = 'Operational command for growing service businesses'
+BRAND_TAGLINE = 'Jobs, dispatch, scheduling, and team coordination for service businesses.'
 BRAND_LOGO_FILENAME = 'ledgerflow-logo.png'
 BRAND_MARK_FILENAME = 'ledgerflow-mark.png'
 ADMIN_LABEL = 'Businesses'
@@ -58,6 +58,65 @@ PAYROLL_PERIODS = {
     'semimonthly': 24,
     'monthly': 12,
 }
+
+OPS_DEFAULT_SERVICE_TYPES = [
+    {
+        'name': 'Cleaning',
+        'description': 'Recurring or one-time residential and commercial cleaning work.',
+        'default_duration_minutes': 180,
+        'default_priority': 'normal',
+        'default_crew_size': 2,
+        'color_token': '#4F7363',
+    },
+    {
+        'name': 'Painting',
+        'description': 'Interior or exterior painting projects with prep and finish stages.',
+        'default_duration_minutes': 360,
+        'default_priority': 'high',
+        'default_crew_size': 2,
+        'color_token': '#C77647',
+    },
+    {
+        'name': 'Landscaping',
+        'description': 'Recurring lawn and landscaping visits with route-based scheduling.',
+        'default_duration_minutes': 120,
+        'default_priority': 'normal',
+        'default_crew_size': 2,
+        'color_token': '#4C8A57',
+    },
+    {
+        'name': 'Mobile Detailing',
+        'description': 'On-site vehicle detailing and care appointments.',
+        'default_duration_minutes': 150,
+        'default_priority': 'normal',
+        'default_crew_size': 1,
+        'color_token': '#5678A8',
+    },
+    {
+        'name': 'Electrical',
+        'description': 'Field-service electrical dispatches and job-site work.',
+        'default_duration_minutes': 180,
+        'default_priority': 'urgent',
+        'default_crew_size': 1,
+        'color_token': '#E3A94D',
+    },
+    {
+        'name': 'Flooring',
+        'description': 'Install, repair, and finish work for flooring crews.',
+        'default_duration_minutes': 300,
+        'default_priority': 'high',
+        'default_crew_size': 2,
+        'color_token': '#8B6E5D',
+    },
+    {
+        'name': 'Custom',
+        'description': 'Flexible service type for business-specific operational work.',
+        'default_duration_minutes': 120,
+        'default_priority': 'normal',
+        'default_crew_size': 1,
+        'color_token': '#72819A',
+    },
+]
 
 DEFAULT_TAX_RULES = {
     2026: {
@@ -526,6 +585,302 @@ TRANSLATIONS.update({
     },
 })
 
+TRANSLATIONS.update({
+    'Active Business': {'es': 'Empresa activa', 'pt': 'Empresa ativa'},
+    'Supervise one business at a time without losing the operational view.': {
+        'es': 'Supervisa una empresa por vez sin perder la vista operativa.',
+        'pt': 'Supervisione uma empresa por vez sem perder a visao operacional.',
+    },
+    'Jobs, dispatch, scheduling, team coordination, and operational visibility in one focused workspace.': {
+        'es': 'Trabajos, despacho, agenda, coordinacion del equipo y visibilidad operativa en un solo espacio enfocado.',
+        'pt': 'Servicos, despacho, agenda, coordenacao da equipe e visibilidade operacional em um unico espaco focado.',
+    },
+    'Operations': {'es': 'Operaciones', 'pt': 'Operacoes'},
+    'Dashboard': {'es': 'Panel', 'pt': 'Painel'},
+    'Jobs': {'es': 'Trabajos', 'pt': 'Servicos'},
+    'Dispatch': {'es': 'Despacho', 'pt': 'Despacho'},
+    'Team': {'es': 'Equipo', 'pt': 'Equipe'},
+    'Availability': {'es': 'Disponibilidad', 'pt': 'Disponibilidade'},
+    'Activity': {'es': 'Actividad', 'pt': 'Atividade'},
+    'Library': {'es': 'Biblioteca', 'pt': 'Biblioteca'},
+    'Locations': {'es': 'Ubicaciones', 'pt': 'Locais'},
+    'Templates': {'es': 'Plantillas', 'pt': 'Modelos'},
+    'Read-Only Summary': {'es': 'Resumen solo lectura', 'pt': 'Resumo somente leitura'},
+    'Admin Exit': {'es': 'Salida del administrador', 'pt': 'Saida do administrador'},
+    'Open Admin Controls': {'es': 'Abrir controles del administrador', 'pt': 'Abrir controles do administrador'},
+    'Operational LedgerFlow is focused on jobs, dispatch, scheduling, team coordination, and field execution for service businesses.': {
+        'es': 'Operational LedgerFlow se enfoca en trabajos, despacho, agenda, coordinacion del equipo y ejecucion en campo para negocios de servicios.',
+        'pt': 'A LedgerFlow Operacional foca em servicos, despacho, agenda, coordenacao da equipe e execucao em campo para negocios de servicos.',
+    },
+    'Operational data stays in the business workspace, administrator supervision remains business-scoped, and the worker portal stays separate and restricted.': {
+        'es': 'Los datos operativos permanecen en el espacio empresarial, la supervision del administrador sigue limitada al negocio y el portal del trabajador permanece separado y restringido.',
+        'pt': 'Os dados operacionais permanecem no espaco da empresa, a supervisao do administrador continua limitada ao negocio e o portal do trabalhador permanece separado e restrito.',
+    },
+    'Use Income Records to begin saving business income in a tax-preparation-friendly format.': {
+        'es': 'Usa Registros de Ingresos para comenzar a guardar ingresos del negocio en un formato amigable para impuestos.',
+        'pt': 'Use Registros de Receita para comecar a salvar receitas da empresa em um formato amigavel para impostos.',
+    },
+    'Open Team Members if you need to add, update, or organize staff and payout information.': {
+        'es': 'Abre Miembros del Equipo si necesitas agregar, actualizar u organizar personal e informacion de pagos.',
+        'pt': 'Abra Membros da Equipe se precisar adicionar, atualizar ou organizar funcionarios e informacoes de pagamento.',
+    },
+    'W-4': {'es': 'W-4', 'pt': 'W-4'},
+    'W-2': {'es': 'W-2', 'pt': 'W-2'},
+    '1099': {'es': '1099', 'pt': '1099'},
+    'These charges are owed by your business to your administrator and are separate from your customer payments.': {
+        'es': 'Estos cargos son adeudados por tu negocio a tu administrador y estan separados de tus pagos de clientes.',
+        'pt': 'Essas cobrancas sao devidas pela sua empresa ao administrador e ficam separadas dos pagamentos dos seus clientes.',
+    },
+    'This business is billed on': {'es': 'Este negocio se factura en', 'pt': 'Esta empresa e faturada em'},
+    'but the workspace is intentionally unlocked at': {'es': 'pero el espacio esta desbloqueado intencionalmente en', 'pt': 'mas o espaco esta intencionalmente liberado em'},
+    'This lets your administrator grant broader tools without changing the subscription price being paid.': {
+        'es': 'Esto permite que tu administrador otorgue herramientas mas amplias sin cambiar el precio de la suscripcion pagada.',
+        'pt': 'Isso permite que o administrador conceda ferramentas mais amplas sem mudar o preco da assinatura paga.',
+    },
+    'Override note': {'es': 'Nota de excepcion', 'pt': 'Nota de excecao'},
+    'Monthly Subscription': {'es': 'Suscripcion mensual', 'pt': 'Assinatura mensal'},
+    'No plan code recorded yet': {'es': 'Aun no hay codigo de plan registrado', 'pt': 'Ainda nao ha codigo de plano registrado'},
+    'Default Method': {'es': 'Metodo predeterminado', 'pt': 'Metodo padrao'},
+    'Not enrolled yet': {'es': 'Aun no registrado', 'pt': 'Ainda nao registrado'},
+    'Automatic Withdrawal': {'es': 'Retiro automatico', 'pt': 'Retirada automatica'},
+    'Authorized': {'es': 'Autorizado', 'pt': 'Autorizado'},
+    'Manual approval': {'es': 'Aprobacion manual', 'pt': 'Aprovacao manual'},
+    'Runs from the default saved method': {'es': 'Se ejecuta desde el metodo predeterminado guardado', 'pt': 'Roda a partir do metodo padrao salvo'},
+    'Use this if you want approval before collection': {'es': 'Usa esto si quieres aprobacion antes del cobro', 'pt': 'Use isso se quiser aprovacao antes da cobranca'},
+    'Granted Access': {'es': 'Acceso concedido', 'pt': 'Acesso concedido'},
+    'Backup Method': {'es': 'Metodo de respaldo', 'pt': 'Metodo de backup'},
+    'Optional': {'es': 'Opcional', 'pt': 'Opcional'},
+    'Active saved methods': {'es': 'Metodos guardados activos', 'pt': 'Metodos salvos ativos'},
+    'Status': {'es': 'Estado', 'pt': 'Status'},
+    'Set as default': {'es': 'Definir como predeterminado', 'pt': 'Definir como padrao'},
+    'Set as backup': {'es': 'Definir como respaldo', 'pt': 'Definir como backup'},
+    'Save Payment Method': {'es': 'Guardar metodo de pago', 'pt': 'Salvar metodo de pagamento'},
+    'Review Existing Payment Methods': {'es': 'Revisar metodos de pago existentes', 'pt': 'Revisar metodos de pagamento existentes'},
+    'Default': {'es': 'Predeterminado', 'pt': 'Padrao'},
+    'Backup': {'es': 'Respaldo', 'pt': 'Backup'},
+    'Recorded method:': {'es': 'Metodo registrado:', 'pt': 'Metodo registrado:'},
+    'ending in': {'es': 'terminado en', 'pt': 'terminando em'},
+    'expires': {'es': 'vence', 'pt': 'vence'},
+    'Update Method': {'es': 'Actualizar metodo', 'pt': 'Atualizar metodo'},
+    'Remove Method': {'es': 'Eliminar metodo', 'pt': 'Remover metodo'},
+    'No payment method has been recorded yet. Add a default card or ACH method so your billing setup is complete.': {
+        'es': 'Aun no se ha registrado un metodo de pago. Agrega una tarjeta o ACH predeterminado para completar la configuracion de facturacion.',
+        'pt': 'Ainda nao ha metodo de pagamento registrado. Adicione um cartao ou ACH padrao para concluir a configuracao de faturamento.',
+    },
+    'Administrator fees are one-time charges owed by your business to your administrator. They are separate from your recurring subscription and separate from your own customer payment workflows.': {
+        'es': 'Los cargos del administrador son cobros unicos adeudados por tu negocio al administrador. Estan separados de tu suscripcion recurrente y de tus propios flujos de cobro a clientes.',
+        'pt': 'As taxas do administrador sao cobrancas unicas devidas pela sua empresa ao administrador. Elas ficam separadas da assinatura recorrente e dos seus proprios fluxos de cobranca de clientes.',
+    },
+    'No open administrator service fees right now.': {'es': 'No hay cargos abiertos del administrador en este momento.', 'pt': 'Nao ha taxas abertas do administrador neste momento.'},
+    'Administrator Fee History': {'es': 'Historico de cargos del administrador', 'pt': 'Historico de taxas do administrador'},
+    'Paid': {'es': 'Pagado', 'pt': 'Pago'},
+    'Reference': {'es': 'Referencia', 'pt': 'Referencia'},
+    'No reference': {'es': 'Sin referencia', 'pt': 'Sem referencia'},
+    'No completed administrator fee history yet.': {'es': 'Aun no hay historial de cargos completados del administrador.', 'pt': 'Ainda nao ha historico de taxas concluidas do administrador.'},
+    'Subscription + Administrator Fees': {'es': 'Suscripcion + cargos del administrador', 'pt': 'Assinatura + taxas do administrador'},
+    'Recurring monthly service': {'es': 'Servicio mensual recurrente', 'pt': 'Servico mensal recorrente'},
+    'No default method on file': {'es': 'No hay metodo predeterminado registrado', 'pt': 'Nao ha metodo padrao registrado'},
+    'Recurring subscription tracked separately': {'es': 'Suscripcion recurrente seguida por separado', 'pt': 'Assinatura recorrente acompanhada separadamente'},
+    'One-time administrator fees tracked separately': {'es': 'Cargos unicos del administrador seguidos por separado', 'pt': 'Taxas unicas do administrador acompanhadas separadamente'},
+    'Access override active': {'es': 'Excepcion de acceso activa', 'pt': 'Excecao de acesso ativa'},
+    'Review Administrator Fees': {'es': 'Revisar cargos del administrador', 'pt': 'Revisar taxas do administrador'},
+    'Manage Method On File': {'es': 'Administrar metodo registrado', 'pt': 'Administrar metodo salvo'},
+    'Recurring Service': {'es': 'Servicio recurrente', 'pt': 'Servico recorrente'},
+    'Subscription Billing Preferences': {'es': 'Preferencias de cobro de suscripcion', 'pt': 'Preferencias de cobranca da assinatura'},
+    'Save Billing Preferences': {'es': 'Guardar preferencias de cobro', 'pt': 'Salvar preferencias de cobranca'},
+    'Card': {'es': 'Tarjeta', 'pt': 'Cartao'},
+    'ACH / Bank Debit': {'es': 'ACH / Debito bancario', 'pt': 'ACH / Debito bancario'},
+    'Manual / Offline': {'es': 'Manual / Offline', 'pt': 'Manual / Offline'},
+    'Zelle / Bank Transfer': {'es': 'Zelle / Transferencia bancaria', 'pt': 'Zelle / Transferencia bancaria'},
+    'Other': {'es': 'Otro', 'pt': 'Outro'},
+    'Needs Update': {'es': 'Necesita actualizacion', 'pt': 'Precisa atualizacao'},
+    'Inactive': {'es': 'Inactivo', 'pt': 'Inativo'},
+    'Past Due': {'es': 'Vencido', 'pt': 'Vencido'},
+    'Paused': {'es': 'Pausado', 'pt': 'Pausado'},
+    'Canceled': {'es': 'Cancelado', 'pt': 'Cancelado'},
+    'Missing': {'es': 'Faltante', 'pt': 'Ausente'},
+    'On File': {'es': 'Registrado', 'pt': 'Registrado'},
+    'Pending': {'es': 'Pendiente', 'pt': 'Pendente'},
+    'Processing': {'es': 'Procesando', 'pt': 'Processando'},
+    'Payment Method': {'es': 'Metodo de pago', 'pt': 'Metodo de pagamento'},
+    'Charge Saved Payment Method': {'es': 'Cobrar el metodo guardado', 'pt': 'Cobrar o metodo salvo'},
+    'Send Payment Request': {'es': 'Enviar solicitud de pago', 'pt': 'Enviar solicitacao de pagamento'},
+    'Send Payment Link / Invoice': {'es': 'Enviar enlace de pago / factura', 'pt': 'Enviar link de pagamento / fatura'},
+    'Manual / Offline Payment': {'es': 'Pago manual / offline', 'pt': 'Pagamento manual / offline'},
+    'Bank / Zelle Instructions': {'es': 'Instrucciones bancarias / Zelle', 'pt': 'Instrucoes bancarias / Zelle'},
+    'Pay Online': {'es': 'Pagar en linea', 'pt': 'Pagar online'},
+    'Open the administrator-provided payment page for this one-time fee.': {
+        'es': 'Abre la pagina de pago proporcionada por el administrador para este cargo unico.',
+        'pt': 'Abra a pagina de pagamento fornecida pelo administrador para esta taxa unica.',
+    },
+    'Open Payment Link': {'es': 'Abrir enlace de pago', 'pt': 'Abrir link de pagamento'},
+    'Charge to Method on File': {'es': 'Cobro al metodo registrado', 'pt': 'Cobrar no metodo salvo'},
+    'Your administrator marked this fee to be collected using the saved payment method on file. No self-service payment click is required on your side in this phase.': {
+        'es': 'Tu administrador marco este cargo para cobrarse usando el metodo guardado. No se requiere un clic de pago de autoservicio de tu lado en esta fase.',
+        'pt': 'Seu administrador marcou esta taxa para ser cobrada usando o metodo salvo. Nenhum clique de pagamento em autoatendimento e necessario do seu lado nesta fase.',
+    },
+    'Manual Payment': {'es': 'Pago manual', 'pt': 'Pagamento manual'},
+    'Follow the manual payment instructions provided by your administrator for this fee.': {
+        'es': 'Sigue las instrucciones de pago manual proporcionadas por tu administrador para este cargo.',
+        'pt': 'Siga as instrucoes de pagamento manual fornecidas pelo administrador para esta taxa.',
+    },
+    'Use the Zelle or bank-transfer instructions provided by your administrator for this fee.': {
+        'es': 'Usa las instrucciones de Zelle o transferencia bancaria proporcionadas por tu administrador para este cargo.',
+        'pt': 'Use as instrucoes de Zelle ou transferencia bancaria fornecidas pelo administrador para esta taxa.',
+    },
+    'Payment Request Pending': {'es': 'Solicitud de pago pendiente', 'pt': 'Solicitacao de pagamento pendente'},
+    'Your administrator will send or complete a payment request for this fee.': {
+        'es': 'Tu administrador enviara o completara una solicitud de pago para este cargo.',
+        'pt': 'Seu administrador enviara ou concluira uma solicitacao de pagamento para esta taxa.',
+    },
+    'Open the available payment page for this administrator fee.': {
+        'es': 'Abre la pagina de pago disponible para este cargo del administrador.',
+        'pt': 'Abra a pagina de pagamento disponivel para esta taxa do administrador.',
+    },
+    'Payment Details Pending': {'es': 'Detalles de pago pendientes', 'pt': 'Detalhes de pagamento pendentes'},
+    'This fee is posted, but your administrator has not added the payment action or instructions yet.': {
+        'es': 'Este cargo ya esta publicado, pero tu administrador aun no agrego la accion o instrucciones de pago.',
+        'pt': 'Esta taxa ja foi publicada, mas o administrador ainda nao adicionou a acao ou as instrucoes de pagamento.',
+    },
+    'No open administrator fees right now.': {'es': 'No hay cargos abiertos del administrador en este momento.', 'pt': 'Nao ha taxas abertas do administrador neste momento.'},
+    'Your billing center is clear at the moment.': {'es': 'Tu centro de cobro esta despejado en este momento.', 'pt': 'Seu centro de cobranca esta limpo no momento.'},
+    'Open administrator fees require review.': {'es': 'Los cargos abiertos del administrador requieren revision.', 'pt': 'As taxas abertas do administrador exigem revisao.'},
+    'Review the fee actions below to complete payment.': {'es': 'Revisa las acciones de cobro abajo para completar el pago.', 'pt': 'Revise as acoes de cobranca abaixo para concluir o pagamento.'},
+    'This private client portal is active for invited clients and administrator-managed accounts. Core workspace tools are live, and some non-critical experience improvements may continue during the final rollout stage.': {
+        'es': 'Este portal privado para clientes esta activo para clientes invitados y cuentas administradas por el administrador. Las herramientas principales ya estan en vivo y algunas mejoras no criticas pueden continuar durante la fase final.',
+        'pt': 'Este portal privado para clientes esta ativo para clientes convidados e contas gerenciadas pelo administrador. As ferramentas principais ja estao ao vivo e algumas melhorias nao criticas podem continuar durante a fase final.',
+    },
+    'Client access is permission-based and controlled by the administrator.': {
+        'es': 'El acceso del cliente se basa en permisos y es controlado por el administrador.',
+        'pt': 'O acesso do cliente e baseado em permissao e controlado pelo administrador.',
+    },
+    'Billing, records, schedules, and workspace management functions are active.': {
+        'es': 'Las funciones de cobro, registros, agendas y gestion del espacio estan activas.',
+        'pt': 'As funcoes de cobranca, registros, agendas e gestao do espaco estao ativas.',
+    },
+    'Some advanced or premium features may still be labeled coming soon.': {
+        'es': 'Algunas funciones avanzadas o premium aun pueden aparecer como proximamente.',
+        'pt': 'Alguns recursos avancados ou premium ainda podem aparecer como em breve.',
+    },
+    'LedgerFlow stores business, team-member, billing, and account-access records needed to operate the portal for invited clients. Information is used to manage the platform, support billing workflows, and maintain administrator-supervised client service.': {
+        'es': 'LedgerFlow almacena registros de negocio, equipo, cobro y acceso necesarios para operar el portal para clientes invitados. La informacion se usa para administrar la plataforma, apoyar flujos de cobro y mantener el servicio supervisado por el administrador.',
+        'pt': 'O LedgerFlow armazena registros de negocio, equipe, cobranca e acesso necessarios para operar o portal para clientes convidados. As informacoes sao usadas para administrar a plataforma, apoiar fluxos de cobranca e manter o servico supervisionado pelo administrador.',
+    },
+    'Access is limited to authorized accounts and administrator-managed workflows.': {
+        'es': 'El acceso esta limitado a cuentas autorizadas y flujos administrados por el administrador.',
+        'pt': 'O acesso e limitado a contas autorizadas e fluxos gerenciados pelo administrador.',
+    },
+    'Stored information may include contact details, business records, notices, payment-method references, and email-delivery logs.': {
+        'es': 'La informacion almacenada puede incluir datos de contacto, registros del negocio, avisos, referencias de metodos de pago y registros de entrega de correos.',
+        'pt': 'As informacoes armazenadas podem incluir dados de contato, registros da empresa, avisos, referencias de metodos de pagamento e logs de entrega de e-mails.',
+    },
+    'Clients should contact their administrator for record corrections, support questions, or account changes.': {
+        'es': 'Los clientes deben contactar a su administrador para corregir registros, hacer preguntas de soporte o cambiar la cuenta.',
+        'pt': 'Os clientes devem contatar o administrador para corrigir registros, tirar duvidas de suporte ou alterar a conta.',
+    },
+    'Use of this portal is limited to invited and authorized client accounts. Users must keep login credentials private, use accurate business information, and avoid unauthorized sharing, misuse, or interference with the portal.': {
+        'es': 'El uso de este portal esta limitado a cuentas de clientes invitados y autorizados. Los usuarios deben mantener privadas sus credenciales, usar informacion correcta del negocio y evitar compartir sin autorizacion, mal uso o interferencia con el portal.',
+        'pt': 'O uso deste portal e limitado a contas de clientes convidados e autorizados. Os usuarios devem manter as credenciais privadas, usar informacoes corretas da empresa e evitar compartilhamento nao autorizado, uso indevido ou interferencia com o portal.',
+    },
+    'Subscriptions, billing arrangements, and service scope are managed directly through the administrator.': {
+        'es': 'Las suscripciones, arreglos de cobro y alcance del servicio se gestionan directamente por medio del administrador.',
+        'pt': 'As assinaturas, acordos de cobranca e escopo do servico sao gerenciados diretamente pelo administrador.',
+    },
+    'Access may be suspended or changed if service is canceled, permissions are removed, or account use becomes improper.': {
+        'es': 'El acceso puede suspenderse o cambiarse si el servicio se cancela, se eliminan permisos o el uso de la cuenta se vuelve inapropiado.',
+        'pt': 'O acesso pode ser suspenso ou alterado se o servico for cancelado, as permissoes forem removidas ou o uso da conta se tornar inadequado.',
+    },
+    'The platform may continue to improve through normal updates during final rollout.': {
+        'es': 'La plataforma puede seguir mejorando mediante actualizaciones normales durante el lanzamiento final.',
+        'pt': 'A plataforma pode continuar melhorando por meio de atualizacoes normais durante o lancamento final.',
+    },
+    'LedgerFlow uses secured account controls, environment-level application secrets, and administrator-managed access policies. This notice does not represent formal certification, third-party audit attestation, or an absolute guarantee of uninterrupted operation.': {
+        'es': 'LedgerFlow usa controles de cuenta protegidos, secretos de aplicacion a nivel de entorno y politicas de acceso administradas. Este aviso no representa certificacion formal, auditoria de terceros ni garantia absoluta de operacion ininterrumpida.',
+        'pt': 'O LedgerFlow usa controles de conta protegidos, segredos de aplicacao em nivel de ambiente e politicas de acesso administradas. Este aviso nao representa certificacao formal, auditoria de terceiros nem garantia absoluta de operacao ininterrupta.',
+    },
+    'Security-sensitive settings are managed through protected administrator controls.': {
+        'es': 'Las configuraciones sensibles de seguridad se administran mediante controles protegidos del administrador.',
+        'pt': 'As configuracoes sensiveis de seguranca sao gerenciadas por controles protegidos do administrador.',
+    },
+    'Clients should report suspicious activity immediately to their administrator.': {
+        'es': 'Los clientes deben informar actividad sospechosa de inmediato a su administrador.',
+        'pt': 'Os clientes devem relatar atividade suspeita imediatamente ao administrador.',
+    },
+    'Email delivery and billing workflows depend on active third-party service availability.': {
+        'es': 'La entrega de correos y los flujos de cobro dependen de la disponibilidad activa de servicios de terceros.',
+        'pt': 'A entrega de e-mails e os fluxos de cobranca dependem da disponibilidade ativa de servicos de terceiros.',
+    },
+    'Business Profiles': {'es': 'Perfiles de negocios', 'pt': 'Perfis de empresas'},
+    'Back to Dashboard': {'es': 'Volver al panel', 'pt': 'Voltar ao painel'},
+    'Service Level / Pricing Tier': {'es': 'Nivel de servicio / plan de precio', 'pt': 'Nivel de servico / plano de preco'},
+    'pricing': {'es': 'precio', 'pt': 'preco'},
+    'access': {'es': 'acceso', 'pt': 'acesso'},
+    'Subscription:': {'es': 'Suscripcion:', 'pt': 'Assinatura:'},
+    'Access override active: billed as': {'es': 'Excepcion de acceso activa: cobrado como', 'pt': 'Excecao de acesso ativa: cobrado como'},
+    'granted': {'es': 'concedido', 'pt': 'concedido'},
+    'Access granted by administrator:': {'es': 'Acceso concedido por el administrador:', 'pt': 'Acesso concedido pelo administrador:'},
+    'Contact missing': {'es': 'Contacto faltante', 'pt': 'Contato ausente'},
+    'Kind missing': {'es': 'Tipo faltante', 'pt': 'Tipo ausente'},
+    'Address missing': {'es': 'Direccion faltante', 'pt': 'Endereco ausente'},
+    'Optional short description like house cleaning or interior painting': {
+        'es': 'Descripcion corta opcional como limpieza residencial o pintura interior',
+        'pt': 'Descricao curta opcional como limpeza residencial ou pintura interna',
+    },
+    'Self-Service': {'es': 'Autoservicio', 'pt': 'Autoatendimento'},
+    'Match pricing tier': {'es': 'Igualar el plan de precio', 'pt': 'Igualar o plano de preco'},
+    'Cleaning': {'es': 'Limpieza', 'pt': 'Limpeza'},
+    'Painting': {'es': 'Pintura', 'pt': 'Pintura'},
+    'Nails / Beauty': {'es': 'Uñas / Belleza', 'pt': 'Unhas / Beleza'},
+    'Massage / Wellness': {'es': 'Masaje / Bienestar', 'pt': 'Massagem / Bem-estar'},
+    'Construction': {'es': 'Construccion', 'pt': 'Construcao'},
+    'Landscaping': {'es': 'Paisajismo', 'pt': 'Paisagismo'},
+    'Home Services': {'es': 'Servicios del hogar', 'pt': 'Servicos residenciais'},
+    'Childcare': {'es': 'Cuidado infantil', 'pt': 'Cuidado infantil'},
+    'Consulting': {'es': 'Consultoria', 'pt': 'Consultoria'},
+    'Bookkeeping / Accounting': {'es': 'Contabilidad / Contaduria', 'pt': 'Escrituracao / Contabilidade'},
+    'Retail / Boutique': {'es': 'Retail / Boutique', 'pt': 'Varejo / Boutique'},
+    'Food / Catering': {'es': 'Comida / Catering', 'pt': 'Comida / Catering'},
+    'Fitness / Personal Training': {'es': 'Fitness / Entrenamiento personal', 'pt': 'Fitness / Treinamento pessoal'},
+    'LLC': {'es': 'LLC', 'pt': 'LLC'},
+    'S-Corp': {'es': 'S-Corp', 'pt': 'S-Corp'},
+    'C-Corp': {'es': 'C-Corp', 'pt': 'C-Corp'},
+    'Sole Proprietor': {'es': 'Propietario unico', 'pt': 'Empresario individual'},
+    'Partnership': {'es': 'Sociedad', 'pt': 'Sociedade'},
+    'Nonprofit': {'es': 'Sin fines de lucro', 'pt': 'Sem fins lucrativos'},
+    'Private client workspace for owner-led service businesses that need clean billing, records, and calendar visibility.': {
+        'es': 'Espacio privado para negocios de servicios dirigidos por el propietario que necesitan cobro limpio, registros y visibilidad de calendario.',
+        'pt': 'Espaco privado para negocios de servicos liderados pelo proprietario que precisam de faturamento limpo, registros e visibilidade de calendario.',
+    },
+    'Best for smaller direct-admin client accounts.': {'es': 'Ideal para cuentas de clientes pequenas con administracion directa.', 'pt': 'Ideal para contas menores com administracao direta.'},
+    'Business workspace dashboard': {'es': 'Panel del espacio empresarial', 'pt': 'Painel do espaco empresarial'},
+    'Billing center with method on file': {'es': 'Centro de cobro con metodo registrado', 'pt': 'Centro de faturamento com metodo salvo'},
+    'Income records and expense tracking': {'es': 'Registros de ingresos y control de gastos', 'pt': 'Registros de receita e controle de despesas'},
+    'Calendar and work schedule access': {'es': 'Acceso al calendario y agenda de trabajo', 'pt': 'Acesso ao calendario e agenda de trabalho'},
+    'Direct administrator support': {'es': 'Soporte directo del administrador', 'pt': 'Suporte direto do administrador'},
+    'Adds team tools and stronger operational support for growing businesses with active payroll coordination.': {
+        'es': 'Agrega herramientas de equipo y soporte operativo mas fuerte para negocios en crecimiento con coordinacion activa de nomina.',
+        'pt': 'Adiciona ferramentas de equipe e suporte operacional mais forte para negocios em crescimento com coordenacao ativa de folha.',
+    },
+    'Best for businesses managing staff and payroll visibility.': {'es': 'Ideal para negocios que administran personal y visibilidad de nomina.', 'pt': 'Ideal para empresas que administram equipe e visibilidade de folha.'},
+    'Everything in Essential': {'es': 'Todo en Essential', 'pt': 'Tudo no Essential'},
+    'Team member portal access': {'es': 'Acceso al portal del equipo', 'pt': 'Acesso ao portal da equipe'},
+    'Team member payouts and pay stubs': {'es': 'Pagos del equipo y comprobantes', 'pt': 'Pagamentos da equipe e comprovantes'},
+    'Policies, notices, and requests': {'es': 'Politicas, avisos y solicitudes', 'pt': 'Politicas, avisos e solicitacoes'},
+    'Expanded administrator guidance': {'es': 'Orientacion ampliada del administrador', 'pt': 'Orientacao ampliada do administrador'},
+    'Highest-touch private client tier with premium onboarding, priority support, and principal-level oversight.': {
+        'es': 'Nivel privado de mayor acompanamiento con onboarding premium, soporte prioritario y supervision de nivel principal.',
+        'pt': 'Nivel privado de maior acompanhamento com onboarding premium, suporte prioritario e supervisao de nivel principal.',
+    },
+    'Best for clients who want concierge support and deeper administrator involvement.': {'es': 'Ideal para clientes que quieren soporte concierge y una participacion mas profunda del administrador.', 'pt': 'Ideal para clientes que querem suporte concierge e uma participacao mais profunda do administrador.'},
+    'Everything in Growth': {'es': 'Todo en Growth', 'pt': 'Tudo no Growth'},
+    'Priority support response': {'es': 'Respuesta de soporte prioritaria', 'pt': 'Resposta de suporte prioritaria'},
+    'Premium onboarding review': {'es': 'Revision premium de onboarding', 'pt': 'Revisao premium de onboarding'},
+    'Principal-level workspace oversight': {'es': 'Supervision del espacio a nivel principal', 'pt': 'Supervisao do espaco em nivel principal'},
+    'Higher-touch billing coordination': {'es': 'Coordinacion de cobro de alto acompanamiento', 'pt': 'Coordenacao de cobranca com maior acompanhamento'},
+    'Live bank connection': {'es': 'Conexion bancaria en vivo', 'pt': 'Conexao bancaria ao vivo'},
+    'Check printing workflow': {'es': 'Flujo de impresion de cheques', 'pt': 'Fluxo de impressao de cheques'},
+})
+
 
 def business_color(client_id: int | None) -> str:
     if not client_id:
@@ -594,6 +949,94 @@ def estimate_miles(from_address: str, to_address: str) -> float:
 
 def money(value: float | int | Decimal) -> float:
     return float(Decimal(str(value or 0)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+
+
+def upsert_customer_contact(
+    conn: sqlite3.Connection,
+    client_id: int,
+    customer_name: str,
+    customer_email: str = '',
+    customer_phone: str = '',
+    customer_address: str = '',
+    customer_notes: str = '',
+    created_by_user_id: int | None = None,
+):
+    name = (customer_name or '').strip()
+    if not name:
+        return None
+    email = (customer_email or '').strip().lower()
+    phone = (customer_phone or '').strip()
+    address = (customer_address or '').strip()
+    notes = (customer_notes or '').strip()
+    matched = None
+    if email:
+        matched = conn.execute(
+            '''SELECT *
+               FROM customer_contacts
+               WHERE client_id=?
+                 AND LOWER(COALESCE(customer_email,''))=?
+               LIMIT 1''',
+            (client_id, email),
+        ).fetchone()
+    if not matched:
+        matched = conn.execute(
+            '''SELECT *
+               FROM customer_contacts
+               WHERE client_id=?
+                 AND LOWER(TRIM(customer_name))=?
+               ORDER BY CASE WHEN COALESCE(customer_email,'')='' THEN 0 ELSE 1 END, id DESC
+               LIMIT 1''',
+            (client_id, name.lower()),
+        ).fetchone()
+    timestamp = now_iso()
+    if matched:
+        merged_email = email or (matched['customer_email'] or '')
+        merged_phone = phone or (matched['customer_phone'] or '')
+        merged_address = address or (matched['customer_address'] or '')
+        merged_notes = notes or (matched['customer_notes'] or '')
+        conn.execute(
+            '''UPDATE customer_contacts
+               SET customer_name=?,
+                   customer_email=?,
+                   customer_phone=?,
+                   customer_address=?,
+                   customer_notes=?,
+                   status='active',
+                   updated_at=?,
+                   updated_by_user_id=?
+               WHERE id=?''',
+            (
+                name,
+                merged_email,
+                merged_phone,
+                merged_address,
+                merged_notes,
+                timestamp,
+                created_by_user_id,
+                matched['id'],
+            ),
+        )
+        return matched['id']
+    cursor = conn.execute(
+        '''INSERT INTO customer_contacts (
+               client_id, customer_name, customer_email, customer_phone, customer_address,
+               customer_notes, status, created_by_user_id, updated_by_user_id, created_at, updated_at
+           ) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+        (
+            client_id,
+            name,
+            email,
+            phone,
+            address,
+            notes,
+            'active',
+            created_by_user_id,
+            created_by_user_id,
+            timestamp,
+            timestamp,
+        ),
+    )
+    return cursor.lastrowid
 
 
 def clean_last4(value: str) -> str:
@@ -795,6 +1238,15 @@ def access_level_override_active(client_row) -> bool:
 def effective_service_level_label(client_row) -> str:
     level = effective_service_level(client_row)
     return service_level_label_map().get(level, service_level_label_map().get(default_service_level(), 'Essential'))
+
+
+def premium_sales_access_enabled(client_row) -> bool:
+    return effective_service_level(client_row) == 'premium_principal'
+
+
+def premium_sales_redirect(client_id: int):
+    flash('Clients, estimates, and customer invoicing are available on the Premium subscription.', 'error')
+    return redirect(url_for('business_payments_page', client_id=client_id))
 
 
 def service_level_plan_code(service_level: str) -> str:
@@ -1529,22 +1981,9 @@ def open_fee_guidance(rows) -> dict:
             'headline': 'No open administrator fees right now.',
             'detail': 'Your billing center is clear at the moment.',
         }
-    with_link = sum(1 for row in open_rows if fee_collection_guidance(row)['url'])
-    manual = sum(1 for row in open_rows if normalize_collection_method(row['collection_method'] or default_collection_method()) in {'manual_offline', 'zelle_manual'})
-    request_based = sum(1 for row in open_rows if normalize_collection_method(row['collection_method'] or default_collection_method()) == 'send_payment_request')
-    charge_on_file = sum(1 for row in open_rows if normalize_collection_method(row['collection_method'] or default_collection_method()) == 'charge_saved_method')
-    parts = []
-    if with_link:
-        parts.append(f'{with_link} ready to pay online')
-    if manual:
-        parts.append(f'{manual} using instructions')
-    if request_based:
-        parts.append(f'{request_based} waiting on request delivery')
-    if charge_on_file:
-        parts.append(f'{charge_on_file} marked for method-on-file collection')
     return {
-        'headline': f'{len(open_rows)} open administrator fee{"s" if len(open_rows) != 1 else ""}',
-        'detail': ', '.join(parts) + '.' if parts else 'Review the fee actions below to complete payment.',
+        'headline': 'Open administrator fees require review.',
+        'detail': 'Review the fee actions below to complete payment.',
     }
 
 
@@ -3682,6 +4121,21 @@ def init_db():
                 FOREIGN KEY(client_id) REFERENCES clients(id),
                 FOREIGN KEY(converted_invoice_id) REFERENCES invoices(id)
             );
+            CREATE TABLE IF NOT EXISTS customer_contacts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id INTEGER NOT NULL,
+                customer_name TEXT NOT NULL,
+                customer_email TEXT DEFAULT '',
+                customer_phone TEXT DEFAULT '',
+                customer_address TEXT DEFAULT '',
+                customer_notes TEXT DEFAULT '',
+                status TEXT NOT NULL DEFAULT 'active',
+                created_by_user_id INTEGER,
+                updated_by_user_id INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(client_id) REFERENCES clients(id)
+            );
             CREATE TABLE IF NOT EXISTS gas_entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 client_id INTEGER NOT NULL,
@@ -4301,6 +4755,264 @@ def init_db():
         ensure_column(conn, 'invoices', 'declined_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'invoices', 'converted_invoice_id', 'INTEGER')
         ensure_column(conn, 'invoices', 'payment_note', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'customer_phone', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'customer_address', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'customer_notes', "TEXT DEFAULT ''")
+        ensure_column(conn, 'customer_contacts', 'status', "TEXT DEFAULT 'active'")
+        ensure_column(conn, 'customer_contacts', 'created_by_user_id', 'INTEGER')
+        ensure_column(conn, 'customer_contacts', 'updated_by_user_id', 'INTEGER')
+        ensure_column(conn, 'customer_contacts', 'created_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'customer_contacts', 'updated_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+
+        conn.executescript(
+            '''
+            CREATE TABLE IF NOT EXISTS service_types (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                default_duration_minutes INTEGER NOT NULL DEFAULT 120,
+                default_priority TEXT DEFAULT 'normal',
+                default_crew_size INTEGER NOT NULL DEFAULT 1,
+                color_token TEXT DEFAULT '#72819A',
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(client_id, name),
+                FOREIGN KEY(client_id) REFERENCES clients(id)
+            );
+            CREATE TABLE IF NOT EXISTS service_locations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id INTEGER NOT NULL,
+                customer_contact_id INTEGER,
+                location_name TEXT DEFAULT '',
+                address_line1 TEXT DEFAULT '',
+                city TEXT DEFAULT '',
+                state TEXT DEFAULT '',
+                postal_code TEXT DEFAULT '',
+                access_notes TEXT DEFAULT '',
+                gate_code TEXT DEFAULT '',
+                parking_notes TEXT DEFAULT '',
+                location_notes TEXT DEFAULT '',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(client_id) REFERENCES clients(id),
+                FOREIGN KEY(customer_contact_id) REFERENCES customer_contacts(id)
+            );
+            CREATE TABLE IF NOT EXISTS job_templates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id INTEGER NOT NULL,
+                service_type_id INTEGER,
+                name TEXT NOT NULL,
+                default_title TEXT DEFAULT '',
+                default_duration_minutes INTEGER NOT NULL DEFAULT 120,
+                default_priority TEXT DEFAULT 'normal',
+                default_tags TEXT DEFAULT '',
+                default_notes TEXT DEFAULT '',
+                default_crew_size INTEGER NOT NULL DEFAULT 1,
+                checklist_text TEXT DEFAULT '',
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(client_id) REFERENCES clients(id),
+                FOREIGN KEY(service_type_id) REFERENCES service_types(id)
+            );
+            CREATE TABLE IF NOT EXISTS jobs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id INTEGER NOT NULL,
+                legacy_schedule_entry_id INTEGER UNIQUE,
+                customer_contact_id INTEGER,
+                service_location_id INTEGER,
+                service_type_id INTEGER,
+                template_id INTEGER,
+                created_by_user_id INTEGER,
+                updated_by_user_id INTEGER,
+                title TEXT NOT NULL,
+                customer_name TEXT DEFAULT '',
+                customer_reference TEXT DEFAULT '',
+                service_type_name TEXT DEFAULT '',
+                priority TEXT DEFAULT 'normal',
+                status TEXT DEFAULT 'unscheduled',
+                field_progress_status TEXT DEFAULT 'not_started',
+                tags TEXT DEFAULT '',
+                service_address TEXT DEFAULT '',
+                city TEXT DEFAULT '',
+                state TEXT DEFAULT '',
+                postal_code TEXT DEFAULT '',
+                scheduled_start TEXT DEFAULT '',
+                scheduled_end TEXT DEFAULT '',
+                estimated_duration_minutes INTEGER NOT NULL DEFAULT 0,
+                notes_summary TEXT DEFAULT '',
+                internal_notes TEXT DEFAULT '',
+                dispatch_notes TEXT DEFAULT '',
+                completion_notes TEXT DEFAULT '',
+                recurrence_rule TEXT DEFAULT '',
+                is_recurring INTEGER NOT NULL DEFAULT 0,
+                cancellation_reason TEXT DEFAULT '',
+                issue_flag INTEGER NOT NULL DEFAULT 0,
+                requires_revisit INTEGER NOT NULL DEFAULT 0,
+                completed_at TEXT DEFAULT '',
+                last_progress_at TEXT DEFAULT '',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(client_id) REFERENCES clients(id),
+                FOREIGN KEY(customer_contact_id) REFERENCES customer_contacts(id),
+                FOREIGN KEY(service_location_id) REFERENCES service_locations(id),
+                FOREIGN KEY(service_type_id) REFERENCES service_types(id),
+                FOREIGN KEY(template_id) REFERENCES job_templates(id),
+                FOREIGN KEY(created_by_user_id) REFERENCES users(id),
+                FOREIGN KEY(updated_by_user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS job_assignments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                job_id INTEGER NOT NULL,
+                worker_id INTEGER NOT NULL,
+                assignment_role TEXT DEFAULT 'crew_member',
+                assigned_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                assigned_by_user_id INTEGER,
+                status TEXT DEFAULT 'assigned',
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(job_id, worker_id),
+                FOREIGN KEY(job_id) REFERENCES jobs(id),
+                FOREIGN KEY(worker_id) REFERENCES workers(id),
+                FOREIGN KEY(assigned_by_user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS worker_availability (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                worker_id INTEGER NOT NULL,
+                client_id INTEGER NOT NULL,
+                available_date TEXT NOT NULL,
+                start_time TEXT DEFAULT '',
+                end_time TEXT DEFAULT '',
+                availability_status TEXT DEFAULT 'available',
+                note TEXT DEFAULT '',
+                created_by_user_id INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(worker_id) REFERENCES workers(id),
+                FOREIGN KEY(client_id) REFERENCES clients(id),
+                FOREIGN KEY(created_by_user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS job_activity_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id INTEGER NOT NULL,
+                job_id INTEGER NOT NULL,
+                actor_type TEXT DEFAULT 'system',
+                actor_id INTEGER,
+                event_type TEXT DEFAULT 'updated',
+                event_text TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(client_id) REFERENCES clients(id),
+                FOREIGN KEY(job_id) REFERENCES jobs(id)
+            );
+            CREATE TABLE IF NOT EXISTS job_notes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                job_id INTEGER NOT NULL,
+                client_id INTEGER NOT NULL,
+                note_type TEXT DEFAULT 'internal',
+                body TEXT NOT NULL,
+                created_by_user_id INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(job_id) REFERENCES jobs(id),
+                FOREIGN KEY(client_id) REFERENCES clients(id),
+                FOREIGN KEY(created_by_user_id) REFERENCES users(id)
+            );
+            '''
+        )
+        ensure_column(conn, 'workers', 'worker_role', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'crew_label', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'skill_tags', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'availability_baseline', "TEXT DEFAULT ''")
+        ensure_column(conn, 'service_types', 'description', "TEXT DEFAULT ''")
+        ensure_column(conn, 'service_types', 'default_duration_minutes', 'INTEGER NOT NULL DEFAULT 120')
+        ensure_column(conn, 'service_types', 'default_priority', "TEXT DEFAULT 'normal'")
+        ensure_column(conn, 'service_types', 'default_crew_size', 'INTEGER NOT NULL DEFAULT 1')
+        ensure_column(conn, 'service_types', 'color_token', "TEXT DEFAULT '#72819A'")
+        ensure_column(conn, 'service_types', 'is_active', 'INTEGER NOT NULL DEFAULT 1')
+        ensure_column(conn, 'service_types', 'created_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'service_types', 'updated_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'service_locations', 'customer_contact_id', 'INTEGER')
+        ensure_column(conn, 'service_locations', 'location_name', "TEXT DEFAULT ''")
+        ensure_column(conn, 'service_locations', 'address_line1', "TEXT DEFAULT ''")
+        ensure_column(conn, 'service_locations', 'city', "TEXT DEFAULT ''")
+        ensure_column(conn, 'service_locations', 'state', "TEXT DEFAULT ''")
+        ensure_column(conn, 'service_locations', 'postal_code', "TEXT DEFAULT ''")
+        ensure_column(conn, 'service_locations', 'access_notes', "TEXT DEFAULT ''")
+        ensure_column(conn, 'service_locations', 'gate_code', "TEXT DEFAULT ''")
+        ensure_column(conn, 'service_locations', 'parking_notes', "TEXT DEFAULT ''")
+        ensure_column(conn, 'service_locations', 'location_notes', "TEXT DEFAULT ''")
+        ensure_column(conn, 'service_locations', 'created_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'service_locations', 'updated_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'job_templates', 'service_type_id', 'INTEGER')
+        ensure_column(conn, 'job_templates', 'default_title', "TEXT DEFAULT ''")
+        ensure_column(conn, 'job_templates', 'default_duration_minutes', 'INTEGER NOT NULL DEFAULT 120')
+        ensure_column(conn, 'job_templates', 'default_priority', "TEXT DEFAULT 'normal'")
+        ensure_column(conn, 'job_templates', 'default_tags', "TEXT DEFAULT ''")
+        ensure_column(conn, 'job_templates', 'default_notes', "TEXT DEFAULT ''")
+        ensure_column(conn, 'job_templates', 'default_crew_size', 'INTEGER NOT NULL DEFAULT 1')
+        ensure_column(conn, 'job_templates', 'checklist_text', "TEXT DEFAULT ''")
+        ensure_column(conn, 'job_templates', 'is_active', 'INTEGER NOT NULL DEFAULT 1')
+        ensure_column(conn, 'job_templates', 'created_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'job_templates', 'updated_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'jobs', 'legacy_schedule_entry_id', 'INTEGER')
+        ensure_column(conn, 'jobs', 'customer_contact_id', 'INTEGER')
+        ensure_column(conn, 'jobs', 'service_location_id', 'INTEGER')
+        ensure_column(conn, 'jobs', 'service_type_id', 'INTEGER')
+        ensure_column(conn, 'jobs', 'template_id', 'INTEGER')
+        ensure_column(conn, 'jobs', 'created_by_user_id', 'INTEGER')
+        ensure_column(conn, 'jobs', 'updated_by_user_id', 'INTEGER')
+        ensure_column(conn, 'jobs', 'customer_name', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'customer_reference', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'service_type_name', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'priority', "TEXT DEFAULT 'normal'")
+        ensure_column(conn, 'jobs', 'status', "TEXT DEFAULT 'unscheduled'")
+        ensure_column(conn, 'jobs', 'field_progress_status', "TEXT DEFAULT 'not_started'")
+        ensure_column(conn, 'jobs', 'tags', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'service_address', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'city', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'state', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'postal_code', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'scheduled_start', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'scheduled_end', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'estimated_duration_minutes', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'jobs', 'notes_summary', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'internal_notes', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'dispatch_notes', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'completion_notes', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'recurrence_rule', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'is_recurring', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'jobs', 'cancellation_reason', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'issue_flag', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'jobs', 'requires_revisit', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'jobs', 'completed_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'last_progress_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'jobs', 'created_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'jobs', 'updated_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'job_assignments', 'assignment_role', "TEXT DEFAULT 'crew_member'")
+        ensure_column(conn, 'job_assignments', 'assigned_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'job_assignments', 'assigned_by_user_id', 'INTEGER')
+        ensure_column(conn, 'job_assignments', 'status', "TEXT DEFAULT 'assigned'")
+        ensure_column(conn, 'job_assignments', 'sort_order', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'worker_availability', 'client_id', 'INTEGER')
+        ensure_column(conn, 'worker_availability', 'available_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'worker_availability', 'start_time', "TEXT DEFAULT ''")
+        ensure_column(conn, 'worker_availability', 'end_time', "TEXT DEFAULT ''")
+        ensure_column(conn, 'worker_availability', 'availability_status', "TEXT DEFAULT 'available'")
+        ensure_column(conn, 'worker_availability', 'note', "TEXT DEFAULT ''")
+        ensure_column(conn, 'worker_availability', 'created_by_user_id', 'INTEGER')
+        ensure_column(conn, 'worker_availability', 'created_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'worker_availability', 'updated_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'job_activity_log', 'client_id', 'INTEGER')
+        ensure_column(conn, 'job_activity_log', 'actor_type', "TEXT DEFAULT 'system'")
+        ensure_column(conn, 'job_activity_log', 'actor_id', 'INTEGER')
+        ensure_column(conn, 'job_activity_log', 'event_type', "TEXT DEFAULT 'updated'")
+        ensure_column(conn, 'job_activity_log', 'event_text', "TEXT DEFAULT ''")
+        ensure_column(conn, 'job_activity_log', 'created_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        ensure_column(conn, 'job_notes', 'client_id', 'INTEGER')
+        ensure_column(conn, 'job_notes', 'note_type', "TEXT DEFAULT 'internal'")
+        ensure_column(conn, 'job_notes', 'body', "TEXT DEFAULT ''")
+        ensure_column(conn, 'job_notes', 'created_by_user_id', 'INTEGER')
+        ensure_column(conn, 'job_notes', 'created_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
         conn.execute("UPDATE invoices SET record_kind='income_record' WHERE COALESCE(record_kind,'')=''")
         conn.execute("UPDATE invoices SET invoice_total_amount=COALESCE(invoice_total_amount,0)+paid_amount WHERE COALESCE(invoice_total_amount,0)=0")
         conn.execute("UPDATE invoices SET invoice_status='paid' WHERE record_kind='income_record' AND COALESCE(invoice_status,'') IN ('', 'draft')")
@@ -4332,6 +5044,8 @@ def init_db():
                     values['standard_deduction_single'], values['standard_deduction_married'], values['standard_deduction_head'],
                     values['brackets_single_json'], values['brackets_married_json'], values['brackets_head_json']
                 ))
+
+        migrate_legacy_schedule_to_jobs(conn)
 
         conn.commit()
 
@@ -5051,32 +5765,68 @@ def assigned_worker_token(worker_ids):
 
 def worker_schedule_rows_for_client(client_id: int):
     with get_conn() as conn:
-        return conn.execute(
-            '''SELECT ws.*
-               FROM work_schedule_entries ws
-               WHERE ws.client_id=?
-               ORDER BY ws.schedule_date ASC,
-                        CASE WHEN COALESCE(ws.start_time,'')='' THEN 1 ELSE 0 END,
-                        ws.start_time ASC,
-                        ws.id DESC''',
+        prepare_ops_workspace(conn, client_id)
+        rows = conn.execute(
+            '''SELECT
+                   j.id,
+                   j.title AS job_name,
+                   substr(COALESCE(j.scheduled_start, ''), 1, 10) AS schedule_date,
+                   substr(COALESCE(j.scheduled_start, ''), 12, 5) AS start_time,
+                   substr(COALESCE(j.scheduled_end, ''), 12, 5) AS end_time,
+                   j.estimated_duration_minutes,
+                   COALESCE(NULLIF(j.service_address, ''), sl.address_line1, '') AS job_address,
+                   j.notes_summary AS scope_of_work,
+                   COALESCE(NULLIF(j.dispatch_notes, ''), j.internal_notes, '') AS notes,
+                   GROUP_CONCAT(w.name, ', ') AS assigned_worker_names
+               FROM jobs j
+               LEFT JOIN service_locations sl ON sl.id = j.service_location_id
+               LEFT JOIN job_assignments ja
+                 ON ja.job_id = j.id
+                AND COALESCE(ja.status, 'assigned') <> 'removed'
+               LEFT JOIN workers w ON w.id = ja.worker_id
+               WHERE j.client_id=?
+               GROUP BY j.id
+               ORDER BY COALESCE(j.scheduled_start, ''), j.id DESC''',
             (client_id,)
         ).fetchall()
+    items = []
+    for row in rows:
+        item = dict(row)
+        item['estimated_duration'] = ops_duration_label(item.get('estimated_duration_minutes') or 0)
+        items.append(item)
+    return items
 
 
 def worker_schedule_rows_for_worker(worker_id: int, client_id: int):
-    token = f'%,{worker_id},%'
     with get_conn() as conn:
-        return conn.execute(
-            '''SELECT ws.*
-               FROM work_schedule_entries ws
-               WHERE ws.client_id=?
-                 AND COALESCE(ws.assigned_worker_ids,'') LIKE ?
-               ORDER BY ws.schedule_date ASC,
-                        CASE WHEN COALESCE(ws.start_time,'')='' THEN 1 ELSE 0 END,
-                        ws.start_time ASC,
-                        ws.id DESC''',
-            (client_id, token)
+        prepare_ops_workspace(conn, client_id)
+        rows = conn.execute(
+            '''SELECT
+                   j.id,
+                   j.title AS job_name,
+                   substr(COALESCE(j.scheduled_start, ''), 1, 10) AS schedule_date,
+                   substr(COALESCE(j.scheduled_start, ''), 12, 5) AS start_time,
+                   substr(COALESCE(j.scheduled_end, ''), 12, 5) AS end_time,
+                   j.estimated_duration_minutes,
+                   COALESCE(NULLIF(j.service_address, ''), sl.address_line1, '') AS job_address,
+                   j.notes_summary AS scope_of_work,
+                   COALESCE(NULLIF(j.dispatch_notes, ''), j.internal_notes, '') AS notes
+               FROM jobs j
+               JOIN job_assignments ja
+                 ON ja.job_id = j.id
+                AND ja.worker_id = ?
+                AND COALESCE(ja.status, 'assigned') <> 'removed'
+               LEFT JOIN service_locations sl ON sl.id = j.service_location_id
+               WHERE j.client_id=?
+               ORDER BY COALESCE(j.scheduled_start, ''), j.id DESC''',
+            (worker_id, client_id)
         ).fetchall()
+    items = []
+    for row in rows:
+        item = dict(row)
+        item['estimated_duration'] = ops_duration_label(item.get('estimated_duration_minutes') or 0)
+        items.append(item)
+    return items
 
 
 def worker_schedule_summary(rows):
@@ -5088,6 +5838,1064 @@ def worker_schedule_summary(rows):
         'upcoming_count': len(upcoming),
         'next_item': next_item,
     }
+
+
+OPS_JOB_STATUSES = [
+    ('draft', 'Draft'),
+    ('unscheduled', 'Unscheduled'),
+    ('scheduled', 'Scheduled'),
+    ('assigned', 'Assigned'),
+    ('in_progress', 'In Progress'),
+    ('paused', 'Paused'),
+    ('completed', 'Completed'),
+    ('cancelled', 'Cancelled'),
+    ('needs_follow_up', 'Needs Follow-Up'),
+]
+OPS_PROGRESS_STATUSES = [
+    ('not_started', 'Not Started'),
+    ('en_route', 'En Route'),
+    ('on_site', 'On Site'),
+    ('paused', 'Paused'),
+    ('completed', 'Completed'),
+    ('requires_revisit', 'Requires Revisit'),
+]
+OPS_PRIORITIES = [
+    ('low', 'Low'),
+    ('normal', 'Normal'),
+    ('high', 'High'),
+    ('urgent', 'Urgent'),
+]
+OPS_AVAILABILITY_STATUSES = [
+    ('available', 'Available'),
+    ('limited', 'Limited'),
+    ('unavailable', 'Unavailable'),
+    ('time_off', 'Time Off'),
+]
+
+
+def ops_job_status_options():
+    return OPS_JOB_STATUSES
+
+
+def ops_progress_status_options():
+    return OPS_PROGRESS_STATUSES
+
+
+def ops_priority_options():
+    return OPS_PRIORITIES
+
+
+def ops_availability_status_options():
+    return OPS_AVAILABILITY_STATUSES
+
+
+def ops_label(value: str, fallback: str = 'Unknown') -> str:
+    raw = (value or '').strip()
+    return raw.replace('_', ' ').replace('-', ' ').title() if raw else fallback
+
+
+def normalize_ops_choice(value: str, allowed_options, default: str) -> str:
+    cleaned = (value or '').strip().lower()
+    allowed = {key for key, _ in allowed_options}
+    return cleaned if cleaned in allowed else default
+
+
+def normalize_ops_job_status(value: str, *, default: str = 'unscheduled') -> str:
+    return normalize_ops_choice(value, OPS_JOB_STATUSES, default)
+
+
+def normalize_ops_progress_status(value: str, *, default: str = 'not_started') -> str:
+    return normalize_ops_choice(value, OPS_PROGRESS_STATUSES, default)
+
+
+def normalize_ops_priority(value: str, *, default: str = 'normal') -> str:
+    return normalize_ops_choice(value, OPS_PRIORITIES, default)
+
+
+def normalize_ops_availability_status(value: str, *, default: str = 'available') -> str:
+    return normalize_ops_choice(value, OPS_AVAILABILITY_STATUSES, default)
+
+
+def ops_clean_csv(value: str) -> str:
+    seen = []
+    for piece in re.split(r'[,;]', value or ''):
+        cleaned = piece.strip()
+        if cleaned and cleaned.lower() not in {item.lower() for item in seen}:
+            seen.append(cleaned)
+    return ', '.join(seen)
+
+
+def ops_schedule_timestamp(date_value: str, time_value: str = '') -> str:
+    date_clean = (date_value or '').strip()
+    if not date_clean:
+        return ''
+    time_clean = (time_value or '').strip()
+    return f'{date_clean}T{time_clean}' if time_clean else date_clean
+
+
+def ops_schedule_date(iso_value: str) -> str:
+    return (iso_value or '')[:10]
+
+
+def ops_schedule_time(iso_value: str) -> str:
+    return (iso_value or '')[11:16] if 'T' in (iso_value or '') else ''
+
+
+def ops_parse_datetime(iso_value: str):
+    raw = (iso_value or '').strip()
+    if not raw:
+        return None
+    try:
+        if 'T' in raw:
+            return datetime.fromisoformat(raw)
+        return datetime.fromisoformat(f'{raw}T00:00')
+    except ValueError:
+        return None
+
+
+def ops_duration_label(minutes: int | None) -> str:
+    total = int(minutes or 0)
+    if total <= 0:
+        return ''
+    hours, mins = divmod(total, 60)
+    if hours and mins:
+        return f'{hours}h {mins}m'
+    if hours:
+        return f'{hours}h'
+    return f'{mins}m'
+
+
+def ops_duration_minutes(start_iso: str, end_iso: str, fallback: int = 0) -> int:
+    start_dt = ops_parse_datetime(start_iso)
+    end_dt = ops_parse_datetime(end_iso)
+    if start_dt and end_dt and end_dt > start_dt:
+        return int((end_dt - start_dt).total_seconds() // 60)
+    return max(int(fallback or 0), 0)
+
+
+def ops_schedule_end(date_value: str, start_time: str, end_time: str, duration_minutes: int) -> str:
+    if (date_value or '').strip() and (end_time or '').strip():
+        return ops_schedule_timestamp(date_value, end_time)
+    start_iso = ops_schedule_timestamp(date_value, start_time)
+    start_dt = ops_parse_datetime(start_iso)
+    if start_dt and int(duration_minutes or 0) > 0:
+        return (start_dt + timedelta(minutes=int(duration_minutes))).strftime('%Y-%m-%dT%H:%M')
+    return ''
+
+
+def ops_range_overlap(start_a: str, end_a: str, start_b: str, end_b: str) -> bool:
+    a1 = ops_parse_datetime(start_a)
+    a2 = ops_parse_datetime(end_a) or a1
+    b1 = ops_parse_datetime(start_b)
+    b2 = ops_parse_datetime(end_b) or b1
+    if not all([a1, a2, b1, b2]):
+        return False
+    return a1 < b2 and b1 < a2
+
+
+def ops_log_activity(conn: sqlite3.Connection, *, client_id: int, job_id: int, actor_type: str, actor_id=None, event_type: str = 'updated', event_text: str = ''):
+    conn.execute(
+        '''INSERT INTO job_activity_log (client_id, job_id, actor_type, actor_id, event_type, event_text)
+           VALUES (?,?,?,?,?,?)''',
+        (client_id, job_id, (actor_type or 'system').strip()[:50], actor_id, (event_type or 'updated').strip()[:50], (event_text or '').strip()[:400]),
+    )
+
+
+def ops_ensure_reference_data(conn: sqlite3.Connection, client_id: int):
+    if not client_id:
+        return
+    for item in OPS_DEFAULT_SERVICE_TYPES:
+        existing = conn.execute(
+            'SELECT id FROM service_types WHERE client_id=? AND lower(name)=lower(?)',
+            (client_id, item['name']),
+        ).fetchone()
+        if not existing:
+            conn.execute(
+                '''INSERT INTO service_types (
+                       client_id, name, description, default_duration_minutes,
+                       default_priority, default_crew_size, color_token, is_active, updated_at
+                   ) VALUES (?,?,?,?,?,?,?,?,?)''',
+                (
+                    client_id,
+                    item['name'],
+                    item['description'],
+                    item['default_duration_minutes'],
+                    item['default_priority'],
+                    item['default_crew_size'],
+                    item['color_token'],
+                    1,
+                    now_iso(),
+                ),
+            )
+    type_map = {
+        row['name']: row['id']
+        for row in conn.execute('SELECT id, name FROM service_types WHERE client_id=?', (client_id,)).fetchall()
+    }
+    default_templates = [
+        ('Standard Service Visit', 'Cleaning', 'Standard service visit', 180, 'normal', 2, 'Arrival check, equipment check, completion confirmation'),
+        ('Crew Dispatch', 'Landscaping', 'Crew dispatch job', 240, 'high', 3, 'Route check, arrival confirmation, completion handoff'),
+        ('Follow-Up Visit', 'Custom', 'Follow-up visit', 90, 'normal', 1, 'Issue review, corrective work, customer confirmation'),
+    ]
+    for name, service_name, default_title, duration_minutes, priority, crew_size, checklist_text in default_templates:
+        exists = conn.execute(
+            'SELECT id FROM job_templates WHERE client_id=? AND lower(name)=lower(?)',
+            (client_id, name),
+        ).fetchone()
+        if not exists:
+            conn.execute(
+                '''INSERT INTO job_templates (
+                       client_id, service_type_id, name, default_title, default_duration_minutes,
+                       default_priority, default_crew_size, checklist_text, is_active, updated_at
+                   ) VALUES (?,?,?,?,?,?,?,?,?,?)''',
+                (
+                    client_id,
+                    type_map.get(service_name),
+                    name,
+                    default_title,
+                    duration_minutes,
+                    priority,
+                    crew_size,
+                    checklist_text,
+                    1,
+                    now_iso(),
+                ),
+            )
+
+
+def ops_find_or_create_location(
+    conn: sqlite3.Connection,
+    *,
+    client_id: int,
+    customer_contact_id=None,
+    location_name: str = '',
+    address_line1: str = '',
+    city: str = '',
+    state: str = '',
+    postal_code: str = '',
+    access_notes: str = '',
+    gate_code: str = '',
+    parking_notes: str = '',
+    location_notes: str = '',
+):
+    location_name = (location_name or '').strip()
+    address_line1 = (address_line1 or '').strip()
+    city = (city or '').strip()
+    state = (state or '').strip()
+    postal_code = (postal_code or '').strip()
+    if not any([location_name, address_line1, city, state, postal_code]):
+        return None
+    row = conn.execute(
+        '''SELECT id
+           FROM service_locations
+           WHERE client_id=?
+             AND lower(COALESCE(address_line1, ''))=lower(?)
+             AND lower(COALESCE(city, ''))=lower(?)
+             AND lower(COALESCE(state, ''))=lower(?)
+             AND lower(COALESCE(postal_code, ''))=lower(?)
+           LIMIT 1''',
+        (client_id, address_line1, city, state, postal_code),
+    ).fetchone()
+    if row:
+        conn.execute(
+            '''UPDATE service_locations
+               SET location_name=CASE WHEN COALESCE(location_name, '')='' THEN ? ELSE location_name END,
+                   customer_contact_id=COALESCE(customer_contact_id, ?),
+                   access_notes=CASE WHEN COALESCE(access_notes, '')='' THEN ? ELSE access_notes END,
+                   gate_code=CASE WHEN COALESCE(gate_code, '')='' THEN ? ELSE gate_code END,
+                   parking_notes=CASE WHEN COALESCE(parking_notes, '')='' THEN ? ELSE parking_notes END,
+                   location_notes=CASE WHEN COALESCE(location_notes, '')='' THEN ? ELSE location_notes END,
+                   updated_at=?
+               WHERE id=?''',
+            (location_name, customer_contact_id, access_notes, gate_code, parking_notes, location_notes, now_iso(), row['id']),
+        )
+        return row['id']
+    conn.execute(
+        '''INSERT INTO service_locations (
+               client_id, customer_contact_id, location_name, address_line1, city, state, postal_code,
+               access_notes, gate_code, parking_notes, location_notes, updated_at
+           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+        (
+            client_id,
+            customer_contact_id,
+            location_name,
+            address_line1,
+            city,
+            state,
+            postal_code,
+            access_notes,
+            gate_code,
+            parking_notes,
+            location_notes,
+            now_iso(),
+        ),
+    )
+    return conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+
+def ops_sync_job_assignments(conn: sqlite3.Connection, *, client_id: int, job_id: int, worker_ids, actor_user_id=None):
+    normalized_ids = normalize_worker_assignment_ids(worker_ids)
+    existing_rows = conn.execute(
+        '''SELECT ja.worker_id, w.name
+           FROM job_assignments ja
+           JOIN workers w ON w.id = ja.worker_id
+           WHERE ja.job_id=?''',
+        (job_id,),
+    ).fetchall()
+    existing_ids = [int(row['worker_id']) for row in existing_rows]
+    worker_name_map = {
+        row['id']: row['name']
+        for row in conn.execute('SELECT id, name FROM workers WHERE client_id=?', (client_id,)).fetchall()
+    }
+    for worker_id in existing_ids:
+        if worker_id not in normalized_ids:
+            conn.execute('DELETE FROM job_assignments WHERE job_id=? AND worker_id=?', (job_id, worker_id))
+            ops_log_activity(
+                conn,
+                client_id=client_id,
+                job_id=job_id,
+                actor_type='user',
+                actor_id=actor_user_id,
+                event_type='assignment_removed',
+                event_text=f"Removed {worker_name_map.get(worker_id, 'worker')} from the crew.",
+            )
+    for index, worker_id in enumerate(normalized_ids):
+        if worker_id in existing_ids:
+            conn.execute(
+                '''UPDATE job_assignments
+                   SET status='assigned', sort_order=?, assigned_by_user_id=COALESCE(assigned_by_user_id, ?)
+                   WHERE job_id=? AND worker_id=?''',
+                (index, actor_user_id, job_id, worker_id),
+            )
+            continue
+        conn.execute(
+            '''INSERT INTO job_assignments (job_id, worker_id, assignment_role, assigned_by_user_id, status, sort_order)
+               VALUES (?,?,?,?,?,?)''',
+            (job_id, worker_id, 'crew_member', actor_user_id, 'assigned', index),
+        )
+        ops_log_activity(
+            conn,
+            client_id=client_id,
+            job_id=job_id,
+            actor_type='user',
+            actor_id=actor_user_id,
+            event_type='assignment_added',
+            event_text=f"Assigned {worker_name_map.get(worker_id, 'worker')} to the job.",
+        )
+
+
+def migrate_legacy_schedule_to_jobs(conn: sqlite3.Connection):
+    try:
+        legacy_rows = conn.execute(
+            '''SELECT *
+               FROM work_schedule_entries
+               ORDER BY schedule_date, id'''
+        ).fetchall()
+    except sqlite3.Error:
+        return
+    for row in legacy_rows:
+        existing = conn.execute(
+            'SELECT id FROM jobs WHERE legacy_schedule_entry_id=?',
+            (row['id'],),
+        ).fetchone()
+        if existing:
+            continue
+        client_id = int(row['client_id'] or 0)
+        if not client_id:
+            continue
+        ops_ensure_reference_data(conn, client_id)
+        location_id = ops_find_or_create_location(
+            conn,
+            client_id=client_id,
+            location_name=row['job_name'],
+            address_line1=row['job_address'] or '',
+            location_notes=row['notes'] or '',
+        )
+        service_type = conn.execute(
+            'SELECT id, name FROM service_types WHERE client_id=? ORDER BY CASE WHEN lower(name)=? THEN 0 ELSE 1 END, name LIMIT 1',
+            (client_id, 'custom'),
+        ).fetchone()
+        scheduled_start = ops_schedule_timestamp(row['schedule_date'] or '', row['start_time'] or '')
+        scheduled_end = ops_schedule_timestamp(row['schedule_date'] or '', row['end_time'] or '')
+        estimated_minutes = ops_duration_minutes(scheduled_start, scheduled_end, 0)
+        status = 'assigned' if (row['assigned_worker_ids'] or '').strip() else 'scheduled'
+        conn.execute(
+            '''INSERT INTO jobs (
+                   client_id, legacy_schedule_entry_id, service_location_id, service_type_id, created_by_user_id, updated_by_user_id,
+                   title, service_type_name, status, field_progress_status, service_address, scheduled_start, scheduled_end,
+                   estimated_duration_minutes, notes_summary, internal_notes, updated_at
+               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+            (
+                client_id,
+                row['id'],
+                location_id,
+                service_type['id'] if service_type else None,
+                row['created_by_user_id'],
+                row['created_by_user_id'],
+                (row['job_name'] or 'Imported Schedule Entry').strip(),
+                service_type['name'] if service_type else 'Custom',
+                status,
+                'not_started',
+                (row['job_address'] or '').strip(),
+                scheduled_start,
+                scheduled_end,
+                estimated_minutes,
+                (row['scope_of_work'] or '').strip(),
+                (row['notes'] or '').strip(),
+                now_iso(),
+            ),
+        )
+        job_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+        worker_ids = normalize_worker_assignment_ids((row['assigned_worker_ids'] or '').split(','))
+        ops_sync_job_assignments(conn, client_id=client_id, job_id=job_id, worker_ids=worker_ids, actor_user_id=row['created_by_user_id'])
+        ops_log_activity(
+            conn,
+            client_id=client_id,
+            job_id=job_id,
+            actor_type='system',
+            actor_id=row['created_by_user_id'],
+            event_type='legacy_import',
+            event_text='Imported a legacy work schedule entry into Operational LedgerFlow.',
+        )
+
+
+def prepare_ops_workspace(conn: sqlite3.Connection, client_id: int):
+    ops_ensure_reference_data(conn, client_id)
+    migrate_legacy_schedule_to_jobs(conn)
+    conn.commit()
+
+
+def ops_service_types(conn: sqlite3.Connection, client_id: int):
+    prepare_ops_workspace(conn, client_id)
+    return conn.execute(
+        'SELECT * FROM service_types WHERE client_id=? AND COALESCE(is_active, 1)=1 ORDER BY name',
+        (client_id,),
+    ).fetchall()
+
+
+def ops_job_templates(conn: sqlite3.Connection, client_id: int):
+    prepare_ops_workspace(conn, client_id)
+    return conn.execute(
+        '''SELECT jt.*, st.name AS service_type_name
+           FROM job_templates jt
+           LEFT JOIN service_types st ON st.id = jt.service_type_id
+           WHERE jt.client_id=?
+           ORDER BY COALESCE(jt.is_active, 1) DESC, jt.name''',
+        (client_id,),
+    ).fetchall()
+
+
+def ops_jobs_query(
+    conn: sqlite3.Connection,
+    *,
+    client_id: int,
+    job_id: int | None = None,
+    status: str = '',
+    worker_id: int | None = None,
+    service_type_id: int | None = None,
+    search: str = '',
+    date_from: str = '',
+    date_to: str = '',
+):
+    clauses = ['j.client_id=?']
+    params = [client_id]
+    if job_id:
+        clauses.append('j.id=?')
+        params.append(job_id)
+    if status:
+        clauses.append('j.status=?')
+        params.append(normalize_ops_job_status(status))
+    if worker_id:
+        clauses.append('EXISTS (SELECT 1 FROM job_assignments ja2 WHERE ja2.job_id=j.id AND ja2.worker_id=? AND COALESCE(ja2.status, "assigned") <> "removed")')
+        params.append(worker_id)
+    if service_type_id:
+        clauses.append('j.service_type_id=?')
+        params.append(service_type_id)
+    if search:
+        clauses.append('(lower(j.title) LIKE ? OR lower(COALESCE(j.customer_name, "")) LIKE ? OR lower(COALESCE(j.service_address, "")) LIKE ? OR lower(COALESCE(j.tags, "")) LIKE ?)')
+        term = f"%{search.strip().lower()}%"
+        params.extend([term, term, term, term])
+    if date_from:
+        clauses.append('substr(COALESCE(j.scheduled_start, ""), 1, 10) >= ?')
+        params.append(date_from)
+    if date_to:
+        clauses.append('substr(COALESCE(j.scheduled_start, ""), 1, 10) <= ?')
+        params.append(date_to)
+    where_sql = ' AND '.join(clauses)
+    return conn.execute(
+        f'''SELECT
+                j.*,
+                COALESCE(st.name, j.service_type_name, 'Custom') AS service_type_label,
+                COALESCE(sl.location_name, '') AS location_name,
+                COALESCE(sl.access_notes, '') AS access_notes,
+                COALESCE(sl.gate_code, '') AS gate_code,
+                COALESCE(sl.parking_notes, '') AS parking_notes,
+                GROUP_CONCAT(w.name, ', ') AS assigned_worker_names,
+                GROUP_CONCAT(CAST(w.id AS TEXT), ',') AS assigned_worker_ids_csv,
+                COUNT(ja.id) AS assigned_count
+            FROM jobs j
+            LEFT JOIN service_types st ON st.id = j.service_type_id
+            LEFT JOIN service_locations sl ON sl.id = j.service_location_id
+            LEFT JOIN job_assignments ja
+              ON ja.job_id = j.id
+             AND COALESCE(ja.status, 'assigned') <> 'removed'
+            LEFT JOIN workers w ON w.id = ja.worker_id
+            WHERE {where_sql}
+            GROUP BY j.id
+            ORDER BY
+                CASE j.status
+                    WHEN 'in_progress' THEN 0
+                    WHEN 'needs_follow_up' THEN 1
+                    WHEN 'assigned' THEN 2
+                    WHEN 'scheduled' THEN 3
+                    WHEN 'unscheduled' THEN 4
+                    WHEN 'draft' THEN 5
+                    WHEN 'paused' THEN 6
+                    WHEN 'completed' THEN 7
+                    WHEN 'cancelled' THEN 8
+                    ELSE 9
+                END,
+                COALESCE(j.scheduled_start, ''),
+                j.id DESC''',
+        tuple(params),
+    ).fetchall()
+
+
+def ops_job_notes_for_job(conn: sqlite3.Connection, job_id: int):
+    return conn.execute(
+        '''SELECT jn.*, u.full_name
+           FROM job_notes jn
+           LEFT JOIN users u ON u.id = jn.created_by_user_id
+           WHERE jn.job_id=?
+           ORDER BY jn.created_at DESC, jn.id DESC''',
+        (job_id,),
+    ).fetchall()
+
+
+def ops_job_activity_for_job(conn: sqlite3.Connection, job_id: int, limit: int = 40):
+    return conn.execute(
+        '''SELECT jal.*
+           FROM job_activity_log jal
+           WHERE jal.job_id=?
+           ORDER BY jal.created_at DESC, jal.id DESC
+           LIMIT ?''',
+        (job_id, limit),
+    ).fetchall()
+
+
+def ops_finance_summary(conn: sqlite3.Connection, client_id: int):
+    monday = (date.today() - timedelta(days=date.today().weekday())).isoformat()
+    invoice_row = conn.execute(
+        '''SELECT
+               COUNT(*) AS total_invoices,
+               COUNT(CASE WHEN COALESCE(record_kind, '')='customer_invoice' AND COALESCE(invoice_status, 'draft') NOT IN ('paid', 'cancelled') THEN 1 END) AS outstanding_invoice_count,
+               COALESCE(SUM(CASE WHEN COALESCE(record_kind, 'income_record') <> 'estimate' AND COALESCE(invoice_date, '') >= ? THEN paid_amount ELSE 0 END), 0) AS revenue_week
+           FROM invoices
+           WHERE client_id=?''',
+        (monday, client_id),
+    ).fetchone()
+    billing_row = conn.execute(
+        '''SELECT
+               COUNT(*) AS pending_billing_alerts,
+               COALESCE(SUM(amount_due), 0) AS pending_billing_amount
+           FROM business_payment_items
+           WHERE client_id=?
+             AND COALESCE(status, 'pending') IN ('pending', 'processing')''',
+        (client_id,),
+    ).fetchone()
+    return {
+        'outstanding_invoice_count': int(invoice_row['outstanding_invoice_count'] or 0) if invoice_row else 0,
+        'revenue_week': float(invoice_row['revenue_week'] or 0) if invoice_row else 0.0,
+        'pending_billing_alerts': int(billing_row['pending_billing_alerts'] or 0) if billing_row else 0,
+        'pending_billing_amount': float(billing_row['pending_billing_amount'] or 0) if billing_row else 0.0,
+    }
+
+
+def ops_worker_rows(conn: sqlite3.Connection, client_id: int):
+    today_iso = date.today().isoformat()
+    return conn.execute(
+        '''SELECT
+               w.*,
+               COALESCE(NULLIF(w.worker_role, ''), NULLIF(w.role_classification, ''), 'Crew Member') AS ops_role,
+               COUNT(DISTINCT CASE WHEN COALESCE(j.status, '') NOT IN ('completed', 'cancelled') AND substr(COALESCE(j.scheduled_start, ''), 1, 10) >= ? THEN j.id END) AS upcoming_assignments,
+               COUNT(DISTINCT CASE WHEN COALESCE(j.status, '')='in_progress' THEN j.id END) AS active_assignments,
+               MAX(substr(COALESCE(j.scheduled_start, ''), 1, 10)) AS next_assignment_date
+           FROM workers w
+           LEFT JOIN job_assignments ja
+             ON ja.worker_id = w.id
+            AND COALESCE(ja.status, 'assigned') <> 'removed'
+           LEFT JOIN jobs j ON j.id = ja.job_id
+           WHERE w.client_id=?
+           GROUP BY w.id
+           ORDER BY CASE WHEN COALESCE(w.status, 'active')='active' THEN 0 ELSE 1 END, w.name''',
+        (today_iso, client_id),
+    ).fetchall()
+
+
+def ops_availability_rows(conn: sqlite3.Connection, client_id: int, start_date: str = '', end_date: str = ''):
+    clauses = ['wa.client_id=?']
+    params = [client_id]
+    if start_date:
+        clauses.append('wa.available_date>=?')
+        params.append(start_date)
+    if end_date:
+        clauses.append('wa.available_date<=?')
+        params.append(end_date)
+    return conn.execute(
+        f'''SELECT wa.*, w.name AS worker_name
+            FROM worker_availability wa
+            JOIN workers w ON w.id = wa.worker_id
+            WHERE {' AND '.join(clauses)}
+            ORDER BY wa.available_date, wa.start_time, w.name''',
+        tuple(params),
+    ).fetchall()
+
+
+def ops_conflicts(conn: sqlite3.Connection, client_id: int):
+    jobs = ops_jobs_query(conn, client_id=client_id)
+    assignments = conn.execute(
+        '''SELECT ja.job_id, ja.worker_id, w.name, COALESCE(w.status, 'active') AS worker_status
+           FROM job_assignments ja
+           JOIN workers w ON w.id = ja.worker_id
+           JOIN jobs j ON j.id = ja.job_id
+           WHERE j.client_id=?
+             AND COALESCE(ja.status, 'assigned') <> 'removed'
+             AND COALESCE(j.status, '') NOT IN ('completed', 'cancelled')''',
+        (client_id,),
+    ).fetchall()
+    jobs_by_id = {row['id']: row for row in jobs}
+    conflicts = []
+    by_worker = {}
+    for row in assignments:
+        job = jobs_by_id.get(row['job_id'])
+        if not job:
+            continue
+        if (row['worker_status'] or 'active') != 'active':
+            conflicts.append({
+                'kind': 'inactive_worker',
+                'worker_name': row['name'],
+                'job_title': job['title'],
+                'detail': f"{row['name']} is inactive but still assigned to {job['title']}.",
+            })
+        by_worker.setdefault(row['worker_id'], []).append((row['name'], job))
+    for worker_jobs in by_worker.values():
+        ordered = sorted(worker_jobs, key=lambda pair: (pair[1]['scheduled_start'] or '', pair[1]['id']))
+        for idx in range(len(ordered) - 1):
+            worker_name, first_job = ordered[idx]
+            _, second_job = ordered[idx + 1]
+            if ops_range_overlap(first_job['scheduled_start'], first_job['scheduled_end'], second_job['scheduled_start'], second_job['scheduled_end']):
+                conflicts.append({
+                    'kind': 'overlap',
+                    'worker_name': worker_name,
+                    'job_title': first_job['title'],
+                    'detail': f"{worker_name} is double-booked on {first_job['title']} and {second_job['title']}.",
+                })
+    availability_rows = ops_availability_rows(conn, client_id, date.today().isoformat(), (date.today() + timedelta(days=30)).isoformat())
+    availability_index = {}
+    for row in availability_rows:
+        availability_index.setdefault((row['worker_id'], row['available_date']), []).append(row)
+    for row in assignments:
+        job = jobs_by_id.get(row['job_id'])
+        if not job:
+            continue
+        job_date = ops_schedule_date(job['scheduled_start'])
+        for availability in availability_index.get((row['worker_id'], job_date), []):
+            availability_status = normalize_ops_availability_status(availability['availability_status'])
+            if availability_status == 'available':
+                continue
+            slot_start = ops_schedule_timestamp(job_date, availability['start_time'])
+            slot_end = ops_schedule_timestamp(job_date, availability['end_time']) if availability['end_time'] else job['scheduled_end']
+            if availability_status == 'time_off' or ops_range_overlap(job['scheduled_start'], job['scheduled_end'], slot_start, slot_end):
+                conflicts.append({
+                    'kind': 'availability',
+                    'worker_name': row['name'],
+                    'job_title': job['title'],
+                    'detail': f"{row['name']} is marked {ops_label(availability_status)} during {job['title']}.",
+                })
+                break
+    time_off_rows = conn.execute(
+        '''SELECT tor.*, w.name AS worker_name
+           FROM worker_time_off_requests tor
+           JOIN workers w ON w.id = tor.worker_id
+           WHERE w.client_id=?
+             AND COALESCE(tor.status, 'pending') IN ('pending', 'approved')
+           ORDER BY tor.start_date, tor.end_date''',
+        (client_id,),
+    ).fetchall()
+    for row in time_off_rows:
+        for worker_name, job in by_worker.get(row['worker_id'], []):
+            job_date = ops_schedule_date(job['scheduled_start'])
+            if row['start_date'] <= job_date <= (row['end_date'] or row['start_date']):
+                conflicts.append({
+                    'kind': 'time_off',
+                    'worker_name': worker_name,
+                    'job_title': job['title'],
+                    'detail': f"{worker_name} has a time-off request overlapping {job['title']}.",
+                })
+                break
+    return conflicts
+
+
+def ops_int(value, default: int | None = None):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def ops_recent_activity(conn: sqlite3.Connection, client_id: int, limit: int = 16, search: str = ''):
+    clauses = ['jal.client_id=?']
+    params = [client_id]
+    if search:
+        clauses.append('(lower(jal.event_text) LIKE ? OR lower(COALESCE(j.title, "")) LIKE ?)')
+        term = f"%{search.strip().lower()}%"
+        params.extend([term, term])
+    params.append(limit)
+    return conn.execute(
+        f'''SELECT jal.*, j.title AS job_title
+            FROM job_activity_log jal
+            LEFT JOIN jobs j ON j.id = jal.job_id
+            WHERE {' AND '.join(clauses)}
+            ORDER BY jal.created_at DESC, jal.id DESC
+            LIMIT ?''',
+        tuple(params),
+    ).fetchall()
+
+
+def ops_dashboard_summary(conn: sqlite3.Connection, client_id: int):
+    prepare_ops_workspace(conn, client_id)
+    jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id)]
+    today_iso = date.today().isoformat()
+    now_value = datetime.now()
+    today_jobs = [job for job in jobs if ops_schedule_date(job['scheduled_start']) == today_iso and job['status'] not in {'draft', 'cancelled'}]
+    unassigned_jobs = [job for job in jobs if int(job['assigned_count'] or 0) == 0 and job['status'] not in {'completed', 'cancelled'}]
+    overdue_jobs = []
+    for job in jobs:
+        if job['status'] in {'completed', 'cancelled', 'draft'}:
+            continue
+        start_dt = ops_parse_datetime(job['scheduled_start'])
+        if start_dt and start_dt < now_value:
+            overdue_jobs.append(job)
+    active_jobs = [job for job in jobs if job['status'] == 'in_progress']
+    completed_today = [job for job in jobs if job['status'] == 'completed' and ops_schedule_date(job['completed_at'] or job['scheduled_start']) == today_iso]
+    crews = {((job.get('assigned_worker_names') or '').strip()) for job in active_jobs if (job.get('assigned_worker_names') or '').strip()}
+    completion_ratio = int(round((len(completed_today) / max(len(today_jobs), 1)) * 100)) if today_jobs else 0
+    return {
+        'jobs': jobs,
+        'today_jobs': today_jobs,
+        'unassigned_jobs': unassigned_jobs,
+        'overdue_jobs': overdue_jobs,
+        'active_jobs': active_jobs,
+        'active_crews': crews,
+        'completion_ratio': completion_ratio,
+        'completed_today': completed_today,
+        'conflicts': ops_conflicts(conn, client_id),
+        'recent_activity': ops_recent_activity(conn, client_id),
+        'finance_summary': ops_finance_summary(conn, client_id),
+    }
+
+
+def ops_save_job(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int, form, existing=None) -> int:
+    title = (form.get('title', '') or '').strip()
+    if not title:
+        raise ValueError('Job title is required.')
+    service_type_id = ops_int(form.get('service_type_id'))
+    service_type = conn.execute(
+        'SELECT * FROM service_types WHERE id=? AND client_id=?',
+        (service_type_id, client_id),
+    ).fetchone() if service_type_id else None
+    scheduled_date = (form.get('scheduled_date', '') or '').strip()
+    start_time = (form.get('start_time', '') or '').strip()
+    end_time = (form.get('end_time', '') or '').strip()
+    estimated_duration_minutes = max(ops_int(form.get('estimated_duration_minutes'), 0) or 0, 0)
+    scheduled_start = ops_schedule_timestamp(scheduled_date, start_time)
+    scheduled_end = ops_schedule_end(scheduled_date, start_time, end_time, estimated_duration_minutes)
+    estimated_duration_minutes = ops_duration_minutes(scheduled_start, scheduled_end, estimated_duration_minutes)
+    priority = normalize_ops_priority(form.get('priority'), default=(service_type['default_priority'] if service_type else 'normal'))
+    status = normalize_ops_job_status(form.get('status'), default='unscheduled')
+    progress_status = normalize_ops_progress_status(form.get('field_progress_status'), default='not_started')
+    assigned_worker_ids = normalize_worker_assignment_ids(form.getlist('assigned_worker_ids'))
+    if scheduled_start and status in {'draft', 'unscheduled'}:
+        status = 'scheduled'
+    if assigned_worker_ids and status in {'scheduled', 'draft', 'unscheduled'}:
+        status = 'assigned'
+    if status == 'in_progress' and progress_status == 'not_started':
+        progress_status = 'on_site'
+    if status == 'paused':
+        progress_status = 'paused'
+    if status == 'completed':
+        progress_status = 'completed'
+    requires_revisit = 1 if form.get('requires_revisit') else 0
+    if requires_revisit:
+        status = 'needs_follow_up'
+        progress_status = 'requires_revisit'
+    issue_flag = 1 if form.get('issue_flag') else 0
+    location_id = ops_find_or_create_location(
+        conn,
+        client_id=client_id,
+        customer_contact_id=ops_int(form.get('customer_contact_id')),
+        location_name=(form.get('location_name', '') or '').strip(),
+        address_line1=(form.get('service_address', '') or '').strip(),
+        city=(form.get('city', '') or '').strip(),
+        state=(form.get('state', '') or '').strip(),
+        postal_code=(form.get('postal_code', '') or '').strip(),
+        access_notes=(form.get('access_notes', '') or '').strip(),
+        gate_code=(form.get('gate_code', '') or '').strip(),
+        parking_notes=(form.get('parking_notes', '') or '').strip(),
+        location_notes=(form.get('location_notes', '') or '').strip(),
+    ) or (existing['service_location_id'] if existing else None)
+    payload = (
+        ops_int(form.get('customer_contact_id')),
+        location_id,
+        service_type_id,
+        ops_int(form.get('template_id')),
+        title,
+        (form.get('customer_name', '') or '').strip(),
+        (form.get('customer_reference', '') or '').strip(),
+        service_type['name'] if service_type else (existing['service_type_name'] if existing else 'Custom'),
+        priority,
+        status,
+        progress_status,
+        ops_clean_csv(form.get('tags', '')),
+        (form.get('service_address', '') or '').strip(),
+        (form.get('city', '') or '').strip(),
+        (form.get('state', '') or '').strip(),
+        (form.get('postal_code', '') or '').strip(),
+        scheduled_start,
+        scheduled_end,
+        estimated_duration_minutes,
+        (form.get('notes_summary', '') or '').strip(),
+        (form.get('internal_notes', '') or '').strip(),
+        (form.get('dispatch_notes', '') or '').strip(),
+        (form.get('completion_notes', '') or '').strip(),
+        (form.get('recurrence_rule', '') or '').strip(),
+        1 if (form.get('recurrence_rule', '') or '').strip() else 0,
+        (form.get('cancellation_reason', '') or '').strip(),
+        issue_flag,
+        requires_revisit,
+        now_iso() if status == 'completed' else '',
+        now_iso() if progress_status != 'not_started' else '',
+        now_iso(),
+        actor_user_id,
+    )
+    if existing:
+        conn.execute(
+            '''UPDATE jobs
+               SET customer_contact_id=?, service_location_id=?, service_type_id=?, template_id=?, title=?, customer_name=?, customer_reference=?,
+                   service_type_name=?, priority=?, status=?, field_progress_status=?, tags=?, service_address=?, city=?, state=?, postal_code=?,
+                   scheduled_start=?, scheduled_end=?, estimated_duration_minutes=?, notes_summary=?, internal_notes=?, dispatch_notes=?,
+                   completion_notes=?, recurrence_rule=?, is_recurring=?, cancellation_reason=?, issue_flag=?, requires_revisit=?, completed_at=?,
+                   last_progress_at=?, updated_at=?, updated_by_user_id=?
+               WHERE id=?''',
+            payload + (existing['id'],),
+        )
+        job_id = existing['id']
+        if existing['status'] != status:
+            ops_log_activity(
+                conn,
+                client_id=client_id,
+                job_id=job_id,
+                actor_type='user',
+                actor_id=actor_user_id,
+                event_type='status_changed',
+                event_text=f"Changed status from {ops_label(existing['status'])} to {ops_label(status)}.",
+            )
+        else:
+            ops_log_activity(
+                conn,
+                client_id=client_id,
+                job_id=job_id,
+                actor_type='user',
+                actor_id=actor_user_id,
+                event_type='updated',
+                event_text='Updated job details.',
+            )
+    else:
+        conn.execute(
+            '''INSERT INTO jobs (
+                   client_id, customer_contact_id, service_location_id, service_type_id, template_id, created_by_user_id, updated_by_user_id,
+                   title, customer_name, customer_reference, service_type_name, priority, status, field_progress_status, tags,
+                   service_address, city, state, postal_code, scheduled_start, scheduled_end, estimated_duration_minutes,
+                   notes_summary, internal_notes, dispatch_notes, completion_notes, recurrence_rule, is_recurring, cancellation_reason,
+                   issue_flag, requires_revisit, completed_at, last_progress_at, updated_at
+               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+            (
+                client_id,
+                payload[0],
+                payload[1],
+                payload[2],
+                payload[3],
+                actor_user_id,
+                actor_user_id,
+                payload[4],
+                payload[5],
+                payload[6],
+                payload[7],
+                payload[8],
+                payload[9],
+                payload[10],
+                payload[11],
+                payload[12],
+                payload[13],
+                payload[14],
+                payload[15],
+                payload[16],
+                payload[17],
+                payload[18],
+                payload[19],
+                payload[20],
+                payload[21],
+                payload[22],
+                payload[23],
+                payload[24],
+                payload[25],
+                payload[26],
+                payload[27],
+                payload[28],
+                payload[29],
+                payload[30],
+            ),
+        )
+        job_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+        ops_log_activity(
+            conn,
+            client_id=client_id,
+            job_id=job_id,
+            actor_type='user',
+            actor_id=actor_user_id,
+            event_type='created',
+            event_text='Created the job record.',
+        )
+    ops_sync_job_assignments(conn, client_id=client_id, job_id=job_id, worker_ids=assigned_worker_ids, actor_user_id=actor_user_id)
+    return job_id
+
+
+def ops_duplicate_job(conn: sqlite3.Connection, *, client_id: int, job_id: int, actor_user_id: int) -> int | None:
+    source = conn.execute('SELECT * FROM jobs WHERE id=? AND client_id=?', (job_id, client_id)).fetchone()
+    if not source:
+        return None
+    conn.execute(
+        '''INSERT INTO jobs (
+               client_id, customer_contact_id, service_location_id, service_type_id, template_id, created_by_user_id, updated_by_user_id,
+               title, customer_name, customer_reference, service_type_name, priority, status, field_progress_status, tags,
+               service_address, city, state, postal_code, scheduled_start, scheduled_end, estimated_duration_minutes,
+               notes_summary, internal_notes, dispatch_notes, completion_notes, recurrence_rule, is_recurring, cancellation_reason,
+               issue_flag, requires_revisit, completed_at, last_progress_at, updated_at
+           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+        (
+            client_id,
+            source['customer_contact_id'],
+            source['service_location_id'],
+            source['service_type_id'],
+            source['template_id'],
+            actor_user_id,
+            actor_user_id,
+            f"{source['title']} (Copy)",
+            source['customer_name'],
+            source['customer_reference'],
+            source['service_type_name'],
+            source['priority'],
+            'unscheduled',
+            'not_started',
+            source['tags'],
+            source['service_address'],
+            source['city'],
+            source['state'],
+            source['postal_code'],
+            '',
+            '',
+            source['estimated_duration_minutes'],
+            source['notes_summary'],
+            source['internal_notes'],
+            source['dispatch_notes'],
+            '',
+            source['recurrence_rule'],
+            source['is_recurring'],
+            '',
+            source['issue_flag'],
+            0,
+            '',
+            '',
+            now_iso(),
+        ),
+    )
+    new_job_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    assignment_ids = [
+        row['worker_id']
+        for row in conn.execute('SELECT worker_id FROM job_assignments WHERE job_id=? ORDER BY sort_order, id', (job_id,)).fetchall()
+    ]
+    ops_sync_job_assignments(conn, client_id=client_id, job_id=new_job_id, worker_ids=assignment_ids, actor_user_id=actor_user_id)
+    ops_log_activity(
+        conn,
+        client_id=client_id,
+        job_id=new_job_id,
+        actor_type='user',
+        actor_id=actor_user_id,
+        event_type='duplicated',
+        event_text=f"Duplicated from job #{job_id}.",
+    )
+    return new_job_id
+
+
+def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int, form, existing=None) -> int:
+    name = (form.get('name', '') or '').strip()
+    if not name:
+        raise ValueError('Worker name is required.')
+    worker_role = (form.get('worker_role', '') or '').strip()
+    status = (form.get('status', '') or '').strip().lower() or 'active'
+    if status not in {'active', 'inactive', 'terminated'}:
+        status = 'active'
+    payload = (
+        name,
+        worker_role,
+        worker_role,
+        (form.get('phone', '') or '').strip(),
+        (form.get('email', '') or '').strip(),
+        normalize_language(form.get('preferred_language') or 'en'),
+        (form.get('crew_label', '') or '').strip(),
+        ops_clean_csv(form.get('skill_tags', '')),
+        (form.get('availability_baseline', '') or '').strip(),
+        status,
+        now_iso(),
+        actor_user_id,
+    )
+    if existing:
+        conn.execute(
+            '''UPDATE workers
+               SET name=?, worker_role=?, role_classification=?, phone=?, email=?, preferred_language=?, crew_label=?, skill_tags=?,
+                   availability_baseline=?, status=?, updated_at=?, updated_by_user_id=?
+               WHERE id=?''',
+            payload + (existing['id'],),
+        )
+        worker_id = existing['id']
+        log_worker_profile_history(conn, worker_id=worker_id, client_id=client_id, action='updated', changed_by_user_id=actor_user_id)
+    else:
+        conn.execute(
+            '''INSERT INTO workers (
+                   client_id, name, worker_type, phone, email, preferred_language, role_classification, worker_role,
+                   crew_label, skill_tags, availability_baseline, status, created_by_user_id, updated_at, updated_by_user_id
+               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+            (
+                client_id,
+                name,
+                '1099',
+                payload[3],
+                payload[4],
+                payload[5],
+                worker_role,
+                worker_role,
+                payload[6],
+                payload[7],
+                payload[8],
+                status,
+                actor_user_id,
+                now_iso(),
+                actor_user_id,
+            ),
+        )
+        worker_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+        conn.execute('INSERT OR IGNORE INTO w4_answers (worker_id, signed_date) VALUES (?,?)', (worker_id, date.today().isoformat()))
+        log_worker_profile_history(conn, worker_id=worker_id, client_id=client_id, action='created', changed_by_user_id=actor_user_id)
+    return worker_id
 
 
 def worker_time_off_rows(worker_id: int):
@@ -6133,6 +7941,7 @@ def inject_globals():
         'subscription_tier_map': subscription_tier_view_map(),
         'effective_service_level': effective_service_level,
         'effective_service_level_label': effective_service_level_label,
+        'premium_sales_access_enabled': premium_sales_access_enabled,
         'access_level_override_active': access_level_override_active,
         'service_level_access_options': service_level_access_options(),
         'current_request_path': current_request_path(),
@@ -8147,24 +9956,655 @@ def dashboard():
     user = current_user()
     client_id = selected_client_id(user, 'get')
     with get_conn() as conn:
+        prepare_ops_workspace(conn, client_id)
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
-        invoices = conn.execute(
-            "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate' ORDER BY invoice_date DESC, id DESC LIMIT 10",
-            (client_id,),
-        ).fetchall()
-        workers = conn.execute('SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name', (client_id,)).fetchall()
+        worker_rows = ops_worker_rows(conn, client_id)
+        dashboard_summary = ops_dashboard_summary(conn, client_id)
+        service_types = ops_service_types(conn, client_id)
+        templates = ops_job_templates(conn, client_id)
     mark_messages_read(client_id, user['id'])
-    payment_summary = business_payment_summary(client_id)
-    open_admin_fee_rows = [row for row in payment_summary['rows'] if (row['status'] or 'pending') in {'pending', 'processing'}]
+    return render_template(
+        'ops_dashboard.html',
+        client=client,
+        client_id=client_id,
+        workers=worker_rows,
+        service_types=service_types,
+        templates=templates,
+        ops=dashboard_summary,
+        job_status_options=ops_job_status_options(),
+        priority_options=ops_priority_options(),
+        progress_status_options=ops_progress_status_options(),
+        today_iso=date.today().isoformat(),
+    )
+
+
+@app.route('/jobs', methods=['GET', 'POST'])
+@login_required
+def ops_jobs():
+    user = current_user()
+    client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    selected_job_id = request.values.get('job_id', type=int)
+    if request.method == 'POST':
+        action = (request.form.get('action') or 'create_job').strip()
+        with get_conn() as conn:
+            prepare_ops_workspace(conn, client_id)
+            if action in {'create_job', 'update_job'}:
+                existing = conn.execute('SELECT * FROM jobs WHERE id=? AND client_id=?', (request.form.get('job_id', type=int), client_id)).fetchone() if action == 'update_job' else None
+                try:
+                    selected_job_id = ops_save_job(conn, client_id=client_id, actor_user_id=user['id'], form=request.form, existing=existing)
+                    conn.commit()
+                    flash('Job saved.', 'success')
+                except ValueError as exc:
+                    conn.rollback()
+                    flash(str(exc), 'error')
+            elif action == 'duplicate_job':
+                duplicated_id = ops_duplicate_job(conn, client_id=client_id, job_id=request.form.get('job_id', type=int) or 0, actor_user_id=user['id'])
+                if duplicated_id:
+                    conn.commit()
+                    selected_job_id = duplicated_id
+                    flash('Job duplicated.', 'success')
+                else:
+                    conn.rollback()
+                    flash('Job could not be duplicated.', 'error')
+            elif action == 'update_status':
+                job_id = request.form.get('job_id', type=int) or 0
+                job = conn.execute('SELECT * FROM jobs WHERE id=? AND client_id=?', (job_id, client_id)).fetchone()
+                if job:
+                    status = normalize_ops_job_status(request.form.get('status'), default=job['status'])
+                    progress_status = normalize_ops_progress_status(request.form.get('field_progress_status'), default=job['field_progress_status'])
+                    completion_notes = (request.form.get('completion_notes', '') or '').strip()
+                    completed_at = now_iso() if status == 'completed' else (job['completed_at'] or '')
+                    conn.execute(
+                        '''UPDATE jobs
+                           SET status=?, field_progress_status=?, completion_notes=?, completed_at=?, last_progress_at=?, updated_at=?, updated_by_user_id=?
+                           WHERE id=?''',
+                        (status, progress_status, completion_notes, completed_at if status == 'completed' else '', now_iso(), now_iso(), user['id'], job_id),
+                    )
+                    ops_log_activity(
+                        conn,
+                        client_id=client_id,
+                        job_id=job_id,
+                        actor_type='user',
+                        actor_id=user['id'],
+                        event_type='status_changed',
+                        event_text=f"Updated workflow to {ops_label(status)} / {ops_label(progress_status)}.",
+                    )
+                    conn.commit()
+                    selected_job_id = job_id
+                    flash('Job status updated.', 'success')
+                else:
+                    flash('Job not found.', 'error')
+            elif action == 'add_note':
+                job_id = request.form.get('job_id', type=int) or 0
+                note_body = (request.form.get('note_body', '') or '').strip()
+                note_type = (request.form.get('note_type', '') or 'internal').strip()[:30]
+                if not note_body:
+                    flash('Enter a note before saving.', 'error')
+                else:
+                    conn.execute(
+                        'INSERT INTO job_notes (job_id, client_id, note_type, body, created_by_user_id) VALUES (?,?,?,?,?)',
+                        (job_id, client_id, note_type, note_body[:3000], user['id']),
+                    )
+                    ops_log_activity(
+                        conn,
+                        client_id=client_id,
+                        job_id=job_id,
+                        actor_type='user',
+                        actor_id=user['id'],
+                        event_type='note_added',
+                        event_text=f"Added a {note_type.replace('_', ' ')} note.",
+                    )
+                    conn.commit()
+                    selected_job_id = job_id
+                    flash('Job note added.', 'success')
+            return redirect(url_for('ops_jobs', client_id=client_id, job_id=selected_job_id))
+    status_filter = (request.args.get('status') or '').strip()
+    search = (request.args.get('search') or '').strip()
+    worker_filter = request.args.get('worker_id', type=int)
+    service_type_filter = request.args.get('service_type_id', type=int)
     with get_conn() as conn:
-        payment_methods = conn.execute(
-            '''SELECT *
-               FROM business_payment_methods
-               WHERE client_id=?
-               ORDER BY is_default DESC, is_backup DESC, updated_at DESC, id DESC''',
+        prepare_ops_workspace(conn, client_id)
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, status=status_filter, worker_id=worker_filter, service_type_id=service_type_filter, search=search)]
+        workers = ops_worker_rows(conn, client_id)
+        service_types = ops_service_types(conn, client_id)
+        templates = ops_job_templates(conn, client_id)
+        locations = conn.execute('SELECT * FROM service_locations WHERE client_id=? ORDER BY location_name, address_line1', (client_id,)).fetchall()
+        selected_job_id = selected_job_id or (jobs[0]['id'] if jobs else None)
+        selected_job_rows = ops_jobs_query(conn, client_id=client_id, job_id=selected_job_id) if selected_job_id else []
+        selected_job = dict(selected_job_rows[0]) if selected_job_rows else None
+        selected_job_notes = ops_job_notes_for_job(conn, selected_job_id) if selected_job_id else []
+        selected_job_activity = ops_job_activity_for_job(conn, selected_job_id) if selected_job_id else []
+        template_seed = conn.execute('SELECT * FROM job_templates WHERE id=? AND client_id=?', (request.args.get('template_id', type=int), client_id)).fetchone() if request.args.get('template_id', type=int) else None
+    return render_template(
+        'ops_jobs.html',
+        client=client,
+        client_id=client_id,
+        jobs=jobs,
+        workers=workers,
+        service_types=service_types,
+        templates=templates,
+        locations=locations,
+        selected_job=selected_job,
+        selected_job_notes=selected_job_notes,
+        selected_job_activity=selected_job_activity,
+        template_seed=template_seed,
+        filters={'status': status_filter, 'search': search, 'worker_id': worker_filter, 'service_type_id': service_type_filter},
+        job_status_options=ops_job_status_options(),
+        progress_status_options=ops_progress_status_options(),
+        priority_options=ops_priority_options(),
+        today_iso=date.today().isoformat(),
+    )
+
+
+@app.route('/dispatch', methods=['GET', 'POST'])
+@login_required
+def ops_dispatch():
+    user = current_user()
+    client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    dispatch_date = (request.values.get('date') or date.today().isoformat()).strip()
+    if request.method == 'POST':
+        action = (request.form.get('action') or '').strip()
+        with get_conn() as conn:
+            prepare_ops_workspace(conn, client_id)
+            job_id = request.form.get('job_id', type=int) or 0
+            job = conn.execute('SELECT * FROM jobs WHERE id=? AND client_id=?', (job_id, client_id)).fetchone()
+            if not job:
+                flash('Job not found.', 'error')
+                return redirect(url_for('ops_dispatch', client_id=client_id, date=dispatch_date))
+            if action == 'dispatch_assign':
+                worker_ids = normalize_worker_assignment_ids(request.form.getlist('assigned_worker_ids'))
+                ops_sync_job_assignments(conn, client_id=client_id, job_id=job_id, worker_ids=worker_ids, actor_user_id=user['id'])
+                dispatch_note = (request.form.get('dispatch_note', '') or '').strip()
+                status = normalize_ops_job_status(request.form.get('status'), default='assigned' if worker_ids else job['status'])
+                conn.execute(
+                    'UPDATE jobs SET status=?, dispatch_notes=?, updated_at=?, updated_by_user_id=? WHERE id=?',
+                    (status, dispatch_note or job['dispatch_notes'], now_iso(), user['id'], job_id),
+                )
+                ops_log_activity(
+                    conn,
+                    client_id=client_id,
+                    job_id=job_id,
+                    actor_type='user',
+                    actor_id=user['id'],
+                    event_type='dispatch_updated',
+                    event_text='Updated crew dispatch details.',
+                )
+                conn.commit()
+                flash('Dispatch updated.', 'success')
+            elif action == 'dispatch_progress':
+                status = normalize_ops_job_status(request.form.get('status'), default=job['status'])
+                progress_status = normalize_ops_progress_status(request.form.get('field_progress_status'), default=job['field_progress_status'])
+                dispatch_note = (request.form.get('dispatch_note', '') or '').strip()
+                conn.execute(
+                    '''UPDATE jobs
+                       SET status=?, field_progress_status=?, dispatch_notes=?, last_progress_at=?, updated_at=?, updated_by_user_id=?
+                       WHERE id=?''',
+                    (status, progress_status, dispatch_note or job['dispatch_notes'], now_iso(), now_iso(), user['id'], job_id),
+                )
+                ops_log_activity(
+                    conn,
+                    client_id=client_id,
+                    job_id=job_id,
+                    actor_type='user',
+                    actor_id=user['id'],
+                    event_type='dispatch_progress',
+                    event_text=f"Dispatch moved the job to {ops_label(status)} / {ops_label(progress_status)}.",
+                )
+                conn.commit()
+                flash('Dispatch progress updated.', 'success')
+        return redirect(url_for('ops_dispatch', client_id=client_id, date=dispatch_date))
+    anchor_date = date.fromisoformat(dispatch_date) if re.match(r'^\d{4}-\d{2}-\d{2}$', dispatch_date) else date.today()
+    week_end = anchor_date + timedelta(days=6)
+    with get_conn() as conn:
+        prepare_ops_workspace(conn, client_id)
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workers = [dict(row) for row in ops_worker_rows(conn, client_id)]
+        jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, date_from=anchor_date.isoformat(), date_to=week_end.isoformat())]
+        conflicts = ops_conflicts(conn, client_id)
+    today_jobs = [job for job in jobs if ops_schedule_date(job['scheduled_start']) == anchor_date.isoformat()]
+    unassigned_jobs = [job for job in today_jobs if int(job.get('assigned_count') or 0) == 0]
+    active_jobs = [job for job in today_jobs if job['status'] == 'in_progress']
+    dispatch_board = []
+    for worker in workers:
+        worker_jobs = []
+        for job in today_jobs:
+            assigned_ids = normalize_worker_assignment_ids((job.get('assigned_worker_ids_csv') or '').split(','))
+            if worker['id'] in assigned_ids:
+                worker_jobs.append(job)
+        if worker_jobs or worker['status'] == 'active':
+            dispatch_board.append({'worker': worker, 'jobs': worker_jobs})
+    return render_template(
+        'ops_dispatch.html',
+        client=client,
+        client_id=client_id,
+        workers=workers,
+        jobs=jobs,
+        today_jobs=today_jobs,
+        unassigned_jobs=unassigned_jobs,
+        active_jobs=active_jobs,
+        dispatch_board=dispatch_board,
+        conflicts=conflicts,
+        dispatch_date=anchor_date.isoformat(),
+        week_end=week_end.isoformat(),
+        job_status_options=ops_job_status_options(),
+        progress_status_options=ops_progress_status_options(),
+    )
+
+
+@app.route('/schedule', methods=['GET', 'POST'])
+@login_required
+def ops_schedule():
+    user = current_user()
+    client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    view = (request.values.get('view') or 'week').strip().lower()
+    if view not in {'day', 'week', 'month'}:
+        view = 'week'
+    date_value = (request.values.get('date') or date.today().isoformat()).strip()
+    anchor_date = date.fromisoformat(date_value) if re.match(r'^\d{4}-\d{2}-\d{2}$', date_value) else date.today()
+    if request.method == 'POST':
+        action = (request.form.get('action') or '').strip()
+        with get_conn() as conn:
+            prepare_ops_workspace(conn, client_id)
+            if action == 'quick_add_job':
+                try:
+                    job_id = ops_save_job(conn, client_id=client_id, actor_user_id=user['id'], form=request.form)
+                    conn.commit()
+                    flash('Job added to the schedule.', 'success')
+                    return redirect(url_for('ops_schedule', client_id=client_id, view=view, date=anchor_date.isoformat(), job_id=job_id))
+                except ValueError as exc:
+                    conn.rollback()
+                    flash(str(exc), 'error')
+            elif action == 'move_job':
+                job_id = request.form.get('job_id', type=int) or 0
+                job = conn.execute('SELECT * FROM jobs WHERE id=? AND client_id=?', (job_id, client_id)).fetchone()
+                if job:
+                    move_date = (request.form.get('scheduled_date', '') or '').strip()
+                    move_start = (request.form.get('start_time', '') or '').strip()
+                    move_end = (request.form.get('end_time', '') or '').strip()
+                    scheduled_start = ops_schedule_timestamp(move_date, move_start)
+                    scheduled_end = ops_schedule_end(move_date, move_start, move_end, job['estimated_duration_minutes'] or 0)
+                    conn.execute(
+                        'UPDATE jobs SET scheduled_start=?, scheduled_end=?, updated_at=?, updated_by_user_id=? WHERE id=?',
+                        (scheduled_start, scheduled_end, now_iso(), user['id'], job_id),
+                    )
+                    ops_log_activity(
+                        conn,
+                        client_id=client_id,
+                        job_id=job_id,
+                        actor_type='user',
+                        actor_id=user['id'],
+                        event_type='rescheduled',
+                        event_text=f"Rescheduled the job to {move_date}.",
+                    )
+                    conn.commit()
+                    flash('Job rescheduled.', 'success')
+        return redirect(url_for('ops_schedule', client_id=client_id, view=view, date=anchor_date.isoformat()))
+    if view == 'day':
+        range_start = range_end = anchor_date
+        prev_date = anchor_date - timedelta(days=1)
+        next_date = anchor_date + timedelta(days=1)
+    elif view == 'week':
+        range_start = anchor_date - timedelta(days=anchor_date.weekday())
+        range_end = range_start + timedelta(days=6)
+        prev_date = range_start - timedelta(days=7)
+        next_date = range_start + timedelta(days=7)
+    else:
+        import calendar as pycal
+        range_start = anchor_date.replace(day=1)
+        range_end = range_start.replace(day=pycal.monthrange(range_start.year, range_start.month)[1])
+        prev_date = (range_start - timedelta(days=1)).replace(day=1)
+        next_date = (range_end + timedelta(days=1)).replace(day=1)
+    worker_filter = request.args.get('worker_id', type=int)
+    status_filter = (request.args.get('status') or '').strip()
+    service_type_filter = request.args.get('service_type_id', type=int)
+    with get_conn() as conn:
+        prepare_ops_workspace(conn, client_id)
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workers = ops_worker_rows(conn, client_id)
+        service_types = ops_service_types(conn, client_id)
+        jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, worker_id=worker_filter, status=status_filter, service_type_id=service_type_filter, date_from=range_start.isoformat(), date_to=range_end.isoformat())]
+    jobs_by_day = {}
+    for job in jobs:
+        jobs_by_day.setdefault(ops_schedule_date(job['scheduled_start']), []).append(job)
+    month_weeks = []
+    month_name = ''
+    if view == 'month':
+        import calendar as pycal
+        cal = pycal.Calendar(firstweekday=0)
+        month_weeks = list(cal.monthdatescalendar(range_start.year, range_start.month))
+        month_name = pycal.month_name[range_start.month]
+    visible_days = [range_start + timedelta(days=offset) for offset in range((range_end - range_start).days + 1)]
+    return render_template(
+        'ops_schedule.html',
+        client=client,
+        client_id=client_id,
+        workers=workers,
+        service_types=service_types,
+        jobs=jobs,
+        jobs_by_day=jobs_by_day,
+        view=view,
+        anchor_date=anchor_date.isoformat(),
+        range_start=range_start.isoformat(),
+        range_end=range_end.isoformat(),
+        prev_date=prev_date.isoformat(),
+        next_date=next_date.isoformat(),
+        visible_days=visible_days,
+        month_weeks=month_weeks,
+        month_name=month_name,
+        filters={'worker_id': worker_filter, 'status': status_filter, 'service_type_id': service_type_filter},
+        job_status_options=ops_job_status_options(),
+        priority_options=ops_priority_options(),
+        today_iso=date.today().isoformat(),
+    )
+
+
+@app.route('/team', methods=['GET', 'POST'])
+@login_required
+def ops_team():
+    user = current_user()
+    client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    selected_worker_id = request.values.get('worker_id', type=int)
+    if request.method == 'POST':
+        action = (request.form.get('action') or '').strip()
+        with get_conn() as conn:
+            prepare_ops_workspace(conn, client_id)
+            if action in {'create_worker', 'update_worker'}:
+                existing = conn.execute('SELECT * FROM workers WHERE id=? AND client_id=?', (request.form.get('worker_id', type=int), client_id)).fetchone() if action == 'update_worker' else None
+                try:
+                    selected_worker_id = ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=request.form, existing=existing)
+                    conn.commit()
+                    flash('Team member saved.', 'success')
+                except ValueError as exc:
+                    conn.rollback()
+                    flash(str(exc), 'error')
+        return redirect(url_for('ops_team', client_id=client_id, worker_id=selected_worker_id))
+    with get_conn() as conn:
+        prepare_ops_workspace(conn, client_id)
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workers = [dict(row) for row in ops_worker_rows(conn, client_id)]
+        selected_worker_id = selected_worker_id or (workers[0]['id'] if workers else None)
+        selected_worker = next((row for row in workers if row['id'] == selected_worker_id), None)
+        worker_jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, worker_id=selected_worker_id)] if selected_worker_id else []
+        worker_availability = [row for row in ops_availability_rows(conn, client_id, date.today().isoformat(), (date.today() + timedelta(days=21)).isoformat()) if row['worker_id'] == selected_worker_id]
+    return render_template(
+        'ops_team.html',
+        client=client,
+        client_id=client_id,
+        workers=workers,
+        selected_worker=selected_worker,
+        worker_jobs=worker_jobs,
+        worker_availability=worker_availability,
+        today_iso=date.today().isoformat(),
+    )
+
+
+@app.route('/availability', methods=['GET', 'POST'])
+@login_required
+def ops_availability():
+    user = current_user()
+    client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    selected_worker_id = request.values.get('worker_id', type=int)
+    if request.method == 'POST':
+        action = (request.form.get('action') or 'save_availability').strip()
+        with get_conn() as conn:
+            prepare_ops_workspace(conn, client_id)
+            if action == 'save_availability':
+                availability_id = request.form.get('availability_id', type=int)
+                worker_id = request.form.get('worker_id', type=int)
+                available_date = (request.form.get('available_date', '') or '').strip()
+                if not worker_id or not available_date:
+                    flash('Worker and date are required.', 'error')
+                else:
+                    payload = (
+                        normalize_ops_availability_status(request.form.get('availability_status')),
+                        (request.form.get('start_time', '') or '').strip(),
+                        (request.form.get('end_time', '') or '').strip(),
+                        (request.form.get('note', '') or '').strip(),
+                        now_iso(),
+                        user['id'],
+                    )
+                    if availability_id:
+                        conn.execute(
+                            '''UPDATE worker_availability
+                               SET availability_status=?, start_time=?, end_time=?, note=?, updated_at=?, created_by_user_id=?
+                               WHERE id=? AND client_id=?''',
+                            payload + (availability_id, client_id),
+                        )
+                    else:
+                        conn.execute(
+                            '''INSERT INTO worker_availability (
+                                   worker_id, client_id, available_date, availability_status, start_time, end_time, note, created_by_user_id, updated_at
+                               ) VALUES (?,?,?,?,?,?,?,?,?)''',
+                            (worker_id, client_id, available_date, payload[0], payload[1], payload[2], payload[3], user['id'], now_iso()),
+                        )
+                    conn.commit()
+                    flash('Availability saved.', 'success')
+                    selected_worker_id = worker_id
+            elif action == 'delete_availability':
+                availability_id = request.form.get('availability_id', type=int)
+                conn.execute('DELETE FROM worker_availability WHERE id=? AND client_id=?', (availability_id, client_id))
+                conn.commit()
+                flash('Availability block removed.', 'success')
+        return redirect(url_for('ops_availability', client_id=client_id, worker_id=selected_worker_id))
+    start_date = request.args.get('start_date', date.today().isoformat())
+    end_date = request.args.get('end_date', (date.today() + timedelta(days=21)).isoformat())
+    with get_conn() as conn:
+        prepare_ops_workspace(conn, client_id)
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workers = [dict(row) for row in ops_worker_rows(conn, client_id)]
+        selected_worker_id = selected_worker_id or (workers[0]['id'] if workers else None)
+        availability_rows = ops_availability_rows(conn, client_id, start_date, end_date)
+        time_off_rows = conn.execute(
+            '''SELECT tor.*, w.name AS worker_name
+               FROM worker_time_off_requests tor
+               JOIN workers w ON w.id = tor.worker_id
+               WHERE w.client_id=?
+               ORDER BY tor.start_date, tor.end_date''',
             (client_id,),
         ).fetchall()
-    return render_template('dashboard.html', client=client, invoices=invoices, workers=workers, summary=client_summary(client_id), client_id=client_id, review_request=latest_review_request(client_id), chat_rows=chat_messages(client_id), chat_unread_count=unread_message_count(client_id, user['id']), chat_recipients=available_recipients(client_id, user['id']), selected_recipient_id=default_recipient_id(client_id, user), latest_incoming_message=latest_incoming_message(client_id, user['id']), admin_fee_summary=payment_summary, open_admin_fee_rows=open_admin_fee_rows, open_fee_guidance=open_fee_guidance(open_admin_fee_rows), payment_method_summary=payment_method_summary(payment_methods), subscription_status_labels=subscription_status_label_map())
+        conflicts = ops_conflicts(conn, client_id)
+    return render_template(
+        'ops_availability.html',
+        client=client,
+        client_id=client_id,
+        workers=workers,
+        selected_worker_id=selected_worker_id,
+        availability_rows=availability_rows,
+        time_off_rows=time_off_rows,
+        conflicts=conflicts,
+        availability_status_options=ops_availability_status_options(),
+        start_date=start_date,
+        end_date=end_date,
+        today_iso=date.today().isoformat(),
+    )
+
+
+@app.route('/activity')
+@login_required
+def ops_activity():
+    user = current_user()
+    client_id = selected_client_id(user, 'get')
+    search = (request.args.get('search') or '').strip()
+    with get_conn() as conn:
+        prepare_ops_workspace(conn, client_id)
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        activity_rows = ops_recent_activity(conn, client_id, limit=80, search=search)
+        note_rows = conn.execute(
+            '''SELECT jn.*, j.title AS job_title, u.full_name
+               FROM job_notes jn
+               LEFT JOIN jobs j ON j.id = jn.job_id
+               LEFT JOIN users u ON u.id = jn.created_by_user_id
+               WHERE jn.client_id=?
+               ORDER BY jn.created_at DESC, jn.id DESC
+               LIMIT 80''',
+            (client_id,),
+        ).fetchall()
+    return render_template(
+        'ops_activity.html',
+        client=client,
+        client_id=client_id,
+        activity_rows=activity_rows,
+        note_rows=note_rows,
+        search=search,
+    )
+
+
+@app.route('/locations', methods=['GET', 'POST'])
+@login_required
+def ops_locations():
+    user = current_user()
+    client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    selected_location_id = request.values.get('location_id', type=int)
+    if request.method == 'POST':
+        action = (request.form.get('action') or 'save_location').strip()
+        with get_conn() as conn:
+            prepare_ops_workspace(conn, client_id)
+            if action == 'save_location':
+                location_id = request.form.get('location_id', type=int)
+                payload = (
+                    (request.form.get('location_name', '') or '').strip(),
+                    (request.form.get('address_line1', '') or '').strip(),
+                    (request.form.get('city', '') or '').strip(),
+                    (request.form.get('state', '') or '').strip(),
+                    (request.form.get('postal_code', '') or '').strip(),
+                    (request.form.get('access_notes', '') or '').strip(),
+                    (request.form.get('gate_code', '') or '').strip(),
+                    (request.form.get('parking_notes', '') or '').strip(),
+                    (request.form.get('location_notes', '') or '').strip(),
+                    now_iso(),
+                )
+                if location_id:
+                    conn.execute(
+                        '''UPDATE service_locations
+                           SET location_name=?, address_line1=?, city=?, state=?, postal_code=?, access_notes=?, gate_code=?, parking_notes=?, location_notes=?, updated_at=?
+                           WHERE id=? AND client_id=?''',
+                        payload + (location_id, client_id),
+                    )
+                    selected_location_id = location_id
+                else:
+                    conn.execute(
+                        '''INSERT INTO service_locations (
+                               client_id, location_name, address_line1, city, state, postal_code, access_notes, gate_code, parking_notes, location_notes, updated_at
+                           ) VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+                        (client_id,) + payload,
+                    )
+                    selected_location_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+                conn.commit()
+                flash('Location saved.', 'success')
+            elif action == 'delete_location':
+                location_id = request.form.get('location_id', type=int)
+                linked_job = conn.execute('SELECT 1 FROM jobs WHERE service_location_id=? LIMIT 1', (location_id,)).fetchone()
+                if linked_job:
+                    flash('Location is linked to jobs and cannot be removed.', 'error')
+                else:
+                    conn.execute('DELETE FROM service_locations WHERE id=? AND client_id=?', (location_id, client_id))
+                    conn.commit()
+                    flash('Location removed.', 'success')
+        return redirect(url_for('ops_locations', client_id=client_id, location_id=selected_location_id))
+    with get_conn() as conn:
+        prepare_ops_workspace(conn, client_id)
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        locations = conn.execute(
+            '''SELECT sl.*, COUNT(j.id) AS job_count, MAX(substr(COALESCE(j.scheduled_start, ''), 1, 10)) AS last_job_date
+               FROM service_locations sl
+               LEFT JOIN jobs j ON j.service_location_id = sl.id
+               WHERE sl.client_id=?
+               GROUP BY sl.id
+               ORDER BY sl.location_name, sl.address_line1''',
+            (client_id,),
+        ).fetchall()
+        selected_location_id = selected_location_id or (locations[0]['id'] if locations else None)
+        selected_location = conn.execute('SELECT * FROM service_locations WHERE id=? AND client_id=?', (selected_location_id, client_id)).fetchone() if selected_location_id else None
+        location_jobs = conn.execute(
+            '''SELECT title, status, scheduled_start
+               FROM jobs
+               WHERE client_id=? AND service_location_id=?
+               ORDER BY COALESCE(scheduled_start, '') DESC, id DESC
+               LIMIT 20''',
+            (client_id, selected_location_id),
+        ).fetchall() if selected_location_id else []
+    return render_template(
+        'ops_locations.html',
+        client=client,
+        client_id=client_id,
+        locations=locations,
+        selected_location=selected_location,
+        location_jobs=location_jobs,
+    )
+
+
+@app.route('/templates', methods=['GET', 'POST'])
+@login_required
+def ops_templates():
+    user = current_user()
+    client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    selected_template_id = request.values.get('template_id', type=int)
+    if request.method == 'POST':
+        action = (request.form.get('action') or 'save_template').strip()
+        with get_conn() as conn:
+            prepare_ops_workspace(conn, client_id)
+            if action == 'save_template':
+                template_id = request.form.get('template_id', type=int)
+                payload = (
+                    ops_int(request.form.get('service_type_id')),
+                    (request.form.get('name', '') or '').strip(),
+                    (request.form.get('default_title', '') or '').strip(),
+                    max(ops_int(request.form.get('default_duration_minutes'), 120) or 120, 0),
+                    normalize_ops_priority(request.form.get('default_priority')),
+                    max(ops_int(request.form.get('default_crew_size'), 1) or 1, 1),
+                    ops_clean_csv(request.form.get('default_tags', '')),
+                    (request.form.get('default_notes', '') or '').strip(),
+                    (request.form.get('checklist_text', '') or '').strip(),
+                    1 if request.form.get('is_active') else 0,
+                    now_iso(),
+                )
+                if not payload[1]:
+                    flash('Template name is required.', 'error')
+                elif template_id:
+                    conn.execute(
+                        '''UPDATE job_templates
+                           SET service_type_id=?, name=?, default_title=?, default_duration_minutes=?, default_priority=?, default_crew_size=?,
+                               default_tags=?, default_notes=?, checklist_text=?, is_active=?, updated_at=?
+                           WHERE id=? AND client_id=?''',
+                        payload + (template_id, client_id),
+                    )
+                    selected_template_id = template_id
+                    conn.commit()
+                    flash('Template updated.', 'success')
+                else:
+                    conn.execute(
+                        '''INSERT INTO job_templates (
+                               client_id, service_type_id, name, default_title, default_duration_minutes, default_priority,
+                               default_crew_size, default_tags, default_notes, checklist_text, is_active, updated_at
+                           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        (client_id,) + payload,
+                    )
+                    selected_template_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+                    conn.commit()
+                    flash('Template created.', 'success')
+            elif action == 'delete_template':
+                template_id = request.form.get('template_id', type=int)
+                conn.execute('UPDATE job_templates SET is_active=0, updated_at=? WHERE id=? AND client_id=?', (now_iso(), template_id, client_id))
+                conn.commit()
+                flash('Template archived.', 'success')
+        return redirect(url_for('ops_templates', client_id=client_id, template_id=selected_template_id))
+    with get_conn() as conn:
+        prepare_ops_workspace(conn, client_id)
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        service_types = ops_service_types(conn, client_id)
+        templates = ops_job_templates(conn, client_id)
+        selected_template_id = selected_template_id or (templates[0]['id'] if templates else None)
+        selected_template = conn.execute('SELECT * FROM job_templates WHERE id=? AND client_id=?', (selected_template_id, client_id)).fetchone() if selected_template_id else None
+    return render_template(
+        'ops_templates.html',
+        client=client,
+        client_id=client_id,
+        service_types=service_types,
+        templates=templates,
+        selected_template=selected_template,
+        priority_options=ops_priority_options(),
+    )
 
 
 @app.route('/welcome-center')
@@ -8209,13 +10649,113 @@ def summary():
     return render_template('summary.html', client=client, client_id=client_id, workers=workers, invoices=invoices, mileage_entries=mileage, summary=client_summary(client_id, start_date or None, end_date or None), start_date=start_date, end_date=end_date)
 
 
-@app.route('/clients-sales')
+@app.route('/clients-sales', methods=['GET', 'POST'])
 @login_required
 def customer_sales():
     user = current_user()
-    client_id = selected_client_id(user, 'get')
+    client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        if not client or not allowed_client(user, client_id):
+            abort(403)
+        if not premium_sales_access_enabled(client):
+            return premium_sales_redirect(client_id)
+        if request.method == 'POST':
+            action = (request.form.get('action', 'add_customer_contact') or '').strip()
+            if action == 'add_customer_contact':
+                customer_name = request.form.get('customer_name', '').strip()
+                customer_email = request.form.get('customer_email', '').strip().lower()
+                customer_phone = request.form.get('customer_phone', '').strip()
+                customer_address = request.form.get('customer_address', '').strip()
+                customer_notes = request.form.get('customer_notes', '').strip()
+                if not customer_name:
+                    flash('Client name is required.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if customer_email and '@' not in customer_email:
+                    flash('Enter a valid client email or leave it blank.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                upsert_customer_contact(
+                    conn,
+                    client_id=client_id,
+                    customer_name=customer_name,
+                    customer_email=customer_email,
+                    customer_phone=customer_phone,
+                    customer_address=customer_address,
+                    customer_notes=customer_notes,
+                    created_by_user_id=user['id'],
+                )
+                conn.commit()
+                flash('Client saved.', 'success')
+                return redirect(url_for('customer_sales', client_id=client_id))
+            if action == 'update_customer_contact':
+                contact_id = request.form.get('contact_id', type=int)
+                contact = conn.execute(
+                    'SELECT * FROM customer_contacts WHERE id=? AND client_id=?',
+                    (contact_id, client_id),
+                ).fetchone() if contact_id else None
+                if not contact:
+                    flash('Client record not found.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                customer_name = request.form.get('customer_name', '').strip()
+                customer_email = request.form.get('customer_email', '').strip().lower()
+                if not customer_name:
+                    flash('Client name is required.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if customer_email and '@' not in customer_email:
+                    flash('Enter a valid client email or leave it blank.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                conn.execute(
+                    '''UPDATE customer_contacts
+                       SET customer_name=?,
+                           customer_email=?,
+                           customer_phone=?,
+                           customer_address=?,
+                           customer_notes=?,
+                           updated_at=?,
+                           updated_by_user_id=?
+                       WHERE id=? AND client_id=?''',
+                    (
+                        customer_name,
+                        customer_email,
+                        request.form.get('customer_phone', '').strip(),
+                        request.form.get('customer_address', '').strip(),
+                        request.form.get('customer_notes', '').strip(),
+                        now_iso(),
+                        user['id'],
+                        contact_id,
+                        client_id,
+                    ),
+                )
+                conn.commit()
+                flash('Client updated.', 'success')
+                return redirect(url_for('customer_sales', client_id=client_id))
+            if action in {'archive_customer_contact', 'restore_customer_contact'}:
+                contact_id = request.form.get('contact_id', type=int)
+                next_status = 'archived' if action == 'archive_customer_contact' else 'active'
+                updated = conn.execute(
+                    '''UPDATE customer_contacts
+                       SET status=?,
+                           updated_at=?,
+                           updated_by_user_id=?
+                       WHERE id=? AND client_id=?''',
+                    (next_status, now_iso(), user['id'], contact_id, client_id),
+                )
+                conn.commit()
+                if updated.rowcount:
+                    flash('Client record updated.', 'success')
+                else:
+                    flash('Client record not found.', 'error')
+                return redirect(url_for('customer_sales', client_id=client_id))
+        contact_rows = conn.execute(
+            '''SELECT *
+               FROM customer_contacts
+               WHERE client_id=?
+               ORDER BY CASE WHEN COALESCE(status,'active')='active' THEN 0 ELSE 1 END,
+                        LOWER(customer_name), id DESC''',
+            (client_id,),
+        ).fetchall()
+        active_contacts = [dict(row) for row in contact_rows if (row['status'] or 'active') == 'active']
+        archived_contacts = [dict(row) for row in contact_rows if (row['status'] or 'active') != 'active']
         estimate_source_rows = conn.execute(
             "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'')='estimate' ORDER BY invoice_date DESC, id DESC LIMIT 10",
             (client_id,),
@@ -8236,6 +10776,25 @@ def customer_sales():
             'open_invoices': 0,
         }
 
+        for contact in contact_rows:
+            contact_name = (contact['customer_name'] or '').strip() or 'Unnamed client'
+            contact_email = (contact['customer_email'] or '').strip().lower()
+            customer_activity_map[(contact_name.lower(), contact_email)] = {
+                'customer_name': contact_name,
+                'customer_email': contact_email,
+                'customer_phone': (contact['customer_phone'] or '').strip(),
+                'customer_address': (contact['customer_address'] or '').strip(),
+                'customer_notes': (contact['customer_notes'] or '').strip(),
+                'estimate_count': 0,
+                'invoice_count': 0,
+                'last_estimate_status': '',
+                'last_invoice_status': '',
+                'last_activity_at': contact['updated_at'] or contact['created_at'] or '',
+                'open_balance': 0.0,
+                'source': 'saved_client',
+                'status': contact['status'] or 'active',
+            }
+
         for row in estimate_source_rows:
             token = ensure_invoice_public_token(conn, row['id'])
             status = estimate_current_status(row)
@@ -8253,12 +10812,17 @@ def customer_sales():
             activity = customer_activity_map.setdefault(key, {
                 'customer_name': customer_name,
                 'customer_email': customer_email,
+                'customer_phone': '',
+                'customer_address': '',
+                'customer_notes': '',
                 'estimate_count': 0,
                 'invoice_count': 0,
                 'last_estimate_status': '',
                 'last_invoice_status': '',
                 'last_activity_at': '',
                 'open_balance': 0.0,
+                'source': 'sales_activity',
+                'status': 'active',
             })
             activity['estimate_count'] += 1
             activity['last_estimate_status'] = status
@@ -8281,12 +10845,17 @@ def customer_sales():
             activity = customer_activity_map.setdefault(key, {
                 'customer_name': customer_name,
                 'customer_email': customer_email,
+                'customer_phone': '',
+                'customer_address': '',
+                'customer_notes': '',
                 'estimate_count': 0,
                 'invoice_count': 0,
                 'last_estimate_status': '',
                 'last_invoice_status': '',
                 'last_activity_at': '',
                 'open_balance': 0.0,
+                'source': 'sales_activity',
+                'status': 'active',
             })
             activity['invoice_count'] += 1
             activity['last_invoice_status'] = status
@@ -8298,11 +10867,13 @@ def customer_sales():
         key=lambda item: (item['last_activity_at'] or '', item['customer_name'].lower()),
         reverse=True,
     )
-    metrics['customer_count'] = len(customer_activity)
+    metrics['customer_count'] = len(active_contacts)
     return render_template(
         'customer_sales.html',
         client=client,
         client_id=client_id,
+        customer_contacts=active_contacts,
+        archived_customer_contacts=archived_contacts,
         customer_activity=customer_activity,
         estimate_rows=estimate_rows,
         estimate_public_links=estimate_public_links,
@@ -9982,8 +12553,19 @@ def invoices():
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
             abort(403)
+        sales_workspace_enabled = premium_sales_access_enabled(client)
+        customer_contact_rows = conn.execute(
+            '''SELECT *
+               FROM customer_contacts
+               WHERE client_id=? AND COALESCE(status,'active')='active'
+               ORDER BY LOWER(customer_name), id DESC''',
+            (client_id,),
+        ).fetchall() if sales_workspace_enabled else []
+        customer_contact_lookup = {row['id']: row for row in customer_contact_rows}
         if request.method == 'POST':
             action = request.form.get('action', 'add_invoice').strip()
+            if action in {'create_customer_invoice', 'send_customer_invoice', 'send_customer_invoice_reminder', 'mark_customer_invoice_paid'} and not sales_workspace_enabled:
+                return premium_sales_redirect(client_id)
             if action == 'add_mileage':
                 start_point = request.form.get('start_point', '').strip()
                 destination = request.form.get('destination', '').strip()
@@ -10009,6 +12591,7 @@ def invoices():
                 return redirect(url_for('invoices', client_id=client_id))
             if action == 'create_customer_invoice':
                 errors: list[str] = []
+                selected_contact = customer_contact_lookup.get(request.form.get('customer_contact_id', type=int))
                 customer_name = request.form.get('client_name', '').strip()
                 recipient_email = request.form.get('recipient_email', '').strip().lower()
                 invoice_date = request.form.get('invoice_date', '').strip() or today_iso
@@ -10016,6 +12599,12 @@ def invoices():
                 invoice_title = request.form.get('invoice_title', '').strip() or 'Customer Invoice'
                 client_address = request.form.get('client_address', '').strip()
                 notes = request.form.get('notes', '').strip()
+                customer_phone = request.form.get('customer_phone', '').strip()
+                if selected_contact:
+                    customer_name = customer_name or (selected_contact['customer_name'] or '').strip()
+                    recipient_email = recipient_email or (selected_contact['customer_email'] or '').strip().lower()
+                    client_address = client_address or (selected_contact['customer_address'] or '').strip()
+                    customer_phone = customer_phone or (selected_contact['customer_phone'] or '').strip()
                 payment_link = normalize_payment_link(request.form.get('public_payment_link', '').strip())
                 sales_tax_amount = normalize_money_amount(request.form.get('sales_tax_amount', '0') or '0')
                 items, item_errors = parse_invoice_line_items(request.form)
@@ -10085,6 +12674,16 @@ def invoices():
                             item['line_total'],
                         )
                     )
+                upsert_customer_contact(
+                    conn,
+                    client_id=client_id,
+                    customer_name=customer_name,
+                    customer_email=recipient_email,
+                    customer_phone=customer_phone,
+                    customer_address=client_address,
+                    customer_notes=notes,
+                    created_by_user_id=user['id'],
+                )
                 send_now = bool(request.form.get('send_now'))
                 if send_now:
                     view_link = public_invoice_url(token)
@@ -10368,6 +12967,8 @@ def invoices():
     return render_template(
         'invoices.html',
         customer_invoices=customer_invoice_rows,
+        sales_workspace_enabled=sales_workspace_enabled,
+        customer_contacts=[dict(row) for row in customer_contact_rows],
         income_records=income_rows,
         invoice_line_items_map=line_items_map,
         invoice_public_links=invoice_public_links,
@@ -10399,10 +13000,21 @@ def estimates():
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
             abort(403)
+        if not premium_sales_access_enabled(client):
+            return premium_sales_redirect(client_id)
+        customer_contact_rows = conn.execute(
+            '''SELECT *
+               FROM customer_contacts
+               WHERE client_id=? AND COALESCE(status,'active')='active'
+               ORDER BY LOWER(customer_name), id DESC''',
+            (client_id,),
+        ).fetchall()
+        customer_contact_lookup = {row['id']: row for row in customer_contact_rows}
         if request.method == 'POST':
             action = request.form.get('action', 'create_estimate').strip()
             if action == 'create_estimate':
                 errors: list[str] = []
+                selected_contact = customer_contact_lookup.get(request.form.get('customer_contact_id', type=int))
                 customer_name = request.form.get('client_name', '').strip()
                 recipient_email = request.form.get('recipient_email', '').strip().lower()
                 invoice_date = request.form.get('invoice_date', '').strip() or today_iso
@@ -10410,6 +13022,12 @@ def estimates():
                 estimate_title = request.form.get('invoice_title', '').strip() or 'Project Estimate'
                 client_address = request.form.get('client_address', '').strip()
                 notes = request.form.get('notes', '').strip()
+                customer_phone = request.form.get('customer_phone', '').strip()
+                if selected_contact:
+                    customer_name = customer_name or (selected_contact['customer_name'] or '').strip()
+                    recipient_email = recipient_email or (selected_contact['customer_email'] or '').strip().lower()
+                    client_address = client_address or (selected_contact['customer_address'] or '').strip()
+                    customer_phone = customer_phone or (selected_contact['customer_phone'] or '').strip()
                 items, item_errors = parse_invoice_line_items(request.form)
                 errors.extend(item_errors)
                 if not customer_name:
@@ -10488,6 +13106,16 @@ def estimates():
                             item['line_total'],
                         )
                     )
+                upsert_customer_contact(
+                    conn,
+                    client_id=client_id,
+                    customer_name=customer_name,
+                    customer_email=recipient_email,
+                    customer_phone=customer_phone,
+                    customer_address=client_address,
+                    customer_notes=notes,
+                    created_by_user_id=user['id'],
+                )
                 if request.form.get('send_now'):
                     try:
                         email_result = send_customer_estimate_email(
@@ -10630,6 +13258,7 @@ def estimates():
         'estimates.html',
         client=client,
         client_id=client_id,
+        customer_contacts=[dict(row) for row in customer_contact_rows],
         estimates=estimate_rows,
         estimate_line_items_map=line_items_map,
         estimate_public_links=estimate_public_links,
