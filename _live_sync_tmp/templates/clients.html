@@ -12,6 +12,7 @@
       <div><label>Business Name</label><input name='business_name' required></div>
       <div><label>Kind of Business</label><select name='business_category'><option value=''>Select one (optional)</option>{% for option in business_categories %}<option value='{{ option }}'>{{ option }}</option>{% endfor %}</select></div>
       <div><label>Business Structure</label><select name='business_type' required>{% for option in business_structures %}<option value='{{ option }}'>{{ option }}</option>{% endfor %}</select></div>
+      <div><label>{{ tr('Preferred Language') }}</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if option.code == 'en' %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
       <div><label>EIN</label><input name='ein'></div>
       <div><label>Business Address</label><input name='address'></div>
       <div style='grid-column:1 / -1'><label>Specialty / Short Description</label><input name='business_specialty' placeholder='Optional short description like house cleaning or interior painting'></div>
@@ -133,6 +134,7 @@
         <div><label>Business Name</label><input name='business_name' value='{{ c.business_name }}' required></div>
         <div><label>Kind of Business</label><select name='business_category'><option value=''>Select one (optional)</option>{% for option in business_categories %}<option value='{{ option }}' {% if c.business_category == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
         <div><label>Business Structure</label><select name='business_type'>{% for option in business_structures %}<option value='{{ option }}' {% if c.business_type == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+        <div><label>{{ tr('Preferred Language') }}</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if (c.preferred_language or 'en') == option.code %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
         <div><label>EIN</label><input name='ein' value='{{ c.ein or "" }}'></div>
         <div><label>Business Address</label><input name='address' value='{{ c.address or "" }}'></div>
         <div style='grid-column:1 / -1'><label>Specialty / Short Description</label><input name='business_specialty' value='{{ c.business_specialty or "" }}' placeholder='Optional short description like house cleaning or interior painting'></div>

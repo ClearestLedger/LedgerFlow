@@ -256,6 +256,18 @@ TRANSLATIONS.update({
     'Tax Ready': {'es': 'Listo para impuestos', 'pt': 'Pronto para impostos'},
     'Administrator Fees': {'es': 'Cargos del administrador', 'pt': 'Taxas do administrador'},
     'Marketing Video Coming Soon': {'es': 'Video de marketing proximamente', 'pt': 'Video de marketing em breve'},
+    'Operational LedgerFlow gives service businesses a focused command center for jobs, dispatch, scheduling, team coordination, and field execution.': {
+        'es': 'Operational LedgerFlow ofrece a las empresas de servicios un centro de control enfocado para trabajos, despacho, agenda, coordinacion del equipo y ejecucion en campo.',
+        'pt': 'A LedgerFlow Operacional oferece aos negocios de servicos um centro de comando focado em servicos, despacho, agenda, coordenacao da equipe e execucao em campo.',
+    },
+    'Secure administrator and business access for the operational workspace.': {
+        'es': 'Acceso seguro para administradores y empresas al espacio operativo.',
+        'pt': 'Acesso seguro para administradores e empresas ao espaco operacional.',
+    },
+    'Operational LedgerFlow is the operations product in the LedgerFlow family, built for daily service-business execution.': {
+        'es': 'Operational LedgerFlow es el producto de operaciones de la familia LedgerFlow, creado para la ejecucion diaria de empresas de servicios.',
+        'pt': 'A LedgerFlow Operacional e o produto de operacoes da familia LedgerFlow, criado para a execucao diaria de negocios de servicos.',
+    },
     'Private invited-client rollout. Core portal functions are live and actively administered while final improvements continue.': {
         'es': 'Lanzamiento privado para clientes invitados. Las funciones principales ya estan activas y siguen bajo administracion directa mientras continuan los ajustes finales.',
         'pt': 'Lancamento privado para clientes convidados. As funcoes principais ja estao ativas e seguem sob administracao direta enquanto os ajustes finais continuam.',
@@ -3589,6 +3601,7 @@ def init_db():
                 business_type TEXT DEFAULT '',
                 business_category TEXT DEFAULT '',
                 business_specialty TEXT DEFAULT '',
+                preferred_language TEXT DEFAULT 'en',
                 service_level TEXT DEFAULT 'self_service',
                 access_service_level TEXT DEFAULT '',
                 access_override_note TEXT DEFAULT '',
@@ -4180,6 +4193,7 @@ def init_db():
         ensure_column(conn, 'workers', 'updated_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'updated_by_user_id', 'INTEGER')
         ensure_column(conn, 'workers', 'preferred_language', "TEXT DEFAULT 'en'")
+        ensure_column(conn, 'clients', 'preferred_language', "TEXT DEFAULT 'en'")
         ensure_column(conn, 'clients', 'business_type', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'business_category', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'business_specialty', "TEXT DEFAULT ''")
@@ -4231,6 +4245,7 @@ def init_db():
         conn.execute("UPDATE clients SET onboarding_status='completed' WHERE COALESCE(onboarding_status,'')=''")
         conn.execute("UPDATE clients SET record_status='active' WHERE COALESCE(record_status,'')=''")
         conn.execute("UPDATE clients SET updated_at=created_at WHERE COALESCE(updated_at,'')=''")
+        conn.execute("UPDATE clients SET preferred_language='en' WHERE COALESCE(preferred_language,'')=''")
         conn.execute("UPDATE workers SET updated_at=created_at WHERE COALESCE(updated_at,'')=''")
         conn.execute("UPDATE users SET preferred_language='en' WHERE COALESCE(preferred_language,'')=''")
         conn.execute("UPDATE workers SET preferred_language='en' WHERE COALESCE(preferred_language,'')=''")
@@ -4452,7 +4467,7 @@ def production_import_status_snapshot() -> dict:
     }
 
 
-def current_language_code(user=None, worker=None) -> str:
+def current_language_code(user=None, worker=None, client=None) -> str:
     session_lang = normalize_language(session.get('preferred_language', ''))
     if session_lang != 'en' or session.get('preferred_language'):
         return session_lang
@@ -4460,6 +4475,8 @@ def current_language_code(user=None, worker=None) -> str:
         return normalize_language(worker['preferred_language'])
     if user and (user['preferred_language'] or '').strip():
         return normalize_language(user['preferred_language'])
+    if client and (client['preferred_language'] or '').strip():
+        return normalize_language(client['preferred_language'])
     return 'en'
 
 
@@ -6087,7 +6104,7 @@ def inject_globals():
     worker_shell_messenger = worker_shell_messenger_context(worker) if worker else {'enabled': False}
     assistant_visible = ai_guide_visible()
     shell_assistant = shell_assistant_context(user, worker, active_client, current_mode) if assistant_visible else {'enabled': False}
-    current_language = current_language_code(user, worker)
+    current_language = current_language_code(user, worker, active_client)
     def tr(text: str, **kwargs) -> str:
         return translate_text(text, current_language, **kwargs)
     return {
@@ -6161,6 +6178,11 @@ def set_language():
     if user:
         with get_conn() as conn:
             conn.execute('UPDATE users SET preferred_language=? WHERE id=?', (language, user['id']))
+            if user['role'] == 'client' and user['client_id']:
+                conn.execute(
+                    'UPDATE clients SET preferred_language=?, updated_at=?, updated_by_user_id=? WHERE id=?',
+                    (language, now_iso(), user['id'], user['client_id'])
+                )
             conn.commit()
     elif worker:
         with get_conn() as conn:
@@ -6210,16 +6232,25 @@ def login():
             with get_conn() as conn:
                 user = conn.execute('SELECT * FROM users WHERE lower(email)=?', (email,)).fetchone()
                 if user and check_password_hash(user['password_hash'], password):
+                    client = None
+                    if user['role'] == 'client' and user['client_id']:
+                        client = conn.execute(
+                            'SELECT id, trial_offer_days, preferred_language FROM clients WHERE id=?',
+                            (user['client_id'],)
+                        ).fetchone()
                     session.clear()
                     session['user_id'] = user['id']
-                    session['preferred_language'] = normalize_language(user['preferred_language'] or selected_language)
+                    session['preferred_language'] = normalize_language(
+                        (user['preferred_language'] if user else '')
+                        or (client['preferred_language'] if client else '')
+                        or selected_language
+                    )
                     if user['role'] == 'client' and user_requires_business_onboarding(user):
                         return redirect(url_for('business_onboarding'))
                     if user['role'] == 'client':
                         issue = client_access_issue_for_user(user)
                         if issue:
                             return redirect(url_for('business_comeback'))
-                        client = conn.execute('SELECT id, trial_offer_days FROM clients WHERE id=?', (user['client_id'],)).fetchone()
                         if client and int(client['trial_offer_days'] or 0) > 0:
                             return redirect(url_for('welcome_center', client_id=user['client_id']))
                     return redirect(url_for('cpa_dashboard' if user['role']=='admin' else 'dashboard'))
@@ -8432,6 +8463,7 @@ def clients():
                 business_structure,
                 business_category,
                 business_specialty,
+                normalize_language(request.form.get('preferred_language') or 'en'),
                 service_level,
                 access_service_level,
                 access_override_note,
@@ -8491,6 +8523,7 @@ def clients():
                         business_structure,
                         business_category,
                         business_specialty,
+                        normalize_language(request.form.get('preferred_language') or existing['preferred_language'] or 'en'),
                         service_level,
                         normalize_access_service_level(existing['access_service_level'] or ''),
                         (existing['access_override_note'] or '').strip()[:300],
@@ -8536,15 +8569,19 @@ def clients():
                         '',
                     )
                 conn.execute(
-                    'UPDATE clients SET business_name=?, business_type=?, business_category=?, business_specialty=?, service_level=?, access_service_level=?, access_override_note=?, subscription_plan_code=?, subscription_status=?, subscription_amount=?, subscription_interval=?, subscription_autopay_enabled=?, subscription_next_billing_date=?, subscription_started_at=?, subscription_canceled_at=?, subscription_paused_at=?, default_payment_method_label=?, default_payment_method_status=?, backup_payment_method_label=?, billing_notes=?, contact_name=?, phone=?, email=?, address=?, ein=?, eftps_status=?, eftps_login_reference=?, filing_type=?, bank_name=?, bank_account_nickname=?, bank_account_last4=?, bank_account_holder_name=?, bank_account_number=?, bank_routing_number=?, credit_card_nickname=?, credit_card_last4=?, credit_card_holder_name=?, credit_card_number=?, payroll_contact_name=?, payroll_contact_phone=?, payroll_contact_email=?, state_tax_id=?, record_status=?, archive_reason=?, archived_at=?, archived_by_user_id=?, reactivated_at=?, updated_at=?, updated_by_user_id=? WHERE id=?',
+                    'UPDATE clients SET business_name=?, business_type=?, business_category=?, business_specialty=?, preferred_language=?, service_level=?, access_service_level=?, access_override_note=?, subscription_plan_code=?, subscription_status=?, subscription_amount=?, subscription_interval=?, subscription_autopay_enabled=?, subscription_next_billing_date=?, subscription_started_at=?, subscription_canceled_at=?, subscription_paused_at=?, default_payment_method_label=?, default_payment_method_status=?, backup_payment_method_label=?, billing_notes=?, contact_name=?, phone=?, email=?, address=?, ein=?, eftps_status=?, eftps_login_reference=?, filing_type=?, bank_name=?, bank_account_nickname=?, bank_account_last4=?, bank_account_holder_name=?, bank_account_number=?, bank_routing_number=?, credit_card_nickname=?, credit_card_last4=?, credit_card_holder_name=?, credit_card_number=?, payroll_contact_name=?, payroll_contact_phone=?, payroll_contact_email=?, state_tax_id=?, record_status=?, archive_reason=?, archived_at=?, archived_by_user_id=?, reactivated_at=?, updated_at=?, updated_by_user_id=? WHERE id=?',
                     values + (now_value, user['id'], client_id)
                 )
+                if user['role'] != 'admin':
+                    selected_language = normalize_language(request.form.get('preferred_language') or existing['preferred_language'] or 'en')
+                    conn.execute('UPDATE users SET preferred_language=? WHERE id=?', (selected_language, user['id']))
+                    session['preferred_language'] = selected_language
                 log_client_profile_history(conn, client_id=client_id, action='updated', changed_by_user_id=user['id'])
                 conn.commit()
                 flash('Business profile updated.', 'success')
                 return redirect(url_for('clients'))
             conn.execute(
-                f'INSERT INTO clients (business_name, business_type, business_category, business_specialty, service_level, access_service_level, access_override_note, subscription_plan_code, subscription_status, subscription_amount, subscription_interval, subscription_autopay_enabled, subscription_next_billing_date, subscription_started_at, subscription_canceled_at, subscription_paused_at, default_payment_method_label, default_payment_method_status, backup_payment_method_label, billing_notes, contact_name, phone, email, address, ein, eftps_status, eftps_login_reference, filing_type, bank_name, bank_account_nickname, bank_account_last4, bank_account_holder_name, bank_account_number, bank_routing_number, credit_card_nickname, credit_card_last4, credit_card_holder_name, credit_card_number, payroll_contact_name, payroll_contact_phone, payroll_contact_email, state_tax_id, record_status, archive_reason, archived_at, archived_by_user_id, reactivated_at, created_by_user_id, updated_at, updated_by_user_id) VALUES ({",".join(["?"] * 50)})',
+                f'INSERT INTO clients (business_name, business_type, business_category, business_specialty, preferred_language, service_level, access_service_level, access_override_note, subscription_plan_code, subscription_status, subscription_amount, subscription_interval, subscription_autopay_enabled, subscription_next_billing_date, subscription_started_at, subscription_canceled_at, subscription_paused_at, default_payment_method_label, default_payment_method_status, backup_payment_method_label, billing_notes, contact_name, phone, email, address, ein, eftps_status, eftps_login_reference, filing_type, bank_name, bank_account_nickname, bank_account_last4, bank_account_holder_name, bank_account_number, bank_routing_number, credit_card_nickname, credit_card_last4, credit_card_holder_name, credit_card_number, payroll_contact_name, payroll_contact_phone, payroll_contact_email, state_tax_id, record_status, archive_reason, archived_at, archived_by_user_id, reactivated_at, created_by_user_id, updated_at, updated_by_user_id) VALUES ({",".join(["?"] * 51)})',
                 values + (user['id'], now_value, user['id'])
             )
             client_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -8649,11 +8686,18 @@ def client_users():
                     flash('Enter full name, email, password, and business before saving.', 'error')
                     return redirect(url_for('client_users'))
                 try:
+                    business = conn.execute('SELECT business_name, preferred_language FROM clients WHERE id=?', (client_id,)).fetchone()
                     conn.execute(
-                        'INSERT INTO users (email, password_hash, full_name, role, client_id) VALUES (?,?,?,?,?)',
-                        (email, generate_password_hash(password), full_name, 'client', client_id)
+                        'INSERT INTO users (email, password_hash, full_name, role, client_id, preferred_language) VALUES (?,?,?,?,?,?)',
+                        (
+                            email,
+                            generate_password_hash(password),
+                            full_name,
+                            'client',
+                            client_id,
+                            normalize_language((business['preferred_language'] if business else '') or 'en'),
+                        )
                     )
-                    business = conn.execute('SELECT business_name FROM clients WHERE id=?', (client_id,)).fetchone()
                     log_account_activity(conn, client_id=client_id, account_type='business_login', account_email=email, account_name=full_name, created_by_user_id=user['id'], status='auto_approved', detail='Business login created and activated.')
                     conn.commit()
                     welcome_sent = False
@@ -9328,7 +9372,7 @@ def business_invite(token):
     with get_conn() as conn:
         invite = conn.execute(
             '''SELECT bi.*, c.business_name, c.contact_name, c.email client_email, c.record_status, c.service_level,
-                      c.subscription_plan_code, c.trial_offer_days, c.trial_started_at, c.trial_ends_at
+                      c.subscription_plan_code, c.preferred_language, c.trial_offer_days, c.trial_started_at, c.trial_ends_at
                FROM business_invites bi
                JOIN clients c ON c.id=bi.client_id
                WHERE bi.token=?''',
@@ -9342,7 +9386,7 @@ def business_invite(token):
             conn.commit()
             invite = conn.execute(
                 '''SELECT bi.*, c.business_name, c.contact_name, c.email client_email, c.record_status, c.service_level,
-                          c.subscription_plan_code, c.trial_offer_days, c.trial_started_at, c.trial_ends_at
+                          c.subscription_plan_code, c.preferred_language, c.trial_offer_days, c.trial_started_at, c.trial_ends_at
                    FROM business_invites bi
                    JOIN clients c ON c.id=bi.client_id
                    WHERE bi.token=?''',
@@ -9365,7 +9409,17 @@ def business_invite(token):
             elif password != confirm_password:
                 flash('Passwords do not match.', 'error')
             else:
-                conn.execute('INSERT INTO users (email, password_hash, full_name, role, client_id) VALUES (?,?,?,?,?)', (email, generate_password_hash(password), full_name, 'client', invite['client_id']))
+                conn.execute(
+                    'INSERT INTO users (email, password_hash, full_name, role, client_id, preferred_language) VALUES (?,?,?,?,?,?)',
+                    (
+                        email,
+                        generate_password_hash(password),
+                        full_name,
+                        'client',
+                        invite['client_id'],
+                        normalize_language((invite['preferred_language'] or '') or 'en'),
+                    )
+                )
                 new_user = conn.execute('SELECT id FROM users WHERE email=?', (email,)).fetchone()
                 client_row = conn.execute('SELECT * FROM clients WHERE id=?', (invite['client_id'],)).fetchone()
                 contact_name = (client_row['contact_name'] if client_row else '') or ''
@@ -9635,6 +9689,7 @@ def business_onboarding():
                 request.form.get('preferred_language')
                 or session.get('preferred_language')
                 or user['preferred_language']
+                or client['preferred_language']
             )
             session['preferred_language'] = selected_language
             business_name = request.form.get('business_name', '').strip()
@@ -9696,7 +9751,7 @@ def business_onboarding():
                     autopay_enabled = 1 if request.form.get('subscription_autopay_enabled') in {'1', 'on', 'true', 'yes'} else 0
                 conn.execute(
                     '''UPDATE clients
-                       SET business_name=?, business_type=?, business_category=?, business_specialty=?, service_level=?, contact_name=?, phone=?, email=?, address=?, ein=?,
+                       SET business_name=?, business_type=?, business_category=?, business_specialty=?, preferred_language=?, service_level=?, contact_name=?, phone=?, email=?, address=?, ein=?,
                            subscription_plan_code=?, subscription_status='active', subscription_amount=?, subscription_interval='monthly',
                            subscription_autopay_enabled=?, subscription_next_billing_date=?, subscription_started_at=?,
                            subscription_canceled_at=?, subscription_paused_at=?, billing_notes=?, onboarding_status='completed',
@@ -9709,6 +9764,7 @@ def business_onboarding():
                         business_structure,
                         business_category,
                         business_specialty,
+                        selected_language,
                         service_level,
                         contact_name,
                         phone,
