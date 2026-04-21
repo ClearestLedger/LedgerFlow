@@ -35,4 +35,30 @@
     {% endif %}
   </div>
 </div>
+
+{% if related_email_rows %}
+<div class='card section-frame' style='margin-top:16px'>
+  <div class='card-head'><h3>{{ history_scope_label }}</h3><span class='badge'>{{ related_email_rows|length }} logged</span></div>
+  <div class='small' style='margin-bottom:12px'>Open the exact business-email thread tied to this invite or business instead of relying on whichever workspace was selected last.</div>
+  <table class='table'>
+    <tr><th>Subject</th><th>Type</th><th>Recipient</th><th>Status</th><th>Sent</th><th>Action</th></tr>
+    {% for row in related_email_rows %}
+    <tr>
+      <td>{{ row.subject or 'Email Preview' }}</td>
+      <td>{{ (row.email_type or 'email')|replace('_', ' ')|title }}</td>
+      <td>{{ row.recipient_email or '' }}</td>
+      <td><span class='status-chip {{ row.status or "sent" }}'>{{ row.status or 'sent' }}</span></td>
+      <td>{{ row.created_at }}</td>
+      <td>
+        {% if row.id == email_row.id %}
+        <span class='small'>Currently open</span>
+        {% else %}
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("client_user_email_preview", email_id=row.id) }}'>Open</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
 {% endblock %}

@@ -85,6 +85,14 @@
   - unopened trial invites now trigger an automatic higher-value follow-up after 3 days, when an administrator returns to the portal
   - the follow-up uses category-matched visuals where available and explains what the prospect is missing inside the trial
   - admin invite pipeline now shows email-attention state such as opened, clicked, no-open-signal, and follow-up sent
+- Live admin email correction phase completed on 2026-04-21:
+  - admin email preview now stays in administrator mode instead of inheriting the wrong business workspace shell
+  - prospect pipeline email previews now resolve by the specific invite row, not by whichever business email happened to be sent last
+  - resend invite now validates recipient email, falls back to the business email on file when the saved invite email is invalid, and blocks SMTP sends when no valid address exists
+  - archived / inactive businesses now stay visible inside Business Users with last-email visibility
+- Business-side client workspace follow-up:
+  - expand `Clients & Sales` into a Wave-style customer page where a business can create client records, define job scope, add recurring work to the calendar, send invoices, and send receipts from one place
+  - keep this workflow business-owned, with admin able to supervise without taking over the client relationship workflow
 
 ## Future Pricing Research Note
 

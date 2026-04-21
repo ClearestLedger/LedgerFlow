@@ -247,6 +247,43 @@
 </div>
 {% endif %}
 
+{% if archived_clients %}
+<div class='card section-frame' style='margin-top:16px'>
+  <details class='compact-details users-console-panel' data-filter-details>
+    <summary>Open Archived / Inactive Businesses</summary>
+    <div class='small' style='margin:12px 0'>Archived businesses stay visible here so you can still review their last recorded contact details and email trail.</div>
+    <table class='table'>
+      <tr><th>Business</th><th>Archived</th><th>Contact</th><th>Last Email</th><th>Action</th></tr>
+      {% for c in archived_clients %}
+      <tr data-search-text='{{ (c.business_name or "")|lower }} {{ (c.contact_name or "")|lower }} {{ (c.email or "")|lower }} {{ (c.archive_reason or "")|lower }} {{ (c.last_email_type or "")|lower }} {{ (c.last_email_status or "")|lower }} {{ (c.last_email_recipient or "")|lower }}'>
+        <td>
+          <strong>{{ c.business_name }}</strong>
+          {% if c.archive_reason %}<div class='small'>Reason: {{ c.archive_reason }}</div>{% endif %}
+        </td>
+        <td>{{ c.archived_at or 'Archived' }}</td>
+        <td>{{ c.contact_name or 'Contact missing' }}{% if c.email %}<div class='small'>{{ c.email }}</div>{% endif %}</td>
+        <td>
+          {% if c.last_email_sent_at %}
+          <div class='small'><span class='status-chip {{ c.last_email_status or "sent" }}'>{{ c.last_email_status or 'sent' }}</span> | {{ c.last_email_sent_at }}</div>
+          <div class='small'>{{ (c.last_email_type or 'email')|replace('_', ' ')|title }}{% if c.last_email_recipient %} | {{ c.last_email_recipient }}{% endif %}</div>
+          {% else %}
+          <div class='small'>No email logged yet.</div>
+          {% endif %}
+        </td>
+        <td>
+          {% if c.last_email_id %}
+          <a class='btn btn-secondary btn-sm' href='{{ url_for("client_user_email_preview", email_id=c.last_email_id) }}' target='_blank' rel='noopener'>View Last Email</a>
+          {% else %}
+          <span class='small'>No preview available</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </details>
+</div>
+{% endif %}
+
 <div class='card section-frame' style='margin-top:16px'>
   <details class='compact-details users-console-panel' data-filter-details>
     <summary>Open Recent Business Emails</summary>

@@ -11,6 +11,7 @@ import shutil
 import tempfile
 import zipfile
 from email.message import EmailMessage
+from email.utils import parseaddr
 from cryptography.fernet import Fernet
 import base64
 import hashlib
@@ -1889,6 +1890,27 @@ def normalize_business_category(value: str) -> str:
     if not cleaned:
         return ''
     return cleaned if cleaned in set(business_categories()) else 'Other'
+
+
+def normalize_email_address(value: str) -> str:
+    _display_name, address = parseaddr((value or '').strip())
+    cleaned = (address or '').strip().lower()
+    if not cleaned or ' ' in cleaned or cleaned.count('@') != 1:
+        return ''
+    local_part, domain_part = cleaned.split('@', 1)
+    if not local_part or not domain_part or domain_part.startswith('.') or domain_part.endswith('.') or '.' not in domain_part:
+        return ''
+    return cleaned
+
+
+def resolve_invite_recipient_email(invited_email: str, client_email: str = '') -> tuple[str, str]:
+    normalized_invited_email = normalize_email_address(invited_email)
+    if normalized_invited_email:
+        return normalized_invited_email, ''
+    normalized_client_email = normalize_email_address(client_email)
+    if normalized_client_email:
+        return normalized_client_email, 'Saved invite email was invalid, so LedgerFlow used the business email on file instead.'
+    return '', 'Saved invite email is invalid. Update the business email first.'
 
 
 def business_category_display(value: str) -> str:
@@ -9170,7 +9192,7 @@ def current_mode_for_request(user) -> str:
     workspace_requested = str(request.values.get('workspace', '') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
     if request.endpoint == 'clients' and (user['role'] != 'admin' or workspace_requested):
         return 'business'
-    if request.endpoint in {'clients', 'client_users', 'cpa_dashboard', 'admin_calendar', 'admin_tasks', 'email_settings', 'ai_guide_settings'}:
+    if request.endpoint in {'clients', 'client_users', 'client_user_email_preview', 'cpa_dashboard', 'admin_calendar', 'admin_tasks', 'email_settings', 'ai_guide_settings'}:
         return 'cpa'
     return 'business'
 
@@ -12465,10 +12487,10 @@ def clients():
                 if (existing['record_status'] or 'active') != 'archived':
                     flash('Only archived businesses can receive a rejoin invite.', 'error')
                     return redirect(url_for('clients'))
-                rejoin_email = (existing['email'] or '').strip().lower()
+                rejoin_email = normalize_email_address(existing['email'] or '')
                 rejoin_name = (existing['contact_name'] or '').strip()
                 if not rejoin_email:
-                    flash('Add a business email before sending a rejoin invite.', 'error')
+                    flash('Add a valid business email before sending a rejoin invite.', 'error')
                     return redirect(url_for('clients'))
                 token = generate_invite_token()
                 expires_at = (datetime.utcnow() + timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')
@@ -12873,9 +12895,13 @@ def client_users():
             if action == 'send_prospect_invite':
                 business_name = request.form.get('business_name', '').strip()
                 invite_name = request.form.get('full_name', '').strip()
-                invite_email = request.form.get('email', '').strip().lower()
-                if not business_name or not invite_name or not invite_email:
+                invite_email_raw = request.form.get('email', '').strip()
+                invite_email = normalize_email_address(invite_email_raw)
+                if not business_name or not invite_name or not invite_email_raw:
                     flash('Enter new customer name, contact name, and email before sending the invite.', 'error')
+                    return redirect(url_for('client_users'))
+                if not invite_email:
+                    flash('Enter a valid customer email before sending the invite.', 'error')
                     return redirect(url_for('client_users'))
                 existing_user = conn.execute('SELECT id FROM users WHERE lower(email)=?', (invite_email,)).fetchone()
                 if existing_user:
@@ -12969,11 +12995,15 @@ def client_users():
             if action == 'send_trial_invite':
                 business_name = request.form.get('business_name', '').strip()
                 invite_name = request.form.get('full_name', '').strip()
-                invite_email = request.form.get('email', '').strip().lower()
+                invite_email_raw = request.form.get('email', '').strip()
+                invite_email = normalize_email_address(invite_email_raw)
                 business_category = normalize_business_category(request.form.get('business_category', ''))
                 trial_days = default_trial_offer_days()
-                if not business_name or not invite_name or not invite_email:
+                if not business_name or not invite_name or not invite_email_raw:
                     flash('Enter business name, contact name, and email before sending the trial invite.', 'error')
+                    return redirect(url_for('client_users'))
+                if not invite_email:
+                    flash('Enter a valid business email before sending the trial invite.', 'error')
                     return redirect(url_for('client_users'))
                 existing_user = conn.execute('SELECT id FROM users WHERE lower(email)=?', (invite_email,)).fetchone()
                 if existing_user:
@@ -13084,24 +13114,36 @@ def client_users():
                 return redirect(url_for('client_users'))
             if action == 'send_invite':
                 client_id = request.form.get('client_id', type=int)
+                invite_name = request.form.get('full_name', '').strip()
+                invite_email_raw = request.form.get('email', '').strip()
+                invite_email = normalize_email_address(invite_email_raw)
+                business = conn.execute('SELECT business_name FROM clients WHERE id=?', (client_id,)).fetchone() if client_id else None
+                if not business:
+                    flash('Choose a valid business before sending the invite.', 'error')
+                    return redirect(url_for('client_users'))
+                if not invite_name or not invite_email_raw:
+                    flash('Enter the invitee name and email before sending the invite.', 'error')
+                    return redirect(url_for('client_users'))
+                if not invite_email:
+                    flash('Enter a valid invitee email before sending the invite.', 'error')
+                    return redirect(url_for('client_users'))
                 token = generate_invite_token()
                 expires_at = (datetime.utcnow() + timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')
                 conn.execute(
                     'INSERT INTO business_invites (client_id, invited_email, invited_name, token, status, created_by_user_id, expires_at, invite_error, invite_kind, trial_days) VALUES (?,?,?,?,?,?,?,?,?,?)',
-                    (client_id, request.form.get('email', '').strip().lower(), request.form.get('full_name', '').strip(), token, 'pending', user['id'], expires_at, '', 'business_access', 0)
+                    (client_id, invite_email, invite_name, token, 'pending', user['id'], expires_at, '', 'business_access', 0)
                 )
                 invite_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
-                business = conn.execute('SELECT business_name FROM clients WHERE id=?', (client_id,)).fetchone()
                 invite_link = build_invite_link(token)
                 try:
-                    invite_payload = send_invite_email(request.form.get('email', '').strip().lower(), request.form.get('full_name', '').strip(), (business['business_name'] if business else ''), invite_link)
+                    invite_payload = send_invite_email(invite_email, invite_name, business['business_name'], invite_link)
                     conn.execute('UPDATE business_invites SET status="sent", invite_error="" WHERE id=?', (invite_id,))
                     conn.commit()
                     log_email_delivery(
                         client_id=client_id,
                         email_type=invite_payload['email_type'],
-                        recipient_email=request.form.get('email', '').strip().lower(),
-                        recipient_name=request.form.get('full_name', '').strip(),
+                        recipient_email=invite_email,
+                        recipient_name=invite_name,
                         subject=invite_payload['subject'],
                         body_text=invite_payload['body_text'],
                         body_html=invite_payload['body_html'],
@@ -13116,9 +13158,9 @@ def client_users():
                     log_email_delivery(
                         client_id=client_id,
                         email_type='business_invite',
-                        recipient_email=request.form.get('email', '').strip().lower(),
-                        recipient_name=request.form.get('full_name', '').strip(),
-                        subject=f"Welcome to LedgerFlow - set up your business access for {(business['business_name'] if business else '')}",
+                        recipient_email=invite_email,
+                        recipient_name=invite_name,
+                        subject=f"Welcome to LedgerFlow - set up your business access for {business['business_name']}",
                         status='failed',
                         error_message=str(e)[:500],
                         created_by_user_id=user['id'],
@@ -13128,17 +13170,38 @@ def client_users():
                 return redirect(url_for('client_users'))
             if action == 'resend_invite':
                 invite_id = request.form.get('invite_id', type=int)
-                inv = conn.execute('SELECT bi.*, c.business_name, c.business_category FROM business_invites bi JOIN clients c ON c.id=bi.client_id WHERE bi.id=?', (invite_id,)).fetchone()
+                inv = conn.execute(
+                    '''SELECT
+                           bi.*,
+                           c.business_name,
+                           c.business_category,
+                           c.email AS client_email,
+                           COALESCE(c.record_status, 'active') AS business_record_status
+                       FROM business_invites bi
+                       JOIN clients c ON c.id=bi.client_id
+                       WHERE bi.id=?''',
+                    (invite_id,)
+                ).fetchone()
                 if not inv:
                     flash('Invite not found.', 'error')
                     return redirect(url_for('client_users'))
                 invite_link = build_invite_link(inv['token'])
                 renewed_expires_at = (datetime.utcnow() + timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')
                 tracking_token = generate_email_tracking_token()
+                recipient_email, recipient_note = resolve_invite_recipient_email(inv['invited_email'], inv['client_email'] or '')
+                if not recipient_email:
+                    conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (recipient_note, invite_id))
+                    conn.commit()
+                    flash(recipient_note, 'error')
+                    return redirect(url_for('client_users'))
+                if recipient_email != normalize_email_address(inv['invited_email'] or ''):
+                    conn.execute('UPDATE business_invites SET invited_email=?, invite_error=? WHERE id=?', (recipient_email, recipient_note, invite_id))
+                    inv = dict(inv)
+                    inv['invited_email'] = recipient_email
                 try:
                     if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial':
                         invite_payload = send_trial_invite_email(
-                            inv['invited_email'],
+                            recipient_email,
                             inv['invited_name'],
                             inv['business_name'],
                             invite_link,
@@ -13147,7 +13210,7 @@ def client_users():
                             tracking_token=tracking_token,
                         )
                     else:
-                        invite_payload = send_invite_email(inv['invited_email'], inv['invited_name'], inv['business_name'], invite_link)
+                        invite_payload = send_invite_email(recipient_email, inv['invited_name'], inv['business_name'], invite_link)
                     if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial':
                         conn.execute(
                             'UPDATE business_invites SET status="sent", invite_error="", created_at=CURRENT_TIMESTAMP, expires_at=?, followup_sent_at="", followup_status="pending", followup_error="" WHERE id=?',
@@ -13159,7 +13222,7 @@ def client_users():
                     log_email_delivery(
                         client_id=inv['client_id'],
                         email_type=invite_payload['email_type'],
-                        recipient_email=inv['invited_email'],
+                        recipient_email=recipient_email,
                         recipient_name=inv['invited_name'],
                         subject=invite_payload['subject'],
                         body_text=invite_payload['body_text'],
@@ -13169,14 +13232,17 @@ def client_users():
                         related_invite_id=invite_id,
                         tracking_token=tracking_token if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else '',
                     )
-                    flash('Invite re-sent. View it below in Recent Business Emails.', 'success')
+                    if recipient_note:
+                        flash(f'Invite re-sent. {recipient_note}', 'success')
+                    else:
+                        flash('Invite re-sent. View it below in Recent Business Emails.', 'success')
                 except Exception as e:
                     conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (str(e)[:500], invite_id))
                     conn.commit()
                     log_email_delivery(
                         client_id=inv['client_id'],
                         email_type='prospect_trial_invite' if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else 'business_invite',
-                        recipient_email=inv['invited_email'],
+                        recipient_email=recipient_email,
                         recipient_name=inv['invited_name'],
                         subject=(
                             f"Start your {int(inv['trial_days'] or default_trial_offer_days())}-day LedgerFlow trial for {inv['business_name']}"
@@ -13236,7 +13302,7 @@ def client_users():
                    (
                        SELECT edl.id
                        FROM email_delivery_log edl
-                       WHERE edl.client_id = c.id
+                       WHERE edl.related_invite_id = bi.id
                          AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
@@ -13244,7 +13310,7 @@ def client_users():
                    (
                        SELECT edl.status
                        FROM email_delivery_log edl
-                       WHERE edl.client_id = c.id
+                       WHERE edl.related_invite_id = bi.id
                          AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
@@ -13252,7 +13318,7 @@ def client_users():
                    (
                        SELECT edl.email_type
                        FROM email_delivery_log edl
-                       WHERE edl.client_id = c.id
+                       WHERE edl.related_invite_id = bi.id
                          AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
@@ -13260,7 +13326,7 @@ def client_users():
                    (
                        SELECT edl.created_at
                        FROM email_delivery_log edl
-                       WHERE edl.client_id = c.id
+                       WHERE edl.related_invite_id = bi.id
                          AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
@@ -13268,7 +13334,7 @@ def client_users():
                    (
                        SELECT edl.opened_at
                        FROM email_delivery_log edl
-                       WHERE edl.client_id = c.id
+                       WHERE edl.related_invite_id = bi.id
                          AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
@@ -13276,7 +13342,7 @@ def client_users():
                    (
                        SELECT edl.open_count
                        FROM email_delivery_log edl
-                       WHERE edl.client_id = c.id
+                       WHERE edl.related_invite_id = bi.id
                          AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
@@ -13284,7 +13350,7 @@ def client_users():
                    (
                        SELECT edl.clicked_at
                        FROM email_delivery_log edl
-                       WHERE edl.client_id = c.id
+                       WHERE edl.related_invite_id = bi.id
                          AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
@@ -13292,7 +13358,7 @@ def client_users():
                    (
                        SELECT edl.click_count
                        FROM email_delivery_log edl
-                       WHERE edl.client_id = c.id
+                       WHERE edl.related_invite_id = bi.id
                          AND edl.email_type IN ('business_invite', 'prospect_trial_invite')
                        ORDER BY edl.created_at DESC, edl.id DESC
                        LIMIT 1
@@ -13335,6 +13401,48 @@ def client_users():
                WHERE COALESCE(c.record_status,'active')='prospect'
                ORDER BY c.created_at DESC, c.business_name"""
         ).fetchall()
+        archived_clients = conn.execute(
+            """SELECT
+                   c.*,
+                   (
+                       SELECT edl.id
+                       FROM email_delivery_log edl
+                       WHERE edl.client_id = c.id
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS last_email_id,
+                   (
+                       SELECT edl.email_type
+                       FROM email_delivery_log edl
+                       WHERE edl.client_id = c.id
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS last_email_type,
+                   (
+                       SELECT edl.status
+                       FROM email_delivery_log edl
+                       WHERE edl.client_id = c.id
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS last_email_status,
+                   (
+                       SELECT edl.created_at
+                       FROM email_delivery_log edl
+                       WHERE edl.client_id = c.id
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS last_email_sent_at,
+                   (
+                       SELECT edl.recipient_email
+                       FROM email_delivery_log edl
+                       WHERE edl.client_id = c.id
+                       ORDER BY edl.created_at DESC, edl.id DESC
+                       LIMIT 1
+                   ) AS last_email_recipient
+               FROM clients c
+               WHERE COALESCE(c.record_status,'active')='archived'
+               ORDER BY COALESCE(c.archived_at, c.updated_at, c.created_at) DESC, c.business_name"""
+        ).fetchall()
     prospect_clients = [dict(row) for row in prospect_clients]
     for row in prospect_clients:
         row['pipeline_stage'] = prospect_pipeline_stage(row)
@@ -13345,6 +13453,7 @@ def client_users():
         'client_users.html',
         clients=active_clients,
         prospect_clients=prospect_clients,
+        archived_clients=archived_clients,
         prospect_stage_counts=prospect_stage_counts,
         users=users,
         invites=invites,
@@ -13369,13 +13478,37 @@ def client_user_email_preview(email_id: int):
                WHERE edl.id=?""",
             (email_id,)
         ).fetchone()
+        if row:
+            if row['related_invite_id']:
+                related_email_rows = conn.execute(
+                    """SELECT id, email_type, recipient_email, status, created_at, subject
+                       FROM email_delivery_log
+                       WHERE related_invite_id=?
+                       ORDER BY created_at DESC, id DESC
+                       LIMIT 20""",
+                    (row['related_invite_id'],)
+                ).fetchall()
+                history_scope_label = 'Invite thread history'
+            elif row['client_id']:
+                related_email_rows = conn.execute(
+                    """SELECT id, email_type, recipient_email, status, created_at, subject
+                       FROM email_delivery_log
+                       WHERE client_id=?
+                       ORDER BY created_at DESC, id DESC
+                       LIMIT 20""",
+                    (row['client_id'],)
+                ).fetchall()
+                history_scope_label = 'Business email history'
+            else:
+                related_email_rows = []
+                history_scope_label = 'Related history'
     if not row:
         abort(404)
     if user['role'] != 'admin' and row['client_id'] is not None and row['client_id'] not in visible_client_ids(user, include_non_active=True):
         abort(403)
     preview_row = dict(row)
     preview_row['body_html'] = email_preview_html(row['body_html'] or '')
-    return render_template('email_preview.html', email_row=preview_row)
+    return render_template('email_preview.html', email_row=preview_row, related_email_rows=related_email_rows, history_scope_label=history_scope_label)
 
 
 @app.route('/email/open/<tracking_token>.gif')
