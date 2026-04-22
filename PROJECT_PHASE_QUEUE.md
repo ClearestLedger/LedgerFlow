@@ -223,3 +223,9 @@
   - converted the decorative billing pills into real section navigation for overview, subscription billing, method on file, administrator fees, and fee history
   - added direct action buttons inside the billing summary cards so the page behaves like software controls instead of static status tiles
   - made hash-linked sections auto-open compact details blocks like payment methods and fee history when those areas are targeted
+- Release evidence and privacy-mapping phase completed on 2026-04-22:
+  - created `RELEASE_EVIDENCE_PACKAGE.md` as the current launch-evidence index and blocker summary
+  - created `PRIVACY_POLICY_REALITY_MAP.md` to map real data collection, storage, usage, and external sharing from the live codebase
+  - created `THIRD_PARTY_VENDOR_INVENTORY.md` to document hosting, SMTP, optional AI, and hosted-billing dependencies
+  - created `AI_RED_TEAM_PROMPT_SUITE.md` so optional AI-guide review can be executed as a real release artifact instead of an undocumented blocker
+  - updated `LIVE_COMPLIANCE_GAP_REPORT.md` so privacy/vendor/AI sections now reflect documented artifacts instead of unknown gaps

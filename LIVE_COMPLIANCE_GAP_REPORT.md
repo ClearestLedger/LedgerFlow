@@ -11,9 +11,9 @@ Current release decision:
 - BLOCK RELEASE
 
 Why the release is still blocked:
-1. Privacy and evidence mapping are not yet complete enough to prove that disclosures match real collection, storage, and sharing behavior.
-2. Cross-tenant and role-boundary evidence has not been assembled into a formal release package yet.
-3. Third-party vendor inventory and AI-output review artifacts are still incomplete for a final release signoff.
+1. Cross-tenant and role-boundary evidence has not been assembled into a formal release package yet.
+2. AI-output prompt execution and review notes are still incomplete for a final release signoff.
+3. Privacy and vendor documentation now exist, but they still need final legal/policy signoff against the live notices.
 
 ## Pass / Fail Snapshot
 
@@ -44,8 +44,8 @@ Why the release is still blocked:
 
 ### 6. Privacy notice alignment
 - Privacy notice page exists: PASS
-- Privacy policy to actual data-map comparison is not fully documented: FAIL
-- Third-party processor inventory is not fully documented in release artifacts: FAIL
+- Privacy policy to actual data-map comparison is now documented in `PRIVACY_POLICY_REALITY_MAP.md`: PARTIAL
+- Third-party processor inventory is now documented in `THIRD_PARTY_VENDOR_INVENTORY.md`, but exact live provider confirmation is still needed: PARTIAL
 
 ### 7. Data minimization
 - Some optional fields are clearly marked optional: PASS
@@ -80,10 +80,10 @@ Why the release is still blocked:
 
 ### 14. Third-party / vendor inventory
 - Hosting / email / deployment are known operationally: PARTIAL
-- Formal vendor inventory document tied to privacy notice is still missing: FAIL
+- Formal vendor inventory document now exists, but final provider-confirmation review is still needed: PARTIAL
 
 ### 15. AI / automation
-- Needs explicit adversarial review before release signoff: FAIL
+- Prompt suite now exists in `AI_RED_TEAM_PROMPT_SUITE.md`, but execution and review are still pending: PARTIAL
 
 ### 16. Marketing / website QA
 - Marketing claims still need a final truth-to-product pass after the newest invoice / estimate / client workflow changes: PARTIAL
@@ -91,18 +91,16 @@ Why the release is still blocked:
 
 ## Required next compliance phases
 
-1. Add mandatory Terms + Privacy acceptance with versioned server-side logging.
-2. Finish the release evidence package:
+1. Finish the release evidence package:
    - legal-page screenshots
    - signup / acceptance video
    - DB proof of policy acceptance logging
    - proof that business billing stores labels / last4 / hosted references only
    - access-control test results
    - tenant-isolation test results
-   - privacy-policy-to-data-map comparison
    - AI red-team prompt results
-3. Finalize the vendor inventory and privacy-policy reality map.
-4. Run the full release-gate checklist again only after those blockers are fixed.
+2. Review `PRIVACY_POLICY_REALITY_MAP.md` and `THIRD_PARTY_VENDOR_INVENTORY.md` against the live public legal pages and confirm final wording.
+3. Run the full release-gate checklist again only after those blockers are fixed.
 
 ## Product rule preserved
 
