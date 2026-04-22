@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Dispatch Workflow</div>
+    <div class='page-title'>Dispatch Board</div>
+    <div class='page-subtitle'>Assign crews, clear conflicts, and keep today&apos;s work moving without leaving the operational board.</div>
+  </div>
+  <div class='inline-form'>
+    <a class='btn btn-secondary' href='{{ url_for("ops_dispatch", client_id=client_id, date=(dispatch_date[:10]|string)) }}'>Today</a>
+    <a class='btn btn-secondary' href='{{ url_for("ops_schedule", client_id=client_id) }}'>Schedule</a>
+  </div>
+</div>
+
+<div class='grid cards-3 ops-stat-grid'>
+  <div class='card stat-card ops-stat-card'><h3>Today&apos;s Jobs</h3><div class='metric big'>{{ today_jobs|length }}</div><div class='small'>Work happening on {{ dispatch_date }}</div></div>
+  <div class='card stat-card ops-stat-card'><h3>Unassigned Today</h3><div class='metric big'>{{ unassigned_jobs|length }}</div><div class='small'>Jobs still waiting on a crew</div></div>
+  <div class='card stat-card ops-stat-card'><h3>Active Field Work</h3><div class='metric big'>{{ active_jobs|length }}</div><div class='small'>Jobs already marked in progress</div></div>
+</div>
+
+<div class='grid cards-3' style='margin-top:18px'>
+  <div class='card'>
+    <div class='card-head'><h3>Unassigned Queue</h3><span class='badge'>{{ unassigned_jobs|length }}</span></div>
+    {% if unassigned_jobs %}
+    <div class='ops-card-list'>
+      {% for job in unassigned_jobs %}
+      <div class='ops-list-card'>
+        <div class='ops-list-top'>
+          <strong>{{ job.title }}</strong>
+          <span class='badge ops-status ops-status-{{ job.status }}'>{{ job.status|replace('_', ' ')|title }}</span>
+        </div>
+        <div class='small'>{{ job.service_type_label }}</div>
+        {% if job.service_address %}<div class='small'>{{ job.service_address }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>No unassigned jobs.</strong><span>The current day is fully staffed.</span></div>
+    {% endif %}
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>In Progress</h3><span class='badge'>{{ active_jobs|length }}</span></div>
+    {% if active_jobs %}
+    <div class='ops-card-list'>
+      {% for job in active_jobs %}
+      <div class='ops-list-card'>
+        <div class='ops-list-top'>
+          <strong>{{ job.title }}</strong>
+          <span class='badge ops-status ops-status-in_progress'>In Progress</span>
+        </div>
+        <div class='small'>{{ job.assigned_worker_names or 'Crew not listed' }}</div>
+        {% if job.service_address %}<div class='small'>{{ job.service_address }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>No active field jobs.</strong><span>Dispatch updates will appear here as soon as jobs start moving.</span></div>
+    {% endif %}
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Conflict Alerts</h3><span class='badge'>{{ conflicts|length }}</span></div>
+    {% if conflicts %}
+    <div class='ops-timeline'>
+      {% for conflict in conflicts[:8] %}
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>{{ conflict.worker_name }}</div>
+        <div class='small'>{{ conflict.detail }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>No conflicts detected.</strong><span>The current worker and schedule plan is clear.</span></div>
+    {% endif %}
+  </div>
+</div>
+
+<div class='card' style='margin-top:18px'>
+  <div class='card-head'><h3>Daily Dispatch Board</h3><span class='badge'>{{ dispatch_date }} to {{ week_end }}</span></div>
+  {% if today_jobs %}
+  <div class='ops-dispatch-grid'>
+    {% for job in today_jobs %}
+    <div class='ops-dispatch-card'>
+      <div class='ops-list-top'>
+        <strong>{{ job.title }}</strong>
+        <span class='badge ops-status ops-status-{{ job.status }}'>{{ job.status|replace('_', ' ')|title }}</span>
+      </div>
+      <div class='small'>{{ job.service_type_label }}{% if job.scheduled_start|length > 10 %} · {{ job.scheduled_start[11:16] }}{% endif %}</div>
+      <div class='small'>{{ job.assigned_worker_names or 'Unassigned crew' }}</div>
+      {% if job.service_address %}<div class='small'>{{ job.service_address }}</div>{% endif %}
+      <form method='post' class='form-grid ops-inline-form'>
+        {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <input type='hidden' name='action' value='dispatch_assign'>
+        <input type='hidden' name='job_id' value='{{ job.id }}'>
+        <input type='hidden' name='date' value='{{ dispatch_date }}'>
+        <div style='grid-column:1/-1'><label>Assign Crew</label><div class='ops-checkbox-grid'>{% set assigned_ids = (job.assigned_worker_ids_csv.split(',') if job.assigned_worker_ids_csv else []) %}{% for worker in workers %}<label class='schedule-worker-item'><input type='checkbox' name='assigned_worker_ids' value='{{ worker.id }}' {% if worker.id|string in assigned_ids %}checked{% endif %}> <span>{{ worker.name }}</span></label>{% endfor %}</div></div>
+        <div><label>Status</label><select name='status'>{% for value, label in job_status_options %}<option value='{{ value }}' {% if job.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div style='grid-column:1/-1'><label>Dispatch Note</label><input name='dispatch_note' value='{{ job.dispatch_notes or "" }}' placeholder='Delay, route note, crew note'></div>
+        <div><button type='submit'>Save Dispatch</button></div>
+      </form>
+      <form method='post' class='form-grid ops-inline-form' style='margin-top:12px'>
+        {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <input type='hidden' name='action' value='dispatch_progress'>
+        <input type='hidden' name='job_id' value='{{ job.id }}'>
+        <input type='hidden' name='date' value='{{ dispatch_date }}'>
+        <div><label>Workflow</label><select name='status'>{% for value, label in job_status_options %}<option value='{{ value }}' {% if job.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div><label>Progress</label><select name='field_progress_status'>{% for value, label in progress_status_options %}<option value='{{ value }}' {% if job.field_progress_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div style='grid-column:1/-1'><label>Progress Note</label><input name='dispatch_note' value='{{ job.dispatch_notes or "" }}' placeholder='En route, delayed, on site, pause reason'></div>
+        <div><button type='submit'>Update Progress</button></div>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class='empty-state'><strong>No jobs on this dispatch date.</strong><span>Pick another date or move jobs from Schedule.</span></div>
+  {% endif %}
+</div>
+
+<div class='card' style='margin-top:18px'>
+  <div class='card-head'><h3>Worker Dispatch Lanes</h3><span class='badge'>{{ dispatch_board|length }} workers</span></div>
+  <div class='ops-board-columns'>
+    {% for lane in dispatch_board %}
+    <div class='ops-board-column'>
+      <div class='ops-board-head'>
+        <strong>{{ lane.worker.name }}</strong>
+        <span class='small'>{{ lane.worker.ops_role or lane.worker.role_classification or 'Crew' }}</span>
+      </div>
+      {% if lane.jobs %}
+      {% for job in lane.jobs %}
+      <a class='ops-board-job' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+        <strong>{{ job.title }}</strong>
+        <span>{{ job.scheduled_start[11:16] if job.scheduled_start|length > 10 else 'Flexible' }}</span>
+      </a>
+      {% endfor %}
+      {% else %}
+      <div class='small'>No jobs assigned for this dispatch date.</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

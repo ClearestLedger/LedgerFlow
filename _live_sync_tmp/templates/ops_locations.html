@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Locations</div>
+    <div class='page-title'>Service Locations</div>
+    <div class='page-subtitle'>Map-ready operational addresses, access instructions, and visit history for the places your crews actually work.</div>
+  </div>
+</div>
+
+<div class='grid cards-2 ops-jobs-layout'>
+  <div class='card'>
+    <div class='card-head'><h3>{% if selected_location %}Update Location{% else %}Add Location{% endif %}</h3><span class='badge'>Operations</span></div>
+    <form method='post' class='form-grid'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <input type='hidden' name='action' value='save_location'>
+      {% if selected_location %}<input type='hidden' name='location_id' value='{{ selected_location.id }}'>{% endif %}
+      <div><label>Location Name</label><input name='location_name' value='{{ selected_location.location_name if selected_location else "" }}' placeholder='Main Office, Unit B'></div>
+      <div><label>Address</label><input name='address_line1' value='{{ selected_location.address_line1 if selected_location else "" }}'></div>
+      <div><label>City</label><input name='city' value='{{ selected_location.city if selected_location else "" }}'></div>
+      <div><label>State</label><input name='state' value='{{ selected_location.state if selected_location else "" }}'></div>
+      <div><label>ZIP</label><input name='postal_code' value='{{ selected_location.postal_code if selected_location else "" }}'></div>
+      <div><label>Gate Code</label><input name='gate_code' value='{{ selected_location.gate_code if selected_location else "" }}'></div>
+      <div style='grid-column:1/-1'><label>Access Notes</label><textarea name='access_notes'>{{ selected_location.access_notes if selected_location else "" }}</textarea></div>
+      <div style='grid-column:1/-1'><label>Parking Notes</label><textarea name='parking_notes'>{{ selected_location.parking_notes if selected_location else "" }}</textarea></div>
+      <div style='grid-column:1/-1'><label>Location Notes</label><textarea name='location_notes'>{{ selected_location.location_notes if selected_location else "" }}</textarea></div>
+      <div><button type='submit'>Save Location</button></div>
+    </form>
+    {% if selected_location %}
+    <form method='post' style='margin-top:12px'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <input type='hidden' name='action' value='delete_location'>
+      <input type='hidden' name='location_id' value='{{ selected_location.id }}'>
+      <button class='btn btn-secondary' type='submit'>Delete Location</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Saved Locations</h3><span class='badge'>{{ locations|length }}</span></div>
+    {% if locations %}
+    <div class='ops-card-list'>
+      {% for row in locations %}
+      <a class='ops-list-card {% if selected_location and selected_location.id == row.id %}is-selected{% endif %}' href='{{ url_for("ops_locations", client_id=client_id, location_id=row.id) }}'>
+        <div class='ops-list-top'>
+          <strong>{{ row.location_name or row.address_line1 or 'Service Location' }}</strong>
+          <span class='badge'>{{ row.job_count or 0 }} jobs</span>
+        </div>
+        <div class='small'>{{ row.address_line1 }}</div>
+        <div class='small'>{{ row.city }}{% if row.city and row.state %}, {% endif %}{{ row.state }} {{ row.postal_code }}</div>
+        <div class='small'>Last job {{ row.last_job_date or '—' }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>No locations saved.</strong><span>Locations also get created automatically as jobs are saved.</span></div>
+    {% endif %}
+  </div>
+</div>
+
+{% if selected_location %}
+<div class='card' style='margin-top:18px'>
+  <div class='card-head'><h3>Recent Jobs At This Location</h3><span class='badge'>{{ location_jobs|length }}</span></div>
+  {% if location_jobs %}
+  <table class='table'>
+    <tr><th>Job</th><th>Status</th><th>Scheduled</th></tr>
+    {% for row in location_jobs %}
+    <tr>
+      <td>{{ row.title }}</td>
+      <td>{{ row.status|replace('_', ' ')|title }}</td>
+      <td>{{ row.scheduled_start[:10] if row.scheduled_start else 'Unscheduled' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class='small'>No jobs are linked to this location yet.</div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

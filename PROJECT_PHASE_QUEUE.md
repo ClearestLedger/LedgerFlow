@@ -165,6 +165,12 @@
   - added safe database fallbacks around shared operations queries so partially-migrated live data returns empty-state pages instead of 500 errors
   - added `/agenda` as a real alias of the schedule page so business phrasing and direct links resolve consistently
   - verified admin operations routes return 200 across the protected local database and an older live-style runtime backup when bound correctly before import
+- Clean launch reset package prepared on 2026-04-22:
+  - built a brand-new launch database from the current working app schema instead of reusing older live data
+  - preserved only the admin login, email settings, runtime email config, and local secret key
+  - intentionally removed all businesses, workers, invites, messages, jobs, clients, invoices, estimates, and history so launch can restart from a clean schema
+  - normalized the admin launch profile to English, set the live app base URL to https://ledgerflow-vprm.onrender.com, and reset the sender branding to LedgerFlow
+  - rebuilt the Desktop Render import package and ZIP so the next launch step is a clean production import instead of more patching on top of dirty runtime data
 
 ## Future Pricing Research Note
 
@@ -174,9 +180,17 @@
 
 ## Next Planned Phase
 
-- Phase 4: Additional welcome page
-  - business name
-  - user name
-  - owner name
-  - welcome message
-  - how-to videos section placeholder for future Canva videos
+- Phase 4: Clean production import and route verification
+  - import the clean launch reset bundle into Render
+  - restart the service and verify production-import status
+  - test owner view, dispatch, agenda, team, activity, and locations on the empty clean database
+  - only after the clean sweep passes, begin re-adding live businesses in smaller controlled phases
+- Production route failure root cause confirmed on 2026-04-22:
+  - the Python ops routes were present and returning 200 in the working source, but the GitHub deploy mirror was missing five required templates:
+    - `ops_dispatch.html`
+    - `ops_schedule.html`
+    - `ops_team.html`
+    - `ops_activity.html`
+    - `ops_locations.html`
+  - this deploy-repo drift was the exact reason clean live routes still 500ed after the reset
+  - fix path: keep the deploy mirror template set in lockstep with the working source before each Render deploy

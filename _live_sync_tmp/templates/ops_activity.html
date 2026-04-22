@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Activity & Notes</div>
+    <div class='page-title'>Operational Timeline</div>
+    <div class='page-subtitle'>Track who changed what, when it changed, and what managers recorded along the way.</div>
+  </div>
+</div>
+
+<div class='card' style='margin-bottom:18px'>
+  <form method='get' class='form-grid ops-filter-grid'>
+    <input type='hidden' name='client_id' value='{{ client_id }}'>
+    <div><label>Search Activity</label><input name='search' value='{{ search }}' placeholder='Job title or activity text'></div>
+    <div><button type='submit'>Search</button></div>
+  </form>
+</div>
+
+<div class='grid cards-2'>
+  <div class='card'>
+    <div class='card-head'><h3>Recent Activity</h3><span class='badge'>{{ activity_rows|length }}</span></div>
+    {% if activity_rows %}
+    <div class='ops-timeline'>
+      {% for row in activity_rows %}
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>{{ row.job_title or 'Operational Event' }}</div>
+        <div class='small'>{{ row.event_text }}</div>
+        <div class='small'>{{ row.event_type|replace('_', ' ')|title }} · {{ row.created_at }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>No activity found.</strong><span>Try a broader search or start creating jobs and dispatch actions.</span></div>
+    {% endif %}
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Recent Notes</h3><span class='badge'>{{ note_rows|length }}</span></div>
+    {% if note_rows %}
+    <div class='ops-timeline'>
+      {% for row in note_rows %}
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>{{ row.job_title or 'Job Note' }}{% if row.full_name %} · {{ row.full_name }}{% endif %}</div>
+        <div class='small'>{{ row.note_type|replace('_', ' ')|title }}</div>
+        <div class='small'>{{ row.body }}</div>
+        <div class='small'>{{ row.created_at }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>No notes recorded.</strong><span>Manager notes, dispatch notes, and completion notes will surface here.</span></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

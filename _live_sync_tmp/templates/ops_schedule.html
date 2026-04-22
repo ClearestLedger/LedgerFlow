@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Schedule & Calendar</div>
+    <div class='page-title'>{{ client.business_name }} Schedule</div>
+    <div class='page-subtitle'>Day, week, and month views for work commitments, crew allocation, and quick rescheduling.</div>
+  </div>
+  <div class='inline-form'>
+    <a class='btn btn-secondary {% if view=="day" %}btn-dark{% endif %}' href='{{ url_for("ops_schedule", client_id=client_id, view="day", date=anchor_date) }}'>Day</a>
+    <a class='btn btn-secondary {% if view=="week" %}btn-dark{% endif %}' href='{{ url_for("ops_schedule", client_id=client_id, view="week", date=anchor_date) }}'>Week</a>
+    <a class='btn btn-secondary {% if view=="month" %}btn-dark{% endif %}' href='{{ url_for("ops_schedule", client_id=client_id, view="month", date=anchor_date) }}'>Month</a>
+    <a class='btn btn-secondary' href='{{ url_for("ops_schedule", client_id=client_id, view=view, date=prev_date) }}'>&lsaquo; Prev</a>
+    <a class='btn btn-secondary' href='{{ url_for("ops_schedule", client_id=client_id, view=view, date=next_date) }}'>Next &rsaquo;</a>
+  </div>
+</div>
+
+<div class='grid cards-2' style='margin-bottom:18px'>
+  <div class='card'>
+    <div class='card-head'><h3>Quick Add Job</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("ops_jobs", client_id=client_id) }}'>Full Job Editor</a></div>
+    <form method='post' class='form-grid'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <input type='hidden' name='action' value='quick_add_job'>
+      <div><label>Job Title</label><input name='title' required></div>
+      <div><label>Service Type</label><select name='service_type_id'>{% for row in service_types %}<option value='{{ row.id }}'>{{ row.name }}</option>{% endfor %}</select></div>
+      <div><label>Date</label><input type='date' name='scheduled_date' value='{{ range_start }}'></div>
+      <div><label>Start Time</label><input type='time' name='start_time'></div>
+      <div><label>Duration (min)</label><input type='number' name='estimated_duration_minutes' min='0' value='120'></div>
+      <div><label>Priority</label><select name='priority'>{% for value, label in priority_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+      <div style='grid-column:1/-1'><label>Address</label><input name='service_address'></div>
+      <div style='grid-column:1/-1'><label>Scope / Notes</label><textarea name='notes_summary'></textarea></div>
+      <div style='grid-column:1/-1'><label>Assigned Crew</label><div class='ops-checkbox-grid'>{% for worker in workers %}<label class='schedule-worker-item'><input type='checkbox' name='assigned_worker_ids' value='{{ worker.id }}'> <span>{{ worker.name }}</span></label>{% endfor %}</div></div>
+      <div><button type='submit'>Add to Schedule</button></div>
+    </form>
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Schedule Filters</h3><span class='badge'>{{ view|title }} View</span></div>
+    <form method='get' class='form-grid'>
+      <input type='hidden' name='client_id' value='{{ client_id }}'>
+      <input type='hidden' name='view' value='{{ view }}'>
+      <input type='hidden' name='date' value='{{ anchor_date }}'>
+      <div><label>Worker</label><select name='worker_id'><option value=''>All workers</option>{% for worker in workers %}<option value='{{ worker.id }}' {% if filters.worker_id == worker.id %}selected{% endif %}>{{ worker.name }}</option>{% endfor %}</select></div>
+      <div><label>Status</label><select name='status'><option value=''>All statuses</option>{% for value, label in job_status_options %}<option value='{{ value }}' {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Service Type</label><select name='service_type_id'><option value=''>All service types</option>{% for row in service_types %}<option value='{{ row.id }}' {% if filters.service_type_id == row.id %}selected{% endif %}>{{ row.name }}</option>{% endfor %}</select></div>
+      <div><button type='submit'>Apply Filters</button></div>
+    </form>
+    <div class='small' style='margin-top:12px'>Showing {{ jobs|length }} jobs between {{ range_start }} and {{ range_end }}.</div>
+  </div>
+</div>
+
+{% if view == 'month' %}
+<div class='card'>
+  <div class='card-head'><h3>{{ month_name }} Calendar</h3><span class='badge'>Month</span></div>
+  <div class='scroll-x'>
+    <table class='table calendar-table'>
+      <thead><tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead>
+      <tbody>
+        {% for week in month_weeks %}
+        <tr>
+          {% for day in week %}
+          {% set day_key = day.isoformat() %}
+          <td class='cal-day {% if day_key == today_iso %}cal-today{% endif %}'>
+            <div class='cal-num'>{{ day.day }}</div>
+            {% for job in (jobs_by_day.get(day_key) or [])[:4] %}
+            <a class='cal-item cal-schedule-item' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+              <strong>{{ job.title }}</strong>
+              <div class='small'>{{ job.assigned_worker_names or 'Unassigned' }}</div>
+            </a>
+            {% endfor %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class='card'>
+  <div class='card-head'><h3>{{ view|title }} Schedule</h3><span class='badge'>{{ range_start }} to {{ range_end }}</span></div>
+  {% for day in visible_days %}
+  {% set day_key = day.isoformat() %}
+  <div class='ops-day-section'>
+    <div class='ops-day-header'>
+      <strong>{{ day.strftime('%A') }}</strong>
+      <span>{{ day_key }}</span>
+    </div>
+    {% if jobs_by_day.get(day_key) %}
+    <div class='ops-card-list'>
+      {% for job in jobs_by_day.get(day_key) %}
+      <div class='ops-list-card'>
+        <div class='ops-list-top'>
+          <strong>{{ job.title }}</strong>
+          <span class='badge ops-status ops-status-{{ job.status }}'>{{ job.status|replace('_', ' ')|title }}</span>
+        </div>
+        <div class='small'>{{ job.service_type_label }}{% if job.scheduled_start|length > 10 %} · {{ job.scheduled_start[11:16] }}{% endif %}</div>
+        <div class='small'>{{ job.assigned_worker_names or 'Unassigned' }}</div>
+        {% if job.service_address %}<div class='small'>{{ job.service_address }}</div>{% endif %}
+        <form method='post' class='form-grid ops-inline-form' style='margin-top:12px'>
+          {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+          <input type='hidden' name='action' value='move_job'>
+          <input type='hidden' name='job_id' value='{{ job.id }}'>
+          <div><label>Date</label><input type='date' name='scheduled_date' value='{{ job.scheduled_start[:10] if job.scheduled_start else day_key }}'></div>
+          <div><label>Start</label><input type='time' name='start_time' value='{{ job.scheduled_start[11:16] if job.scheduled_start|length > 10 else "" }}'></div>
+          <div><label>End</label><input type='time' name='end_time' value='{{ job.scheduled_end[11:16] if job.scheduled_end and job.scheduled_end|length > 10 else "" }}'></div>
+          <div><button type='submit'>Reschedule</button></div>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>No jobs on this day.</strong><span>This slot is still open for new work.</span></div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

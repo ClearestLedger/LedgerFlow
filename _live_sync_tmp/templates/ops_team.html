@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Team & Workers</div>
+    <div class='page-title'>Operations Team</div>
+    <div class='page-subtitle'>Manage workforce records, crew roles, skill tags, workload, and portal visibility without turning the worker portal into a manager portal.</div>
+  </div>
+  <div class='stack-actions'>
+    <a class='btn btn-secondary' href='{{ url_for("ops_availability", client_id=client_id) }}'>Availability</a>
+    <a class='btn btn-secondary' href='{{ url_for("workers", client_id=client_id, worker_id=selected_worker.id) if selected_worker else url_for("workers", client_id=client_id) }}'>Legacy HR Records</a>
+  </div>
+</div>
+
+<div class='grid cards-2 ops-jobs-layout'>
+  <div class='card'>
+    <div class='card-head'><h3>Team List</h3><span class='badge'>{{ workers|length }}</span></div>
+    {% if workers %}
+    <div class='ops-card-list'>
+      {% for worker in workers %}
+      <a class='ops-list-card {% if selected_worker and selected_worker.id == worker.id %}is-selected{% endif %}' href='{{ url_for("ops_team", client_id=client_id, worker_id=worker.id) }}'>
+        <div class='ops-list-top'>
+          <strong>{{ worker.name }}</strong>
+          <span class='badge'>{{ worker.status or 'active' }}</span>
+        </div>
+        <div class='small'>{{ worker.ops_role or worker.role_classification or 'Crew Member' }}</div>
+        <div class='small'>Upcoming {{ worker.upcoming_assignments or 0 }} · Active {{ worker.active_assignments or 0 }}</div>
+        <div class='small'>Portal {{ 'Enabled' if worker.portal_access_enabled else 'Off' }}{% if worker.crew_label %} · {{ worker.crew_label }}{% endif %}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>No team members yet.</strong><span>Add the first worker to start dispatching jobs.</span></div>
+    {% endif %}
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>{% if selected_worker %}Update Team Member{% else %}Add Team Member{% endif %}</h3><span class='badge'>Ops Profile</span></div>
+    <details class='compact-details'>
+      <summary>{% if selected_worker %}{{ tr('Update Team Member') }}{% else %}{{ tr('Add Team Member') }}{% endif %}</summary>
+      <form method='post' class='form-grid' style='margin-top:12px'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <input type='hidden' name='action' value='{% if selected_worker %}update_worker{% else %}create_worker{% endif %}'>
+      {% if selected_worker %}<input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>{% endif %}
+      <div><label>Name</label><input name='name' required value='{{ selected_worker.name if selected_worker else "" }}'></div>
+      <div><label>Operational Role</label><input name='worker_role' value='{{ selected_worker.worker_role if selected_worker else "" }}' placeholder='Crew Lead, Painter, Dispatcher'></div>
+      <div><label>Phone</label><input name='phone' value='{{ selected_worker.phone if selected_worker else "" }}'></div>
+      <div><label>Email</label><input name='email' value='{{ selected_worker.email if selected_worker else "" }}'></div>
+      <div><label>Language</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if selected_worker and selected_worker.preferred_language == option.code %}selected{% elif not selected_worker and option.code == 'en' %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
+      <div><label>Status</label><select name='status'><option value='active' {% if not selected_worker or selected_worker.status == 'active' %}selected{% endif %}>Active</option><option value='inactive' {% if selected_worker and selected_worker.status == 'inactive' %}selected{% endif %}>Inactive</option><option value='terminated' {% if selected_worker and selected_worker.status == 'terminated' %}selected{% endif %}>Terminated</option></select></div>
+      <div><label>Crew / Group</label><input name='crew_label' value='{{ selected_worker.crew_label if selected_worker else "" }}' placeholder='Crew A, East Route'></div>
+      <div><label>Skill Tags</label><input name='skill_tags' value='{{ selected_worker.skill_tags if selected_worker else "" }}' placeholder='deep clean, ladder work, trim'></div>
+      <div style='grid-column:1/-1'><label>Availability Baseline</label><textarea name='availability_baseline'>{{ selected_worker.availability_baseline if selected_worker else "" }}</textarea></div>
+      <div><button type='submit'>{% if selected_worker %}Save Team Member{% else %}Add Team Member{% endif %}</button></div>
+      </form>
+    </details>
+  </div>
+</div>
+
+{% if selected_worker %}
+<div class='grid cards-2' style='margin-top:18px'>
+  <div class='card'>
+    <div class='card-head'><h3>Workload Snapshot</h3><span class='badge'>{{ worker_jobs|length }} jobs</span></div>
+    {% if worker_jobs %}
+    <div class='ops-card-list'>
+      {% for job in worker_jobs[:12] %}
+      <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+        <div class='ops-list-top'>
+          <strong>{{ job.title }}</strong>
+          <span class='badge ops-status ops-status-{{ job.status }}'>{{ job.status|replace('_', ' ')|title }}</span>
+        </div>
+        <div class='small'>{{ job.scheduled_start[:10] if job.scheduled_start else 'Unscheduled' }}{% if job.scheduled_start|length > 10 %} · {{ job.scheduled_start[11:16] }}{% endif %}</div>
+        {% if job.service_address %}<div class='small'>{{ job.service_address }}</div>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>No jobs assigned yet.</strong><span>This worker will show up here as soon as dispatch starts assigning work.</span></div>
+    {% endif %}
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Availability & Portal Snapshot</h3><span class='badge'>Restricted Portal</span></div>
+    <div class='ops-timeline'>
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>Portal Access</div>
+        <div class='small'>{{ 'Enabled' if selected_worker.portal_access_enabled else 'Disabled' }}</div>
+      </div>
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>Crew</div>
+        <div class='small'>{{ selected_worker.crew_label or 'Not grouped yet' }}</div>
+      </div>
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>Skill Tags</div>
+        <div class='small'>{{ selected_worker.skill_tags or 'No skills tagged yet' }}</div>
+      </div>
+    </div>
+    <div class='card-head' style='margin-top:18px'><h3>Upcoming Availability</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("ops_availability", client_id=client_id, worker_id=selected_worker.id) }}'>Manage</a></div>
+    {% if worker_availability %}
+    <table class='table'>
+      <tr><th>Date</th><th>Status</th><th>Window</th><th>Note</th></tr>
+      {% for row in worker_availability %}
+      <tr>
+        <td>{{ row.available_date }}</td>
+        <td>{{ row.availability_status|replace('_', ' ')|title }}</td>
+        <td>{{ row.start_time or 'All day' }}{% if row.end_time %} - {{ row.end_time }}{% endif %}</td>
+        <td>{{ row.note or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <div class='small'>No manager-entered availability blocks are saved for this worker yet.</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
