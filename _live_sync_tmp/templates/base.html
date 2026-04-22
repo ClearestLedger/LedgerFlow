@@ -6,7 +6,7 @@
 <title>{{ app_name }}</title>
 <link rel='stylesheet' href='{{ url_for("static", filename="style.css", v=static_asset_version("style.css")) }}'>
 </head>
-<body class='app-shell-body'>
+<body class='app-shell-body{% if current_mode == "business" and active_client %} business-mode-shell{% endif %}{% if current_user and current_user.role == "admin" and current_mode == "cpa" %} admin-cpa-shell{% endif %}'>
 {% set onboarding_locked = current_user and current_user.role != 'admin' and active_client and (active_client.onboarding_status or 'completed') != 'completed' %}
 {% set admin_business_workspace = current_user and current_user.role=='admin' and current_mode=='business' and active_client %}
 <div class='mobile-status-banner' role='status' aria-live='polite'>
@@ -94,6 +94,29 @@
     <a class='btn btn-secondary btn-sm' href='{{ url_for("cpa_dashboard") }}'>{{ tr('Administrator Dashboard') }}</a>
   </form>
   {% endif %}
+</div>
+{% endif %}
+{% if active_client and current_mode == 'business' %}
+<div class='mobile-workspace-card'>
+  <div class='mobile-workspace-eyebrow'>{{ tr('Business Workspace') }}</div>
+  <div class='mobile-workspace-title'>{{ active_client.business_name }}</div>
+  <div class='mobile-workspace-subtitle'>
+    {% if current_user.role == 'admin' %}
+      {{ tr('Administrator Dashboard') }} &middot; {{ tr('Business Workspace') }}
+    {% else %}
+      {{ active_client.contact_name or current_user.full_name or '' }}
+    {% endif %}
+  </div>
+  <div class='mobile-workspace-actions'>
+    <a class='mobile-workspace-action {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Dashboard') }}</a>
+    {% if premium_sales_access_enabled(active_client) %}
+    <a class='mobile-workspace-action {% if request.endpoint in ["customer_sales","estimates","invoices"] %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>{{ tr('Clients & Sales') }}</a>
+    {% else %}
+    <a class='mobile-workspace-action {% if request.endpoint=="invoices" %}active{% endif %}' href='{{ url_for("invoices", client_id=active_client.id) }}'>{{ tr('Invoices & Income') }}</a>
+    {% endif %}
+    <a class='mobile-workspace-action {% if request.endpoint in ["ops_schedule","admin_calendar"] %}active{% endif %}' href='{{ url_for("ops_schedule", client_id=active_client.id) }}'>{{ tr('Schedule') }}</a>
+    <a class='mobile-workspace-action {% if request.endpoint=="clients" %}active{% endif %}' href='{{ url_for("clients", client_id=active_client.id, workspace=1) }}'>{{ tr('Business Profile') }}</a>
+  </div>
 </div>
 {% endif %}
 <div class='app-shell{% if admin_business_workspace %} app-shell-workspace{% endif %}'>
@@ -264,6 +287,38 @@
 {% if current_user and not onboarding_locked %}
   </div>
 </div>
+{% endif %}
+
+{% if current_user and active_client and current_mode == 'business' and not onboarding_locked %}
+<nav class='mobile-app-dock' aria-label='{{ tr("Business Workspace") }}'>
+  <a class='{% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>
+    <strong>{{ tr('Dashboard') }}</strong>
+    <span>{{ tr('Home') }}</span>
+  </a>
+  {% if premium_sales_access_enabled(active_client) %}
+  <a class='{% if request.endpoint in ["customer_sales","estimates","invoices"] %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>
+    <strong>{{ tr('Clients & Sales') }}</strong>
+    <span>{{ tr('Sales') }}</span>
+  </a>
+  {% else %}
+  <a class='{% if request.endpoint=="invoices" %}active{% endif %}' href='{{ url_for("invoices", client_id=active_client.id) }}'>
+    <strong>{{ tr('Invoices & Income') }}</strong>
+    <span>{{ tr('Sales') }}</span>
+  </a>
+  {% endif %}
+  <a class='{% if request.endpoint in ["ops_schedule","admin_calendar"] %}active{% endif %}' href='{{ url_for("ops_schedule", client_id=active_client.id) }}'>
+    <strong>{{ tr('Schedule') }}</strong>
+    <span>{{ tr('Calendar') }}</span>
+  </a>
+  <a class='{% if request.endpoint=="business_payments_page" %}active{% endif %}' href='{{ url_for("business_payments_page", client_id=active_client.id) }}'>
+    <strong>{{ tr('Billing') }}</strong>
+    <span>{{ tr('Pay') }}</span>
+  </a>
+  <a class='{% if request.endpoint=="reports" %}active{% endif %}' href='{{ url_for("reports", client_id=active_client.id) }}'>
+    <strong>{{ tr('Reports') }}</strong>
+    <span>{{ tr('View') }}</span>
+  </a>
+</nav>
 {% endif %}
 
 {% if ai_guide_visible %}

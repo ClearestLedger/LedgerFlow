@@ -79,6 +79,11 @@
   - phone layouts are still not launch-ready
   - mobile-only notice should stay visible while we continue mobile refinement
   - next mobile phase should focus on layout cleanup, spacing, navigation stacking, and form usability on small screens
+  - mobile should keep moving toward an app-style software feel, with cleaner stacked cards, stronger bottom-reach actions, more intentional screen hierarchy, and less “shrunk desktop page” behavior
+- Mobile app-style refinement phase completed on 2026-04-21:
+  - researched current presentation patterns from leading finance/admin business apps and translated them into a more app-like business mobile shell
+  - business-mode phone screens now use a compact workspace card, stronger top hierarchy, and a bottom dock for the main actions
+  - mobile business pages now reduce desktop-style chrome and push the interface toward a cleaner software-app feel instead of a squeezed desktop layout
 - Prospect follow-up automation phase completed on 2026-04-21:
   - 7-day trial invites now support business-category selection at send time
   - prospect trial emails now use tracked opens and tracked CTA clicks

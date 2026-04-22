@@ -339,6 +339,10 @@ TRANSLATIONS.update({
         'es': 'Todavia estamos trabajando aqui para usted. La version para telefono estara lista pronto.',
         'pt': 'Ainda estamos trabalhando aqui para voce. A versao para telefone estara pronta em breve.',
     },
+    'Home': {'es': 'Inicio', 'pt': 'Inicio'},
+    'Sales': {'es': 'Ventas', 'pt': 'Vendas'},
+    'Pay': {'es': 'Pagar', 'pt': 'Pagar'},
+    'View': {'es': 'Ver', 'pt': 'Ver'},
     'Operational LedgerFlow gives service businesses a focused command center for jobs, dispatch, scheduling, team coordination, and field execution.': {
         'es': 'Operational LedgerFlow ofrece a las empresas de servicios un centro de control enfocado para trabajos, despacho, agenda, coordinacion del equipo y ejecucion en campo.',
         'pt': 'A LedgerFlow Operacional oferece aos negocios de servicos um centro de comando focado em servicos, despacho, agenda, coordenacao da equipe e execucao em campo.',
