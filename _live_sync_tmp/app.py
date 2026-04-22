@@ -775,18 +775,19 @@ TRANSLATIONS.update({
     'Assigned automatically from your selected tier': {'es': 'Asignado automaticamente segun tu plan', 'pt': 'Atribuido automaticamente com base no seu plano'},
     'Suggested monthly platform fee for your selected tier': {'es': 'Cuota mensual sugerida para tu plan', 'pt': 'Valor mensal sugerido para o seu plano'},
     'This becomes your first recorded billing date': {'es': 'Esta sera tu primera fecha registrada de cobro', 'pt': 'Esta sera sua primeira data registrada de cobranca'},
-    'This private client rollout uses administrator-managed billing. Your selected plan, pricing, and method on file are saved now so billing can begin immediately, while self-service autopay and premium banking tools continue through final buildout.': {
-        'es': 'Este lanzamiento privado usa facturacion administrada. Tu plan, precio y metodo registrado se guardan ahora para que el cobro pueda comenzar de inmediato, mientras el autopago y las herramientas bancarias premium siguen en desarrollo final.',
-        'pt': 'Este lancamento privado usa faturamento administrado. Seu plano, preco e metodo salvo sao guardados agora para que a cobranca possa comecar imediatamente, enquanto o autopagamento e as ferramentas bancarias premium seguem em desenvolvimento final.',
+    'This private client rollout uses administrator-managed billing. Your selected plan, billing authorization, and method descriptor can be saved now while processor-hosted checkout and premium banking tools continue through final buildout.': {
+        'es': 'Este lanzamiento privado usa facturacion administrada. Tu plan, autorizacion de cobro y descriptor del metodo pueden guardarse ahora mientras el checkout hospedado por el procesador y las herramientas bancarias premium siguen en desarrollo final.',
+        'pt': 'Este lancamento privado usa faturamento administrado. Seu plano, autorizacao de cobranca e descritor do metodo podem ser salvos agora enquanto o checkout hospedado pelo processador e as ferramentas bancarias premium seguem em desenvolvimento final.',
     },
-    'Add the payment method your business wants on file for subscription billing. This creates or updates your default billing method.': {
-        'es': 'Agrega el metodo de pago que tu negocio quiere dejar registrado para la suscripcion. Esto crea o actualiza tu metodo predeterminado.',
-        'pt': 'Adicione o metodo de pagamento que sua empresa quer manter salvo para a assinatura. Isso cria ou atualiza o metodo padrao.',
+    'Save the billing authorization reference your business already approved through a processor-hosted page. LedgerFlow keeps only the method label, last four digits, and hosted reference on file.': {
+        'es': 'Guarda la referencia de autorizacion que tu negocio ya aprobo por medio de una pagina hospedada por el procesador. LedgerFlow conserva solo la etiqueta del metodo, los ultimos cuatro digitos y la referencia hospedada.',
+        'pt': 'Salve a referencia de autorizacao que sua empresa ja aprovou por meio de uma pagina hospedada pelo processador. O LedgerFlow guarda apenas o nome do metodo, os ultimos quatro digitos e a referencia hospedada.',
     },
     'Method Type': {'es': 'Tipo de metodo', 'pt': 'Tipo de metodo'},
     'Method Label': {'es': 'Etiqueta del metodo', 'pt': 'Etiqueta do metodo'},
     'Primary business card or Operating ACH': {'es': 'Tarjeta principal del negocio o ACH operativo', 'pt': 'Cartao principal da empresa ou ACH operacional'},
     'Card Brand / Bank Name': {'es': 'Marca de tarjeta / banco', 'pt': 'Bandeira do cartao / banco'},
+    'Card Brand / Bank / Processor': {'es': 'Marca de tarjeta / banco / procesador', 'pt': 'Bandeira do cartao / banco / processador'},
     'Visa or Chase Business Checking': {'es': 'Visa o cuenta comercial Chase', 'pt': 'Visa ou conta comercial Chase'},
     'Account Holder Name': {'es': 'Nombre del titular', 'pt': 'Nome do titular'},
     'Business legal name': {'es': 'Nombre legal del negocio', 'pt': 'Nome legal da empresa'},
@@ -795,15 +796,45 @@ TRANSLATIONS.update({
     'Account Type': {'es': 'Tipo de cuenta', 'pt': 'Tipo de conta'},
     'Checking': {'es': 'Corriente', 'pt': 'Corrente'},
     'Savings': {'es': 'Ahorros', 'pt': 'Poupanca'},
-    'Routing Number': {'es': 'Numero de ruta', 'pt': 'Numero de roteamento'},
     'Leave blank to keep current': {'es': 'Deja en blanco para conservar el actual', 'pt': 'Deixe em branco para manter o atual'},
-    '9 digits': {'es': '9 digitos', 'pt': '9 digitos'},
-    'Account Number': {'es': 'Numero de cuenta', 'pt': 'Numero da conta'},
-    'Enter account number': {'es': 'Ingresa el numero de cuenta', 'pt': 'Digite o numero da conta'},
-    'Confirm Account Number': {'es': 'Confirmar numero de cuenta', 'pt': 'Confirmar numero da conta'},
-    'Re-enter account number': {'es': 'Vuelve a ingresar el numero de cuenta', 'pt': 'Digite novamente o numero da conta'},
     'Note (optional)': {'es': 'Nota (opcional)', 'pt': 'Nota (opcional)'},
     'Optional billing contact or setup note': {'es': 'Nota opcional de facturacion o configuracion', 'pt': 'Nota opcional de faturamento ou configuracao'},
+    'Processor / Mandate Reference': {'es': 'Referencia del procesador / mandato', 'pt': 'Referencia do processador / mandato'},
+    'Customer, mandate, or authorization reference from your billing provider': {'es': 'Referencia del cliente, mandato o autorizacion de tu proveedor de cobro', 'pt': 'Referencia do cliente, mandato ou autorizacao do seu provedor de cobranca'},
+    'Hosted Billing Setup Link': {'es': 'Link hospedado de configuracion de cobro', 'pt': 'Link hospedado de configuracao de cobranca'},
+    'Paste the hosted billing setup or customer portal link': {'es': 'Pega el link hospedado de configuracion de cobro o del portal del cliente', 'pt': 'Cole o link hospedado de configuracao de cobranca ou do portal do cliente'},
+    'LedgerFlow stores only labels, last four digits, and hosted billing references. Full card and bank-account numbers are not collected inside this app.': {
+        'es': 'LedgerFlow guarda solo etiquetas, ultimos cuatro digitos y referencias hospedadas de cobro. Los numeros completos de tarjeta y cuenta bancaria no se recopilan dentro de esta app.',
+        'pt': 'O LedgerFlow guarda apenas etiquetas, ultimos quatro digitos e referencias hospedadas de cobranca. Numeros completos de cartao e conta bancaria nao sao coletados dentro deste app.',
+    },
+    'Open Hosted Billing Setup': {'es': 'Abrir configuracion hospedada de cobro', 'pt': 'Abrir configuracao hospedada de cobranca'},
+    'Managed in Billing Center': {'es': 'Administrado en el Centro de Cobro', 'pt': 'Gerenciado na Central de Cobranca'},
+    'Turn this on when your hosted processor already has an approved default card or ACH authorization on file.': {
+        'es': 'Activa esto cuando tu procesador hospedado ya tenga una autorizacion aprobada para la tarjeta o ACH predeterminados.',
+        'pt': 'Ative isto quando seu processador hospedado ja tiver uma autorizacao aprovada para o cartao ou ACH padrao.',
+    },
+    'An active default card or ACH method descriptor is required before automatic withdrawal can be enabled.': {
+        'es': 'Se requiere un descriptor activo del metodo predeterminado de tarjeta o ACH antes de habilitar el cobro automatico.',
+        'pt': 'Um descritor ativo do metodo padrao de cartao ou ACH e necessario antes de ativar a cobranca automatica.',
+    },
+    'No payment method has been recorded yet. Add a default card or ACH descriptor so your billing setup is complete.': {
+        'es': 'Todavia no se registro ningun metodo. Agrega un descriptor predeterminado de tarjeta o ACH para completar la configuracion de cobro.',
+        'pt': 'Nenhum metodo foi registrado ainda. Adicione um descritor padrao de cartao ou ACH para concluir a configuracao de cobranca.',
+    },
+    'Billing Center keeps method labels, last four digits, and hosted billing references. Full card and bank-account numbers are no longer stored in this business profile.': {
+        'es': 'El Centro de Cobro mantiene etiquetas del metodo, ultimos cuatro digitos y referencias hospedadas. Los numeros completos de tarjeta y cuenta bancaria ya no se guardan en este perfil del negocio.',
+        'pt': 'A Central de Cobranca mantem nomes do metodo, ultimos quatro digitos e referencias hospedadas. Numeros completos de cartao e conta bancaria nao sao mais guardados neste perfil da empresa.',
+    },
+    'Stored information may include contact details, business records, notices, payment-method references, hosted billing links, and email-delivery logs.': {
+        'es': 'La informacion almacenada puede incluir datos de contacto, registros del negocio, avisos, referencias del metodo de pago, links hospedados de cobro y registros de entrega de correo.',
+        'pt': 'As informacoes armazenadas podem incluir dados de contato, registros da empresa, avisos, referencias do metodo de pagamento, links hospedados de cobranca e registros de entrega de email.',
+    },
+    'Hosted payment authorization should be completed through the external billing processor selected by the administrator, not by entering full card or bank-account numbers directly into LedgerFlow.': {
+        'es': 'La autorizacion de pago hospedada debe completarse a traves del procesador externo seleccionado por el administrador, no ingresando numeros completos de tarjeta o cuenta bancaria directamente en LedgerFlow.',
+        'pt': 'A autorizacao de pagamento hospedada deve ser concluida por meio do processador externo selecionado pelo administrador, e nao digitando numeros completos de cartao ou conta bancaria diretamente no LedgerFlow.',
+    },
+    'Default payment method': {'es': 'Metodo de pago predeterminado', 'pt': 'Metodo de pagamento padrao'},
+    'Backup payment method': {'es': 'Metodo de pago de respaldo', 'pt': 'Metodo de pagamento de backup'},
     'When you complete this step, LedgerFlow will save your business profile, activate your subscription record, save your method on file, and unlock your full business workspace.': {
         'es': 'Al completar este paso, LedgerFlow guardara el perfil del negocio, activara la suscripcion, guardara el metodo registrado y desbloqueara el espacio completo.',
         'pt': 'Ao concluir esta etapa, o LedgerFlow salvara o perfil da empresa, ativara a assinatura, salvara o metodo registrado e liberara o espaco completo.',
@@ -820,9 +851,9 @@ TRANSLATIONS.update({
     },
     'Review Billing': {'es': 'Revisar facturacion', 'pt': 'Revisar faturamento'},
     'Save Income Records': {'es': 'Guardar ingresos', 'pt': 'Salvar receitas'},
-    'Subscription billing, method on file, and one-time administrator fees in one calm premium billing workspace.': {
-        'es': 'Facturacion de suscripcion, metodo registrado y cargos unicos del administrador en un solo espacio de cobro.',
-        'pt': 'Faturamento de assinatura, metodo salvo e taxas unicas do administrador em um unico espaco de cobranca.',
+    'Subscription billing, authorization on file, hosted billing references, and one-time administrator fees in one calm premium billing workspace.': {
+        'es': 'Facturacion de suscripcion, autorizacion registrada, referencias hospedadas de cobro y cargos unicos del administrador en un solo espacio de cobro.',
+        'pt': 'Faturamento de assinatura, autorizacao salva, referencias hospedadas de cobranca e taxas unicas do administrador em um unico espaco de cobranca.',
     },
     'Back to Administrator': {'es': 'Volver al administrador', 'pt': 'Voltar ao administrador'},
     'Subscription Plan': {'es': 'Plan de suscripcion', 'pt': 'Plano de assinatura'},
@@ -830,9 +861,9 @@ TRANSLATIONS.update({
         'es': 'Este portal en vivo se cobra como un servicio privado administrado. Tu plan y metodo registrado ya estan activos, mientras el autoservicio y las herramientas bancarias premium continúan en desarrollo final.',
         'pt': 'Este portal ao vivo e cobrado como um servico privado administrado. Seu plano e metodo salvo ja estao ativos, enquanto o autoatendimento e as ferramentas bancarias premium continuam em desenvolvimento final.',
     },
-    'Use one default payment method for subscription billing and optionally keep one backup on file. Full card storage and live autopay are not running inside this app.': {
-        'es': 'Usa un metodo predeterminado para la suscripcion y opcionalmente uno de respaldo. El almacenamiento completo de tarjetas y el autopago aun no corren dentro de esta app.',
-        'pt': 'Use um metodo padrao para a assinatura e opcionalmente um de backup. O armazenamento completo de cartoes e o autopagamento ainda nao rodam dentro deste app.',
+    'Use one default payment method for subscription billing and optionally keep one backup on file. LedgerFlow stores only safe billing descriptors while full payment authorization stays with your hosted processor.': {
+        'es': 'Usa un metodo predeterminado para la suscripcion y opcionalmente uno de respaldo. LedgerFlow guarda solo descriptores seguros de cobro mientras la autorizacion completa permanece con tu procesador hospedado.',
+        'pt': 'Use um metodo padrao para a assinatura e opcionalmente um de backup. O LedgerFlow guarda apenas descritores seguros de cobranca enquanto a autorizacao completa permanece com seu processador hospedado.',
     },
     'Update Method On File': {'es': 'Actualizar metodo registrado', 'pt': 'Atualizar metodo salvo'},
     'Open administrator fees awaiting action': {'es': 'Cargos del administrador pendientes de accion', 'pt': 'Taxas do administrador aguardando acao'},
@@ -3357,14 +3388,12 @@ def validate_payment_method_form(form, *, existing=None) -> tuple[dict, list[str
     status = normalize_saved_method_status(form.get('status', 'active'))
     holder_name = form.get('holder_name', '').strip()
     brand_name = form.get('brand_name', '').strip()
-    card_number = clean_digits(form.get('card_number', '').strip())
     account_last4 = clean_last4(form.get('account_last4', '').strip())
     expiry_display = (form.get('expiry_display', '') or '').strip()
-    routing_number = clean_digits(form.get('routing_number', '').strip())
-    account_number = clean_digits(form.get('account_number', '').strip())
-    confirm_account_number = clean_digits(form.get('confirm_account_number', '').strip())
     account_type = normalize_bank_account_type(form.get('account_type', 'checking'))
-    existing_card_number = decrypt_secret((existing['card_number_enc'] or '')) if existing and 'card_number_enc' in existing.keys() else ''
+    processor_reference = form.get('processor_reference', '').strip()
+    hosted_setup_url_raw = form.get('hosted_setup_url', '').strip()
+    hosted_setup_url = normalize_payment_link(hosted_setup_url_raw)
     if not label:
         errors.append('Enter a payment method label.')
     elif len(label) > 120:
@@ -3373,6 +3402,12 @@ def validate_payment_method_form(form, *, existing=None) -> tuple[dict, list[str
         errors.append('Account holder name must be 120 characters or fewer.')
     if len(brand_name) > 80:
         errors.append('Card brand or bank name must be 80 characters or fewer.')
+    if len(processor_reference) > 140:
+        errors.append('Processor reference must be 140 characters or fewer.')
+    if hosted_setup_url is None:
+        errors.append('Enter a valid hosted billing setup link.')
+    elif len(hosted_setup_url or '') > 1000:
+        errors.append('Hosted billing setup link must be 1000 characters or fewer.')
     if form.get('account_last4', '').strip() and len(account_last4) != 4:
         errors.append('Last 4 must contain exactly four digits.')
     if len(expiry_display) > 7:
@@ -3384,32 +3419,18 @@ def validate_payment_method_form(form, *, existing=None) -> tuple[dict, list[str
             errors.append('Enter the card brand or issuer for card billing.')
         if not holder_name:
             errors.append('Enter the cardholder name for card billing.')
-        if card_number:
-            if len(card_number) < 13 or len(card_number) > 19:
-                errors.append('Card number must be between 13 and 19 digits.')
-        elif not existing_card_number and not account_last4 and not (existing['account_last4'] if existing else ''):
-            errors.append('Enter a card number for card billing.')
+        if not account_last4 and not (existing['account_last4'] if existing else ''):
+            errors.append('Enter the last 4 digits for the card on file.')
     if method_type == 'ach':
-        existing_routing = decrypt_secret((existing['routing_number_enc'] or '')) if existing else ''
-        existing_account = decrypt_secret((existing['account_number_enc'] or '')) if existing else ''
-        if not routing_number and not existing_routing:
-            errors.append('Enter a routing number for ACH.')
-        elif routing_number and len(routing_number) != 9:
-            errors.append('Routing number must be 9 digits.')
-        if not account_number and not existing_account:
-            errors.append('Enter an account number for ACH.')
-        elif account_number and len(account_number) < 4:
-            errors.append('Account number must be at least 4 digits.')
-        if account_number or confirm_account_number:
-            if account_number != confirm_account_number:
-                errors.append('Account number and confirmation must match.')
         if not holder_name:
             errors.append('Enter the account holder name for ACH.')
         if not brand_name:
             errors.append('Enter the bank name for ACH.')
+        if not account_last4 and not (existing['account_last4'] if existing else ''):
+            errors.append('Enter the last 4 digits for ACH.')
     if len(details_note) > 300:
         errors.append('Payment method note must be 300 characters or fewer.')
-    final_account_last4 = account_last4 or clean_last4(card_number) or clean_last4(account_number) or (existing['account_last4'] if existing else '')
+    final_account_last4 = account_last4 or (existing['account_last4'] if existing else '')
     return {
         'method_type': method_type,
         'label': label,
@@ -3421,9 +3442,11 @@ def validate_payment_method_form(form, *, existing=None) -> tuple[dict, list[str
         'account_last4': final_account_last4,
         'expiry_display': expiry_display,
         'account_type': account_type,
-        'card_number_enc': encrypt_secret(card_number) if card_number else (existing['card_number_enc'] if existing and 'card_number_enc' in existing.keys() else ''),
-        'routing_number_enc': encrypt_secret(routing_number) if routing_number else (existing['routing_number_enc'] if existing else ''),
-        'account_number_enc': encrypt_secret(account_number) if account_number else (existing['account_number_enc'] if existing else ''),
+        'processor_reference': processor_reference[:140],
+        'hosted_setup_url': hosted_setup_url or '',
+        'card_number_enc': '',
+        'routing_number_enc': '',
+        'account_number_enc': '',
         'details_note': details_note,
     }, errors
 
@@ -3472,6 +3495,27 @@ def validate_worker_payout_setup(form, *, existing=None) -> tuple[dict, list[str
         'deposit_account_number_enc': encrypt_secret(deposit_account_number) if deposit_account_number else (existing['deposit_account_number_enc'] if existing else ''),
         'zelle_contact': zelle_contact,
     }, errors
+
+
+def purge_legacy_local_payment_storage(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """UPDATE clients
+           SET bank_account_number='',
+               bank_routing_number='',
+               credit_card_number=''
+           WHERE COALESCE(bank_account_number,'')<>''
+              OR COALESCE(bank_routing_number,'')<>''
+              OR COALESCE(credit_card_number,'')<>''"""
+    )
+    conn.execute(
+        """UPDATE business_payment_methods
+           SET card_number_enc='',
+               routing_number_enc='',
+               account_number_enc=''
+           WHERE COALESCE(card_number_enc,'')<>''
+              OR COALESCE(routing_number_enc,'')<>''
+              OR COALESCE(account_number_enc,'')<>''"""
+    )
 
 
 def payment_methods_for_client(client_id: int):
@@ -6329,6 +6373,8 @@ def init_db():
                 account_last4 TEXT DEFAULT '',
                 expiry_display TEXT DEFAULT '',
                 account_type TEXT DEFAULT '',
+                processor_reference TEXT DEFAULT '',
+                hosted_setup_url TEXT DEFAULT '',
                 card_number_enc TEXT DEFAULT '',
                 routing_number_enc TEXT DEFAULT '',
                 account_number_enc TEXT DEFAULT '',
@@ -6739,6 +6785,8 @@ def init_db():
         ensure_column(conn, 'business_payment_methods', 'account_last4', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_payment_methods', 'expiry_display', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_payment_methods', 'account_type', "TEXT DEFAULT ''")
+        ensure_column(conn, 'business_payment_methods', 'processor_reference', "TEXT DEFAULT ''")
+        ensure_column(conn, 'business_payment_methods', 'hosted_setup_url', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_payment_methods', 'card_number_enc', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_payment_methods', 'routing_number_enc', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_payment_methods', 'account_number_enc', "TEXT DEFAULT ''")
@@ -6746,6 +6794,7 @@ def init_db():
         ensure_column(conn, 'business_payment_methods', 'created_by_user_id', 'INTEGER')
         ensure_column(conn, 'business_payment_methods', 'created_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
         ensure_column(conn, 'business_payment_methods', 'updated_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
+        purge_legacy_local_payment_storage(conn)
         ensure_column(conn, 'business_invites', 'invite_error', "TEXT DEFAULT ''")
         ensure_column(conn, 'business_invites', 'invite_kind', "TEXT DEFAULT 'business_access'")
         ensure_column(conn, 'business_invites', 'trial_days', 'INTEGER NOT NULL DEFAULT 0')
@@ -11267,8 +11316,8 @@ def cpa_dashboard():
                     if cleaned['is_backup']:
                         conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (client_id,))
                     conn.execute(
-                        '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, card_number_enc, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, processor_reference, hosted_setup_url, card_number_enc, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                         (
                             client_id,
                             cleaned['method_type'],
@@ -11281,6 +11330,8 @@ def cpa_dashboard():
                             cleaned['account_last4'],
                             cleaned['expiry_display'],
                             cleaned['account_type'],
+                            cleaned['processor_reference'],
+                            cleaned['hosted_setup_url'],
                             cleaned['card_number_enc'],
                             cleaned['routing_number_enc'],
                             cleaned['account_number_enc'],
@@ -11310,7 +11361,7 @@ def cpa_dashboard():
                         conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (row['client_id'],))
                     conn.execute(
                         '''UPDATE business_payment_methods
-                           SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, card_number_enc=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
+                           SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, processor_reference=?, hosted_setup_url=?, card_number_enc=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
                            WHERE id=?''',
                         (
                             cleaned['method_type'],
@@ -11323,6 +11374,8 @@ def cpa_dashboard():
                             cleaned['account_last4'],
                             cleaned['expiry_display'],
                             cleaned['account_type'],
+                            cleaned['processor_reference'],
+                            cleaned['hosted_setup_url'],
                             cleaned['card_number_enc'],
                             cleaned['routing_number_enc'],
                             cleaned['account_number_enc'],
@@ -12590,8 +12643,8 @@ def business_payments_page():
                     if cleaned['is_backup']:
                         conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (client_id,))
                     conn.execute(
-                        '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, card_number_enc, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
-                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, processor_reference, hosted_setup_url, card_number_enc, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                         (
                             client_id,
                             cleaned['method_type'],
@@ -12604,6 +12657,8 @@ def business_payments_page():
                             cleaned['account_last4'],
                             cleaned['expiry_display'],
                             cleaned['account_type'],
+                            cleaned['processor_reference'],
+                            cleaned['hosted_setup_url'],
                             cleaned['card_number_enc'],
                             cleaned['routing_number_enc'],
                             cleaned['account_number_enc'],
@@ -12633,7 +12688,7 @@ def business_payments_page():
                         conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (client_id,))
                     conn.execute(
                         '''UPDATE business_payment_methods
-                           SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, card_number_enc=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
+                           SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, processor_reference=?, hosted_setup_url=?, card_number_enc=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
                            WHERE id=? AND client_id=?''',
                         (
                             cleaned['method_type'],
@@ -12646,6 +12701,8 @@ def business_payments_page():
                             cleaned['account_last4'],
                             cleaned['expiry_display'],
                             cleaned['account_type'],
+                            cleaned['processor_reference'],
+                            cleaned['hosted_setup_url'],
                             cleaned['card_number_enc'],
                             cleaned['routing_number_enc'],
                             cleaned['account_number_enc'],
@@ -14224,14 +14281,14 @@ def clients():
                 request.form.get('filing_type', 'Both').strip(),
                 request.form.get('bank_name', '').strip(),
                 request.form.get('bank_account_nickname', '').strip(),
-                clean_last4(request.form.get('bank_account_last4', '').strip() or request.form.get('bank_account_number', '').strip()),
+                clean_last4(request.form.get('bank_account_last4', '').strip()),
                 request.form.get('bank_account_holder_name', '').strip(),
-                clean_digits(request.form.get('bank_account_number', '').strip()),
-                clean_digits(request.form.get('bank_routing_number', '').strip()),
+                '',
+                '',
                 request.form.get('credit_card_nickname', '').strip(),
-                clean_last4(request.form.get('credit_card_last4', '').strip() or request.form.get('credit_card_number', '').strip()),
+                clean_last4(request.form.get('credit_card_last4', '').strip()),
                 request.form.get('credit_card_holder_name', '').strip(),
-                clean_digits(request.form.get('credit_card_number', '').strip()),
+                '',
                 request.form.get('payroll_contact_name', '').strip(),
                 request.form.get('payroll_contact_phone', '').strip(),
                 request.form.get('payroll_contact_email', '').strip().lower(),
@@ -14284,14 +14341,14 @@ def clients():
                         request.form.get('filing_type', 'Both').strip(),
                         request.form.get('bank_name', '').strip(),
                         request.form.get('bank_account_nickname', '').strip(),
-                        clean_last4(request.form.get('bank_account_last4', '').strip() or request.form.get('bank_account_number', '').strip()),
+                        clean_last4(request.form.get('bank_account_last4', '').strip()),
                         request.form.get('bank_account_holder_name', '').strip(),
-                        clean_digits(request.form.get('bank_account_number', '').strip()),
-                        clean_digits(request.form.get('bank_routing_number', '').strip()),
+                        '',
+                        '',
                         request.form.get('credit_card_nickname', '').strip(),
-                        clean_last4(request.form.get('credit_card_last4', '').strip() or request.form.get('credit_card_number', '').strip()),
+                        clean_last4(request.form.get('credit_card_last4', '').strip()),
                         request.form.get('credit_card_holder_name', '').strip(),
-                        clean_digits(request.form.get('credit_card_number', '').strip()),
+                        '',
                         request.form.get('payroll_contact_name', '').strip(),
                         request.form.get('payroll_contact_phone', '').strip(),
                         request.form.get('payroll_contact_email', '').strip().lower(),
@@ -15665,12 +15722,10 @@ def business_onboarding():
                 request.form.get('label', '').strip(),
                 request.form.get('brand_name', '').strip(),
                 request.form.get('holder_name', '').strip(),
-                request.form.get('card_number', '').strip(),
                 request.form.get('account_last4', '').strip(),
                 request.form.get('expiry_display', '').strip(),
-                request.form.get('routing_number', '').strip(),
-                request.form.get('account_number', '').strip(),
-                request.form.get('confirm_account_number', '').strip(),
+                request.form.get('processor_reference', '').strip(),
+                request.form.get('hosted_setup_url', '').strip(),
                 request.form.get('details_note', '').strip(),
             ]
             submitted_payment_method = any(submitted_payment_fields)
@@ -15754,7 +15809,7 @@ def business_onboarding():
                             conn.execute('UPDATE business_payment_methods SET is_backup=0 WHERE client_id=?', (client_id,))
                         conn.execute(
                             '''UPDATE business_payment_methods
-                               SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, card_number_enc=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
+                               SET method_type=?, label=?, status=?, is_default=?, is_backup=?, holder_name=?, brand_name=?, account_last4=?, expiry_display=?, account_type=?, processor_reference=?, hosted_setup_url=?, card_number_enc=?, routing_number_enc=?, account_number_enc=?, details_note=?, updated_at=?
                                WHERE id=? AND client_id=?''',
                             (
                                 cleaned_method['method_type'],
@@ -15767,6 +15822,8 @@ def business_onboarding():
                                 cleaned_method['account_last4'],
                                 cleaned_method['expiry_display'],
                                 cleaned_method['account_type'],
+                                cleaned_method['processor_reference'],
+                                cleaned_method['hosted_setup_url'],
                                 cleaned_method['card_number_enc'],
                                 cleaned_method['routing_number_enc'],
                                 cleaned_method['account_number_enc'],
@@ -15778,8 +15835,8 @@ def business_onboarding():
                         )
                     else:
                         conn.execute(
-                            '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, card_number_enc, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
-                               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                            '''INSERT INTO business_payment_methods (client_id, method_type, label, status, is_default, is_backup, holder_name, brand_name, account_last4, expiry_display, account_type, processor_reference, hosted_setup_url, card_number_enc, routing_number_enc, account_number_enc, details_note, created_by_user_id, updated_at)
+                               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                             (
                                 client_id,
                                 cleaned_method['method_type'],
@@ -15792,6 +15849,8 @@ def business_onboarding():
                                 cleaned_method['account_last4'],
                                 cleaned_method['expiry_display'],
                                 cleaned_method['account_type'],
+                                cleaned_method['processor_reference'],
+                                cleaned_method['hosted_setup_url'],
                                 cleaned_method['card_number_enc'],
                                 cleaned_method['routing_number_enc'],
                                 cleaned_method['account_number_enc'],

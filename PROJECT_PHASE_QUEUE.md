@@ -213,3 +213,9 @@
   - first-launch administrator creation is now blocked unless Terms of Use and Privacy Notice are accepted at signup, and that acceptance is logged immediately
   - trust and policy surfaces now show the active policy versions and effective date, and public auth screens now point users to those policies before or during first sign-in
   - focused smoke tests passed for both flows: clean-reset admin forced acceptance before dashboard access, and first-launch admin signup blocked until required acceptance is given
+- Payment architecture cleanup phase completed on 2026-04-22:
+  - removed business-side collection of full card numbers, routing numbers, and bank-account numbers from onboarding, billing-center, administrator billing controls, and business profile forms
+  - switched the billing setup flow to hosted-processor references only: method label, last four digits, authorization status, processor / mandate reference, and optional hosted billing-setup link
+  - added a one-time schema cleanup that purges legacy locally stored business billing numbers from `clients` and `business_payment_methods`
+  - updated trust/compliance copy to reflect hosted billing references instead of local full-account capture
+  - expanded the clean-launch verifier so Billing Center is now part of the repeatable admin/business route sweep, and the rerun passed cleanly on both sides

@@ -195,17 +195,17 @@
       <div><label>Method Type</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
       <div><label>Method Label</label><input name='label' placeholder='Primary business Visa or Operating ACH' maxlength='120' required></div>
       <div><label>Status</label><select name='status'>{% for value, label in payment_method_status_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
-      <div class='pm-field pm-card pm-ach pm-zelle'><label>Card Brand / Bank Name</label><input name='brand_name' placeholder='Visa or Chase Business Checking' maxlength='80'></div>
+      <div class='pm-field pm-card pm-ach pm-zelle'><label>Card Brand / Bank / Processor</label><input name='brand_name' placeholder='Visa or Chase Business Checking' maxlength='80'></div>
       <div class='pm-field pm-card pm-ach pm-zelle'><label>Account Holder Name</label><input name='holder_name' placeholder='Business legal name' maxlength='120'></div>
       <div class='pm-field pm-card pm-ach pm-zelle'><label>Last 4 Digits</label><input name='account_last4' inputmode='numeric' maxlength='4' placeholder='4242'></div>
       <div class='pm-field pm-card'><label>Expiration (MM/YY)</label><input name='expiry_display' maxlength='5' placeholder='08/28'></div>
       <div class='pm-field pm-ach'><label>Account Type</label><select name='account_type'><option value='checking'>Checking</option><option value='savings'>Savings</option></select></div>
-      <div class='pm-field pm-ach'><label>Routing Number</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='9 digits'></div>
-      <div class='pm-field pm-ach'><label>Account Number</label><input name='account_number' inputmode='numeric' placeholder='Enter account number'></div>
-      <div class='pm-field pm-ach'><label>Confirm Account Number</label><input name='confirm_account_number' inputmode='numeric' placeholder='Re-enter account number'></div>
+      <div><label>Processor / Mandate Reference</label><input name='processor_reference' maxlength='140' placeholder='Customer, mandate, or authorization reference'></div>
+      <div style='grid-column:1 / -1'><label>Hosted Billing Setup Link</label><input type='url' name='hosted_setup_url' placeholder='Paste the hosted billing setup or customer portal link'></div>
       <div><label><input type='checkbox' name='is_default' value='1'> Set as default</label></div>
       <div><label><input type='checkbox' name='is_backup' value='1'> Set as backup</label></div>
       <div style='grid-column:1 / -1'><label>Note (optional)</label><input name='details_note' placeholder='Billing contact note or internal method note' maxlength='300'></div>
+      <div class='small' style='grid-column:1 / -1'>LedgerFlow stores only labels, last four digits, and hosted billing references. Full card and bank-account numbers are not collected here.</div>
       <div><button type='submit' class='btn btn-secondary'>Save Payment Method</button></div>
     </form>
     {% if selected_payment_methods %}
@@ -220,18 +220,20 @@
           <div><label>Method Type</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if (method.method_type or 'other') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
           <div><label>Method Label</label><input name='label' value='{{ method.label or "" }}' maxlength='120' required></div>
           <div><label>Status</label><select name='status'>{% for value, label in payment_method_status_options %}<option value='{{ value }}' {% if (method.status or 'active') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-          <div class='pm-field pm-card pm-ach pm-zelle'><label>Card Brand / Bank Name</label><input name='brand_name' value='{{ method.brand_name or "" }}' maxlength='80'></div>
+          <div class='pm-field pm-card pm-ach pm-zelle'><label>Card Brand / Bank / Processor</label><input name='brand_name' value='{{ method.brand_name or "" }}' maxlength='80'></div>
           <div class='pm-field pm-card pm-ach pm-zelle'><label>Account Holder Name</label><input name='holder_name' value='{{ method.holder_name or "" }}' maxlength='120'></div>
           <div class='pm-field pm-card pm-ach pm-zelle'><label>Last 4 Digits</label><input name='account_last4' value='{{ method.account_last4 or "" }}' inputmode='numeric' maxlength='4'></div>
           <div class='pm-field pm-card'><label>Expiration (MM/YY)</label><input name='expiry_display' value='{{ method.expiry_display or "" }}' maxlength='5' placeholder='08/28'></div>
           <div class='pm-field pm-ach'><label>Account Type</label><select name='account_type'><option value='checking' {% if (method.account_type or 'checking') == 'checking' %}selected{% endif %}>Checking</option><option value='savings' {% if method.account_type == 'savings' %}selected{% endif %}>Savings</option></select></div>
-          <div class='pm-field pm-ach'><label>Routing Number</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='Leave blank to keep current'></div>
-          <div class='pm-field pm-ach'><label>Account Number</label><input name='account_number' inputmode='numeric' placeholder='Leave blank to keep current'></div>
-          <div class='pm-field pm-ach'><label>Confirm Account Number</label><input name='confirm_account_number' inputmode='numeric' placeholder='Re-enter only if changing'></div>
+          <div><label>Processor / Mandate Reference</label><input name='processor_reference' value='{{ method.processor_reference or "" }}' maxlength='140' placeholder='Customer, mandate, or authorization reference'></div>
+          <div style='grid-column:1 / -1'><label>Hosted Billing Setup Link</label><input type='url' name='hosted_setup_url' value='{{ method.hosted_setup_url or "" }}' placeholder='Paste the hosted billing setup or customer portal link'></div>
           <div><label><input type='checkbox' name='is_default' value='1' {% if method.is_default %}checked{% endif %}> Default</label></div>
           <div><label><input type='checkbox' name='is_backup' value='1' {% if method.is_backup %}checked{% endif %}> Backup</label></div>
           <div style='grid-column:1 / -1'><label>Note (optional)</label><input name='details_note' value='{{ method.details_note or "" }}' maxlength='300'></div>
-          <div class='small' style='grid-column:1 / -1'>Recorded method: {{ method.label or payment_method_type_labels.get(method.method_type or 'other', 'Payment Method') }}{% if method.brand_name %} &middot; {{ method.brand_name }}{% endif %}{% if method.account_last4 %} &middot; ending in {{ method.account_last4 }}{% endif %}{% if method.account_type and method.method_type == 'ach' %} &middot; {{ method.account_type|title }}{% endif %}{% if method.expiry_display %} &middot; expires {{ method.expiry_display }}{% endif %}</div>
+          <div class='small' style='grid-column:1 / -1'>Recorded method: {{ method.label or payment_method_type_labels.get(method.method_type or 'other', 'Payment Method') }}{% if method.brand_name %} &middot; {{ method.brand_name }}{% endif %}{% if method.account_last4 %} &middot; ending in {{ method.account_last4 }}{% endif %}{% if method.account_type and method.method_type == 'ach' %} &middot; {{ method.account_type|title }}{% endif %}{% if method.expiry_display %} &middot; expires {{ method.expiry_display }}{% endif %}{% if method.processor_reference %} &middot; {{ method.processor_reference }}{% endif %}</div>
+          {% if method.hosted_setup_url %}
+          <div style='grid-column:1 / -1'><a class='btn btn-secondary btn-sm' href='{{ method.hosted_setup_url }}' target='_blank' rel='noopener'>Open Hosted Billing Setup</a></div>
+          {% endif %}
           <div style='display:flex;gap:8px;flex-wrap:wrap'>
             <button type='submit' class='btn btn-secondary'>Update Method</button>
             <button type='submit' class='btn btn-red' formaction='{{ url_for("cpa_dashboard", client_id=selected_business.id) }}' formmethod='post' formnovalidate onclick="this.form.querySelector('[name=action]').value='delete_payment_method'">Remove Method</button>

@@ -1,6 +1,6 @@
 # LedgerFlow Live Compliance Gap Report
 
-Date: 2026-04-21
+Date: 2026-04-22
 
 Purpose:
 - keep LedgerFlow as one unified all-in-one platform
@@ -11,10 +11,9 @@ Current release decision:
 - BLOCK RELEASE
 
 Why the release is still blocked:
-1. Terms / privacy acceptance is not yet enforced server-side with version logging.
-2. Current billing architecture still accepts and stores full payment-account data inside the app, which is not acceptable if the intended scope is lighter outsourced payment handling.
-3. Privacy and evidence mapping are not yet complete enough to prove that disclosures match real collection, storage, and sharing behavior.
-4. Cross-tenant and role-boundary evidence has not been assembled into a formal release package yet.
+1. Privacy and evidence mapping are not yet complete enough to prove that disclosures match real collection, storage, and sharing behavior.
+2. Cross-tenant and role-boundary evidence has not been assembled into a formal release package yet.
+3. Third-party vendor inventory and AI-output review artifacts are still incomplete for a final release signoff.
 
 ## Pass / Fail Snapshot
 
@@ -25,9 +24,9 @@ Why the release is still blocked:
 - Footer and login links present: PASS
 
 ### 2. Terms acceptance / consent
-- Mandatory acceptance before signup / onboarding: FAIL
-- Acceptance stored with user ID, timestamp, policy version, method: FAIL
-- Re-acceptance after material policy change: FAIL
+- Mandatory acceptance before signup / onboarding: PASS
+- Acceptance stored with user ID, timestamp, policy version, method: PASS
+- Re-acceptance after material policy change: PASS
 
 ### 3. Positioning / claims
 - Product still positioned as a tool, not a CPA replacement: PARTIAL
@@ -40,8 +39,8 @@ Why the release is still blocked:
 
 ### 5. Payment / billing architecture
 - Billing terms visibility before payment: PARTIAL
-- Local storage of full card / bank-account data still exists in code and DB handling: FAIL
-- Payment architecture should be moved to outsourced processor-hosted collection or explicitly redesigned for the correct compliance scope: FAIL
+- Business-side billing now stores labels, last four digits, and hosted billing references instead of full card / bank-account numbers: PASS
+- Payment architecture moved to processor-hosted authorization references, but final vendor-specific release evidence is still needed: PARTIAL
 
 ### 6. Privacy notice alignment
 - Privacy notice page exists: PASS
@@ -50,7 +49,7 @@ Why the release is still blocked:
 
 ### 7. Data minimization
 - Some optional fields are clearly marked optional: PASS
-- Payment / sensitive-data minimization is not yet acceptable while local full account data exists: FAIL
+- Payment / sensitive-data minimization improved through hosted-billing references and last4-only storage on the business billing path: PASS
 
 ### 8. Authentication / access control
 - Protected routes require authentication: PASS
@@ -68,7 +67,7 @@ Why the release is still blocked:
 
 ### 11. Audit / logging
 - Email delivery and some operational events are logged: PARTIAL
-- Terms acceptance logging does not yet exist: FAIL
+- Terms acceptance logging now exists: PASS
 - Formal critical-event audit review is still needed: FAIL
 
 ### 12. Incident readiness
@@ -93,17 +92,17 @@ Why the release is still blocked:
 ## Required next compliance phases
 
 1. Add mandatory Terms + Privacy acceptance with versioned server-side logging.
-2. Remove unexpected local full card / bank-account storage from the app path and move collection to the right hosted payment architecture.
-3. Build the release evidence package:
+2. Finish the release evidence package:
    - legal-page screenshots
    - signup / acceptance video
    - DB proof of policy acceptance logging
+   - proof that business billing stores labels / last4 / hosted references only
    - access-control test results
    - tenant-isolation test results
    - privacy-policy-to-data-map comparison
    - AI red-team prompt results
-4. Finalize the vendor inventory and privacy-policy reality map.
-5. Run the full release-gate checklist again only after those blockers are fixed.
+3. Finalize the vendor inventory and privacy-policy reality map.
+4. Run the full release-gate checklist again only after those blockers are fixed.
 
 ## Product rule preserved
 

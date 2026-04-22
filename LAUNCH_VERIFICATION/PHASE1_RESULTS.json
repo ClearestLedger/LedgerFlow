@@ -1,0 +1,318 @@
+{
+  "generated_at": "2026-04-22T16:13:02",
+  "reset_bundle_dir": "C:\\Users\\danie\\OneDrive\\Desktop\\LedgerNew_Render_Migration",
+  "run_data_dir": "C:\\Users\\danie\\OneDrive\\Desktop\\folder for codex\\_tmp_phase1_clean_launch_verification\\data",
+  "admin_login": {
+    "status_code": 302,
+    "location": "/legal-acceptance?next=/cpa-dashboard",
+    "ok": true
+  },
+  "business_login": {
+    "status_code": 302,
+    "location": "/legal-acceptance?next=/dashboard",
+    "ok": true
+  },
+  "seed": {
+    "client_id": 1,
+    "business_user_id": 2,
+    "worker_id": 1,
+    "job_id": 1,
+    "customer_contact_id": 1,
+    "service_location_id": 1
+  },
+  "admin_supervised": [
+    {
+      "label": "Administrator Dashboard",
+      "path": "/cpa-dashboard",
+      "status_code": 200,
+      "final_path": "/cpa-dashboard",
+      "marker": "Administrator Dashboard",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Business Owner View",
+      "path": "/dashboard?client_id=1",
+      "status_code": 200,
+      "final_path": "/dashboard",
+      "marker": "Owner View",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Business Welcome Center",
+      "path": "/welcome-center?client_id=1",
+      "status_code": 200,
+      "final_path": "/welcome-center",
+      "marker": "Welcome Center",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Billing Center",
+      "path": "/business-payments?client_id=1",
+      "status_code": 200,
+      "final_path": "/business-payments",
+      "marker": "Billing Center",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Jobs",
+      "path": "/jobs?client_id=1",
+      "status_code": 200,
+      "final_path": "/jobs",
+      "marker": "Jobs",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Dispatch",
+      "path": "/dispatch?client_id=1",
+      "status_code": 200,
+      "final_path": "/dispatch",
+      "marker": "Dispatch",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Agenda",
+      "path": "/agenda?client_id=1",
+      "status_code": 200,
+      "final_path": "/agenda",
+      "marker": "Schedule",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Team",
+      "path": "/team?client_id=1",
+      "status_code": 200,
+      "final_path": "/team",
+      "marker": "Team",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Availability",
+      "path": "/availability?client_id=1",
+      "status_code": 200,
+      "final_path": "/availability",
+      "marker": "Availability",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Activity",
+      "path": "/activity?client_id=1",
+      "status_code": 200,
+      "final_path": "/activity",
+      "marker": "Activity",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Locations",
+      "path": "/locations?client_id=1",
+      "status_code": 200,
+      "final_path": "/locations",
+      "marker": "Locations",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Templates",
+      "path": "/templates?client_id=1",
+      "status_code": 200,
+      "final_path": "/templates",
+      "marker": "Templates",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Clients and Sales",
+      "path": "/clients-sales?client_id=1",
+      "status_code": 200,
+      "final_path": "/clients-sales",
+      "marker": "Clients & Sales",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Reports",
+      "path": "/reports?client_id=1",
+      "status_code": 200,
+      "final_path": "/reports",
+      "marker": "Reports",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Summary",
+      "path": "/summary?client_id=1",
+      "status_code": 200,
+      "final_path": "/summary",
+      "marker": "Summary",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    }
+  ],
+  "business_workspace": [
+    {
+      "label": "Owner View",
+      "path": "/dashboard",
+      "status_code": 200,
+      "final_path": "/dashboard",
+      "marker": "Owner View",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Welcome Center",
+      "path": "/welcome-center",
+      "status_code": 200,
+      "final_path": "/welcome-center",
+      "marker": "Welcome Center",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Billing Center",
+      "path": "/business-payments",
+      "status_code": 200,
+      "final_path": "/business-payments",
+      "marker": "Billing Center",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Jobs",
+      "path": "/jobs",
+      "status_code": 200,
+      "final_path": "/jobs",
+      "marker": "Jobs",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Dispatch",
+      "path": "/dispatch",
+      "status_code": 200,
+      "final_path": "/dispatch",
+      "marker": "Dispatch",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Agenda",
+      "path": "/agenda",
+      "status_code": 200,
+      "final_path": "/agenda",
+      "marker": "Schedule",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Team",
+      "path": "/team",
+      "status_code": 200,
+      "final_path": "/team",
+      "marker": "Team",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Availability",
+      "path": "/availability",
+      "status_code": 200,
+      "final_path": "/availability",
+      "marker": "Availability",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Activity",
+      "path": "/activity",
+      "status_code": 200,
+      "final_path": "/activity",
+      "marker": "Activity",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Locations",
+      "path": "/locations",
+      "status_code": 200,
+      "final_path": "/locations",
+      "marker": "Locations",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Templates",
+      "path": "/templates",
+      "status_code": 200,
+      "final_path": "/templates",
+      "marker": "Templates",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Clients and Sales",
+      "path": "/clients-sales",
+      "status_code": 200,
+      "final_path": "/clients-sales",
+      "marker": "Clients & Sales",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Reports",
+      "path": "/reports",
+      "status_code": 200,
+      "final_path": "/reports",
+      "marker": "Reports",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Summary",
+      "path": "/summary",
+      "status_code": 200,
+      "final_path": "/summary",
+      "marker": "Summary",
+      "marker_found": true,
+      "internal_error": false,
+      "pass": true
+    }
+  ],
+  "overall_pass": true
+}

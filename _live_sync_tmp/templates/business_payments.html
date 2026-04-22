@@ -6,7 +6,7 @@
   <div>
     <div class='page-kicker'>{{ tr('Billing Workspace') }}</div>
     <div class='page-title'>{{ client.business_name }} &middot; {{ tr('Billing Center') }}</div>
-    <div class='page-subtitle'>{{ tr('Subscription billing, method on file, and one-time administrator fees in one calm premium billing workspace.') }}</div>
+    <div class='page-subtitle'>{{ tr('Subscription billing, authorization on file, hosted billing references, and one-time administrator fees in one calm premium billing workspace.') }}</div>
   </div>
   {% if current_user.role=='admin' %}<a class='btn btn-secondary' href='{{ url_for("cpa_dashboard", client_id=client_id) }}'>{{ tr('Back to Administrator') }}</a>{% endif %}
 </div>
@@ -45,7 +45,7 @@
 <div class='card section-frame' id='subscription-billing' style='margin-bottom:16px'>
   <div class='card-head'><h3>{{ tr('Subscription Billing') }}</h3><span class='badge'>{{ tr('Recurring Service') }}</span></div>
   <div class='tier-rollout-note' style='margin-bottom:14px'>
-    {{ tr('This live portal is billed as a private administrator-managed client service. Your selected plan, payment authorization, and method on file are active now while premium banking tools continue through final rollout.') }}
+    {{ tr('This live portal is billed as a private administrator-managed client service. Your selected plan and method on file are active now, while fully automated self-checkout and premium banking tools continue through final rollout.') }}
   </div>
   {% if access_level_override_active(client) %}
   <div class='card section-frame' style='margin-bottom:14px;box-shadow:none'>
@@ -84,7 +84,7 @@
     </div>
     {% endfor %}
   </div>
-  <div class='small'>{{ tr('Use one default payment method for subscription billing, optionally keep one backup on file, and authorize automatic withdrawal when you want recurring billing collected from the saved default method.') }}</div>
+  <div class='small'>{{ tr('Use one default payment method for subscription billing and optionally keep one backup on file. LedgerFlow stores only safe billing descriptors while full payment authorization stays with your hosted processor.') }}</div>
 
   <div class='card' style='margin-top:14px;box-shadow:none;border:1px solid #E6ECF2'>
     <div class='card-head'><h3>{{ tr('Subscription Billing Preferences') }}</h3><span class='badge'>{{ tr('Automatic Withdrawal') }}</span></div>
@@ -93,10 +93,10 @@
       <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
       <div style='grid-column:1 / -1'>
         <label><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if client.subscription_autopay_enabled %}checked{% endif %}> {{ tr('Authorize automatic withdrawal from the default saved method for recurring subscription billing.') }}</label>
-        <div class='small' style='margin-top:6px'>{{ tr('Turn this on when you want monthly subscription billing collected from the default card or ACH method already on file.') }}</div>
+        <div class='small' style='margin-top:6px'>{{ tr('Turn this on when your hosted processor already has an approved default card or ACH authorization on file.') }}</div>
       </div>
       <div><label>{{ tr('Next Billing Date') }}</label><input type='date' name='subscription_next_billing_date' value='{{ client.subscription_next_billing_date or "" }}'></div>
-      <div class='small' style='align-self:end'>{{ tr('An active default card or ACH method is required before automatic withdrawal can be enabled.') }}</div>
+      <div class='small' style='align-self:end'>{{ tr('An active default card or ACH method descriptor is required before automatic withdrawal can be enabled.') }}</div>
       <div><button type='submit' class='btn btn-secondary'>{{ tr('Save Billing Preferences') }}</button></div>
     </form>
   </div>
@@ -110,18 +110,17 @@
         <div><label>{{ tr('Method Type') }}</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}'>{{ tr(label) }}</option>{% endfor %}</select></div>
         <div><label>{{ tr('Method Label') }}</label><input name='label' placeholder='{{ tr("Primary business Visa or Operating ACH") }}' maxlength='120' required></div>
         <div><label>{{ tr('Status') }}</label><select name='status'>{% for value, label in payment_method_status_options %}<option value='{{ value }}'>{{ tr(label) }}</option>{% endfor %}</select></div>
-        <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank Name') }}</label><input name='brand_name' placeholder='{{ tr("Visa or Chase Business Checking") }}' maxlength='80'></div>
+        <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank / Processor') }}</label><input name='brand_name' placeholder='{{ tr("Visa or Chase Business Checking") }}' maxlength='80'></div>
         <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Account Holder Name') }}</label><input name='holder_name' placeholder='{{ tr("Business legal name") }}' maxlength='120'></div>
-        <div class='pm-field pm-card'><label>{{ tr('Card Number') }}</label><input name='card_number' inputmode='numeric' maxlength='23' placeholder='4111 1111 1111 1111'></div>
         <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Last 4 Digits') }}</label><input name='account_last4' inputmode='numeric' maxlength='4' placeholder='4242'></div>
         <div class='pm-field pm-card'><label>{{ tr('Expiration (MM/YY)') }}</label><input name='expiry_display' maxlength='5' placeholder='08/28'></div>
         <div class='pm-field pm-ach'><label>{{ tr('Account Type') }}</label><select name='account_type'><option value='checking'>{{ tr('Checking') }}</option><option value='savings'>{{ tr('Savings') }}</option></select></div>
-        <div class='pm-field pm-ach'><label>{{ tr('Routing Number') }}</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='{{ tr("9 digits") }}'></div>
-        <div class='pm-field pm-ach'><label>{{ tr('Account Number') }}</label><input name='account_number' inputmode='numeric' placeholder='{{ tr("Enter account number") }}'></div>
-        <div class='pm-field pm-ach'><label>{{ tr('Confirm Account Number') }}</label><input name='confirm_account_number' inputmode='numeric' placeholder='{{ tr("Re-enter account number") }}'></div>
+        <div><label>{{ tr('Processor / Mandate Reference') }}</label><input name='processor_reference' maxlength='140' placeholder='{{ tr("Customer, mandate, or authorization reference from your billing provider") }}'></div>
+        <div style='grid-column:1 / -1'><label>{{ tr('Hosted Billing Setup Link') }}</label><input type='url' name='hosted_setup_url' placeholder='{{ tr("Paste the hosted billing setup or customer portal link") }}'></div>
         <div><label><input type='checkbox' name='is_default' value='1'> {{ tr('Set as default') }}</label></div>
         <div><label><input type='checkbox' name='is_backup' value='1'> {{ tr('Set as backup') }}</label></div>
         <div style='grid-column:1 / -1'><label>{{ tr('Note (optional)') }}</label><input name='details_note' placeholder='{{ tr("Optional billing contact or setup note") }}' maxlength='300'></div>
+        <div class='small' style='grid-column:1 / -1'>{{ tr('LedgerFlow stores only labels, last four digits, and hosted billing references. Full card and bank-account numbers are not collected inside this app.') }}</div>
         <div><button type='submit' class='btn btn-secondary'>{{ tr('Save Payment Method') }}</button></div>
       </form>
 
@@ -137,19 +136,20 @@
               <div><label>{{ tr('Method Type') }}</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if (method.method_type or 'other') == value %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
               <div><label>{{ tr('Method Label') }}</label><input name='label' value='{{ method.label or "" }}' maxlength='120' required></div>
               <div><label>{{ tr('Status') }}</label><select name='status'>{% for value, label in payment_method_status_options %}<option value='{{ value }}' {% if (method.status or 'active') == value %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
-              <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank Name') }}</label><input name='brand_name' value='{{ method.brand_name or "" }}' maxlength='80'></div>
+              <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank / Processor') }}</label><input name='brand_name' value='{{ method.brand_name or "" }}' maxlength='80'></div>
               <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Account Holder Name') }}</label><input name='holder_name' value='{{ method.holder_name or "" }}' maxlength='120'></div>
-              <div class='pm-field pm-card'><label>{{ tr('Card Number') }}</label><input name='card_number' inputmode='numeric' maxlength='23' placeholder='{{ tr("Leave blank to keep current") }}'></div>
               <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Last 4 Digits') }}</label><input name='account_last4' value='{{ method.account_last4 or "" }}' inputmode='numeric' maxlength='4'></div>
               <div class='pm-field pm-card'><label>{{ tr('Expiration (MM/YY)') }}</label><input name='expiry_display' value='{{ method.expiry_display or "" }}' maxlength='5' placeholder='08/28'></div>
               <div class='pm-field pm-ach'><label>{{ tr('Account Type') }}</label><select name='account_type'><option value='checking' {% if (method.account_type or 'checking') == 'checking' %}selected{% endif %}>{{ tr('Checking') }}</option><option value='savings' {% if method.account_type == 'savings' %}selected{% endif %}>{{ tr('Savings') }}</option></select></div>
-              <div class='pm-field pm-ach'><label>{{ tr('Routing Number') }}</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='{{ tr("Leave blank to keep current") }}'></div>
-              <div class='pm-field pm-ach'><label>{{ tr('Account Number') }}</label><input name='account_number' inputmode='numeric' placeholder='{{ tr("Leave blank to keep current") }}'></div>
-              <div class='pm-field pm-ach'><label>{{ tr('Confirm Account Number') }}</label><input name='confirm_account_number' inputmode='numeric' placeholder='{{ tr("Re-enter only if changing") }}'></div>
+              <div><label>{{ tr('Processor / Mandate Reference') }}</label><input name='processor_reference' value='{{ method.processor_reference or "" }}' maxlength='140' placeholder='{{ tr("Customer, mandate, or authorization reference from your billing provider") }}'></div>
+              <div style='grid-column:1 / -1'><label>{{ tr('Hosted Billing Setup Link') }}</label><input type='url' name='hosted_setup_url' value='{{ method.hosted_setup_url or "" }}' placeholder='{{ tr("Paste the hosted billing setup or customer portal link") }}'></div>
               <div><label><input type='checkbox' name='is_default' value='1' {% if method.is_default %}checked{% endif %}> {{ tr('Default') }}</label></div>
               <div><label><input type='checkbox' name='is_backup' value='1' {% if method.is_backup %}checked{% endif %}> {{ tr('Backup') }}</label></div>
               <div style='grid-column:1 / -1'><label>{{ tr('Note (optional)') }}</label><input name='details_note' value='{{ method.details_note or "" }}' maxlength='300'></div>
-              <div class='small' style='grid-column:1 / -1'>{{ tr('Recorded method:') }} {{ method.label or payment_method_type_labels.get(method.method_type or 'other', 'Payment Method') }}{% if method.brand_name %} &middot; {{ method.brand_name }}{% endif %}{% if method.account_last4 %} &middot; {{ tr('ending in') }} {{ method.account_last4 }}{% endif %}{% if method.account_type and method.method_type == 'ach' %} &middot; {{ method.account_type|title }}{% endif %}{% if method.expiry_display %} &middot; {{ tr('expires') }} {{ method.expiry_display }}{% endif %}</div>
+              <div class='small' style='grid-column:1 / -1'>{{ tr('Recorded method:') }} {{ method.label or payment_method_type_labels.get(method.method_type or 'other', 'Payment Method') }}{% if method.brand_name %} &middot; {{ method.brand_name }}{% endif %}{% if method.account_last4 %} &middot; {{ tr('ending in') }} {{ method.account_last4 }}{% endif %}{% if method.account_type and method.method_type == 'ach' %} &middot; {{ method.account_type|title }}{% endif %}{% if method.expiry_display %} &middot; {{ tr('expires') }} {{ method.expiry_display }}{% endif %}{% if method.processor_reference %} &middot; {{ method.processor_reference }}{% endif %}</div>
+              {% if method.hosted_setup_url %}
+              <div style='grid-column:1 / -1'><a class='btn btn-secondary btn-sm' href='{{ method.hosted_setup_url }}' target='_blank' rel='noopener'>{{ tr('Open Hosted Billing Setup') }}</a></div>
+              {% endif %}
               <div style='display:flex;gap:8px;flex-wrap:wrap'>
                 <button type='submit' class='btn btn-secondary btn-sm'>{{ tr('Update Method') }}</button>
                 <button type='submit' class='btn btn-red btn-sm' formaction='{{ url_for("business_payments_page", client_id=client_id) }}' formmethod='post' formnovalidate onclick="this.form.querySelector('[name=action]').value='delete_payment_method'">{{ tr('Remove Method') }}</button>
@@ -159,7 +159,7 @@
           </div>
         </details>
       {% else %}
-        <div class='small' style='margin-top:12px'>{{ tr('No payment method has been recorded yet. Add a default card or ACH method so your billing setup is complete.') }}</div>
+        <div class='small' style='margin-top:12px'>{{ tr('No payment method has been recorded yet. Add a default card or ACH descriptor so your billing setup is complete.') }}</div>
       {% endif %}
     </div>
   </details>

@@ -340,7 +340,7 @@
           </div>
         </div>
         <div class='tier-rollout-note' style='margin-top:12px'>
-          {{ tr('This private client rollout uses administrator-managed billing. Your selected plan, payment authorization, and method on file are saved now so billing can begin immediately while premium banking tools continue through final buildout.') }}
+          {{ tr('This private client rollout uses administrator-managed billing. Your selected plan, billing authorization, and method descriptor can be saved now while processor-hosted checkout and premium banking tools continue through final buildout.') }}
         </div>
         <label class='small' style='display:block;margin-top:10px'><input type='checkbox' name='subscription_autopay_enabled' value='1' {% if request.form.get("subscription_autopay_enabled", '1' if client.subscription_autopay_enabled else '') %}checked{% endif %}> {{ tr('Authorize automatic withdrawal from the default saved method for recurring subscription billing.') }}</label>
       </div>
@@ -353,27 +353,26 @@
             <span class='step-number'>3</span>
             <div class='onboarding-step-copy'>
               <strong>{{ tr('Make Payment Setup') }}</strong>
-              <span>{{ tr('Save the method on file that LedgerFlow will use for subscription billing.') }}</span>
+              <span>{{ tr('Save the billing authorization reference your business already approved through a processor-hosted page. LedgerFlow keeps only the method label, last four digits, and hosted reference on file.') }}</span>
             </div>
           </div>
           <span class='status-chip processing'>{{ selected_method_type|replace('_', ' ')|title }}</span>
         </div>
       </summary>
       <div class='onboarding-step-body'>
-        <div class='small' style='margin-bottom:14px'>{{ tr('Add the payment method your business wants on file for subscription billing. This creates or updates your default billing method.') }}</div>
+        <div class='small' style='margin-bottom:14px'>{{ tr('Save the billing authorization reference your business already approved through a processor-hosted page. LedgerFlow keeps only the method label, last four digits, and hosted reference on file.') }}</div>
         <div class='form-grid payment-method-form onboarding-method-form'>
           <div><label>{{ tr('Method Type') }}</label><select name='method_type'>{% for value, label in payment_method_type_options %}<option value='{{ value }}' {% if request.form.get("method_type", default_method.method_type if default_method else "card") == value %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
           <div><label>{{ tr('Method Label') }}</label><input name='label' value='{{ request.form.get("label", default_method.label if default_method else "") }}' placeholder='{{ tr("Primary business card or Operating ACH") }}' required></div>
-          <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank Name') }}</label><input name='brand_name' value='{{ request.form.get("brand_name", default_method.brand_name if default_method else "") }}' placeholder='{{ tr("Visa or Chase Business Checking") }}'></div>
+          <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Card Brand / Bank / Processor') }}</label><input name='brand_name' value='{{ request.form.get("brand_name", default_method.brand_name if default_method else "") }}' placeholder='{{ tr("Visa or Chase Business Checking") }}'></div>
           <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Account Holder Name') }}</label><input name='holder_name' value='{{ request.form.get("holder_name", default_method.holder_name if default_method else client.contact_name or current_user.full_name or "") }}' placeholder='{{ tr("Business legal name") }}'></div>
-          <div class='pm-field pm-card'><label>{{ tr('Card Number') }}</label><input name='card_number' inputmode='numeric' maxlength='23' placeholder='{% if default_method and default_method.method_type == "card" %}{{ tr("Leave blank to keep current") }}{% else %}4111 1111 1111 1111{% endif %}'></div>
           <div class='pm-field pm-card pm-ach pm-zelle'><label>{{ tr('Last 4 Digits') }}</label><input name='account_last4' value='{{ request.form.get("account_last4", default_method.account_last4 if default_method else "") }}' inputmode='numeric' maxlength='4' placeholder='4242'></div>
           <div class='pm-field pm-card'><label>{{ tr('Expiration (MM/YY)') }}</label><input name='expiry_display' value='{{ request.form.get("expiry_display", default_method.expiry_display if default_method else "") }}' maxlength='5' placeholder='08/28'></div>
           <div class='pm-field pm-ach'><label>{{ tr('Account Type') }}</label><select name='account_type'><option value='checking' {% if request.form.get("account_type", default_method.account_type if default_method else "checking") == "checking" %}selected{% endif %}>{{ tr('Checking') }}</option><option value='savings' {% if request.form.get("account_type", default_method.account_type if default_method else "") == "savings" %}selected{% endif %}>{{ tr('Savings') }}</option></select></div>
-          <div class='pm-field pm-ach'><label>{{ tr('Routing Number') }}</label><input name='routing_number' inputmode='numeric' maxlength='9' placeholder='{% if default_method and default_method.method_type == "ach" %}{{ tr("Leave blank to keep current") }}{% else %}{{ tr("9 digits") }}{% endif %}'></div>
-          <div class='pm-field pm-ach'><label>{{ tr('Account Number') }}</label><input name='account_number' inputmode='numeric' placeholder='{% if default_method and default_method.method_type == "ach" %}{{ tr("Leave blank to keep current") }}{% else %}{{ tr("Enter account number") }}{% endif %}'></div>
-          <div class='pm-field pm-ach'><label>{{ tr('Confirm Account Number') }}</label><input name='confirm_account_number' inputmode='numeric' placeholder='{{ tr("Re-enter account number") }}'></div>
+          <div><label>{{ tr('Processor / Mandate Reference') }}</label><input name='processor_reference' value='{{ request.form.get("processor_reference", default_method.processor_reference if default_method else "") }}' maxlength='140' placeholder='{{ tr("Customer, mandate, or authorization reference from your billing provider") }}'></div>
+          <div style='grid-column:1 / -1'><label>{{ tr('Hosted Billing Setup Link') }}</label><input type='url' name='hosted_setup_url' value='{{ request.form.get("hosted_setup_url", default_method.hosted_setup_url if default_method else "") }}' placeholder='{{ tr("Paste the hosted billing setup or customer portal link") }}'></div>
           <div style='grid-column:1 / -1'><label>{{ tr('Note (optional)') }}</label><input name='details_note' value='{{ request.form.get("details_note", default_method.details_note if default_method else "") }}' placeholder='{{ tr("Optional billing contact or setup note") }}'></div>
+          <div class='small' style='grid-column:1 / -1'>{{ tr('LedgerFlow stores only labels, last four digits, and hosted billing references. Full card and bank-account numbers are not collected inside this app.') }}</div>
           <input type='hidden' name='status' value='active'>
           <input type='hidden' name='is_default' value='1'>
         </div>

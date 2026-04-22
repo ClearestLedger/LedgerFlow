@@ -45,15 +45,10 @@
       <div><label>Filing Type</label><select name='filing_type'>{% for option in filing_types %}<option value='{{ option }}'>{{ option }}</option>{% endfor %}</select></div>
       <div></div>
 
-      <div><label>Bank Name</label><input name='bank_name'></div>
-      <div><label>Bank Account Nickname</label><input name='bank_account_nickname' placeholder='Operating'></div>
-      <div><label>Bank Account Holder Name</label><input name='bank_account_holder_name'></div>
-      <div><label>Full Account Number</label><input name='bank_account_number' inputmode='numeric'></div>
-
-      <div><label>Full Routing Number</label><input name='bank_routing_number' inputmode='numeric'></div>
-      <div><label>Credit Card Nickname</label><input name='credit_card_nickname' placeholder='Business Card'></div>
-      <div><label>Credit Card Holder Name</label><input name='credit_card_holder_name'></div>
-      <div><label>Full Credit Card Number</label><input name='credit_card_number' inputmode='numeric'></div>
+      <div class='small' style='grid-column:1 / -1;padding:12px 14px;border:1px solid #dfe7ef;border-radius:16px;background:#f8fafc'>
+        <strong>{{ tr('Managed in Billing Center') }}</strong>
+        <div style='margin-top:4px'>{{ tr('Billing Center keeps method labels, last four digits, and hosted billing references. Full card and bank-account numbers are no longer stored in this business profile.') }}</div>
+      </div>
 
       <div><label>Payroll Contact Name</label><input name='payroll_contact_name'></div>
       <div><label>Payroll Contact Phone</label><input name='payroll_contact_phone'></div>
@@ -179,15 +174,12 @@
         <div><label>Filing Type</label><select name='filing_type'>{% for option in filing_types %}<option value='{{ option }}' {% if c.filing_type == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
         <div></div>
 
-        <div><label>Bank Name</label><input name='bank_name' value='{{ c.bank_name or "" }}'></div>
-        <div><label>Bank Account Nickname</label><input name='bank_account_nickname' value='{{ c.bank_account_nickname or "" }}'></div>
-        <div><label>Bank Account Holder Name</label><input name='bank_account_holder_name' value='{{ c.bank_account_holder_name or "" }}'></div>
-        <div><label>Full Account Number</label><input name='bank_account_number' value='{{ mask_account_number(c.bank_account_number or c.bank_account_last4 or "") }}' data-sensitive='true' data-mask='{{ mask_account_number(c.bank_account_number or c.bank_account_last4 or "") }}' data-full='{{ c.bank_account_number or c.bank_account_last4 or "" }}' inputmode='numeric' autocomplete='off'></div>
-
-        <div><label>Full Routing Number</label><input name='bank_routing_number' value='{{ mask_account_number(c.bank_routing_number or "", visible_digits=3, min_mask=5) }}' data-sensitive='true' data-mask='{{ mask_account_number(c.bank_routing_number or "", visible_digits=3, min_mask=5) }}' data-full='{{ c.bank_routing_number or "" }}' inputmode='numeric' autocomplete='off'></div>
-        <div><label>Credit Card Nickname</label><input name='credit_card_nickname' value='{{ c.credit_card_nickname or "" }}'></div>
-        <div><label>Credit Card Holder Name</label><input name='credit_card_holder_name' value='{{ c.credit_card_holder_name or "" }}'></div>
-        <div><label>Full Credit Card Number</label><input name='credit_card_number' value='{{ mask_card_number(c.credit_card_number or c.credit_card_last4 or "") }}' data-sensitive='true' data-mask='{{ mask_card_number(c.credit_card_number or c.credit_card_last4 or "") }}' data-full='{{ c.credit_card_number or c.credit_card_last4 or "" }}' inputmode='numeric' autocomplete='off'></div>
+        <div class='small' style='grid-column:1 / -1;padding:12px 14px;border:1px solid #dfe7ef;border-radius:16px;background:#f8fafc'>
+          <strong>{{ tr('Managed in Billing Center') }}</strong>
+          <div style='margin-top:4px'>{{ tr('Billing Center keeps method labels, last four digits, and hosted billing references. Full card and bank-account numbers are no longer stored in this business profile.') }}</div>
+          <div style='margin-top:6px'>{{ tr('Default payment method') }}: {{ c.default_payment_method_label or tr('Not set') }}{% if c.default_payment_method_status %} &middot; {{ tr((c.default_payment_method_status or 'missing')|replace('_',' ')|title) }}{% endif %}</div>
+          <div>{{ tr('Backup payment method') }}: {{ c.backup_payment_method_label or tr('Optional') }}</div>
+        </div>
 
         <div><label>Payroll Contact Name</label><input name='payroll_contact_name' value='{{ c.payroll_contact_name or "" }}'></div>
         <div><label>Payroll Contact Phone</label><input name='payroll_contact_phone' value='{{ c.payroll_contact_phone or "" }}'></div>
