@@ -50,28 +50,32 @@ Why release is still blocked:
 - `AI_RED_TEAM_PROMPT_SUITE.md`
 - current result: prompt suite and pass/fail criteria documented; execution still pending
 
+8. Access-control and tenant-isolation evidence
+- `LAUNCH_VERIFICATION\\PHASE2_REPORT.md`
+- `LAUNCH_VERIFICATION\\PHASE2_RESULTS.json`
+- current result: clean pass on adversarial admin, business-user, worker, and public-document isolation checks against the clean launch baseline
+
 ## Status by release-gate area
 
 ### Ready now
 - legal pages present
 - terms/privacy acceptance logging
 - clean launch verification route sweep
+- adversarial access-control and core tenant-isolation verification
 - payment-method minimization on business billing flows
 - incident response baseline
 - privacy and vendor documentation baseline
 
 ### Still needed before release
-- formal access-control evidence package
-- formal tenant-isolation evidence package
 - AI prompt execution and review notes
 - final privacy-policy-to-reality signoff
 - final release signoff summary
 
 ## Recommended next steps
 
-1. Run an adversarial access-control and tenant-isolation sweep on the clean live build.
-2. Execute the AI red-team prompt suite and capture pass/fail notes.
-3. Review `PRIVACY_POLICY_REALITY_MAP.md` and `THIRD_PARTY_VENDOR_INVENTORY.md` against the live legal pages.
+1. Execute the AI red-team prompt suite and capture pass/fail notes.
+2. Review `PRIVACY_POLICY_REALITY_MAP.md` and `THIRD_PARTY_VENDOR_INVENTORY.md` against the live legal pages.
+3. Add final screenshots and signoff artifacts to the release evidence package.
 4. Update `LIVE_COMPLIANCE_GAP_REPORT.md` one more time after those results are in.
 
 ## Product rule preserved

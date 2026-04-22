@@ -11,9 +11,9 @@ Current release decision:
 - BLOCK RELEASE
 
 Why the release is still blocked:
-1. Cross-tenant and role-boundary evidence has not been assembled into a formal release package yet.
-2. AI-output prompt execution and review notes are still incomplete for a final release signoff.
-3. Privacy and vendor documentation now exist, but they still need final legal/policy signoff against the live notices.
+1. AI-output prompt execution and review notes are still incomplete for a final release signoff.
+2. Privacy and vendor documentation now exist, but they still need final legal/policy signoff against the live notices.
+3. Final evidence assembly is still incomplete for screenshots, signoff artifacts, and long-tail release documentation.
 
 ## Pass / Fail Snapshot
 
@@ -54,11 +54,11 @@ Why the release is still blocked:
 ### 8. Authentication / access control
 - Protected routes require authentication: PASS
 - Role-based routing exists for admin, business user, and worker: PASS
-- Formal adversarial test evidence is still needed: FAIL
+- Formal adversarial test evidence now exists for the clean launch baseline across admin, business user, and worker boundaries: PASS
 
 ### 9. Multi-tenant / data isolation
 - Tenant-specific route checks exist in code: PARTIAL
-- Formal cross-tenant test evidence package is still missing: FAIL
+- Route-level and public-document isolation evidence now exists in `LAUNCH_VERIFICATION\\PHASE2_REPORT.md`: PARTIAL
 
 ### 10. Security baseline
 - HTTPS / Render deployment expected for live use: PARTIAL
@@ -96,8 +96,6 @@ Why the release is still blocked:
    - signup / acceptance video
    - DB proof of policy acceptance logging
    - proof that business billing stores labels / last4 / hosted references only
-   - access-control test results
-   - tenant-isolation test results
    - AI red-team prompt results
 2. Review `PRIVACY_POLICY_REALITY_MAP.md` and `THIRD_PARTY_VENDOR_INVENTORY.md` against the live public legal pages and confirm final wording.
 3. Run the full release-gate checklist again only after those blockers are fixed.

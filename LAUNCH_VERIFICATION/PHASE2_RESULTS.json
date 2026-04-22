@@ -1,0 +1,305 @@
+{
+  "seed": {
+    "alpha": {
+      "client_id": 1,
+      "business_name": "Phase 2 Alpha Painting LLC",
+      "business_user_id": 2,
+      "business_email": "phase2.alpha@ledgerflow.local",
+      "business_password": "Phase2Alpha!2026",
+      "worker_id": 1,
+      "worker_email": "phase2.worker.alpha@ledgerflow.local",
+      "worker_password": "WorkerAlpha!2026",
+      "worker_name": "Alpha Worker",
+      "job_id": 1,
+      "invoice_id": 1,
+      "invoice_token": "phase2-alpha-public-token",
+      "payment_id": 1,
+      "customer_name": "Alpha Customer"
+    },
+    "beta": {
+      "client_id": 2,
+      "business_name": "Phase 2 Beta Cleaning LLC",
+      "business_user_id": 3,
+      "business_email": "phase2.beta@ledgerflow.local",
+      "business_password": "Phase2Beta!2026",
+      "worker_id": 2,
+      "worker_email": "phase2.worker.beta@ledgerflow.local",
+      "worker_password": "WorkerBeta!2026",
+      "worker_name": "Beta Worker",
+      "job_id": 2,
+      "invoice_id": 2,
+      "invoice_token": "phase2-beta-public-token",
+      "payment_id": 2,
+      "customer_name": "Beta Customer"
+    }
+  },
+  "admin_login": {
+    "status_code": 302,
+    "location": "/legal-acceptance?next=/cpa-dashboard",
+    "ok": true
+  },
+  "alpha_login": {
+    "status_code": 302,
+    "location": "/legal-acceptance?next=/dashboard",
+    "ok": true
+  },
+  "beta_login": {
+    "status_code": 302,
+    "location": "/legal-acceptance?next=/dashboard",
+    "ok": true
+  },
+  "worker_login": {
+    "status_code": 302,
+    "location": "/worker-portal/time-summary",
+    "ok": true
+  },
+  "admin_supervision": [
+    {
+      "label": "Admin opens Alpha Billing Center",
+      "path": "/business-payments?client_id=1",
+      "status_code": 200,
+      "final_path": "/business-payments",
+      "expected_status": 200,
+      "expected_text": "Phase 2 Alpha Painting LLC",
+      "forbidden_text": "",
+      "expected_final_path": "/business-payments",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Admin opens Beta Billing Center",
+      "path": "/business-payments?client_id=2",
+      "status_code": 200,
+      "final_path": "/business-payments",
+      "expected_status": 200,
+      "expected_text": "Phase 2 Beta Cleaning LLC",
+      "forbidden_text": "",
+      "expected_final_path": "/business-payments",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    }
+  ],
+  "business_isolation": [
+    {
+      "label": "Alpha own billing center",
+      "path": "/business-payments",
+      "status_code": 200,
+      "final_path": "/business-payments",
+      "expected_status": 200,
+      "expected_text": "Phase 2 Alpha Painting LLC",
+      "forbidden_text": "Phase 2 Beta Cleaning LLC",
+      "expected_final_path": "/business-payments",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Alpha tries Beta billing center",
+      "path": "/business-payments?client_id=2",
+      "status_code": 200,
+      "final_path": "/business-payments",
+      "expected_status": 200,
+      "expected_text": "Phase 2 Alpha Painting LLC",
+      "forbidden_text": "Phase 2 Beta Cleaning LLC",
+      "expected_final_path": "/business-payments",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Alpha tries Beta owner view",
+      "path": "/dashboard?client_id=2",
+      "status_code": 200,
+      "final_path": "/dashboard",
+      "expected_status": 200,
+      "expected_text": "Owner View",
+      "forbidden_text": "Phase 2 Beta Cleaning LLC",
+      "expected_final_path": "/dashboard",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Alpha tries Beta clients and sales",
+      "path": "/clients-sales?client_id=2",
+      "status_code": 200,
+      "final_path": "/clients-sales",
+      "expected_status": 200,
+      "expected_text": "Clients & Sales",
+      "forbidden_text": "Phase 2 Beta Cleaning LLC",
+      "expected_final_path": "/clients-sales",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Alpha blocked from admin dashboard",
+      "path": "/cpa-dashboard",
+      "status_code": 403,
+      "expected_status": 403,
+      "pass": true
+    },
+    {
+      "label": "Beta own billing center",
+      "path": "/business-payments",
+      "status_code": 200,
+      "final_path": "/business-payments",
+      "expected_status": 200,
+      "expected_text": "Phase 2 Beta Cleaning LLC",
+      "forbidden_text": "Phase 2 Alpha Painting LLC",
+      "expected_final_path": "/business-payments",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Beta tries Alpha billing center",
+      "path": "/business-payments?client_id=1",
+      "status_code": 200,
+      "final_path": "/business-payments",
+      "expected_status": 200,
+      "expected_text": "Phase 2 Beta Cleaning LLC",
+      "forbidden_text": "Phase 2 Alpha Painting LLC",
+      "expected_final_path": "/business-payments",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Beta tries Alpha reports",
+      "path": "/reports?client_id=1",
+      "status_code": 200,
+      "final_path": "/reports",
+      "expected_status": 200,
+      "expected_text": "Reports",
+      "forbidden_text": "Phase 2 Alpha Painting LLC",
+      "expected_final_path": "/reports",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    }
+  ],
+  "worker_boundaries": [
+    {
+      "label": "Worker opens own time summary",
+      "path": "/worker-portal/time-summary",
+      "status_code": 200,
+      "final_path": "/worker-portal/time-summary",
+      "expected_status": 200,
+      "expected_text": "Alpha Worker",
+      "forbidden_text": "",
+      "expected_final_path": "/worker-portal/time-summary",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Worker opens own pay stub",
+      "path": "/worker-portal/pay-stubs/1",
+      "status_code": 200,
+      "final_path": "/worker-portal/pay-stubs/1",
+      "expected_status": 200,
+      "expected_text": "Alpha Worker",
+      "forbidden_text": "",
+      "expected_final_path": "/worker-portal/pay-stubs/1",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Worker blocked from other business pay stub",
+      "path": "/worker-portal/pay-stubs/2",
+      "status_code": 404,
+      "expected_status": 404,
+      "pass": true
+    },
+    {
+      "label": "Worker blocked from business dashboard",
+      "path": "/dashboard?client_id=1",
+      "status_code": 302,
+      "location": "/login",
+      "expected_location_fragment": "/login",
+      "pass": true
+    },
+    {
+      "label": "Worker blocked from admin dashboard",
+      "path": "/cpa-dashboard",
+      "status_code": 302,
+      "location": "/login",
+      "expected_location_fragment": "/login",
+      "pass": true
+    },
+    {
+      "label": "Business user blocked from worker portal pay stub route",
+      "path": "/worker-portal/pay-stubs/1",
+      "status_code": 302,
+      "location": "/worker-login",
+      "expected_location_fragment": "/worker-login",
+      "pass": true
+    }
+  ],
+  "public_document_isolation": [
+    {
+      "label": "Public alpha invoice token resolves only alpha invoice",
+      "path": "/customer-invoice/phase2-alpha-public-token",
+      "status_code": 200,
+      "final_path": "/customer-invoice/phase2-alpha-public-token",
+      "expected_status": 200,
+      "expected_text": "Alpha Customer",
+      "forbidden_text": "Beta Customer",
+      "expected_final_path": "/customer-invoice/phase2-alpha-public-token",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Public beta invoice token resolves only beta invoice",
+      "path": "/customer-invoice/phase2-beta-public-token",
+      "status_code": 200,
+      "final_path": "/customer-invoice/phase2-beta-public-token",
+      "expected_status": 200,
+      "expected_text": "Beta Customer",
+      "forbidden_text": "Alpha Customer",
+      "expected_final_path": "/customer-invoice/phase2-beta-public-token",
+      "expected_text_found": true,
+      "forbidden_text_absent": true,
+      "final_path_ok": true,
+      "internal_error": false,
+      "pass": true
+    },
+    {
+      "label": "Invalid public invoice token returns not found",
+      "path": "/customer-invoice/not-a-real-token",
+      "status_code": 404,
+      "expected_status": 404,
+      "pass": true
+    }
+  ],
+  "overall_pass": true
+}

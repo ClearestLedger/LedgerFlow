@@ -229,3 +229,9 @@
   - created `THIRD_PARTY_VENDOR_INVENTORY.md` to document hosting, SMTP, optional AI, and hosted-billing dependencies
   - created `AI_RED_TEAM_PROMPT_SUITE.md` so optional AI-guide review can be executed as a real release artifact instead of an undocumented blocker
   - updated `LIVE_COMPLIANCE_GAP_REPORT.md` so privacy/vendor/AI sections now reflect documented artifacts instead of unknown gaps
+- Access-control and tenant-isolation verification phase completed on 2026-04-22:
+  - created `LAUNCH_VERIFICATION\\phase2_access_control_verify.py` as a repeatable adversarial verifier on the clean reset baseline
+  - seeded two isolated demo businesses, two business logins, two workers, and public invoice tokens to test role boundaries and tenant separation
+  - verified admin supervision access, business-user cross-tenant pinning, worker-route isolation, worker pay-stub isolation, and public invoice-token isolation
+  - generated `LAUNCH_VERIFICATION\\PHASE2_RESULTS.json` and `LAUNCH_VERIFICATION\\PHASE2_REPORT.md` with a clean pass across all adversarial scenarios
+  - updated compliance/evidence documents so role-boundary evidence is now a real release artifact instead of a known missing gap
