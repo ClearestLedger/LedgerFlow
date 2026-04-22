@@ -27,10 +27,11 @@
 
   <section class='card section-frame' id='privacy'>
     <div class='card-head'><h3>{{ tr('Privacy Notice') }}</h3><span class='badge'>{{ tr('Client Data') }}</span></div>
-    <p class='legal-copy'>{{ tr('LedgerFlow stores business, team-member, billing, and account-access records needed to operate the portal for invited clients. Information is used to manage the platform, support billing workflows, and maintain administrator-supervised client service.') }}</p>
+    <p class='legal-copy'>{{ tr('LedgerFlow stores account-access, business-profile, customer-sales, worker/payroll, scheduling, and billing-reference data needed to operate the portal for invited clients.') }}</p>
     <ul class='subscription-tier-list'>
       <li>{{ tr('Access is limited to authorized accounts and administrator-managed workflows.') }}</li>
       <li>{{ tr('Stored information may include contact details, business records, notices, payment-method references, hosted billing links, and email-delivery logs.') }}</li>
+      <li>{{ tr('Public estimate and invoice links are created only when a business user uses those workflows for a customer.') }}</li>
       <li>{{ tr('Clients should contact their administrator for record corrections, support questions, or account changes.') }}</li>
     </ul>
   </section>
@@ -53,6 +54,16 @@
       <li>{{ tr('Hosted payment authorization should be completed through the external billing processor selected by the administrator, not by entering full card or bank-account numbers directly into LedgerFlow.') }}</li>
       <li>{{ tr('Clients should report suspicious activity immediately to their administrator.') }}</li>
       <li>{{ tr('Email delivery and billing workflows depend on active third-party service availability.') }}</li>
+    </ul>
+  </section>
+
+  <section class='card section-frame' id='processors'>
+    <div class='card-head'><h3>{{ tr('Third-Party Services') }}</h3><span class='badge'>{{ tr('Processors') }}</span></div>
+    <p class='legal-copy'>{{ tr('LedgerFlow is hosted on Render, sends transactional email through the configured SMTP provider, and may direct businesses to an external hosted billing processor selected by the administrator.') }}</p>
+    <ul class='subscription-tier-list'>
+      <li>{{ tr('The current launch baseline uses Gmail SMTP for transactional email delivery.') }}</li>
+      <li>{{ tr('Hosted billing authorization is completed outside LedgerFlow through the external hosted billing processor selected by the administrator.') }}</li>
+      <li>{{ tr('The optional AI guide is not active in the current launch baseline. If it is enabled later, selected user questions and workflow context may be sent to the configured AI provider.') }}</li>
     </ul>
   </section>
 

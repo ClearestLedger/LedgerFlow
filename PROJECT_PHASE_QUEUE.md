@@ -235,3 +235,20 @@
   - verified admin supervision access, business-user cross-tenant pinning, worker-route isolation, worker pay-stub isolation, and public invoice-token isolation
   - generated `LAUNCH_VERIFICATION\\PHASE2_RESULTS.json` and `LAUNCH_VERIFICATION\\PHASE2_REPORT.md` with a clean pass across all adversarial scenarios
   - updated compliance/evidence documents so role-boundary evidence is now a real release artifact instead of a known missing gap
+- AI launch-posture verification phase completed on 2026-04-22:
+  - created `LAUNCH_VERIFICATION\\phase3_ai_launch_posture_verify.py` as a repeatable verifier on the clean reset baseline
+  - verified the clean launch bundle keeps the optional AI guide disabled, unconfigured, and hidden in production by default
+  - verified admin login and legal acceptance still complete normally while AI settings and AI response routes stay unavailable
+  - generated `LAUNCH_VERIFICATION\\PHASE3_RESULTS.json` and `LAUNCH_VERIFICATION\\PHASE3_REPORT.md`
+  - updated release/compliance documents so AI is treated as out of current launch scope unless explicitly enabled later
+- Privacy/vendor legal-page signoff phase completed on 2026-04-22:
+  - updated the public Trust page so it discloses the current privacy categories, Render hosting, Gmail SMTP baseline, hosted billing boundary, and inactive optional AI posture
+  - created `LAUNCH_VERIFICATION\\phase4_privacy_vendor_signoff_verify.py` as a repeatable verifier on the clean reset baseline
+  - generated `LAUNCH_VERIFICATION\\PHASE4_RESULTS.json` and `LAUNCH_VERIFICATION\\PHASE4_REPORT.md` with a clean pass on public legal-page and entry-point checks
+  - created `PRIVACY_VENDOR_LEGAL_SIGNOFF.md` as the formal signoff artifact for the current launch baseline
+  - updated release/compliance documents so privacy/vendor page alignment is no longer treated as an open blocker
+- Future product architecture note recorded on 2026-04-22:
+  - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
+  - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections
+  - each leg should have its own submenu and compact default state so businesses unfold only the area they are actively working in
+  - invoice and estimate UX should be upgraded later toward a cleaner Wave-plus workflow while staying fully inside the business workspace structure

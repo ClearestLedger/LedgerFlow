@@ -47,7 +47,8 @@ Data involved:
 
 Status:
 - active dependency
-- exact live provider should be confirmed from production Email Settings before final signoff
+- current clean launch baseline is configured for Gmail SMTP
+- if the live email provider changes later, this inventory and the public legal page should be reviewed again
 
 ### 3. OpenAI
 
@@ -65,6 +66,7 @@ Data involved:
 
 Status:
 - optional dependency
+- current clean launch baseline keeps this dependency disabled
 - should remain disclosed only as an optional configured processor unless enabled in live use
 
 ### 4. Hosted billing processor chosen by administrator
@@ -99,7 +101,7 @@ These were not observed as built-in code dependencies in the reviewed source:
 ## Release-note guidance
 
 Before public launch, confirm and document:
-1. exact live SMTP provider
+1. whether the live SMTP provider still matches the current Gmail SMTP baseline
 2. whether the optional AI guide is enabled in production
 3. which hosted billing processor the administrator actually uses for live businesses
 

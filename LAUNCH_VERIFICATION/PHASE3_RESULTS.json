@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-04-22 17:24:20",
+  "checks": [
+    {
+      "label": "AI guide hidden by default in production",
+      "passed": true,
+      "detail": "ai_guide_visible=False"
+    },
+    {
+      "label": "AI profile disabled on clean launch baseline",
+      "passed": true,
+      "detail": "enabled=False"
+    },
+    {
+      "label": "AI profile unconfigured on clean launch baseline",
+      "passed": true,
+      "detail": "configured=False api_key_present=False"
+    },
+    {
+      "label": "Admin login still routes through legal gate first",
+      "passed": true,
+      "detail": "status=302 location=/legal-acceptance?next=/cpa-dashboard"
+    },
+    {
+      "label": "Admin can complete legal acceptance and continue",
+      "passed": true,
+      "detail": "status=302 location=/cpa-dashboard"
+    },
+    {
+      "label": "Admin dashboard does not expose AI settings link in launch baseline",
+      "passed": true,
+      "detail": "status=200 ai_link_present=False"
+    },
+    {
+      "label": "AI settings route stays hidden for admin in production launch posture",
+      "passed": true,
+      "detail": "status=404"
+    },
+    {
+      "label": "AI response endpoint is unavailable in launch baseline",
+      "passed": true,
+      "detail": "status=404 error=AI Guide is not enabled for this portal."
+    }
+  ],
+  "total_checks": 8,
+  "passed_checks": 8,
+  "overall_pass": true,
+  "launch_posture": {
+    "ai_guide_visible": false,
+    "ai_enabled": false,
+    "ai_configured": false,
+    "provider": "openai",
+    "model": "gpt-5"
+  }
+}

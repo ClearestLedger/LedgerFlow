@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-04-22 17:50:38",
+  "checks": [
+    {
+      "label": "Trust page loads publicly",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "label": "Trust page shows Privacy Notice section",
+      "passed": true,
+      "detail": "Privacy Notice present"
+    },
+    {
+      "label": "Trust page shows Terms of Use section",
+      "passed": true,
+      "detail": "Terms of Use present"
+    },
+    {
+      "label": "Trust page shows Disclaimer section",
+      "passed": true,
+      "detail": "Disclaimer present"
+    },
+    {
+      "label": "Trust page discloses Render hosting",
+      "passed": true,
+      "detail": "Render disclosure present"
+    },
+    {
+      "label": "Trust page discloses Gmail SMTP baseline",
+      "passed": true,
+      "detail": "Gmail SMTP disclosure present"
+    },
+    {
+      "label": "Trust page discloses hosted billing boundary",
+      "passed": true,
+      "detail": "Hosted billing boundary present"
+    },
+    {
+      "label": "Trust page discloses AI launch posture",
+      "passed": true,
+      "detail": "AI launch posture present"
+    },
+    {
+      "label": "Login page links to Trust/Terms/Privacy",
+      "passed": true,
+      "detail": "Login links to terms/privacy present"
+    },
+    {
+      "label": "Create-account page links to Terms/Privacy",
+      "passed": true,
+      "detail": "status=200"
+    }
+  ],
+  "total_checks": 10,
+  "passed_checks": 10,
+  "overall_pass": true
+}

@@ -11,9 +11,8 @@ Current release status:
 - BLOCK RELEASE
 
 Why release is still blocked:
-1. access-control and tenant-isolation evidence has not been turned into a formal adversarial test package yet
-2. AI-output red-team prompts now exist, but the live assistant has not been fully exercised and reviewed yet
-3. privacy / vendor mapping is now documented, but it still needs final policy-review signoff against the live legal pages
+1. final release signoff screenshots and summary artifacts are still incomplete
+2. remaining compliance evidence is still incomplete for upload/file-security review, critical-event audit review, and retention/deletion rules
 
 ## Current evidence artifacts
 
@@ -42,15 +41,23 @@ Why release is still blocked:
 - `THIRD_PARTY_VENDOR_INVENTORY.md`
 - current result: hosting, SMTP, optional AI provider, and hosted-billing dependency documented
 
-6. Incident response evidence
+6. Privacy / vendor signoff evidence
+- `PRIVACY_VENDOR_LEGAL_SIGNOFF.md`
+- `LAUNCH_VERIFICATION\\PHASE4_REPORT.md`
+- `LAUNCH_VERIFICATION\\PHASE4_RESULTS.json`
+- current result: public legal page aligned to current privacy reality map, vendor inventory, and launch-baseline AI posture
+
+7. Incident response evidence
 - `INCIDENT_RESPONSE_RUNBOOK.md`
 - current result: baseline incident categories, containment flow, preservation, and communication path documented
 
-7. AI review evidence
+8. AI review evidence
 - `AI_RED_TEAM_PROMPT_SUITE.md`
-- current result: prompt suite and pass/fail criteria documented; execution still pending
+- `LAUNCH_VERIFICATION\\PHASE3_REPORT.md`
+- `LAUNCH_VERIFICATION\\PHASE3_RESULTS.json`
+- current result: clean launch baseline verified with AI disabled and hidden in production by default; full prompt execution is deferred until any future AI activation
 
-8. Access-control and tenant-isolation evidence
+9. Access-control and tenant-isolation evidence
 - `LAUNCH_VERIFICATION\\PHASE2_REPORT.md`
 - `LAUNCH_VERIFICATION\\PHASE2_RESULTS.json`
 - current result: clean pass on adversarial admin, business-user, worker, and public-document isolation checks against the clean launch baseline
@@ -65,18 +72,17 @@ Why release is still blocked:
 - payment-method minimization on business billing flows
 - incident response baseline
 - privacy and vendor documentation baseline
+- privacy/vendor/legal-page signoff for the current launch baseline
+- AI launch posture verification for the current baseline
 
 ### Still needed before release
-- AI prompt execution and review notes
-- final privacy-policy-to-reality signoff
 - final release signoff summary
 
 ## Recommended next steps
 
-1. Execute the AI red-team prompt suite and capture pass/fail notes.
-2. Review `PRIVACY_POLICY_REALITY_MAP.md` and `THIRD_PARTY_VENDOR_INVENTORY.md` against the live legal pages.
-3. Add final screenshots and signoff artifacts to the release evidence package.
-4. Update `LIVE_COMPLIANCE_GAP_REPORT.md` one more time after those results are in.
+1. Add final screenshots and signoff artifacts to the release evidence package.
+2. Update `LIVE_COMPLIANCE_GAP_REPORT.md` one more time after those results are in.
+3. If AI is ever enabled later, rerun `AI_RED_TEAM_PROMPT_SUITE.md` and add the activation evidence before release.
 
 ## Product rule preserved
 

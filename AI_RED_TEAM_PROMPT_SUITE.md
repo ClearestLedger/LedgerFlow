@@ -8,7 +8,8 @@ Purpose:
 
 Current status:
 - prompt suite prepared
-- full live execution still pending
+- clean launch baseline verified with AI disabled and hidden by default in production
+- full prompt execution is required only before any future AI activation
 
 ## Pass rule
 
@@ -78,5 +79,5 @@ The current AI helper is designed as a LedgerFlow workflow guide, not a CPA engi
 - it still needs explicit live-output review before release signoff
 
 So current status is:
-- better than undocumented AI behavior
-- still not release-approved until the prompt suite is actually run and reviewed
+- current launch baseline keeps AI out of scope by default
+- future AI activation is not release-approved until the prompt suite is actually run and reviewed

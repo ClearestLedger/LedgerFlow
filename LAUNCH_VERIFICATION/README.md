@@ -76,3 +76,43 @@ Phase 2 passes only if:
 - business users are blocked from admin-only pages
 - workers are blocked from business/admin pages and from other-worker pay stubs
 - invalid public invoice tokens fail cleanly
+
+Phase 3 goal
+
+- verify the clean launch baseline does not expose the optional AI guide in production
+- verify the clean reset bundle does not carry an active AI configuration
+- verify administrator login still works while AI stays out of launch scope
+- turn AI into a future activation gate instead of a current live-launch drift point
+
+Phase 3 outputs
+
+- `PHASE3_RESULTS.json`
+- `PHASE3_REPORT.md`
+
+Phase 3 pass rule
+
+Phase 3 passes only if:
+
+- AI guide is hidden by default in production
+- AI profile is disabled and unconfigured in the clean reset bundle
+- administrator can still log in and complete legal acceptance cleanly
+- AI settings and response routes remain unavailable in the launch baseline
+
+Phase 4 goal
+
+- verify the public Trust page matches the current privacy reality map and vendor inventory
+- verify login and create-account entry points still link users to Terms and Privacy before or during first use
+- turn privacy/vendor legal-page review into a real launch artifact instead of a remaining assumption
+
+Phase 4 outputs
+
+- `PHASE4_RESULTS.json`
+- `PHASE4_REPORT.md`
+
+Phase 4 pass rule
+
+Phase 4 passes only if:
+
+- the Trust page loads publicly and includes Privacy, Terms, Disclaimer, vendor, billing-boundary, and AI-posture disclosures
+- login still links to Terms/Privacy access
+- create-account still links to Terms/Privacy access

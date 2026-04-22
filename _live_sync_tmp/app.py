@@ -1057,6 +1057,10 @@ TRANSLATIONS.update({
         'es': 'LedgerFlow almacena registros de negocio, equipo, cobro y acceso necesarios para operar el portal para clientes invitados. La informacion se usa para administrar la plataforma, apoyar flujos de cobro y mantener el servicio supervisado por el administrador.',
         'pt': 'O LedgerFlow armazena registros de negocio, equipe, cobranca e acesso necessarios para operar o portal para clientes convidados. As informacoes sao usadas para administrar a plataforma, apoiar fluxos de cobranca e manter o servico supervisionado pelo administrador.',
     },
+    'LedgerFlow stores account-access, business-profile, customer-sales, worker/payroll, scheduling, and billing-reference data needed to operate the portal for invited clients.': {
+        'es': 'LedgerFlow almacena datos de acceso, perfil del negocio, ventas al cliente, trabajador/nomina, agenda y referencias de cobro necesarios para operar el portal para clientes invitados.',
+        'pt': 'O LedgerFlow armazena dados de acesso, perfil da empresa, vendas ao cliente, trabalhador/folha, agenda e referencias de cobranca necessarios para operar o portal para clientes convidados.',
+    },
     'Access is limited to authorized accounts and administrator-managed workflows.': {
         'es': 'El acceso esta limitado a cuentas autorizadas y flujos administrados por el administrador.',
         'pt': 'O acesso e limitado a contas autorizadas e fluxos gerenciados pelo administrador.',
@@ -1068,6 +1072,10 @@ TRANSLATIONS.update({
     'Clients should contact their administrator for record corrections, support questions, or account changes.': {
         'es': 'Los clientes deben contactar a su administrador para corregir registros, hacer preguntas de soporte o cambiar la cuenta.',
         'pt': 'Os clientes devem contatar o administrador para corrigir registros, tirar duvidas de suporte ou alterar a conta.',
+    },
+    'Public estimate and invoice links are created only when a business user uses those workflows for a customer.': {
+        'es': 'Los links publicos de estimados y facturas solo se crean cuando un usuario del negocio usa esos flujos para un cliente.',
+        'pt': 'Os links publicos de estimativas e faturas so sao criados quando um usuario da empresa usa esses fluxos para um cliente.',
     },
     'Use of this portal is limited to invited and authorized client accounts. Users must keep login credentials private, use accurate business information, and avoid unauthorized sharing, misuse, or interference with the portal.': {
         'es': 'El uso de este portal esta limitado a cuentas de clientes invitados y autorizados. Los usuarios deben mantener privadas sus credenciales, usar informacion correcta del negocio y evitar compartir sin autorizacion, mal uso o interferencia con el portal.',
@@ -1100,6 +1108,24 @@ TRANSLATIONS.update({
     'Email delivery and billing workflows depend on active third-party service availability.': {
         'es': 'La entrega de correos y los flujos de cobro dependen de la disponibilidad activa de servicios de terceros.',
         'pt': 'A entrega de e-mails e os fluxos de cobranca dependem da disponibilidade ativa de servicos de terceiros.',
+    },
+    'Third-Party Services': {'es': 'Servicios de terceros', 'pt': 'Servicos de terceiros'},
+    'Processors': {'es': 'Procesadores', 'pt': 'Processadores'},
+    'LedgerFlow is hosted on Render, sends transactional email through the configured SMTP provider, and may direct businesses to an external hosted billing processor selected by the administrator.': {
+        'es': 'LedgerFlow esta alojado en Render, envia correos transaccionales por medio del proveedor SMTP configurado y puede dirigir negocios a un procesador externo de cobro hospedado seleccionado por el administrador.',
+        'pt': 'O LedgerFlow esta hospedado na Render, envia emails transacionais por meio do provedor SMTP configurado e pode direcionar empresas para um processador externo de cobranca hospedada selecionado pelo administrador.',
+    },
+    'The current launch baseline uses Gmail SMTP for transactional email delivery.': {
+        'es': 'La base actual de lanzamiento usa Gmail SMTP para la entrega de correos transaccionales.',
+        'pt': 'A base atual de lancamento usa Gmail SMTP para a entrega de emails transacionais.',
+    },
+    'Hosted billing authorization is completed outside LedgerFlow through the external hosted billing processor selected by the administrator.': {
+        'es': 'La autorizacion de cobro hospedada se completa fuera de LedgerFlow por medio del procesador externo seleccionado por el administrador.',
+        'pt': 'A autorizacao de cobranca hospedada e concluida fora do LedgerFlow por meio do processador externo selecionado pelo administrador.',
+    },
+    'The optional AI guide is not active in the current launch baseline. If it is enabled later, selected user questions and workflow context may be sent to the configured AI provider.': {
+        'es': 'La guia opcional de IA no esta activa en la base actual de lanzamiento. Si se activa mas adelante, preguntas seleccionadas del usuario y el contexto del flujo podran enviarse al proveedor de IA configurado.',
+        'pt': 'A guia opcional de IA nao esta ativa na base atual de lancamento. Se for ativada depois, perguntas selecionadas do usuario e o contexto do fluxo poderao ser enviados ao provedor de IA configurado.',
     },
     'Business Profiles': {'es': 'Perfiles de negocios', 'pt': 'Perfis de empresas'},
     'Back to Dashboard': {'es': 'Volver al panel', 'pt': 'Voltar ao painel'},

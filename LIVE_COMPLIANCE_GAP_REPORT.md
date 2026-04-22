@@ -11,9 +11,8 @@ Current release decision:
 - BLOCK RELEASE
 
 Why the release is still blocked:
-1. AI-output prompt execution and review notes are still incomplete for a final release signoff.
-2. Privacy and vendor documentation now exist, but they still need final legal/policy signoff against the live notices.
-3. Final evidence assembly is still incomplete for screenshots, signoff artifacts, and long-tail release documentation.
+1. Final evidence assembly is still incomplete for screenshots, signoff artifacts, and long-tail release documentation.
+2. Upload/file-security evidence, critical-event audit review, and retention/deletion rules still need completion.
 
 ## Pass / Fail Snapshot
 
@@ -31,7 +30,7 @@ Why the release is still blocked:
 ### 3. Positioning / claims
 - Product still positioned as a tool, not a CPA replacement: PARTIAL
 - Explicit disclaimer now added: PASS
-- AI / system outputs still need a dedicated red-team review for advice-style language: FAIL
+- Current launch baseline keeps the optional AI guide disabled and hidden in production by default: PASS
 
 ### 4. Product boundary
 - Core tool behavior is still record / organize / summarize oriented: PASS
@@ -44,8 +43,8 @@ Why the release is still blocked:
 
 ### 6. Privacy notice alignment
 - Privacy notice page exists: PASS
-- Privacy policy to actual data-map comparison is now documented in `PRIVACY_POLICY_REALITY_MAP.md`: PARTIAL
-- Third-party processor inventory is now documented in `THIRD_PARTY_VENDOR_INVENTORY.md`, but exact live provider confirmation is still needed: PARTIAL
+- Privacy policy to actual data-map comparison is documented in `PRIVACY_POLICY_REALITY_MAP.md` and signed off against the live legal page through `PRIVACY_VENDOR_LEGAL_SIGNOFF.md`: PASS
+- Third-party processor/vendor posture is documented in `THIRD_PARTY_VENDOR_INVENTORY.md` and reflected on the live legal page for the current launch baseline: PASS
 
 ### 7. Data minimization
 - Some optional fields are clearly marked optional: PASS
@@ -79,11 +78,13 @@ Why the release is still blocked:
 - Formal retention rules and deletion policy are still missing: FAIL
 
 ### 14. Third-party / vendor inventory
-- Hosting / email / deployment are known operationally: PARTIAL
-- Formal vendor inventory document now exists, but final provider-confirmation review is still needed: PARTIAL
+- Hosting / email / deployment are documented for the current launch baseline: PASS
+- Formal vendor inventory and public-page alignment evidence now exist: PASS
 
 ### 15. AI / automation
-- Prompt suite now exists in `AI_RED_TEAM_PROMPT_SUITE.md`, but execution and review are still pending: PARTIAL
+- Prompt suite exists in `AI_RED_TEAM_PROMPT_SUITE.md`: PASS
+- Clean launch baseline verified with AI disabled and hidden in production by default through `LAUNCH_VERIFICATION\\PHASE3_REPORT.md`: PASS
+- Future AI activation still requires the prompt suite to be executed and reviewed before release: PARTIAL
 
 ### 16. Marketing / website QA
 - Marketing claims still need a final truth-to-product pass after the newest invoice / estimate / client workflow changes: PARTIAL
@@ -96,8 +97,7 @@ Why the release is still blocked:
    - signup / acceptance video
    - DB proof of policy acceptance logging
    - proof that business billing stores labels / last4 / hosted references only
-   - AI red-team prompt results
-2. Review `PRIVACY_POLICY_REALITY_MAP.md` and `THIRD_PARTY_VENDOR_INVENTORY.md` against the live public legal pages and confirm final wording.
+2. Define upload/file-security evidence, formal critical-event audit review, and retention/deletion rules.
 3. Run the full release-gate checklist again only after those blockers are fixed.
 
 ## Product rule preserved
