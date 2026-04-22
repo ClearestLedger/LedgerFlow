@@ -8,7 +8,8 @@
   <div class='card'>
     <div class='card-head'><h3 style='margin:0'>{{ tr('Add Schedule Entry') }}</h3><span class='badge'>{{ tr('Business') }}</span></div>
     <form method='post' class='form-grid'>
-      <div><label>{{ tr('Job Name') }}</label><input name='job_name' required placeholder='Interior repaint, pressure wash, deep clean'></div>
+      <div><label>{{ tr('Saved Client') }}</label><select id='schedule_contact_select' name='customer_contact_id'><option value=''>{{ tr('Choose saved client (optional)') }}</option>{% for row in customer_contacts %}<option value='{{ row.id }}' {% if prefill_contact_id and row.id == prefill_contact_id %}selected{% endif %} data-name='{{ row.customer_name|e }}' data-address='{{ row.customer_address|e }}' data-notes='{{ row.customer_notes|e }}' data-scope='{{ row.recurring_scope|e }}' data-title='{{ (row.recurring_job_name or row.customer_name)|e }}'>{{ row.customer_name }}{% if row.customer_email %} &middot; {{ row.customer_email }}{% endif %}</option>{% endfor %}</select></div>
+      <div><label>{{ tr('Job Name') }}</label><input id='schedule_job_name' name='job_name' value='{{ prefill_contact.recurring_job_name or prefill_contact.customer_name if prefill_contact else "" }}' required placeholder='Interior repaint, pressure wash, deep clean'></div>
       <div><label>{{ tr('Date') }}</label><input type='date' name='schedule_date' required value='{{ today }}'></div>
       <div><label>{{ tr('Start Time') }}</label><input type='time' name='start_time'></div>
       <div><label>{{ tr('End Time') }}</label><input type='time' name='end_time'></div>
@@ -22,9 +23,9 @@
           {% endfor %}
         </div>
       </div>
-      <div style='grid-column:1 / -1'><label>{{ tr('Job Address') }}</label><input name='job_address' placeholder='Street, city, state'></div>
-      <div style='grid-column:1 / -1'><label>{{ tr('Scope of Work') }}</label><input name='scope_of_work' placeholder='Exterior prep, paint walls, move furniture, turnover cleaning'></div>
-      <div style='grid-column:1 / -1'><label>{{ tr('Notes / Instructions') }}</label><textarea name='notes' placeholder='Gate code, materials, customer contact, arrival note'></textarea></div>
+      <div style='grid-column:1 / -1'><label>{{ tr('Job Address') }}</label><input id='schedule_job_address' name='job_address' value='{{ prefill_contact.customer_address if prefill_contact else "" }}' placeholder='Street, city, state'></div>
+      <div style='grid-column:1 / -1'><label>{{ tr('Scope of Work') }}</label><input id='schedule_scope_of_work' name='scope_of_work' value='{{ prefill_contact.recurring_scope if prefill_contact else "" }}' placeholder='Exterior prep, paint walls, move furniture, turnover cleaning'></div>
+      <div style='grid-column:1 / -1'><label>{{ tr('Notes / Instructions') }}</label><textarea id='schedule_notes' name='notes' placeholder='Gate code, materials, customer contact, arrival note'>{{ prefill_contact.customer_notes if prefill_contact else "" }}</textarea></div>
       <div style='grid-column:1 / -1'><button type='submit'>{{ tr('Save Schedule Entry') }}</button></div>
     </form>
   </div>
@@ -49,6 +50,24 @@
     {% endif %}
   </div>
 </div>
+<script>
+(function(){
+  var select = document.getElementById('schedule_contact_select');
+  if (!select) return;
+  select.addEventListener('change', function(){
+    var option = select.options[select.selectedIndex];
+    if (!option) return;
+    var title = document.getElementById('schedule_job_name');
+    var address = document.getElementById('schedule_job_address');
+    var scope = document.getElementById('schedule_scope_of_work');
+    var notes = document.getElementById('schedule_notes');
+    if (title && option.getAttribute('data-title')) title.value = option.getAttribute('data-title');
+    if (address && option.getAttribute('data-address')) address.value = option.getAttribute('data-address');
+    if (scope) scope.value = option.getAttribute('data-scope') || '';
+    if (notes) notes.value = option.getAttribute('data-notes') || '';
+  });
+})();
+</script>
 
 <div class='card' style='margin-top:18px'>
   <div class='card-head'><h3 style='margin:0'>{{ tr('Saved Schedule Entries') }}</h3><span class='badge'>{{ entries|length }}</span></div>

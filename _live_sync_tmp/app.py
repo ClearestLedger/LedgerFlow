@@ -343,6 +343,37 @@ TRANSLATIONS.update({
     'Sales': {'es': 'Ventas', 'pt': 'Vendas'},
     'Pay': {'es': 'Pagar', 'pt': 'Pagar'},
     'View': {'es': 'Ver', 'pt': 'Ver'},
+    'Disclaimer': {'es': 'Descargo', 'pt': 'Aviso legal'},
+    'Client Workspace': {'es': 'Espacio de clientes', 'pt': 'Espaco de clientes'},
+    'Add Client': {'es': 'Agregar cliente', 'pt': 'Adicionar cliente'},
+    'Add to Calendar': {'es': 'Agregar al calendario', 'pt': 'Adicionar ao calendario'},
+    'New Estimate': {'es': 'Nuevo presupuesto', 'pt': 'Novo orcamento'},
+    'New Invoice': {'es': 'Nueva factura', 'pt': 'Nova fatura'},
+    'Send Receipt': {'es': 'Enviar recibo', 'pt': 'Enviar recibo'},
+    'Delete Permanently': {'es': 'Eliminar permanentemente', 'pt': 'Excluir permanentemente'},
+    'Client Actions': {'es': 'Acciones del cliente', 'pt': 'Acoes do cliente'},
+    'Jump directly from a saved client into scheduling, estimates, invoices, and receipts.': {
+        'es': 'Salta directamente desde un cliente guardado a agenda, presupuestos, facturas y recibos.',
+        'pt': 'Vá direto de um cliente salvo para agenda, orcamentos, faturas e recibos.',
+    },
+    'Linked records': {'es': 'Registros vinculados', 'pt': 'Registros vinculados'},
+    'Delete permanently only after linked sales and schedule records are cleared.': {
+        'es': 'Elimina permanentemente solo despues de limpiar los registros de ventas y agenda vinculados.',
+        'pt': 'Exclua permanentemente somente depois de limpar os registros vinculados de vendas e agenda.',
+    },
+    'This client has linked invoices, estimates, jobs, or schedule entries and cannot be permanently deleted yet.': {
+        'es': 'Este cliente tiene facturas, presupuestos, trabajos o agendas vinculadas y aun no puede eliminarse permanentemente.',
+        'pt': 'Este cliente possui faturas, orcamentos, servicos ou agendas vinculadas e ainda nao pode ser excluido permanentemente.',
+    },
+    'Send a payment receipt after the invoice is marked paid.': {
+        'es': 'Envia un recibo de pago despues de marcar la factura como pagada.',
+        'pt': 'Envie um recibo de pagamento depois que a fatura for marcada como paga.',
+    },
+    'Informational tool only': {'es': 'Herramienta solo informativa', 'pt': 'Ferramenta apenas informativa'},
+    'LedgerFlow provides organization, summaries, and workflow tools. It does not provide financial, tax, legal, or accounting advice and does not replace a licensed professional.': {
+        'es': 'LedgerFlow ofrece organizacion, resumos y herramientas de flujo. No brinda asesoramiento financiero, fiscal, legal ni contable y no reemplaza a un profesional licenciado.',
+        'pt': 'A LedgerFlow oferece organizacao, resumos e ferramentas de fluxo. Nao fornece orientacao financeira, fiscal, juridica ou contabil e nao substitui um profissional licenciado.',
+    },
     'Operational LedgerFlow gives service businesses a focused command center for jobs, dispatch, scheduling, team coordination, and field execution.': {
         'es': 'Operational LedgerFlow ofrece a las empresas de servicios un centro de control enfocado para trabajos, despacho, agenda, coordinacion del equipo y ejecucion en campo.',
         'pt': 'A LedgerFlow Operacional oferece aos negocios de servicos um centro de comando focado em servicos, despacho, agenda, coordenacao da equipe e execucao em campo.',
@@ -1700,6 +1731,97 @@ def upsert_customer_contact(
         ),
     )
     return cursor.lastrowid
+
+
+def customer_contact_dependency_summary(conn: sqlite3.Connection, client_id: int, contact_id: int) -> dict:
+    contact = conn.execute(
+        'SELECT * FROM customer_contacts WHERE id=? AND client_id=?',
+        (contact_id, client_id),
+    ).fetchone()
+    contact_name = ((contact['customer_name'] if contact else '') or '').strip().lower()
+    contact_email = ((contact['customer_email'] if contact else '') or '').strip().lower()
+    work_schedule_count = conn.execute(
+        'SELECT COUNT(*) n FROM work_schedule_entries WHERE client_id=? AND customer_contact_id=?',
+        (client_id, contact_id),
+    ).fetchone()['n']
+    job_count = conn.execute(
+        'SELECT COUNT(*) n FROM jobs WHERE client_id=? AND customer_contact_id=?',
+        (client_id, contact_id),
+    ).fetchone()['n']
+    location_count = conn.execute(
+        'SELECT COUNT(*) n FROM service_locations WHERE client_id=? AND customer_contact_id=?',
+        (client_id, contact_id),
+    ).fetchone()['n']
+    if contact_email:
+        estimate_count = conn.execute(
+            """SELECT COUNT(*) n
+               FROM invoices
+               WHERE client_id=?
+                 AND COALESCE(record_kind,'')='estimate'
+                 AND (
+                   customer_contact_id=?
+                   OR (
+                     customer_contact_id IS NULL
+                     AND LOWER(TRIM(COALESCE(client_name,'')))=?
+                     AND LOWER(TRIM(COALESCE(recipient_email,'')))=?
+                   )
+                 )""",
+            (client_id, contact_id, contact_name, contact_email),
+        ).fetchone()['n']
+        invoice_count = conn.execute(
+            """SELECT COUNT(*) n
+               FROM invoices
+               WHERE client_id=?
+                 AND COALESCE(record_kind,'')='customer_invoice'
+                 AND (
+                   customer_contact_id=?
+                   OR (
+                     customer_contact_id IS NULL
+                     AND LOWER(TRIM(COALESCE(client_name,'')))=?
+                     AND LOWER(TRIM(COALESCE(recipient_email,'')))=?
+                   )
+                 )""",
+            (client_id, contact_id, contact_name, contact_email),
+        ).fetchone()['n']
+    else:
+        estimate_count = conn.execute(
+            """SELECT COUNT(*) n
+               FROM invoices
+               WHERE client_id=?
+                 AND COALESCE(record_kind,'')='estimate'
+                 AND (
+                   customer_contact_id=?
+                   OR (
+                     customer_contact_id IS NULL
+                     AND LOWER(TRIM(COALESCE(client_name,'')))=?
+                   )
+                 )""",
+            (client_id, contact_id, contact_name),
+        ).fetchone()['n']
+        invoice_count = conn.execute(
+            """SELECT COUNT(*) n
+               FROM invoices
+               WHERE client_id=?
+                 AND COALESCE(record_kind,'')='customer_invoice'
+                 AND (
+                   customer_contact_id=?
+                   OR (
+                     customer_contact_id IS NULL
+                     AND LOWER(TRIM(COALESCE(client_name,'')))=?
+                   )
+                 )""",
+            (client_id, contact_id, contact_name),
+        ).fetchone()['n']
+    total_links = int(work_schedule_count or 0) + int(job_count or 0) + int(location_count or 0) + int(estimate_count or 0) + int(invoice_count or 0)
+    return {
+        'work_schedule_count': int(work_schedule_count or 0),
+        'job_count': int(job_count or 0),
+        'location_count': int(location_count or 0),
+        'estimate_count': int(estimate_count or 0),
+        'invoice_count': int(invoice_count or 0),
+        'total_links': total_links,
+        'can_delete': total_links == 0,
+    }
 
 
 def recurring_frequency_options():
@@ -4258,6 +4380,76 @@ def send_customer_invoice_reminder_email(
     return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'customer_invoice_reminder'}
 
 
+def send_customer_receipt_email(
+    *,
+    to_email: str,
+    to_name: str,
+    business_name: str,
+    invoice_number,
+    invoice_title: str,
+    invoice_link: str,
+    paid_amount: float,
+    paid_at: str,
+):
+    cfg = smtp_config()
+    sender_email = cfg['sender_email']
+    smtp_username = cfg['smtp_username']
+    smtp_password = cfg['smtp_password']
+    if cfg.get('password_unreadable'):
+        raise RuntimeError('Saved SMTP password must be entered again once after the security-key update.')
+    if not sender_email or not smtp_username or not smtp_password:
+        raise RuntimeError('SMTP not configured')
+    greeting = f"Hi {to_name}," if to_name else 'Hi,'
+    title = invoice_title or 'Customer Invoice'
+    paid_line = f'Paid on: {paid_at[:10]}' if paid_at else 'Paid status recorded in the hosted invoice page.'
+    body = "\n".join([
+        greeting,
+        "",
+        f"{business_name} recorded payment for invoice #{invoice_number}: {title}",
+        paid_line,
+        f"Amount received: ${paid_amount:.2f}",
+        "",
+        "Open the hosted invoice here:",
+        invoice_link,
+        "",
+        "Thank you.",
+        "",
+        "LedgerFlow",
+    ])
+    email_html = render_marketing_email(
+        eyebrow='Payment Receipt',
+        title=f'Receipt for invoice #{invoice_number}',
+        intro='This receipt confirms that payment was recorded on the hosted invoice.',
+        greeting=greeting,
+        body_lines=[
+            f'{title} has been marked paid.',
+            paid_line,
+            f'Amount received: ${paid_amount:.2f}.',
+            'Use the secure button below to reopen the hosted invoice or print it for your records.',
+        ],
+        cta_label='Open Receipt',
+        cta_link=invoice_link,
+        detail_rows=[
+            ('Business', business_name),
+            ('Invoice', f'#{invoice_number}'),
+            ('Invoice title', title),
+            ('Paid on', paid_at[:10] if paid_at else 'Recorded'),
+            ('Amount received', f'${paid_amount:.2f}'),
+        ],
+        feature_tags=['Payment Receipt', 'Hosted Invoice', 'Print Ready'],
+        support_note='If this receipt does not match your records, contact the sender directly.'
+    )
+    subject = f'Receipt for invoice #{invoice_number} from {business_name}'
+    send_rich_email(
+        cfg,
+        subject=subject,
+        to_email=to_email,
+        plain_text=body,
+        html=email_html,
+    )
+    return {'subject': subject, 'body_text': body, 'body_html': email_html, 'email_type': 'customer_receipt'}
+
+
 def send_customer_estimate_email(
     *,
     to_email: str,
@@ -6045,6 +6237,7 @@ def init_db():
         ensure_column(conn, 'invoices', 'approved_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'invoices', 'declined_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'invoices', 'converted_invoice_id', 'INTEGER')
+        ensure_column(conn, 'invoices', 'customer_contact_id', 'INTEGER')
         ensure_column(conn, 'invoices', 'payment_note', "TEXT DEFAULT ''")
         ensure_column(conn, 'customer_contacts', 'customer_phone', "TEXT DEFAULT ''")
         ensure_column(conn, 'customer_contacts', 'customer_address', "TEXT DEFAULT ''")
@@ -10584,14 +10777,15 @@ def convert_estimate_to_invoice_document(conn: sqlite3.Connection, estimate_row,
     due_date = (date.today() + timedelta(days=14)).isoformat()
     cursor = conn.execute(
         '''INSERT INTO invoices (
-            client_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
+            client_id, customer_contact_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
             invoice_total_amount, paid_amount, invoice_date, due_date, estimate_expiration_date, invoice_status,
             public_invoice_token, public_payment_link, sent_at, last_reminder_at, reminder_count,
             customer_viewed_at, customer_paid_at, approved_at, declined_at, converted_invoice_id,
             payment_note, notes, income_category, sales_tax_amount, sales_tax_paid
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
         (
             estimate_row['client_id'],
+            estimate_row['customer_contact_id'] if 'customer_contact_id' in estimate_row.keys() else None,
             next_job,
             'customer_invoice',
             estimate_row['invoice_title'] or 'Customer Invoice',
@@ -12102,7 +12296,7 @@ def customer_sales():
                 if recurring_expected_amount < 0:
                     flash('Default visit price cannot be negative.', 'error')
                     return redirect(url_for('customer_sales', client_id=client_id))
-                upsert_customer_contact(
+                saved_contact_id = upsert_customer_contact(
                     conn,
                     client_id=client_id,
                     customer_name=customer_name,
@@ -12112,16 +12306,7 @@ def customer_sales():
                     customer_notes=customer_notes,
                     created_by_user_id=user['id'],
                 )
-                saved_contact = conn.execute(
-                    '''SELECT id
-                       FROM customer_contacts
-                       WHERE client_id=?
-                         AND LOWER(TRIM(customer_name))=?
-                       ORDER BY id DESC
-                       LIMIT 1''',
-                    (client_id, customer_name.lower()),
-                ).fetchone()
-                if saved_contact:
+                if saved_contact_id:
                     conn.execute(
                         '''UPDATE customer_contacts
                            SET recurring_frequency=?,
@@ -12152,7 +12337,7 @@ def customer_sales():
                             1 if (recurring_frequency and request.form.get('auto_add_to_calendar')) else 0,
                             now_iso(),
                             user['id'],
-                            saved_contact['id'],
+                            saved_contact_id,
                             client_id,
                         ),
                     )
@@ -12277,6 +12462,26 @@ def customer_sales():
                     flash('Client record updated.', 'success')
                 else:
                     flash('Client record not found.', 'error')
+                return redirect(url_for('customer_sales', client_id=client_id))
+            if action == 'delete_customer_contact':
+                contact_id = request.form.get('contact_id', type=int)
+                contact = conn.execute(
+                    'SELECT * FROM customer_contacts WHERE id=? AND client_id=?',
+                    (contact_id, client_id),
+                ).fetchone() if contact_id else None
+                if not contact:
+                    flash('Client record not found.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                dependency = customer_contact_dependency_summary(conn, client_id, contact_id)
+                if (contact['status'] or 'active') == 'active':
+                    flash('Archive the client first before permanent deletion.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                if not dependency['can_delete']:
+                    flash('This client has linked invoices, estimates, jobs, or schedule entries and cannot be permanently deleted yet.', 'error')
+                    return redirect(url_for('customer_sales', client_id=client_id))
+                conn.execute('DELETE FROM customer_contacts WHERE id=? AND client_id=?', (contact_id, client_id))
+                conn.commit()
+                flash('Client record deleted permanently.', 'success')
                 return redirect(url_for('customer_sales', client_id=client_id))
         ensure_recurring_schedule_entries(conn, client_id=client_id, actor_user_id=user['id'])
         conn.commit()
@@ -12432,6 +12637,11 @@ def customer_sales():
         metrics['projected_recurring_revenue'] += float(contact['projected_monthly'] or 0)
         metrics['upcoming_recurring_visits'] += int(contact['upcoming_recurring_visits'] or 0)
     metrics['customer_count'] = len(active_contacts)
+    with get_conn() as dependency_conn:
+        archived_dependency_map = {
+            row['id']: customer_contact_dependency_summary(dependency_conn, client_id, row['id'])
+            for row in archived_contacts
+        }
     return render_template(
         'customer_sales.html',
         client=client,
@@ -12446,6 +12656,7 @@ def customer_sales():
         invoice_public_links=invoice_public_links,
         invoice_status_labels=invoice_status_label_map(),
         metrics=metrics,
+        archived_dependency_map=archived_dependency_map,
         recurring_frequency_options=recurring_frequency_options(),
         recurring_frequency_labels=recurring_frequency_labels,
         recurring_weekday_options=recurring_weekday_options(),
@@ -14342,6 +14553,7 @@ def invoices():
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     today_iso = date.today().isoformat()
     default_due_date = (date.today() + timedelta(days=14)).isoformat()
+    prefill_contact_id = request.values.get('customer_contact_id', type=int)
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
@@ -14355,9 +14567,10 @@ def invoices():
             (client_id,),
         ).fetchall() if sales_workspace_enabled else []
         customer_contact_lookup = {row['id']: row for row in customer_contact_rows}
+        prefill_contact = customer_contact_lookup.get(prefill_contact_id) if sales_workspace_enabled else None
         if request.method == 'POST':
             action = request.form.get('action', 'add_invoice').strip()
-            if action in {'create_customer_invoice', 'send_customer_invoice', 'send_customer_invoice_reminder', 'mark_customer_invoice_paid'} and not sales_workspace_enabled:
+            if action in {'create_customer_invoice', 'send_customer_invoice', 'send_customer_invoice_reminder', 'mark_customer_invoice_paid', 'send_customer_receipt'} and not sales_workspace_enabled:
                 return premium_sales_redirect(client_id)
             if action == 'add_mileage':
                 start_point = request.form.get('start_point', '').strip()
@@ -14385,6 +14598,7 @@ def invoices():
             if action == 'create_customer_invoice':
                 errors: list[str] = []
                 selected_contact = customer_contact_lookup.get(request.form.get('customer_contact_id', type=int))
+                selected_contact_id = selected_contact['id'] if selected_contact else None
                 customer_name = request.form.get('client_name', '').strip()
                 recipient_email = request.form.get('recipient_email', '').strip().lower()
                 invoice_date = request.form.get('invoice_date', '').strip() or today_iso
@@ -14426,14 +14640,26 @@ def invoices():
                 token = generate_invoice_public_token()
                 while conn.execute('SELECT 1 FROM invoices WHERE public_invoice_token=? LIMIT 1', (token,)).fetchone():
                     token = generate_invoice_public_token()
+                saved_contact_id = upsert_customer_contact(
+                    conn,
+                    client_id=client_id,
+                    customer_name=customer_name,
+                    customer_email=recipient_email,
+                    customer_phone=customer_phone,
+                    customer_address=client_address,
+                    customer_notes=notes,
+                    created_by_user_id=user['id'],
+                )
+                customer_contact_id = selected_contact_id or saved_contact_id
                 cursor = conn.execute(
                     '''INSERT INTO invoices (
-                        client_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
+                        client_id, customer_contact_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
                         invoice_total_amount, paid_amount, invoice_date, due_date, invoice_status, public_invoice_token,
                         public_payment_link, notes, income_category, sales_tax_amount, sales_tax_paid
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                     (
                         client_id,
+                        customer_contact_id,
                         next_job,
                         'customer_invoice',
                         invoice_title,
@@ -14467,16 +14693,6 @@ def invoices():
                             item['line_total'],
                         )
                     )
-                upsert_customer_contact(
-                    conn,
-                    client_id=client_id,
-                    customer_name=customer_name,
-                    customer_email=recipient_email,
-                    customer_phone=customer_phone,
-                    customer_address=client_address,
-                    customer_notes=notes,
-                    created_by_user_id=user['id'],
-                )
                 send_now = bool(request.form.get('send_now'))
                 if send_now:
                     view_link = public_invoice_url(token)
@@ -14670,6 +14886,63 @@ def invoices():
                 conn.commit()
                 flash('Customer invoice marked paid.', 'success')
                 return redirect(url_for('invoices', client_id=client_id))
+            if action == 'send_customer_receipt':
+                invoice_id = request.form.get('invoice_id', type=int)
+                row = conn.execute(
+                    '''SELECT i.*, c.business_name
+                       FROM invoices i
+                       JOIN clients c ON c.id = i.client_id
+                       WHERE i.id=? AND i.client_id=? AND COALESCE(i.record_kind,'income_record')='customer_invoice' ''',
+                    (invoice_id, client_id),
+                ).fetchone()
+                if not row:
+                    flash('Customer invoice not found.', 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
+                if not (row['recipient_email'] or '').strip():
+                    flash('Add a recipient email before sending a receipt.', 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
+                if invoice_payment_progress_status(row) != 'paid':
+                    flash('Mark the invoice paid before sending a receipt.', 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
+                token = ensure_invoice_public_token(conn, row['id'])
+                try:
+                    email_result = send_customer_receipt_email(
+                        to_email=row['recipient_email'],
+                        to_name=row['client_name'],
+                        business_name=row['business_name'],
+                        invoice_number=row['job_number'] or row['id'],
+                        invoice_title=row['invoice_title'] or 'Customer Invoice',
+                        invoice_link=public_invoice_url(token),
+                        paid_amount=money(row['paid_amount'] or row['invoice_total_amount'] or 0),
+                        paid_at=row['customer_paid_at'] or row['updated_at'] or now_iso(),
+                    )
+                    log_email_delivery(
+                        client_id=client_id,
+                        email_type=email_result['email_type'],
+                        recipient_email=row['recipient_email'],
+                        recipient_name=row['client_name'],
+                        subject=email_result['subject'],
+                        body_text=email_result['body_text'],
+                        body_html=email_result['body_html'],
+                        status='sent',
+                        created_by_user_id=user['id'],
+                    )
+                    conn.commit()
+                    flash('Payment receipt sent.', 'success')
+                except Exception as exc:
+                    log_email_delivery(
+                        client_id=client_id,
+                        email_type='customer_receipt',
+                        recipient_email=row['recipient_email'],
+                        recipient_name=row['client_name'],
+                        subject=f'Receipt for invoice #{row["job_number"] or row["id"]}',
+                        status='failed',
+                        error_message=str(exc)[:500],
+                        created_by_user_id=user['id'],
+                    )
+                    conn.commit()
+                    flash(f'Receipt send failed: {exc}', 'error')
+                return redirect(url_for('invoices', client_id=client_id))
             next_job = conn.execute('SELECT COALESCE(MAX(job_number),0)+1 n FROM invoices WHERE client_id=?', (client_id,)).fetchone()['n']
             gross_amount = request.form.get('paid_amount', type=float) or 0
             conn.execute(
@@ -14762,6 +15035,8 @@ def invoices():
         customer_invoices=customer_invoice_rows,
         sales_workspace_enabled=sales_workspace_enabled,
         customer_contacts=[dict(row) for row in customer_contact_rows],
+        prefill_contact_id=(prefill_contact['id'] if prefill_contact else None),
+        prefill_contact=dict(prefill_contact) if prefill_contact else None,
         income_records=income_rows,
         invoice_line_items_map=line_items_map,
         invoice_public_links=invoice_public_links,
@@ -14789,6 +15064,7 @@ def estimates():
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     today_iso = date.today().isoformat()
     default_valid_until = (date.today() + timedelta(days=14)).isoformat()
+    prefill_contact_id = request.values.get('customer_contact_id', type=int)
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
@@ -14803,11 +15079,13 @@ def estimates():
             (client_id,),
         ).fetchall()
         customer_contact_lookup = {row['id']: row for row in customer_contact_rows}
+        prefill_contact = customer_contact_lookup.get(prefill_contact_id)
         if request.method == 'POST':
             action = request.form.get('action', 'create_estimate').strip()
             if action == 'create_estimate':
                 errors: list[str] = []
                 selected_contact = customer_contact_lookup.get(request.form.get('customer_contact_id', type=int))
+                selected_contact_id = selected_contact['id'] if selected_contact else None
                 customer_name = request.form.get('client_name', '').strip()
                 recipient_email = request.form.get('recipient_email', '').strip().lower()
                 invoice_date = request.form.get('invoice_date', '').strip() or today_iso
@@ -14846,16 +15124,28 @@ def estimates():
                 token = generate_invoice_public_token()
                 while conn.execute('SELECT 1 FROM invoices WHERE public_invoice_token=? LIMIT 1', (token,)).fetchone():
                     token = generate_invoice_public_token()
+                saved_contact_id = upsert_customer_contact(
+                    conn,
+                    client_id=client_id,
+                    customer_name=customer_name,
+                    customer_email=recipient_email,
+                    customer_phone=customer_phone,
+                    customer_address=client_address,
+                    customer_notes=notes,
+                    created_by_user_id=user['id'],
+                )
+                customer_contact_id = selected_contact_id or saved_contact_id
                 cursor = conn.execute(
                     '''INSERT INTO invoices (
-                        client_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
+                        client_id, customer_contact_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
                         invoice_total_amount, paid_amount, invoice_date, due_date, estimate_expiration_date, invoice_status,
                         public_invoice_token, public_payment_link, sent_at, last_reminder_at, reminder_count,
                         customer_viewed_at, customer_paid_at, approved_at, declined_at, converted_invoice_id,
                         payment_note, notes, income_category, sales_tax_amount, sales_tax_paid
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                     (
                         client_id,
+                        customer_contact_id,
                         next_job,
                         'estimate',
                         estimate_title,
@@ -14899,16 +15189,6 @@ def estimates():
                             item['line_total'],
                         )
                     )
-                upsert_customer_contact(
-                    conn,
-                    client_id=client_id,
-                    customer_name=customer_name,
-                    customer_email=recipient_email,
-                    customer_phone=customer_phone,
-                    customer_address=client_address,
-                    customer_notes=notes,
-                    created_by_user_id=user['id'],
-                )
                 if request.form.get('send_now'):
                     try:
                         email_result = send_customer_estimate_email(
@@ -15052,6 +15332,8 @@ def estimates():
         client=client,
         client_id=client_id,
         customer_contacts=[dict(row) for row in customer_contact_rows],
+        prefill_contact_id=(prefill_contact['id'] if prefill_contact else None),
+        prefill_contact=dict(prefill_contact) if prefill_contact else None,
         estimates=estimate_rows,
         estimate_line_items_map=line_items_map,
         estimate_public_links=estimate_public_links,
@@ -15921,11 +16203,21 @@ def admin_worker_portal_approval():
 def work_schedule():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    prefill_contact_id = request.values.get('customer_contact_id', type=int)
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         ensure_recurring_schedule_entries(conn, client_id=client_id, actor_user_id=user['id'])
         conn.commit()
         workers = conn.execute('SELECT id, name, status FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name', (client_id,)).fetchall()
+        customer_contact_rows = conn.execute(
+            '''SELECT *
+               FROM customer_contacts
+               WHERE client_id=? AND COALESCE(status,'active')='active'
+               ORDER BY LOWER(customer_name), id DESC''',
+            (client_id,),
+        ).fetchall()
+        customer_contact_lookup = {row['id']: row for row in customer_contact_rows}
+        prefill_contact = customer_contact_lookup.get(prefill_contact_id)
         valid_worker_ids = {int(w['id']) for w in workers}
         worker_names_by_id = {int(w['id']): w['name'] for w in workers}
         if request.method == 'POST':
@@ -15947,12 +16239,13 @@ def work_schedule():
                 assigned_names = ', '.join(worker_names_by_id[wid] for wid in assigned_ids if wid in worker_names_by_id)
                 conn.execute(
                     '''INSERT INTO work_schedule_entries (
-                        client_id, job_name, job_address, scope_of_work, schedule_date,
+                        client_id, customer_contact_id, job_name, job_address, scope_of_work, schedule_date,
                         start_time, end_time, estimated_duration, assigned_worker_ids,
                         assigned_worker_names, notes, created_by_user_id
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                     (
                         client_id,
+                        request.form.get('customer_contact_id', type=int),
                         job_name,
                         request.form.get('job_address', '').strip(),
                         request.form.get('scope_of_work', '').strip(),
@@ -15985,8 +16278,12 @@ def work_schedule():
         client=client,
         client_id=client_id,
         workers=workers,
+        customer_contacts=[dict(row) for row in customer_contact_rows],
+        prefill_contact_id=(prefill_contact['id'] if prefill_contact else None),
+        prefill_contact=dict(prefill_contact) if prefill_contact else None,
         entries=entries,
         upcoming_entries=upcoming_entries,
+        today=date.today().isoformat(),
     )
 
 

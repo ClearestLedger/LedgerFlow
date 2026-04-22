@@ -7,7 +7,8 @@
     <div class='page-subtitle'>{{ tr('Premium customer workspace for saved return clients, hosted estimates, customer invoices, and repeat billing relationships.') }}</div>
   </div>
   <div class='stack-actions'>
-    <a class='btn' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>{{ tr('Create Estimate') }}</a>
+    <a class='btn' href='#addSavedClientForm'>{{ tr('Add Client') }}</a>
+    <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>{{ tr('Create Estimate') }}</a>
     <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'>{{ tr('Create Invoice') }}</a>
   </div>
 </div>
@@ -23,10 +24,23 @@
 
 <div class='grid cards-2' style='margin-top:16px'>
   <div class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Client Actions') }}</h3><span class='badge'>{{ tr('Client Workspace') }}</span></div>
+    <div class='small' style='margin-bottom:12px'>{{ tr('Jump directly from a saved client into scheduling, estimates, invoices, and receipts.') }}</div>
+    <div class='summary-strip' style='margin-bottom:14px'>
+      <span class='summary-pill'>{{ tr('Add Client') }}</span>
+      <span class='summary-pill'>{{ tr('Job Scope / Service Scope') }}</span>
+      <span class='summary-pill'>{{ tr('Add to Calendar') }}</span>
+      <span class='summary-pill'>{{ tr('Create Estimate') }}</span>
+      <span class='summary-pill'>{{ tr('Create Invoice') }}</span>
+      <span class='summary-pill'>{{ tr('Send Receipt') }}</span>
+    </div>
+  </div>
+
+  <div class='card section-frame'>
     <div class='card-head'><h3>{{ tr('Add Saved Client') }}</h3><span class='badge'>{{ tr('Recurring Customers') }}</span></div>
     <div class='small' style='margin-bottom:12px'>{{ tr('Keep repeat customers on file here so estimates and invoices can start faster the next time they come back.') }}</div>
     <div class='small' style='margin-bottom:12px'>{{ tr('Use this for return clients whose work repeats on a regular schedule.') }}</div>
-    <form method='post' class='form-grid'>
+    <form method='post' class='form-grid' id='addSavedClientForm'>
       <input type='hidden' name='action' value='add_customer_contact'>
       {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
       <div><label>{{ tr('Client Name') }}</label><input name='customer_name' required></div>
@@ -93,8 +107,13 @@
           {% if row.customer_address %}<div class='small'>{{ row.customer_address }}</div>{% endif %}
         </td>
         <td>
+          <div style='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px'>
+            <a class='btn btn-secondary btn-sm' href='{{ url_for("work_schedule", client_id=client_id, customer_contact_id=row.id) }}'>{{ tr('Add to Calendar') }}</a>
+            <a class='btn btn-secondary btn-sm' href='{{ url_for("estimates", client_id=client_id, customer_contact_id=row.id) }}#estimateForm'>{{ tr('New Estimate') }}</a>
+            <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id, customer_contact_id=row.id) }}#customerInvoiceForm'>{{ tr('New Invoice') }}</a>
+          </div>
           <details class='compact-details client-inline-editor'>
-            <summary>{{ tr('Edit') }}</summary>
+            <summary>{{ tr('Edit Client') }}</summary>
             <form method='post' class='form-grid' style='margin-top:12px'>
               <input type='hidden' name='action' value='update_customer_contact'>
               <input type='hidden' name='contact_id' value='{{ row.id }}'>
@@ -119,9 +138,6 @@
               <div><button type='submit' class='btn btn-secondary btn-sm'>{{ tr('Save Changes') }}</button></div>
             </form>
           </details>
-          {% if row.recurring_frequency %}
-          <a class='btn btn-secondary btn-sm' style='margin-top:8px' href='{{ url_for("work_schedule", client_id=client_id) }}'>{{ tr('Open Work Schedule') }}</a>
-          {% endif %}
           <form method='post' style='margin-top:8px'>
             <input type='hidden' name='action' value='archive_customer_contact'>
             <input type='hidden' name='contact_id' value='{{ row.id }}'>
@@ -131,7 +147,7 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan='5' class='small'>{{ tr('No saved clients yet. Add recurring customers here so estimates and invoices can reuse their details.') }}</td></tr>
+      <tr><td colspan='6' class='small'>{{ tr('No saved clients yet. Add recurring customers here so estimates and invoices can reuse their details.') }}</td></tr>
       {% endfor %}
     </table>
   </div>
@@ -209,19 +225,38 @@
     <summary>{{ tr('Archived Clients') }} ({{ archived_customer_contacts|length }})</summary>
     <div class='scroll-x' style='margin-top:12px'>
       <table class='table'>
-        <tr><th>{{ tr('Client') }}</th><th>{{ tr('Phone') }}</th><th>{{ tr('Address') }}</th><th>{{ tr('Actions') }}</th></tr>
+        <tr><th>{{ tr('Client') }}</th><th>{{ tr('Phone') }}</th><th>{{ tr('Address') }}</th><th>{{ tr('Linked records') }}</th><th>{{ tr('Actions') }}</th></tr>
         {% for row in archived_customer_contacts %}
+        {% set dependency = archived_dependency_map.get(row.id, {}) %}
         <tr>
           <td><strong>{{ row.customer_name }}</strong><div class='small'>{{ row.customer_email or tr('No email saved yet') }}</div></td>
           <td>{{ row.customer_phone or '-' }}</td>
           <td>{{ row.customer_address or '-' }}</td>
+          <td class='small'>
+            {{ dependency.get('estimate_count', 0) }} {{ tr('Estimates') }},
+            {{ dependency.get('invoice_count', 0) }} {{ tr('Invoices') }},
+            {{ dependency.get('job_count', 0) }} {{ tr('Jobs') }},
+            {{ dependency.get('work_schedule_count', 0) }} {{ tr('Schedule') }}
+          </td>
           <td>
-            <form method='post'>
-              <input type='hidden' name='action' value='restore_customer_contact'>
-              <input type='hidden' name='contact_id' value='{{ row.id }}'>
-              {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-              <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Restore') }}</button>
-            </form>
+            <div style='display:flex;gap:8px;flex-wrap:wrap'>
+              <form method='post'>
+                <input type='hidden' name='action' value='restore_customer_contact'>
+                <input type='hidden' name='contact_id' value='{{ row.id }}'>
+                {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+                <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Restore') }}</button>
+              </form>
+              {% if dependency.get('can_delete') %}
+              <form method='post'>
+                <input type='hidden' name='action' value='delete_customer_contact'>
+                <input type='hidden' name='contact_id' value='{{ row.id }}'>
+                {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+                <button class='btn btn-red btn-sm' type='submit'>{{ tr('Delete Permanently') }}</button>
+              </form>
+              {% else %}
+              <div class='small'>{{ tr('Delete permanently only after linked sales and schedule records are cleared.') }}</div>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% endfor %}

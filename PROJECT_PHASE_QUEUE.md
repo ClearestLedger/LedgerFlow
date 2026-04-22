@@ -98,6 +98,20 @@
 - Business-side client workspace follow-up:
   - expand `Clients & Sales` into a Wave-style customer page where a business can create client records, define job scope, add recurring work to the calendar, send invoices, and send receipts from one place
   - keep this workflow business-owned, with admin able to supervise without taking over the client relationship workflow
+- Business client workspace phase completed on 2026-04-21:
+  - saved clients now expose direct business-side actions for calendar, estimate, invoice, and receipt workflows
+  - archived clients now support safe permanent deletion only when no linked jobs, schedule items, estimates, invoices, or service locations remain
+  - sales documents are now being linked back to saved client records through `customer_contact_id` so the business relationship workflow stays cleaner internally
+- Analyst / legal structure rule now locked:
+  - LedgerFlow stays one unified all-in-one platform for small businesses
+  - do not split the product into separate weaker tools
+  - the next structural phase is internal cleanup only: separate internal bookkeeping records from customer-facing sales documents more cleanly, modularize by domain, and preserve role boundaries
+  - do not keep adding broad new features until the internal structure is safer and clearer
+- Live compliance gate status on 2026-04-21:
+  - disclaimer page/link coverage has been added
+  - release is still blocked until mandatory terms/privacy acceptance with version logging exists server-side
+  - release is still blocked until payment-method handling is moved out of unexpected local card/account-number storage or intentionally rebuilt for the correct PCI scope
+  - release is still blocked until the evidence package is complete for access control, tenant isolation, privacy-policy reality match, and incident readiness
 
 ## Future Pricing Research Note
 

@@ -110,12 +110,12 @@
       <form method='post' class='form-grid' id='customerInvoiceForm'>
         <input type='hidden' name='action' value='create_customer_invoice'>
         {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-        <div><label>{{ tr('Saved Client') }}</label><select id='customer_invoice_contact_select' name='customer_contact_id'><option value=''>{{ tr('Choose saved client (optional)') }}</option>{% for row in customer_contacts %}<option value='{{ row.id }}' data-name='{{ row.customer_name|e }}' data-email='{{ row.customer_email|e }}' data-phone='{{ row.customer_phone|e }}' data-address='{{ row.customer_address|e }}' data-notes='{{ row.customer_notes|e }}'>{{ row.customer_name }}{% if row.customer_email %} &middot; {{ row.customer_email }}{% endif %}</option>{% endfor %}</select></div>
+        <div><label>{{ tr('Saved Client') }}</label><select id='customer_invoice_contact_select' name='customer_contact_id'><option value=''>{{ tr('Choose saved client (optional)') }}</option>{% for row in customer_contacts %}<option value='{{ row.id }}' {% if prefill_contact_id and row.id == prefill_contact_id %}selected{% endif %} data-name='{{ row.customer_name|e }}' data-email='{{ row.customer_email|e }}' data-phone='{{ row.customer_phone|e }}' data-address='{{ row.customer_address|e }}' data-notes='{{ row.customer_notes|e }}'>{{ row.customer_name }}{% if row.customer_email %} &middot; {{ row.customer_email }}{% endif %}</option>{% endfor %}</select></div>
         <div><label>{{ tr('Invoice Title') }}</label><input name='invoice_title' value='{{ tr("Service Invoice") }}'></div>
-        <div><label>{{ tr('Customer Name') }}</label><input id='customer_invoice_name' name='client_name' required></div>
-        <div><label>{{ tr('Recipient Email') }}</label><input id='customer_invoice_email' name='recipient_email' type='email' required></div>
-        <div><label>{{ tr('Customer Phone') }}</label><input id='customer_invoice_phone' name='customer_phone'></div>
-        <div><label>{{ tr('Customer Address') }}</label><input id='customer_invoice_address' name='client_address'></div>
+        <div><label>{{ tr('Customer Name') }}</label><input id='customer_invoice_name' name='client_name' value='{{ prefill_contact.customer_name if prefill_contact else "" }}' required></div>
+        <div><label>{{ tr('Recipient Email') }}</label><input id='customer_invoice_email' name='recipient_email' type='email' value='{{ prefill_contact.customer_email if prefill_contact else "" }}' required></div>
+        <div><label>{{ tr('Customer Phone') }}</label><input id='customer_invoice_phone' name='customer_phone' value='{{ prefill_contact.customer_phone if prefill_contact else "" }}'></div>
+        <div><label>{{ tr('Customer Address') }}</label><input id='customer_invoice_address' name='client_address' value='{{ prefill_contact.customer_address if prefill_contact else "" }}'></div>
         <div><label>{{ tr('Issue Date') }}</label><input name='invoice_date' type='date' value='{{ today }}'></div>
         <div><label>{{ tr('Due Date') }}</label><input name='due_date' type='date' value='{{ default_due_date }}'></div>
         <div><label>{{ tr('Online Payment Link') }}</label><input name='public_payment_link' placeholder='{{ tr("https://stripe.com/... or hosted payment page") }}'></div>
@@ -138,7 +138,7 @@
         </div>
         <div><label>{{ tr('Subtotal') }}</label><input id='customer_invoice_subtotal' type='text' readonly value='$0.00'></div>
         <div><label>{{ tr('Total Invoice') }}</label><input id='customer_invoice_total' type='text' readonly value='$0.00'></div>
-        <div style='grid-column:1/-1'><label>{{ tr('Notes') }}</label><textarea id='customer_invoice_notes' name='notes' placeholder='{{ tr("Optional invoice message, scope summary, or payment note") }}'></textarea></div>
+        <div style='grid-column:1/-1'><label>{{ tr('Notes') }}</label><textarea id='customer_invoice_notes' name='notes' placeholder='{{ tr("Optional invoice message, scope summary, or payment note") }}'>{{ prefill_contact.customer_notes if prefill_contact else "" }}</textarea></div>
         <div style='grid-column:1/-1'><label><input type='checkbox' name='send_now' value='1' checked> {{ tr('Send invoice email immediately after saving') }}</label></div>
         <div><button type='submit'>{{ tr('Save Customer Invoice') }}</button></div>
       </form>
@@ -200,6 +200,13 @@
             </form>
             {% else %}
             <span class='badge'>{{ tr('Closed') }}</span>
+            {% if row.recipient_email %}
+            <form method='post' style='display:inline'>
+              <input type='hidden' name='action' value='send_customer_receipt'>
+              <input type='hidden' name='invoice_id' value='{{ row.id }}'>
+              <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Send Receipt') }}</button>
+            </form>
+            {% endif %}
             {% endif %}
           </div>
         </td>
