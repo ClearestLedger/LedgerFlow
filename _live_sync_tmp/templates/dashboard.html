@@ -3,11 +3,26 @@
 {% set is_trial_workspace = (client.trial_offer_days or 0) > 0 %}
 
 <div class='hero-surface welcome-center-hero owner-view-hero'>
-  <div class='summary-strip'>
-    <span class='summary-pill'>{{ tr('Owner View') }}</span>
-    <span class='summary-pill'>{{ tr('Jobs & Profit') }}</span>
-    <span class='summary-pill'>{{ tr('Finance first') }}</span>
-    <span class='summary-pill'>{{ tr('Profit per job visibility') }}</span>
+  <div class='summary-strip owner-action-strip'>
+    <span class='summary-pill summary-pill-active'>{{ tr('Owner View') }}</span>
+    <a class='summary-pill summary-pill-link' href='{{ url_for("ops_overview", client_id=client_id) }}'>
+      <strong>{{ tr('Jobs & Profit') }}</strong>
+      <small>{{ owner_snapshot.today_jobs|length }} {{ tr('Jobs') }}</small>
+    </a>
+    <a class='summary-pill summary-pill-link' href='{{ url_for("summary", client_id=client_id) }}'>
+      <strong>{{ tr('Finance first') }}</strong>
+      <small>${{ '%.2f'|format(summary.operating_profit or 0) }} {{ tr('Operating Profit') }}</small>
+    </a>
+    <a class='summary-pill summary-pill-link' href='{{ url_for("ops_jobs", client_id=client_id) }}#jobProfitForm'>
+      <strong>{{ tr('Profit per job visibility') }}</strong>
+      <small>
+        {% if owner_snapshot.missing_pricing_jobs %}
+          {{ owner_snapshot.missing_pricing_jobs|length }} {{ tr('Jobs missing pricing') }}
+        {% else %}
+          {{ owner_snapshot.top_profit_jobs|length }} {{ tr('Highest profit jobs') }}
+        {% endif %}
+      </small>
+    </a>
   </div>
   <div class='toolbar hero-toolbar' style='margin-top:14px'>
     <div>
@@ -21,6 +36,16 @@
       <a class='btn btn-secondary' href='{{ url_for("reports", client_id=client_id) }}'>{{ tr('Report Center') }}</a>
     </div>
   </div>
+  {% if owner_snapshot.missing_pricing_jobs or not owner_snapshot.top_profit_jobs %}
+  <div class='action-banner owner-profit-banner' style='margin-top:14px'>
+    <div>
+      <div class='small-label'>{{ tr('Profit per job visibility') }}</div>
+      <strong>{{ tr('Complete the money side of each job so the owner view can show real profit.') }}</strong>
+      <div class='small'>{{ tr('Service price, labor, material cost, and profit should be visible immediately.') }}</div>
+    </div>
+    <a class='btn' href='{{ url_for("ops_jobs", client_id=client_id) }}#jobProfitForm'>{{ tr('Open Jobs Board') }}</a>
+  </div>
+  {% endif %}
 </div>
 
 <div class='grid cards-4 owner-kpi-grid' style='margin-top:16px'>

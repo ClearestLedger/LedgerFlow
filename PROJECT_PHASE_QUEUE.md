@@ -194,3 +194,9 @@
     - `ops_locations.html`
   - this deploy-repo drift was the exact reason clean live routes still 500ed after the reset
   - fix path: keep the deploy mirror template set in lockstep with the working source before each Render deploy
+- Owner View profit-action phase completed on 2026-04-22:
+  - the top owner strip now acts like software controls instead of static badges
+  - `Jobs & Profit` now opens the operations profit overview
+  - `Finance first` now opens the finance summary directly
+  - `Profit per job visibility` now jumps straight into the Jobs page profit-entry form
+  - Owner View now shows a direct profit-setup banner when jobs are missing pricing or profit data
