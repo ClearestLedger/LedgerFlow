@@ -44,7 +44,7 @@
           <li>{{ tr('Return to the login page and sign in.') }}</li>
         </ol>
       </div>
-      <div class='small' style='margin-top:14px'>{{ tr('Before or during first sign-in, you may be asked to review and accept the current Terms of Use and Privacy Notice.') }} <a href='{{ url_for("trust_center") }}#terms'>{{ tr('Terms of Use') }}</a> · <a href='{{ url_for("trust_center") }}#privacy'>{{ tr('Privacy Notice') }}</a></div>
+      <div class='small' style='margin-top:14px'>{{ tr('Before or during first sign-in, you may be asked to review and accept the current Terms of Use and Privacy Notice.') }} <a href='{{ url_for("trust_center") }}#terms'>{{ tr('Terms of Use') }}</a> | <a href='{{ url_for("trust_center") }}#privacy'>{{ tr('Privacy Notice') }}</a></div>
       <div class='stack-actions' style='margin-top:16px'>
         <a class='btn' href='{{ url_for("login") }}'>{{ tr('Back to Login') }}</a>
         <a class='btn btn-secondary' href='{{ url_for("worker_login") }}'>{{ tr('Worker Login') }}</a>

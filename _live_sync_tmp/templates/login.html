@@ -61,7 +61,7 @@
         <div class='small' style='margin-top:8px'>
           <label><input type='checkbox' name='accept_privacy' value='1' required> {{ tr('I accept the Privacy Notice') }}</label>
         </div>
-        <div class='small' style='margin-top:8px'>{{ tr('Review the current policies before creating the administrator account.') }} <a href='{{ url_for("trust_center") }}#terms'>{{ tr('Terms of Use') }}</a> · <a href='{{ url_for("trust_center") }}#privacy'>{{ tr('Privacy Notice') }}</a></div>
+        <div class='small' style='margin-top:8px'>{{ tr('Review the current policies before creating the administrator account.') }} <a href='{{ url_for("trust_center") }}#terms'>{{ tr('Terms of Use') }}</a> | <a href='{{ url_for("trust_center") }}#privacy'>{{ tr('Privacy Notice') }}</a></div>
         <button style='margin-top:16px;width:100%'>{{ tr('Create Administrator Account') }}</button>
       </form>
       {% else %}
