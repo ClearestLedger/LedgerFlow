@@ -2549,7 +2549,7 @@ def quick_search_entry(title: str, url: str, current_language: str, *, descripti
 
 def quick_search_workspace_url(endpoint: str, *, user=None, current_mode: str = 'guest', active_client=None, **values) -> str:
     params = {key: value for key, value in values.items() if value not in (None, '')}
-    if user and row_value(user, 'role', '') == 'admin' and current_mode == 'business' and active_client:
+    if active_client:
         params.setdefault('client_id', int(active_client['id']))
     return url_for(endpoint, **params)
 

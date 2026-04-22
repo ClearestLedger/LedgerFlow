@@ -156,7 +156,7 @@
   - authenticated sweep passed for business and administrator routes across dashboard, welcome center, clients and sales, invoices, estimates, reports, summary, work schedule, team, availability, activity, and templates
 - Phase 2 intelligent search and shell stabilization completed on 2026-04-22:
   - administrator quick search now understands business-name + destination queries and can jump directly into the correct supervised business page
-  - business quick search now routes to cleaner in-workspace URLs for team, schedule, clients, and dispatch instead of relying on noisy query strings
+  - business quick search now routes to explicit business-scoped URLs for team, schedule, clients, and dispatch so the live site keeps the correct business context reliably
   - shell messenger drawer composer was tightened again so the reply area stays visible lower in the drawer while the thread scrolls above it
   - light gray / mist palette variables were added and applied across cards, tables, quick-search surfaces, and grouped shell navigation to keep the software brighter and easier to scan
   - authenticated route sweep still passed after the new search, shell, and palette adjustments
