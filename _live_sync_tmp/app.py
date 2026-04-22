@@ -7192,16 +7192,24 @@ def chat_messages(client_id: int):
         ).fetchall()
 
 
-def available_recipients(client_id: int, current_user_id: int):
+def available_recipients(client_id: int, user):
+    if not user:
+        return []
+    current_user_id = user['id']
+    current_user_role = user['role']
     recipients = []
     for person in chat_participants(client_id):
         if person['id'] != current_user_id:
+            if current_user_role == 'admin' and person['role'] != 'client':
+                continue
+            if current_user_role == 'client' and person['role'] != 'admin':
+                continue
             recipients.append(person)
     return recipients
 
 
 def default_recipient_id(client_id: int, user):
-    recipients = available_recipients(client_id, user['id'])
+    recipients = available_recipients(client_id, user)
     if not recipients:
         return None
     if user['role'] == 'admin':
@@ -8877,29 +8885,94 @@ def unread_message_counts_by_client(client_ids: list[int], user_id: int) -> dict
     return {int(row['client_id']): int(row['unread_count'] or 0) for row in rows}
 
 
-def preferred_admin_message_client_id(user, clients, active_client=None):
-    scoped_ids = [int(row['id']) for row in (clients or []) if row and row['id']]
+def admin_messenger_thread_inventory(user, clients):
+    client_rows = [row for row in (clients or []) if row and row['id']]
+    scoped_ids = [int(row['id']) for row in client_rows]
+    if not scoped_ids:
+        return []
+    placeholders = ','.join('?' for _ in scoped_ids)
+    with get_conn() as conn:
+        business_login_rows = conn.execute(
+            f'''SELECT DISTINCT client_id
+                FROM users
+                WHERE role='client'
+                  AND client_id IN ({placeholders})''',
+            tuple(scoped_ids),
+        ).fetchall()
+        message_rows = conn.execute(
+            f'''SELECT
+                    client_id,
+                    COUNT(*) AS message_count,
+                    MAX(created_at) AS latest_message_at,
+                    SUM(CASE WHEN recipient_user_id=? AND COALESCE(is_read,0)=0 THEN 1 ELSE 0 END) AS unread_count
+                FROM internal_messages
+                WHERE client_id IN ({placeholders})
+                GROUP BY client_id''',
+            (user['id'], *scoped_ids),
+        ).fetchall()
+    business_login_ids = {int(row['client_id']) for row in business_login_rows if row['client_id']}
+    message_map = {int(row['client_id']): dict(row) for row in message_rows if row['client_id']}
+    inventory = []
+    for row in client_rows:
+        client_id = int(row['id'])
+        message_meta = message_map.get(client_id, {})
+        has_recipients = client_id in business_login_ids
+        message_count = int(message_meta.get('message_count') or 0)
+        unread_count = int(message_meta.get('unread_count') or 0)
+        latest_message_at = (message_meta.get('latest_message_at') or '').strip()
+        inventory.append({
+            'id': client_id,
+            'business_name': row['business_name'],
+            'has_recipients': has_recipients,
+            'message_count': message_count,
+            'unread_count': unread_count,
+            'latest_message_at': latest_message_at,
+            'usable': bool(has_recipients or message_count),
+        })
+    inventory.sort(key=lambda item: item['business_name'].lower())
+    inventory.sort(
+        key=lambda item: (
+            1 if item['usable'] else 0,
+            1 if item['unread_count'] else 0,
+            item['unread_count'],
+            1 if item['has_recipients'] else 0,
+            item['latest_message_at'] or '',
+        ),
+        reverse=True,
+    )
+    return inventory
+
+
+def preferred_admin_message_client_id(user, clients, active_client=None, thread_inventory=None):
+    inventory = thread_inventory if thread_inventory is not None else admin_messenger_thread_inventory(user, clients)
+    scoped_ids = [int(item['id']) for item in inventory]
     if not scoped_ids:
         return None
-    explicit = request.values.get('messenger_client_id', type=int) or request.values.get('client_id', type=int)
-    if explicit in scoped_ids:
+    usable_ids = [int(item['id']) for item in inventory if item['usable']]
+    fallback_ids = usable_ids or scoped_ids
+    explicit = request.values.get('messenger_client_id', type=int)
+    if explicit in fallback_ids:
         session['admin_messenger_client_id'] = explicit
         return explicit
-    unread_id = recent_message_client_id_for_user(user['id'], scoped_ids, unread_only=True)
-    if unread_id:
-        session['admin_messenger_client_id'] = unread_id
-        return unread_id
+    unread_item = next((item for item in inventory if item['usable'] and item['unread_count'] > 0), None)
+    if unread_item:
+        session['admin_messenger_client_id'] = unread_item['id']
+        return unread_item['id']
     session_id = session.get('admin_messenger_client_id')
-    if session_id in scoped_ids:
+    if session_id in fallback_ids:
         return session_id
-    if active_client and active_client['id'] in scoped_ids:
+    if active_client and active_client['id'] in fallback_ids:
         return int(active_client['id'])
-    latest_thread_id = recent_message_client_id_for_user(user['id'], scoped_ids, unread_only=False)
-    if latest_thread_id:
-        session['admin_messenger_client_id'] = latest_thread_id
-        return latest_thread_id
-    session['admin_messenger_client_id'] = scoped_ids[0]
-    return scoped_ids[0]
+    recent_item = next((item for item in inventory if item['usable'] and item['message_count'] > 0), None)
+    if recent_item:
+        session['admin_messenger_client_id'] = recent_item['id']
+        return recent_item['id']
+    recipient_item = next((item for item in inventory if item['has_recipients']), None)
+    if recipient_item:
+        session['admin_messenger_client_id'] = recipient_item['id']
+        return recipient_item['id']
+    session['admin_messenger_client_id'] = fallback_ids[0]
+    return fallback_ids[0]
 
 
 def shell_messenger_client_id(user, active_client, clients):
@@ -8911,7 +8984,8 @@ def shell_messenger_client_id(user, active_client, clients):
 
 
 def internal_shell_messenger_context(user, active_client, clients):
-    client_id = shell_messenger_client_id(user, active_client, clients)
+    thread_inventory = admin_messenger_thread_inventory(user, clients) if user and user['role'] == 'admin' else []
+    client_id = preferred_admin_message_client_id(user, clients, active_client=active_client, thread_inventory=thread_inventory) if user and user['role'] == 'admin' else shell_messenger_client_id(user, active_client, clients)
     if not client_id:
         return {'enabled': False}
     with get_conn() as conn:
@@ -8920,7 +8994,7 @@ def internal_shell_messenger_context(user, active_client, clients):
         return {'enabled': False}
     thread_client_ids = [int(row['id']) for row in (clients or []) if row and row['id']]
     thread_unread_counts = unread_message_counts_by_client(thread_client_ids, user['id']) if user['role'] == 'admin' else {}
-    recipients = available_recipients(client_id, user['id'])
+    recipients = available_recipients(client_id, user)
     latest = latest_incoming_message(client_id, user['id'])
     return {
         'enabled': True,
@@ -8936,11 +9010,14 @@ def internal_shell_messenger_context(user, active_client, clients):
         'selected_recipient_id': default_recipient_id(client_id, user),
         'thread_clients': [
             {
-                'id': int(row['id']),
-                'business_name': row['business_name'],
-                'unread_count': thread_unread_counts.get(int(row['id']), 0),
+                'id': int(item['id']),
+                'business_name': item['business_name'],
+                'unread_count': thread_unread_counts.get(int(item['id']), 0),
+                'has_recipients': item['has_recipients'],
+                'message_count': item['message_count'],
             }
-            for row in (clients or [])
+            for item in thread_inventory
+            if item['usable'] or int(item['id']) == int(client_id)
         ] if user['role'] == 'admin' else [],
         'latest_incoming': {
             'sender_name': latest['sender_name'],
@@ -10781,7 +10858,7 @@ def cpa_dashboard():
         participants = chat_participants(selected_id)
         latest_review = latest_review_request(selected_id)
     selected_business_payments = business_payment_summary(selected_id) if selected_id else {'rows': [], 'amount_due': 0.0, 'paid_total': 0.0, 'pending_count': 0, 'paid_count': 0, 'cancelled_count': 0}
-    return render_template('cpa_dashboard.html', businesses=businesses, totals=cpa_dashboard_summary(user), review_alerts=pending_review_alerts(), selected_client_id=selected_id, selected_business=selected_business, messenger_rows=messenger_rows, participants=participants, latest_review=latest_review, pending_worker_requests=pending_worker_requests, pending_worker_requests_all=pending_worker_requests_all, business_login_counts=per_business_login_counts(visible_client_ids(user)), account_activity_rows=recent_account_activity(visible_client_ids(user), limit=25), chat_unread_count=unread_message_count(selected_id, user['id']) if selected_id else 0, chat_recipients=available_recipients(selected_id, user['id']) if selected_id else [], selected_recipient_id=default_recipient_id(selected_id, user) if selected_id else None, latest_incoming_message=latest_incoming_message(selected_id, user['id']) if selected_id else None, selected_business_payments=selected_business_payments, selected_payment_methods=selected_payment_methods, selected_payment_method_summary=payment_method_summary(selected_payment_methods), payment_statuses=business_payment_statuses(), payment_type_options=payment_type_options(), collection_method_options=collection_method_options(), collection_method_labels=collection_method_label_map(), payment_method_type_options=payment_method_type_options(), payment_method_status_options=payment_method_status_options(), payment_method_type_labels=payment_method_type_label_map(), payment_method_status_labels=payment_method_status_label_map(), subscription_status_options=subscription_status_options(), subscription_status_labels=subscription_status_label_map(), service_level_options=service_level_options(), service_level_labels=service_level_label_map(), suggested_payment_amounts=suggested_payment_amounts_map(), all_payment_items=all_business_payment_items(), payment_csrf_token=payment_csrf_token())
+    return render_template('cpa_dashboard.html', businesses=businesses, totals=cpa_dashboard_summary(user), review_alerts=pending_review_alerts(), selected_client_id=selected_id, selected_business=selected_business, messenger_rows=messenger_rows, participants=participants, latest_review=latest_review, pending_worker_requests=pending_worker_requests, pending_worker_requests_all=pending_worker_requests_all, business_login_counts=per_business_login_counts(visible_client_ids(user)), account_activity_rows=recent_account_activity(visible_client_ids(user), limit=25), chat_unread_count=unread_message_count(selected_id, user['id']) if selected_id else 0, chat_recipients=available_recipients(selected_id, user) if selected_id else [], selected_recipient_id=default_recipient_id(selected_id, user) if selected_id else None, latest_incoming_message=latest_incoming_message(selected_id, user['id']) if selected_id else None, selected_business_payments=selected_business_payments, selected_payment_methods=selected_payment_methods, selected_payment_method_summary=payment_method_summary(selected_payment_methods), payment_statuses=business_payment_statuses(), payment_type_options=payment_type_options(), collection_method_options=collection_method_options(), collection_method_labels=collection_method_label_map(), payment_method_type_options=payment_method_type_options(), payment_method_status_options=payment_method_status_options(), payment_method_type_labels=payment_method_type_label_map(), payment_method_status_labels=payment_method_status_label_map(), subscription_status_options=subscription_status_options(), subscription_status_labels=subscription_status_label_map(), service_level_options=service_level_options(), service_level_labels=service_level_label_map(), suggested_payment_amounts=suggested_payment_amounts_map(), all_payment_items=all_business_payment_items(), payment_csrf_token=payment_csrf_token())
 
 
 
@@ -16737,7 +16814,7 @@ def chat():
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     if request.method == 'POST':
         body = request.form.get('body', '').strip()
-        recipients = available_recipients(client_id, user['id'])
+        recipients = available_recipients(client_id, user)
         valid_recipient_ids = {p['id'] for p in recipients}
         recipient_id = request.form.get('recipient_user_id', type=int) or default_recipient_id(client_id, user)
         if recipient_id not in valid_recipient_ids:
@@ -16763,7 +16840,7 @@ def chat():
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
     mark_messages_read(client_id, user['id'])
-    return render_template('chat.html', client=client, client_id=client_id, messages=chat_messages(client_id), participants=chat_participants(client_id), review_request=latest_review_request(client_id), chat_unread_count=unread_message_count(client_id, user['id']), chat_recipients=available_recipients(client_id, user['id']), selected_recipient_id=default_recipient_id(client_id, user), latest_incoming_message=latest_incoming_message(client_id, user['id']))
+    return render_template('chat.html', client=client, client_id=client_id, messages=chat_messages(client_id), participants=chat_participants(client_id), review_request=latest_review_request(client_id), chat_unread_count=unread_message_count(client_id, user['id']), chat_recipients=available_recipients(client_id, user), selected_recipient_id=default_recipient_id(client_id, user), latest_incoming_message=latest_incoming_message(client_id, user['id']))
 
 
 

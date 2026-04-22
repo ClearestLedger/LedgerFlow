@@ -127,6 +127,11 @@
   - admin shell messenger now supports switching business threads directly inside the drawer so one business cannot make the whole inbox feel frozen
   - unread counts are now aggregated across visible businesses for administrator messaging
   - dashboard pages no longer silently mark messages as read just by loading; read state now updates when the messenger thread is actually opened
+- Admin messenger thread correction phase completed on 2026-04-22:
+  - admin messenger now prefers usable business threads with real business-login recipients or message history instead of freezing on a dead business thread
+  - the drawer no longer treats the page client_id as a forced messenger selection; only an intentional messenger thread switch should pin the thread
+  - admin recipients are now constrained to business-side users for that business, and business recipients are constrained to administrators
+  - synthetic test confirmed the drawer now selects the real unread business conversation instead of a blank thread with no valid recipient
 - Client workspace and operations hardening phase completed on 2026-04-22:
   - hardened the operational templates path so a bad legacy schedule row cannot crash the whole templates page during ops migration
   - business-side client management is now treated as a core workspace, not hidden behind the old premium-only gate
