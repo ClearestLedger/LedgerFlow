@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block body %}
+<section class="hero-surface">
+  <div class="page-kicker">{{ tr('Quick Search') }}</div>
+  <h1 class="page-title">{{ tr('Search results') }}</h1>
+  <p class="page-subtitle">{{ tr('Showing the best matches for "{query}".', query=query) }}</p>
+</section>
+
+{% if results %}
+<div class="grid cards-2" style="margin-top:18px">
+  {% for result in results %}
+  <article class="card quick-search-card {% if loop.first %}quick-search-card-primary{% endif %}">
+    <div class="card-head">
+      <div>
+        <div class="small-label">
+          {% if loop.first %}
+            {{ tr('Best match') }}
+          {% else %}
+            {{ tr('More matches') }}
+          {% endif %}
+        </div>
+        <h3>{{ tr(result.title) }}</h3>
+      </div>
+      {% if result.category %}
+      <span class="badge">{{ tr(result.category) }}</span>
+      {% endif %}
+    </div>
+    <p class="small" style="margin:0 0 14px 0">{{ tr(result.description) }}</p>
+    <div class="stack-actions">
+      <a class="btn {% if not loop.first %}btn-secondary{% endif %}" href="{{ result.url }}">{{ tr('Open') }}</a>
+    </div>
+  </article>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

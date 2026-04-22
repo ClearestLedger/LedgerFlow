@@ -143,6 +143,11 @@
   - confirmed the originally failing business routes now load cleanly in the test harness: Clients & Sales, Team, Availability, Activity, Templates, and Work Schedule
   - completed a wider authenticated GET sweep across business, admin, and worker sessions with no remaining 500-level failures in the current codebase
   - this phase was stabilization-only and did not remove or reset any real client data
+- Messenger composer and universal search phase completed on 2026-04-22:
+  - fixed the shell messenger drawer layout so the admin reply composer stays visible at the bottom instead of being clipped below the thread
+  - added a role-safe universal quick search box to the main workspace shell and the worker portal header
+  - search now redirects users to the best matching page for terms like mileage, team, invoices, reports, billing, jobs, clients, and pay stubs without crossing business boundaries
+  - added a fallback search results page for logged-in admin and business users when the query is broad and multiple in-scope matches are relevant
 
 ## Future Pricing Research Note
 

@@ -18,6 +18,12 @@
       </div>
     </div>
     <div class='header-right header-controls'>
+      <form method='get' action='{{ url_for("quick_search") }}' class='workspace-search-form'>
+        <input type='hidden' name='next' value='{{ current_request_path }}'>
+        <label class='sr-only' for='worker-shell-search'>{{ tr('Quick Search') }}</label>
+        <input id='worker-shell-search' type='search' name='q' placeholder='{{ tr("Type miles, team, invoices, reports, billing, or schedule") }}' autocomplete='off' required>
+        <button type='submit'>{{ tr('Search') }}</button>
+      </form>
       <form method='post' action='{{ url_for("set_language") }}' class='language-inline-form'>
         <input type='hidden' name='next' value='{{ current_request_path }}'>
         <input type='hidden' name='quiet' value='1'>
