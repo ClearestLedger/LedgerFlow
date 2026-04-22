@@ -956,6 +956,18 @@ body.messenger-open .messenger-drawer{transform:translateX(0);opacity:1;pointer-
 .welcome-message-copy p{margin:0 0 12px;line-height:1.8;color:#415066}
 .welcome-step-list{margin:0;padding-left:18px;color:#415066;line-height:1.75}
 .welcome-step-list li + li{margin-top:10px}
+.welcome-link-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.welcome-link-card{display:flex;flex-direction:column;gap:6px;padding:14px 15px;border-radius:18px;border:1px solid #d7e4f4;background:linear-gradient(180deg,#ffffff,#f8fbff);text-decoration:none;color:inherit;box-shadow:0 10px 22px rgba(15,35,77,.05)}
+.welcome-link-card:hover{transform:translateY(-1px);box-shadow:0 14px 28px rgba(15,35,77,.08)}
+.welcome-link-card strong{color:var(--primary-dark);font-size:14px}
+.welcome-link-card span{font-size:12px;line-height:1.6;color:#5f6f86}
+.finance-focus-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.finance-focus-item{padding:14px 15px;border-radius:18px;border:1px solid #d7e4f4;background:linear-gradient(180deg,#ffffff,#f8fbff);box-shadow:0 10px 22px rgba(15,35,77,.05)}
+.finance-focus-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.finance-focus-head strong{font-size:13px;color:var(--primary-dark)}
+.finance-focus-head span{font-size:14px;font-weight:800;color:var(--primary-dark)}
+.finance-focus-bar{height:10px;border-radius:999px;background:#eaf0f7;overflow:hidden;margin-bottom:8px}
+.finance-focus-bar span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#72819A,#1D2336)}
 .welcome-video-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .welcome-video-card{padding:16px 16px 14px;border:1px solid #d7e4f4;border-radius:20px;background:linear-gradient(180deg,#ffffff,#f8fbff);box-shadow:0 10px 22px rgba(15,35,77,.05)}
 .welcome-video-frame{display:flex;align-items:center;justify-content:center;min-height:180px;border-radius:18px;border:1px dashed #c7d6ed;background:
@@ -987,6 +999,6 @@ body.messenger-open .messenger-drawer{transform:translateX(0);opacity:1;pointer-
   .emoji-toggle{width:100%}
   .chat-input-actions{flex-direction:column;align-items:flex-start}
   .email-preview-surface{padding:4px}
-  .benefits-layout,.benefits-resource-grid,.welcome-video-grid{grid-template-columns:1fr}
+  .benefits-layout,.benefits-resource-grid,.welcome-video-grid,.welcome-link-grid,.finance-focus-grid{grid-template-columns:1fr}
 }
 

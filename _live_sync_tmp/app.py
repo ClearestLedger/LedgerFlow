@@ -370,6 +370,74 @@ TRANSLATIONS.update({
         'pt': 'Envie um recibo de pagamento depois que a fatura for marcada como paga.',
     },
     'Informational tool only': {'es': 'Herramienta solo informativa', 'pt': 'Ferramenta apenas informativa'},
+    'Finance first': {'es': 'Finanzas primero', 'pt': 'Financas primeiro'},
+    'Financial Snapshot': {'es': 'Resumen financiero', 'pt': 'Resumo financeiro'},
+    'Financial Actions': {'es': 'Acciones financieras', 'pt': 'Acoes financeiras'},
+    'Summary Center': {'es': 'Centro de resumen', 'pt': 'Central de resumo'},
+    'Report Center': {'es': 'Centro de reportes', 'pt': 'Central de relatorios'},
+    'Billing Setup': {'es': 'Configuracion de cobro', 'pt': 'Configuracao de cobranca'},
+    'Payroll / W-2': {'es': 'Nomina / W-2', 'pt': 'Folha / W-2'},
+    'Operations Bonuses': {'es': 'Bonos operativos', 'pt': 'Bonus operacionais'},
+    'Financial control first': {'es': 'Control financiero primero', 'pt': 'Controle financeiro primeiro'},
+    'Profit and tax visibility': {'es': 'Visibilidad de ganancias e impuestos', 'pt': 'Visibilidade de lucro e impostos'},
+    'Billing clarity': {'es': 'Claridad de cobro', 'pt': 'Clareza de cobranca'},
+    'W-2 and payroll context': {'es': 'Contexto de W-2 y nomina', 'pt': 'Contexto de W-2 e folha'},
+    'Open Finance Summary': {'es': 'Abrir resumen financiero', 'pt': 'Abrir resumo financeiro'},
+    'Review reports and profit trends': {'es': 'Revisar reportes y tendencias de ganancia', 'pt': 'Revisar relatorios e tendencias de lucro'},
+    'Keep customer invoices, income records, and billing current before moving into secondary workflow tools.': {
+        'es': 'Mantenga facturas de clientes, registros de ingresos y cobro al dia antes de pasar a herramientas secundarias.',
+        'pt': 'Mantenha faturas de clientes, registros de receita e cobranca em dia antes de ir para ferramentas secundarias.',
+    },
+    'Then use reports, payroll forms, and billing status as your weekly control center.': {
+        'es': 'Luego use reportes, formularios de nomina y estado de cobro como su centro de control semanal.',
+        'pt': 'Depois use relatorios, formularios de folha e status de cobranca como seu centro semanal de controle.',
+    },
+    'Save income, review profit, and keep billing clarity before you spend time on scheduling extras.': {
+        'es': 'Guarde ingresos, revise la ganancia y mantenga claridad de cobro antes de gastar tiempo en extras de agenda.',
+        'pt': 'Salve receitas, revise o lucro e mantenha clareza de cobranca antes de gastar tempo com extras de agenda.',
+    },
+    'This workspace is strongest when you begin with income, invoices, reports, payroll records, and billing clarity. Scheduling and team tools stay available as bonuses once the financial foundation is organized.': {
+        'es': 'Este espacio funciona mejor cuando comienza con ingresos, facturas, reportes, registros de nomina y claridad de cobro. Agenda y equipo siguen disponibles como bonus despues de organizar la base financiera.',
+        'pt': 'Este espaco funciona melhor quando voce comeca com receitas, faturas, relatorios, registros de folha e clareza de cobranca. Agenda e equipe continuam disponiveis como bonus depois que a base financeira estiver organizada.',
+    },
+    'Customer Invoice Balance': {'es': 'Saldo de facturas de clientes', 'pt': 'Saldo de faturas de clientes'},
+    'Open customer invoices': {'es': 'Facturas de clientes abiertas', 'pt': 'Faturas de clientes em aberto'},
+    'Open estimates': {'es': 'Presupuestos abiertos', 'pt': 'Orcamentos em aberto'},
+    'W-2 team members': {'es': 'Miembros del equipo W-2', 'pt': 'Membros da equipe W-2'},
+    'Secondary tools': {'es': 'Herramientas secundarias', 'pt': 'Ferramentas secundarias'},
+    'Open Calendar': {'es': 'Abrir calendario', 'pt': 'Abrir calendario'},
+    'Open Team': {'es': 'Abrir equipe', 'pt': 'Abrir equipe'},
+    'Open Benefits Guide': {'es': 'Abrir guia de beneficios', 'pt': 'Abrir guia de beneficios'},
+    'These tools stay available, but they should come after the finance workflow is stable.': {
+        'es': 'Estas herramientas siguen disponibles, pero deben venir despues de estabilizar el flujo financiero.',
+        'pt': 'Estas ferramentas continuam disponiveis, mas devem vir depois que o fluxo financeiro estiver estavel.',
+    },
+    'Income records, billing, reports, and payroll context are ready first. Operations tools stay available after the finances are organized.': {
+        'es': 'Registros de ingresos, cobro, reportes y contexto de nomina estan listos primero. Las herramientas operativas siguen disponibles despues de organizar las finanzas.',
+        'pt': 'Registros de receita, cobranca, relatorios e contexto de folha ficam prontos primeiro. As ferramentas operacionais continuam disponiveis depois que as financas forem organizadas.',
+    },
+    'A guided finance-first welcome space for this business with owner details, overview direction, and future how-to video slots for Canva training content.': {
+        'es': 'Un espacio de bienvenida guiado con foco financiero para este negocio, con datos del propietario, orientacion general y futuros espacios de video Canva.',
+        'pt': 'Um espaco guiado de boas-vindas com foco financeiro para este negocio, com dados do proprietario, direcao geral e futuros espacos de video Canva.',
+    },
+    'This page should point you into the money side of the business first, because that is where most owners need the clearest control.': {
+        'es': 'Esta pagina debe llevarlo primero al lado financiero del negocio, porque ahi la mayoria de los propietarios necesita mas control.',
+        'pt': 'Esta pagina deve levar voce primeiro para o lado financeiro do negocio, porque e ali que a maioria dos proprietarios precisa de mais controle.',
+    },
+    'Open Calendar and scheduling only after the financial baseline is clear.': {
+        'es': 'Abra calendario y agenda solo despues de que la base financiera este clara.',
+        'pt': 'Abra calendario e agenda somente depois que a base financeira estiver clara.',
+    },
+    'Use Team Members when payroll, W-2, or worker payment records need attention.': {
+        'es': 'Use Miembros del equipo cuando nomina, W-2 o pagos a trabajadores necesiten atencion.',
+        'pt': 'Use Membros da equipe quando folha, W-2 ou pagamentos a trabalhadores precisarem de atencao.',
+    },
+    'Open the finance summary first and confirm the current income, profit, and tax-readiness view.': {
+        'es': 'Abra primero el resumen financiero y confirme la vista actual de ingresos, ganancia y preparacion fiscal.',
+        'pt': 'Abra primeiro o resumo financeiro e confirme a visao atual de receita, lucro e preparacao fiscal.',
+    },
+    'Saved income records': {'es': 'Registros de ingresos guardados', 'pt': 'Registros de receita salvos'},
+    'Current operating profit view': {'es': 'Vista actual de ganancia operativa', 'pt': 'Visao atual do lucro operacional'},
     'LedgerFlow provides organization, summaries, and workflow tools. It does not provide financial, tax, legal, or accounting advice and does not replace a licensed professional.': {
         'es': 'LedgerFlow ofrece organizacion, resumos y herramientas de flujo. No brinda asesoramiento financiero, fiscal, legal ni contable y no reemplaza a un profesional licenciado.',
         'pt': 'A LedgerFlow oferece organizacao, resumos e ferramentas de fluxo. Nao fornece orientacao financeira, fiscal, juridica ou contabil e nao substitui um profissional licenciado.',
@@ -9386,12 +9454,55 @@ def enforce_business_onboarding_gate():
 def current_mode_for_request(user) -> str:
     if not user:
         return 'guest'
+    endpoint = request.endpoint or ''
     workspace_requested = str(request.values.get('workspace', '') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
     if request.endpoint == 'clients' and (user['role'] != 'admin' or workspace_requested):
         return 'business'
-    if request.endpoint in {'clients', 'client_users', 'client_user_email_preview', 'cpa_dashboard', 'admin_calendar', 'admin_tasks', 'email_settings', 'ai_guide_settings'}:
+    if user['role'] != 'admin':
+        return 'business'
+    admin_cpa_endpoints = {
+        'clients',
+        'client_users',
+        'client_user_email_preview',
+        'cpa_dashboard',
+        'admin_calendar',
+        'admin_tasks',
+        'email_settings',
+        'ai_guide_settings',
+        'irs_tips',
+        'help_center',
+    }
+    admin_business_endpoints = {
+        'dashboard',
+        'welcome_center',
+        'summary',
+        'business_payments_page',
+        'customer_sales',
+        'estimates',
+        'invoices',
+        'reports',
+        'mileage',
+        'workers',
+        'work_schedule',
+        'benefits_obligations',
+        'ops_overview',
+        'ops_jobs',
+        'ops_dispatch',
+        'ops_schedule',
+        'ops_team',
+        'ops_availability',
+        'ops_activity',
+        'ops_locations',
+        'ops_templates',
+        'w4',
+        'w2',
+        'form_1099',
+    }
+    if endpoint in admin_cpa_endpoints:
         return 'cpa'
-    return 'business'
+    if endpoint in admin_business_endpoints:
+        return 'business'
+    return 'cpa'
 
 
 def active_client_for_request(user):
@@ -9511,6 +9622,7 @@ def set_language():
     language = normalize_language(request.form.get('preferred_language'))
     session['preferred_language'] = language
     session['language_override_active'] = 1
+    session['prospect_followup_last_run'] = now_iso()
     quiet = request.form.get('quiet') in {'1', 'true', 'on', 'yes'}
     user = current_user()
     worker = current_worker()
@@ -12205,8 +12317,62 @@ def welcome_center():
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         worker_count_row = conn.execute('SELECT COUNT(*) count FROM workers WHERE client_id=?', (client_id,)).fetchone()
+        w2_worker_count_row = conn.execute(
+            "SELECT COUNT(*) count FROM workers WHERE client_id=? AND worker_type='W-2'",
+            (client_id,),
+        ).fetchone()
+        open_customer_invoice_row = conn.execute(
+            """SELECT COUNT(*) count,
+                      COALESCE(SUM(CASE
+                        WHEN COALESCE(invoice_total_amount,0) - COALESCE(paid_amount,0) > 0
+                        THEN COALESCE(invoice_total_amount,0) - COALESCE(paid_amount,0)
+                        ELSE 0
+                      END),0) balance
+               FROM invoices
+               WHERE client_id=?
+                 AND COALESCE(record_kind,'')='customer_invoice'
+                 AND COALESCE(invoice_status,'draft') NOT IN ('paid','closed','void','cancelled','canceled')""",
+            (client_id,),
+        ).fetchone()
+        open_estimate_row = conn.execute(
+            """SELECT COUNT(*) count
+               FROM invoices
+               WHERE client_id=?
+                 AND COALESCE(record_kind,'')='estimate'
+                 AND COALESCE(invoice_status,'draft') NOT IN ('declined','expired','converted')""",
+            (client_id,),
+        ).fetchone()
     owner_name = (client['contact_name'] or '').strip() if client else ''
     summary = client_summary(client_id) if client else {}
+    finance_focus_items = [
+        {
+            'label': 'Gross Income',
+            'value': f"${summary.get('gross_income', 0):,.2f}",
+            'detail': 'Saved income records',
+            'amount': float(summary.get('gross_income', 0) or 0),
+        },
+        {
+            'label': 'Operating Profit',
+            'value': f"${summary.get('operating_profit', 0):,.2f}",
+            'detail': 'Current operating profit view',
+            'amount': float(summary.get('operating_profit', 0) or 0),
+        },
+        {
+            'label': 'Customer Invoice Balance',
+            'value': f"${float((open_customer_invoice_row['balance'] if open_customer_invoice_row else 0) or 0):,.2f}",
+            'detail': 'Open customer invoices',
+            'amount': float((open_customer_invoice_row['balance'] if open_customer_invoice_row else 0) or 0),
+        },
+        {
+            'label': 'Total Est.',
+            'value': f"${summary.get('federal_plus_se_estimate', 0):,.2f}",
+            'detail': 'Profit and tax visibility',
+            'amount': float(summary.get('federal_plus_se_estimate', 0) or 0),
+        },
+    ]
+    finance_max = max([item['amount'] for item in finance_focus_items] + [1.0])
+    for item in finance_focus_items:
+        item['percent'] = max(12, min(100, int(round((item['amount'] / finance_max) * 100)))) if item['amount'] > 0 else 12
     return render_template(
         'welcome_center.html',
         client=client,
@@ -12218,6 +12384,11 @@ def welcome_center():
         video_topics=welcome_center_video_topics(),
         summary=summary,
         worker_count=int(worker_count_row['count'] or 0) if worker_count_row else 0,
+        w2_worker_count=int(w2_worker_count_row['count'] or 0) if w2_worker_count_row else 0,
+        open_customer_invoice_count=int(open_customer_invoice_row['count'] or 0) if open_customer_invoice_row else 0,
+        open_customer_invoice_balance=float((open_customer_invoice_row['balance'] if open_customer_invoice_row else 0) or 0),
+        open_estimate_count=int(open_estimate_row['count'] or 0) if open_estimate_row else 0,
+        finance_focus_items=finance_focus_items,
     )
 
 

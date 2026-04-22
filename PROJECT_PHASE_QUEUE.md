@@ -112,6 +112,11 @@
   - release is still blocked until mandatory terms/privacy acceptance with version logging exists server-side
   - release is still blocked until payment-method handling is moved out of unexpected local card/account-number storage or intentionally rebuilt for the correct PCI scope
   - release is still blocked until the evidence package is complete for access control, tenant isolation, privacy-policy reality match, and incident readiness
+- Finance-first live stability phase completed on 2026-04-21:
+  - fixed admin mode leakage so admin informational routes like IRS Tips stay in administrator context instead of inheriting a random business workspace shell
+  - Welcome Center and dashboard now lead with financial clarity, summary, reports, billing, and payroll context before secondary operations tools
+  - welcome actions are now real links instead of mostly static labels
+  - next language follow-up should cover the newest finance-first copy added in this phase
 
 ## Future Pricing Research Note
 
