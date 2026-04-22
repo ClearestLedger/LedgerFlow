@@ -55,6 +55,13 @@
         <div class='password-field'><input type='password' name='password' required><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div>
         <label style='margin-top:12px'>{{ tr('Confirm Password') }}</label>
         <div class='password-field'><input type='password' name='confirm_password' required><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div>
+        <div class='small' style='margin-top:14px'>
+          <label><input type='checkbox' name='accept_terms' value='1' required> {{ tr('I accept the Terms of Use') }}</label>
+        </div>
+        <div class='small' style='margin-top:8px'>
+          <label><input type='checkbox' name='accept_privacy' value='1' required> {{ tr('I accept the Privacy Notice') }}</label>
+        </div>
+        <div class='small' style='margin-top:8px'>{{ tr('Review the current policies before creating the administrator account.') }} <a href='{{ url_for("trust_center") }}#terms'>{{ tr('Terms of Use') }}</a> · <a href='{{ url_for("trust_center") }}#privacy'>{{ tr('Privacy Notice') }}</a></div>
         <button style='margin-top:16px;width:100%'>{{ tr('Create Administrator Account') }}</button>
       </form>
       {% else %}
@@ -67,6 +74,7 @@
         <button style='margin-top:16px;width:100%'>{{ tr('Sign In') }}</button>
         <div style='margin-top:10px;text-align:right'><a class='small' href='{{ url_for("forgot_password") }}'>{{ tr('Forgot Password?') }}</a></div>
       </form>
+      <div class='small' style='margin-top:10px'>{{ tr('By continuing into the workspace, users may be required to review and accept the current Terms of Use and Privacy Notice.') }}</div>
       {% endif %}
       <div class='login-actions'>
         <a class='btn btn-secondary' href='{{ url_for("worker_login") }}'>{{ tr('Worker Login') }}</a>

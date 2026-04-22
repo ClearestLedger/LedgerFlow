@@ -41,6 +41,10 @@ APP_SUBTITLE = 'Profit and job control for growing service businesses'
 BRAND_TAGLINE = 'See the job, control the numbers, and know the profit.'
 BRAND_LOGO_FILENAME = 'ledgerflow-logo.png'
 BRAND_MARK_FILENAME = 'ledgerflow-mark.png'
+TERMS_VERSION = '2026-04-22.1'
+PRIVACY_VERSION = '2026-04-22.1'
+DISCLAIMER_VERSION = '2026-04-22.1'
+POLICY_EFFECTIVE_DATE = '2026-04-22'
 TRACKING_PIXEL_GIF = base64.b64decode('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==')
 ADMIN_LABEL = 'Businesses'
 CUSTOMER_LABEL = 'Customers'
@@ -6550,6 +6554,21 @@ def init_db():
                 FOREIGN KEY(related_invite_id) REFERENCES business_invites(id),
                 FOREIGN KEY(related_user_id) REFERENCES users(id)
             );
+            CREATE TABLE IF NOT EXISTS legal_acceptances (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                client_id INTEGER,
+                terms_version TEXT NOT NULL,
+                privacy_version TEXT NOT NULL,
+                disclaimer_version TEXT DEFAULT '',
+                accepted_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                acceptance_method TEXT DEFAULT 'web_form',
+                accepted_path TEXT DEFAULT '',
+                ip_address TEXT DEFAULT '',
+                user_agent TEXT DEFAULT '',
+                FOREIGN KEY(user_id) REFERENCES users(id),
+                FOREIGN KEY(client_id) REFERENCES clients(id)
+            );
             """
         )
 
@@ -7119,6 +7138,50 @@ def current_worker():
         return None
 
 
+@app.before_request
+def enforce_current_legal_acceptance():
+    if request.method == 'OPTIONS':
+        return None
+    endpoint = request.endpoint or ''
+    if endpoint == 'static':
+        return None
+    user = current_user()
+    if not user:
+        return None
+    exempt_endpoints = {
+        'login',
+        'main_portal',
+        'logout',
+        'set_language',
+        'trust_center',
+        'legal_acceptance',
+        'create_account_info',
+        'worker_login',
+        'forgot_password',
+        'reset_password',
+        'production_import',
+        'production_import_status',
+    }
+    if endpoint in exempt_endpoints:
+        return None
+    if legal_acceptance_session_matches():
+        return None
+    with get_conn() as conn:
+        acceptance_row = latest_legal_acceptance(conn, user['id'])
+        if acceptance_row and user_has_current_legal_acceptance(conn, user['id']):
+            cache_legal_acceptance_in_session(acceptance_row)
+            return None
+    flash(
+        translate_text(
+            'Review and accept the current Terms of Use and Privacy Notice before continuing.',
+            normalize_language(session.get('preferred_language')),
+        ),
+        'error',
+    )
+    next_path = request.full_path if request.query_string else request.path
+    return redirect(url_for('legal_acceptance', next=safe_next_path(next_path, default_post_login_path(user))))
+
+
 def production_import_enabled() -> bool:
     return IS_PRODUCTION and (os.environ.get('PRODUCTION_IMPORT_ENABLED') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
 
@@ -7240,6 +7303,101 @@ def safe_next_path(path: str | None, fallback: str = '/main-portal') -> str:
     if candidate.startswith('/') and not candidate.startswith('//'):
         return candidate
     return fallback
+
+
+def legal_policy_versions() -> dict[str, str]:
+    return {
+        'terms_version': TERMS_VERSION,
+        'privacy_version': PRIVACY_VERSION,
+        'disclaimer_version': DISCLAIMER_VERSION,
+        'effective_date': POLICY_EFFECTIVE_DATE,
+    }
+
+
+def legal_acceptance_session_matches() -> bool:
+    return (
+        (session.get('accepted_terms_version') or '') == TERMS_VERSION
+        and (session.get('accepted_privacy_version') or '') == PRIVACY_VERSION
+        and (session.get('accepted_disclaimer_version') or '') == DISCLAIMER_VERSION
+    )
+
+
+def cache_legal_acceptance_in_session(row) -> None:
+    if not row:
+        session.pop('accepted_terms_version', None)
+        session.pop('accepted_privacy_version', None)
+        session.pop('accepted_disclaimer_version', None)
+        session.pop('accepted_at', None)
+        return
+    session['accepted_terms_version'] = row['terms_version'] or ''
+    session['accepted_privacy_version'] = row['privacy_version'] or ''
+    session['accepted_disclaimer_version'] = row['disclaimer_version'] or ''
+    session['accepted_at'] = row['accepted_at'] or ''
+
+
+def latest_legal_acceptance(conn: sqlite3.Connection, user_id: int):
+    return conn.execute(
+        '''SELECT *
+           FROM legal_acceptances
+           WHERE user_id=?
+           ORDER BY accepted_at DESC, id DESC
+           LIMIT 1''',
+        (user_id,),
+    ).fetchone()
+
+
+def user_has_current_legal_acceptance(conn: sqlite3.Connection, user_id: int) -> bool:
+    row = latest_legal_acceptance(conn, user_id)
+    if not row:
+        return False
+    return (
+        (row['terms_version'] or '') == TERMS_VERSION
+        and (row['privacy_version'] or '') == PRIVACY_VERSION
+        and (row['disclaimer_version'] or '') == DISCLAIMER_VERSION
+    )
+
+
+def record_legal_acceptance(
+    conn: sqlite3.Connection,
+    *,
+    user_id: int,
+    client_id: int | None = None,
+    acceptance_method: str = 'web_form',
+    accepted_path: str = '',
+) -> None:
+    conn.execute(
+        '''INSERT INTO legal_acceptances (
+               user_id, client_id, terms_version, privacy_version, disclaimer_version,
+               accepted_at, acceptance_method, accepted_path, ip_address, user_agent
+           ) VALUES (?,?,?,?,?,?,?,?,?,?)''',
+        (
+            user_id,
+            client_id,
+            TERMS_VERSION,
+            PRIVACY_VERSION,
+            DISCLAIMER_VERSION,
+            datetime.now().isoformat(timespec='seconds'),
+            (acceptance_method or 'web_form').strip()[:80],
+            (accepted_path or '').strip()[:300],
+            ((request.headers.get('X-Forwarded-For', '') or request.remote_addr or '')[:120]),
+            (request.headers.get('User-Agent', '') or '')[:500],
+        ),
+    )
+
+
+def default_post_login_path(user) -> str:
+    if not user:
+        return url_for('main_portal')
+    if user['role'] == 'admin':
+        return url_for('cpa_dashboard')
+    if user_requires_business_onboarding(user):
+        return url_for('business_onboarding')
+    issue = client_access_issue_for_user(user)
+    if issue:
+        return url_for('business_comeback')
+    if user_has_trial_offer(user):
+        return url_for('welcome_center')
+    return url_for('dashboard')
 
 
 def login_required(fn):
@@ -10385,6 +10543,7 @@ def inject_globals():
         'current_request_path': current_request_path(),
         'current_language': current_language,
         'language_options': language_options(),
+        'policy_versions': legal_policy_versions(),
         'tr': tr,
     }
 
@@ -10412,7 +10571,38 @@ def index():
 
 @app.route('/trust-and-policies')
 def trust_center():
-    return render_template('trust_center.html')
+    return render_template('trust_center.html', policy_versions=legal_policy_versions())
+
+
+@app.route('/legal-acceptance', methods=['GET', 'POST'])
+@login_required
+def legal_acceptance():
+    user = current_user()
+    next_path = safe_next_path(request.values.get('next'), default_post_login_path(user))
+    if request.method == 'POST':
+        accept_terms = request.form.get('accept_terms') in {'1', 'on', 'true', 'yes'}
+        accept_privacy = request.form.get('accept_privacy') in {'1', 'on', 'true', 'yes'}
+        if not accept_terms or not accept_privacy:
+            flash('You must accept the Terms of Use and Privacy Notice before continuing.', 'error')
+        else:
+            with get_conn() as conn:
+                client_id = int(user['client_id'] or 0) if user and user['role'] == 'client' else None
+                record_legal_acceptance(
+                    conn,
+                    user_id=user['id'],
+                    client_id=client_id,
+                    acceptance_method='legal_acceptance_page',
+                    accepted_path=next_path,
+                )
+                conn.commit()
+                cache_legal_acceptance_in_session(latest_legal_acceptance(conn, user['id']))
+            flash('Thanks. Your acceptance has been saved.', 'success')
+            return redirect(next_path)
+    return render_template(
+        'legal_acceptance.html',
+        next_path=next_path,
+        policy_versions=legal_policy_versions(),
+    )
 
 
 @app.route('/set-language', methods=['POST'])
@@ -10535,6 +10725,8 @@ def login():
                 email = request.form.get('email', '').strip().lower()
                 password = request.form.get('password', '').strip()
                 confirm_password = request.form.get('confirm_password', '').strip()
+                accept_terms = request.form.get('accept_terms') in {'1', 'on', 'true', 'yes'}
+                accept_privacy = request.form.get('accept_privacy') in {'1', 'on', 'true', 'yes'}
                 if not full_name:
                     flash(translate_text('Full name is required.', selected_language), 'error')
                 elif not email:
@@ -10543,6 +10735,8 @@ def login():
                     flash(translate_text('Password must be at least 8 characters.', selected_language), 'error')
                 elif password != confirm_password:
                     flash(translate_text('Passwords do not match.', selected_language), 'error')
+                elif not accept_terms or not accept_privacy:
+                    flash(translate_text('You must accept the Terms of Use and Privacy Notice before creating the administrator account.', selected_language), 'error')
                 else:
                     with get_conn() as conn:
                         if conn.execute("SELECT 1 FROM users WHERE lower(email)=?", (email,)).fetchone():
@@ -10551,6 +10745,14 @@ def login():
                             conn.execute(
                                 'INSERT INTO users (email, password_hash, full_name, role, client_id, preferred_language) VALUES (?,?,?,?,?,?)',
                                 (email, generate_password_hash(password), full_name, 'admin', None, selected_language)
+                            )
+                            user_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+                            record_legal_acceptance(
+                                conn,
+                                user_id=user_id,
+                                client_id=None,
+                                acceptance_method='admin_signup',
+                                accepted_path='/main-portal',
                             )
                             conn.commit()
                             flash(translate_text('Administrator account created. Sign in below.', selected_language), 'success')
@@ -10574,15 +10776,13 @@ def login():
                         or (client['preferred_language'] if client else '')
                         or selected_language
                     )
-                    if user['role'] == 'client' and user_requires_business_onboarding(user):
-                        return redirect(url_for('business_onboarding'))
-                    if user['role'] == 'client':
-                        issue = client_access_issue_for_user(user)
-                        if issue:
-                            return redirect(url_for('business_comeback'))
-                        if client and int(client['trial_offer_days'] or 0) > 0:
-                            return redirect(url_for('welcome_center', client_id=user['client_id']))
-                    return redirect(url_for('cpa_dashboard' if user['role']=='admin' else 'dashboard'))
+                    acceptance_row = latest_legal_acceptance(conn, user['id'])
+                    if acceptance_row and user_has_current_legal_acceptance(conn, user['id']):
+                        cache_legal_acceptance_in_session(acceptance_row)
+                    else:
+                        cache_legal_acceptance_in_session(None)
+                        return redirect(url_for('legal_acceptance', next=default_post_login_path(user)))
+                    return redirect(default_post_login_path(user))
 
                 workers = conn.execute(
                     '''SELECT w.*, c.business_name, c.subscription_status client_subscription_status, c.record_status client_record_status

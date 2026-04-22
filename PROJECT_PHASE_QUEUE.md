@@ -207,3 +207,9 @@
   - Phase 1 sweep exposed one real bug in `Clients & Sales`: the page referenced a non-existent invoice `updated_at` field during sales-activity rollup
   - fixed that bug by falling back to `sent_at`, `invoice_date`, and `created_at`, and made the page heading clearly read `Clients & Sales` for consistent route verification
   - final Phase 1 result: clean pass on both admin-supervised and direct business-workspace route sweeps against the reset bundle
+- Terms/privacy acceptance phase completed on 2026-04-22:
+  - added server-side legal acceptance logging with version numbers, timestamp, method, path, IP address, and user agent in a dedicated `legal_acceptances` table
+  - existing users are now redirected to a required legal-acceptance page before protected workspace access continues if their stored acceptance does not match the current versions
+  - first-launch administrator creation is now blocked unless Terms of Use and Privacy Notice are accepted at signup, and that acceptance is logged immediately
+  - trust and policy surfaces now show the active policy versions and effective date, and public auth screens now point users to those policies before or during first sign-in
+  - focused smoke tests passed for both flows: clean-reset admin forced acceptance before dashboard access, and first-launch admin signup blocked until required acceptance is given

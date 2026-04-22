@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>{{ tr('Required before continuing') }}</div>
+    <div class='page-title'>{{ tr('Review and accept current policies') }}</div>
+    <div class='page-subtitle'>{{ tr('LedgerFlow requires the current Terms of Use and Privacy Notice to be accepted before protected workspace access continues.') }}</div>
+  </div>
+  <a class='btn btn-secondary' href='{{ url_for("trust_center") }}'>{{ tr('Open Trust & Policies') }}</a>
+</div>
+
+<div class='grid cards-2 legal-grid'>
+  <section class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Current policy versions') }}</h3><span class='badge'>{{ tr('Live') }}</span></div>
+    <div class='summary-strip'>
+      <span class='summary-pill'>{{ tr('Terms version') }} {{ policy_versions.terms_version }}</span>
+      <span class='summary-pill'>{{ tr('Privacy version') }} {{ policy_versions.privacy_version }}</span>
+      <span class='summary-pill'>{{ tr('Disclaimer version') }} {{ policy_versions.disclaimer_version }}</span>
+      <span class='summary-pill'>{{ tr('Effective date') }} {{ policy_versions.effective_date }}</span>
+    </div>
+    <ul class='subscription-tier-list' style='margin-top:16px'>
+      <li>{{ tr('Terms of Use: access rules, credential responsibility, and proper use of the portal.') }}</li>
+      <li>{{ tr('Privacy Notice: what platform and business data LedgerFlow stores and why.') }}</li>
+      <li>{{ tr('Disclaimer: LedgerFlow is an informational workflow tool and not financial, tax, legal, or accounting advice.') }}</li>
+    </ul>
+    <div class='stack-actions' style='margin-top:16px'>
+      <a class='btn btn-secondary' href='{{ url_for("trust_center") }}#terms'>{{ tr('Read Terms of Use') }}</a>
+      <a class='btn btn-secondary' href='{{ url_for("trust_center") }}#privacy'>{{ tr('Read Privacy Notice') }}</a>
+      <a class='btn btn-secondary' href='{{ url_for("trust_center") }}#disclaimer'>{{ tr('Read Disclaimer') }}</a>
+    </div>
+  </section>
+
+  <section class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Acceptance required') }}</h3><span class='badge'>{{ tr('Server logged') }}</span></div>
+    <p class='legal-copy'>{{ tr('Your acceptance is logged with the current version numbers, timestamp, and basic request metadata for audit purposes.') }}</p>
+    <form method='post' style='margin-top:16px'>
+      <input type='hidden' name='next' value='{{ next_path }}'>
+      <div class='small' style='margin-bottom:12px'>
+        <label><input type='checkbox' name='accept_terms' value='1' required> {{ tr('I accept the current Terms of Use') }}</label>
+      </div>
+      <div class='small' style='margin-bottom:16px'>
+        <label><input type='checkbox' name='accept_privacy' value='1' required> {{ tr('I accept the current Privacy Notice') }}</label>
+      </div>
+      <div class='small' style='margin-bottom:16px'>{{ tr('Continuing confirms you reviewed the current policy versions listed on this page.') }}</div>
+      <div class='stack-actions'>
+        <button type='submit'>{{ tr('Accept and Continue') }}</button>
+        <a class='btn btn-secondary' href='{{ url_for("logout") }}'>{{ tr('Log Out') }}</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

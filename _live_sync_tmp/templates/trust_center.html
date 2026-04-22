@@ -5,6 +5,11 @@
     <div class='page-kicker'>{{ tr('Trust & Policies') }}</div>
     <div class='page-title'>{{ tr('Private Client Rollout Notice') }}</div>
     <div class='page-subtitle'>{{ tr('Core LedgerFlow client functions are live for invited clients while final platform refinements continue under administrator oversight.') }}</div>
+    <div class='summary-strip' style='margin-top:14px'>
+      <span class='summary-pill'>{{ tr('Terms version') }} {{ policy_versions.terms_version }}</span>
+      <span class='summary-pill'>{{ tr('Privacy version') }} {{ policy_versions.privacy_version }}</span>
+      <span class='summary-pill'>{{ tr('Effective date') }} {{ policy_versions.effective_date }}</span>
+    </div>
   </div>
   <a class='btn btn-secondary' href='{{ url_for("main_portal") }}'>{{ tr('Main Portal') }}</a>
 </div>
