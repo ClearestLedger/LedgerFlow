@@ -109,7 +109,7 @@
   </div>
   <div class='mobile-workspace-actions'>
     <a class='mobile-workspace-action {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Owner View') }}</a>
-    {% if premium_sales_access_enabled(active_client) %}
+    {% if sales_workspace_access_enabled(active_client) %}
     <a class='mobile-workspace-action {% if request.endpoint in ["customer_sales","estimates","invoices"] %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>{{ tr('Clients & Sales') }}</a>
     {% else %}
     <a class='mobile-workspace-action {% if request.endpoint=="invoices" %}active{% endif %}' href='{{ url_for("invoices", client_id=active_client.id) }}'>{{ tr('Invoices & Income') }}</a>
@@ -149,7 +149,7 @@
         <a class='app-nav-link {% if request.endpoint=="welcome_center" %}active{% endif %}' href='{{ url_for("welcome_center", client_id=active_client.id) }}'>{{ tr('Welcome Center') }}</a>
         <a class='app-nav-link {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Owner View') }}</a>
         <a class='app-nav-link {% if request.endpoint=="ops_jobs" %}active{% endif %}' href='{{ url_for("ops_jobs", client_id=active_client.id) }}'>{{ tr('Jobs') }}</a>
-        {% if premium_sales_access_enabled(active_client) %}
+        {% if sales_workspace_access_enabled(active_client) %}
         <a class='app-nav-link {% if request.endpoint=="customer_sales" %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>{{ tr('Clients & Sales') }}</a>
         <a class='app-nav-link {% if request.endpoint=="estimates" %}active{% endif %}' href='{{ url_for("estimates", client_id=active_client.id) }}'>{{ tr('Estimates') }}</a>
         {% endif %}
@@ -227,7 +227,7 @@
         <a class='workspace-link {% if request.endpoint=="welcome_center" %}active{% endif %}' href='{{ url_for("welcome_center", client_id=active_client.id) }}'>{{ tr('Welcome Center') }}</a>
         <a class='workspace-link {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Owner View') }}</a>
         <a class='workspace-link {% if request.endpoint=="ops_jobs" %}active{% endif %}' href='{{ url_for("ops_jobs", client_id=active_client.id) }}'>{{ tr('Jobs') }}</a>
-        {% if premium_sales_access_enabled(active_client) %}
+        {% if sales_workspace_access_enabled(active_client) %}
         <a class='workspace-link {% if request.endpoint=="customer_sales" %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>{{ tr('Clients & Sales') }}</a>
         <a class='workspace-link {% if request.endpoint=="estimates" %}active{% endif %}' href='{{ url_for("estimates", client_id=active_client.id) }}'>{{ tr('Estimates') }}</a>
         {% endif %}
@@ -296,7 +296,7 @@
     <strong>{{ tr('Dashboard') }}</strong>
     <span>{{ tr('Home') }}</span>
   </a>
-  {% if premium_sales_access_enabled(active_client) %}
+  {% if sales_workspace_access_enabled(active_client) %}
   <a class='{% if request.endpoint in ["customer_sales","estimates","invoices"] %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>
     <strong>{{ tr('Clients & Sales') }}</strong>
     <span>{{ tr('Sales') }}</span>

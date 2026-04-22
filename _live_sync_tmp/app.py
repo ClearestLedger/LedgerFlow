@@ -484,6 +484,27 @@ TRANSLATIONS.update({
     'Open Payroll / W-2': {'es': 'Abrir nomina / W-2', 'pt': 'Abrir folha / W-2'},
     'Open Clients & Sales': {'es': 'Abrir clientes y ventas', 'pt': 'Abrir clientes e vendas'},
     'Client billing': {'es': 'Cobro al cliente', 'pt': 'Cobranca ao cliente'},
+    'Client revenue': {'es': 'Ingreso del cliente', 'pt': 'Receita do cliente'},
+    'Client profit': {'es': 'Ganancia del cliente', 'pt': 'Lucro do cliente'},
+    'Clients with active jobs': {'es': 'Clientes con trabajos activos', 'pt': 'Clientes com servicos ativos'},
+    'Client Profit Snapshot': {'es': 'Resumen de ganancia por cliente', 'pt': 'Resumo de lucro por cliente'},
+    'Financial view by saved client': {'es': 'Vista financiera por cliente guardado', 'pt': 'Visao financeira por cliente salvo'},
+    'Last Job Date': {'es': 'Ultima fecha de trabajo', 'pt': 'Data do ultimo servico'},
+    'Total Cost': {'es': 'Costo total', 'pt': 'Custo total'},
+    'No job financials yet': {'es': 'Aun no hay finanzas de trabajos', 'pt': 'Ainda nao ha financeiros de servicos'},
+    'How This Client Flow Works': {'es': 'Como funciona este flujo del cliente', 'pt': 'Como este fluxo do cliente funciona'},
+    'Customer workspace for saved return clients, hosted estimates, customer invoices, and repeat billing relationships.': {
+        'es': 'Espacio del cliente para clientes recurrentes guardados, estimaciones alojadas, facturas para clientes y relaciones de cobro repetidas.',
+        'pt': 'Espaco do cliente para clientes recorrentes salvos, estimativas hospedadas, faturas para clientes e relacionamentos de cobranca recorrente.',
+    },
+    'Saved customer records for repeat business, financial visibility, and faster quoting.': {
+        'es': 'Registros de clientes guardados para negocios repetidos, visibilidad financiera y cotizaciones mas rapidas.',
+        'pt': 'Registros de clientes salvos para negocios recorrentes, visibilidade financeira e orcamentos mais rapidos.',
+    },
+    'Estimates are available from the main business workflow for quoting and approval before invoicing.': {
+        'es': 'Las estimaciones estan disponibles desde el flujo principal del negocio para cotizar y aprobar antes de facturar.',
+        'pt': 'As estimativas estao disponiveis no fluxo principal da empresa para orcar e aprovar antes de faturar.',
+    },
     'Quick actions': {'es': 'Acciones rapidas', 'pt': 'Acoes rapidas'},
     'Create estimate from this job': {'es': 'Crear estimacion desde este trabajo', 'pt': 'Criar estimativa a partir deste servico'},
     'Create invoice from this job': {'es': 'Crear factura desde este trabajo', 'pt': 'Criar fatura a partir deste servico'},
@@ -546,6 +567,8 @@ TRANSLATIONS.update({
     'Print Dashboard': {'es': 'Imprimir panel', 'pt': 'Imprimir painel'},
     'Subscription Billing': {'es': 'Facturacion de suscripcion', 'pt': 'Cobranca de assinatura'},
     'Open Billing': {'es': 'Abrir facturacion', 'pt': 'Abrir faturamento'},
+    'Active': {'es': 'Activo', 'pt': 'Ativo'},
+    'Completed': {'es': 'Completado', 'pt': 'Concluido'},
     'Plan': {'es': 'Plan', 'pt': 'Plano'},
     'Status': {'es': 'Estado', 'pt': 'Status'},
     'Monthly Fee': {'es': 'Cuota mensual', 'pt': 'Taxa mensal'},
@@ -2384,6 +2407,12 @@ def effective_service_level_label(client_row) -> str:
 
 def premium_sales_access_enabled(client_row) -> bool:
     return effective_service_level(client_row) == 'premium_principal'
+
+
+def sales_workspace_access_enabled(client_row) -> bool:
+    if not client_row:
+        return False
+    return (row_value(client_row, 'record_status', 'active') or 'active').strip().lower() != 'archived'
 
 
 def premium_sales_redirect(client_id: int):
@@ -7861,63 +7890,75 @@ def migrate_legacy_schedule_to_jobs(conn: sqlite3.Connection):
         ).fetchone()
         if existing:
             continue
-        client_id = int(row['client_id'] or 0)
-        if not client_id:
+        try:
+            conn.execute('SAVEPOINT ops_legacy_import')
+            client_id = int(row['client_id'] or 0)
+            if not client_id:
+                conn.execute('ROLLBACK TO SAVEPOINT ops_legacy_import')
+                conn.execute('RELEASE SAVEPOINT ops_legacy_import')
+                continue
+            ops_ensure_reference_data(conn, client_id)
+            location_id = ops_find_or_create_location(
+                conn,
+                client_id=client_id,
+                location_name=row['job_name'],
+                address_line1=row['job_address'] or '',
+                location_notes=row['notes'] or '',
+            )
+            service_type = conn.execute(
+                'SELECT id, name FROM service_types WHERE client_id=? ORDER BY CASE WHEN lower(name)=? THEN 0 ELSE 1 END, name LIMIT 1',
+                (client_id, 'custom'),
+            ).fetchone()
+            scheduled_start = ops_schedule_timestamp(row['schedule_date'] or '', row['start_time'] or '')
+            scheduled_end = ops_schedule_timestamp(row['schedule_date'] or '', row['end_time'] or '')
+            estimated_minutes = ops_duration_minutes(scheduled_start, scheduled_end, 0)
+            status = 'assigned' if (row['assigned_worker_ids'] or '').strip() else 'scheduled'
+            conn.execute(
+                '''INSERT INTO jobs (
+                       client_id, legacy_schedule_entry_id, service_location_id, service_type_id, created_by_user_id, updated_by_user_id,
+                       title, service_type_name, status, field_progress_status, service_address, scheduled_start, scheduled_end,
+                       estimated_duration_minutes, notes_summary, internal_notes, updated_at
+                   ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                (
+                    client_id,
+                    row['id'],
+                    location_id,
+                    service_type['id'] if service_type else None,
+                    row['created_by_user_id'],
+                    row['created_by_user_id'],
+                    (row['job_name'] or 'Imported Schedule Entry').strip(),
+                    service_type['name'] if service_type else 'Custom',
+                    status,
+                    'not_started',
+                    (row['job_address'] or '').strip(),
+                    scheduled_start,
+                    scheduled_end,
+                    estimated_minutes,
+                    (row['scope_of_work'] or '').strip(),
+                    (row['notes'] or '').strip(),
+                    now_iso(),
+                ),
+            )
+            job_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+            worker_ids = normalize_worker_assignment_ids((row['assigned_worker_ids'] or '').split(','))
+            ops_sync_job_assignments(conn, client_id=client_id, job_id=job_id, worker_ids=worker_ids, actor_user_id=row['created_by_user_id'])
+            ops_log_activity(
+                conn,
+                client_id=client_id,
+                job_id=job_id,
+                actor_type='system',
+                actor_id=row['created_by_user_id'],
+                event_type='legacy_import',
+                event_text='Imported a legacy work schedule entry into Operational LedgerFlow.',
+            )
+            conn.execute('RELEASE SAVEPOINT ops_legacy_import')
+        except Exception:
+            try:
+                conn.execute('ROLLBACK TO SAVEPOINT ops_legacy_import')
+                conn.execute('RELEASE SAVEPOINT ops_legacy_import')
+            except sqlite3.Error:
+                pass
             continue
-        ops_ensure_reference_data(conn, client_id)
-        location_id = ops_find_or_create_location(
-            conn,
-            client_id=client_id,
-            location_name=row['job_name'],
-            address_line1=row['job_address'] or '',
-            location_notes=row['notes'] or '',
-        )
-        service_type = conn.execute(
-            'SELECT id, name FROM service_types WHERE client_id=? ORDER BY CASE WHEN lower(name)=? THEN 0 ELSE 1 END, name LIMIT 1',
-            (client_id, 'custom'),
-        ).fetchone()
-        scheduled_start = ops_schedule_timestamp(row['schedule_date'] or '', row['start_time'] or '')
-        scheduled_end = ops_schedule_timestamp(row['schedule_date'] or '', row['end_time'] or '')
-        estimated_minutes = ops_duration_minutes(scheduled_start, scheduled_end, 0)
-        status = 'assigned' if (row['assigned_worker_ids'] or '').strip() else 'scheduled'
-        conn.execute(
-            '''INSERT INTO jobs (
-                   client_id, legacy_schedule_entry_id, service_location_id, service_type_id, created_by_user_id, updated_by_user_id,
-                   title, service_type_name, status, field_progress_status, service_address, scheduled_start, scheduled_end,
-                   estimated_duration_minutes, notes_summary, internal_notes, updated_at
-               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-            (
-                client_id,
-                row['id'],
-                location_id,
-                service_type['id'] if service_type else None,
-                row['created_by_user_id'],
-                row['created_by_user_id'],
-                (row['job_name'] or 'Imported Schedule Entry').strip(),
-                service_type['name'] if service_type else 'Custom',
-                status,
-                'not_started',
-                (row['job_address'] or '').strip(),
-                scheduled_start,
-                scheduled_end,
-                estimated_minutes,
-                (row['scope_of_work'] or '').strip(),
-                (row['notes'] or '').strip(),
-                now_iso(),
-            ),
-        )
-        job_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
-        worker_ids = normalize_worker_assignment_ids((row['assigned_worker_ids'] or '').split(','))
-        ops_sync_job_assignments(conn, client_id=client_id, job_id=job_id, worker_ids=worker_ids, actor_user_id=row['created_by_user_id'])
-        ops_log_activity(
-            conn,
-            client_id=client_id,
-            job_id=job_id,
-            actor_type='system',
-            actor_id=row['created_by_user_id'],
-            event_type='legacy_import',
-            event_text='Imported a legacy work schedule entry into Operational LedgerFlow.',
-        )
 
 
 def prepare_ops_workspace(conn: sqlite3.Connection, client_id: int):
@@ -9873,6 +9914,7 @@ def inject_globals():
         'effective_service_level': effective_service_level,
         'effective_service_level_label': effective_service_level_label,
         'premium_sales_access_enabled': premium_sales_access_enabled,
+        'sales_workspace_access_enabled': sales_workspace_access_enabled,
         'access_level_override_active': access_level_override_active,
         'service_level_access_options': service_level_access_options(),
         'current_request_path': current_request_path(),
@@ -12709,7 +12751,7 @@ def welcome_center():
         open_estimate_count=int(open_estimate_row['count'] or 0) if open_estimate_row else 0,
         finance_focus_items=finance_focus_items,
         owner_snapshot=owner_snapshot,
-        premium_sales_enabled=premium_sales_access_enabled(client) if client else False,
+        premium_sales_enabled=sales_workspace_access_enabled(client) if client else False,
     )
 
 
@@ -12742,8 +12784,7 @@ def customer_sales():
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
             abort(403)
-        if not premium_sales_access_enabled(client):
-            return premium_sales_redirect(client_id)
+        sales_workspace_enabled = sales_workspace_access_enabled(client)
         if request.method == 'POST':
             action = (request.form.get('action', 'add_customer_contact') or '').strip()
             if action == 'add_customer_contact':
@@ -13015,8 +13056,57 @@ def customer_sales():
                 (client_id, date.today().isoformat()),
             ).fetchall()
         }
+        job_rollup_map = {
+            row['customer_contact_id']: dict(row) for row in conn.execute(
+                '''SELECT
+                       customer_contact_id,
+                       COUNT(*) AS job_count,
+                       SUM(CASE WHEN COALESCE(status,'')='completed' THEN 1 ELSE 0 END) AS completed_job_count,
+                       SUM(CASE WHEN COALESCE(status,'') NOT IN ('completed','cancelled') THEN 1 ELSE 0 END) AS active_job_count,
+                       COALESCE(SUM(COALESCE(revenue_amount, 0)), 0) AS total_revenue,
+                       COALESCE(SUM(COALESCE(materials_cost_amount, 0) + COALESCE(labor_cost_amount, 0) + COALESCE(other_cost_amount, 0)), 0) AS total_cost,
+                       COALESCE(SUM(COALESCE(revenue_amount, 0) - (COALESCE(materials_cost_amount, 0) + COALESCE(labor_cost_amount, 0) + COALESCE(other_cost_amount, 0))), 0) AS total_profit,
+                       MAX(
+                           CASE
+                               WHEN COALESCE(substr(completed_at, 1, 10), '') <> '' THEN substr(completed_at, 1, 10)
+                               WHEN COALESCE(substr(scheduled_start, 1, 10), '') <> '' THEN substr(scheduled_start, 1, 10)
+                               ELSE substr(COALESCE(updated_at, created_at, ''), 1, 10)
+                           END
+                       ) AS last_job_date
+                   FROM jobs
+                   WHERE client_id=?
+                     AND customer_contact_id IS NOT NULL
+                   GROUP BY customer_contact_id''',
+                (client_id,),
+            ).fetchall()
+        }
+        invoice_rollup_map = {
+            row['customer_contact_id']: dict(row) for row in conn.execute(
+                '''SELECT
+                       customer_contact_id,
+                       COALESCE(SUM(COALESCE(invoice_total_amount, 0)), 0) AS total_invoiced,
+                       COALESCE(SUM(COALESCE(paid_amount, 0)), 0) AS total_paid,
+                       COALESCE(SUM(
+                           CASE
+                               WHEN COALESCE(invoice_total_amount, 0) > COALESCE(paid_amount, 0)
+                               THEN COALESCE(invoice_total_amount, 0) - COALESCE(paid_amount, 0)
+                               ELSE 0
+                           END
+                       ), 0) AS open_balance
+                   FROM invoices
+                   WHERE client_id=?
+                     AND COALESCE(record_kind, '')='customer_invoice'
+                     AND customer_contact_id IS NOT NULL
+                   GROUP BY customer_contact_id''',
+                (client_id,),
+            ).fetchall()
+        }
         metrics = {
             'customer_count': 0,
+            'client_revenue_total': 0.0,
+            'client_profit_total': 0.0,
+            'clients_with_active_jobs': 0,
+            'clients_losing_money': 0,
             'open_estimates': 0,
             'approved_estimates': 0,
             'open_invoices': 0,
@@ -13118,7 +13208,20 @@ def customer_sales():
     recurring_frequency_labels = dict(recurring_frequency_options())
     for contact in active_contacts:
         schedule_rollup = recurring_schedule_map.get(contact['id'])
+        job_rollup = job_rollup_map.get(contact['id'], {})
+        invoice_rollup = invoice_rollup_map.get(contact['id'], {})
         contact['projected_monthly'] = projected_recurring_monthly_amount(contact)
+        contact['job_count'] = int(job_rollup.get('job_count') or 0)
+        contact['completed_job_count'] = int(job_rollup.get('completed_job_count') or 0)
+        contact['active_job_count'] = int(job_rollup.get('active_job_count') or 0)
+        contact['total_revenue'] = money(job_rollup.get('total_revenue') or 0)
+        contact['total_cost'] = money(job_rollup.get('total_cost') or 0)
+        contact['total_profit'] = money(job_rollup.get('total_profit') or 0)
+        contact['profit_margin_percent'] = round(((contact['total_profit'] / contact['total_revenue']) * 100), 1) if contact['total_revenue'] else 0.0
+        contact['last_job_date'] = (job_rollup.get('last_job_date') or '').strip()
+        contact['total_invoiced'] = money(invoice_rollup.get('total_invoiced') or 0)
+        contact['total_paid'] = money(invoice_rollup.get('total_paid') or 0)
+        contact['open_balance'] = money(invoice_rollup.get('open_balance') or 0)
         if (contact.get('recurring_frequency') or '').strip():
             next_dates = recurring_occurrence_dates(contact, window_start=date.today(), horizon_days=42, limit=1)
             contact['next_visit'] = (schedule_rollup or {}).get('next_visit') or (next_dates[0].isoformat() if next_dates else '')
@@ -13126,9 +13229,24 @@ def customer_sales():
             contact['next_visit'] = ''
         contact['upcoming_recurring_visits'] = int((schedule_rollup or {}).get('upcoming_count') or 0)
         contact['projected_window_amount'] = money((schedule_rollup or {}).get('projected_window_amount') or 0)
+        metrics['client_revenue_total'] += float(contact['total_revenue'] or 0)
+        metrics['client_profit_total'] += float(contact['total_profit'] or 0)
+        if int(contact['active_job_count'] or 0) > 0:
+            metrics['clients_with_active_jobs'] += 1
+        if float(contact['total_profit'] or 0) < 0:
+            metrics['clients_losing_money'] += 1
         metrics['projected_recurring_revenue'] += float(contact['projected_monthly'] or 0)
         metrics['upcoming_recurring_visits'] += int(contact['upcoming_recurring_visits'] or 0)
     metrics['customer_count'] = len(active_contacts)
+    client_financial_rows = sorted(
+        active_contacts,
+        key=lambda item: (
+            float(item.get('total_profit') or 0),
+            float(item.get('total_revenue') or 0),
+            item.get('customer_name', '').lower(),
+        ),
+        reverse=True,
+    )
     with get_conn() as dependency_conn:
         archived_dependency_map = {
             row['id']: customer_contact_dependency_summary(dependency_conn, client_id, row['id'])
@@ -13138,7 +13256,9 @@ def customer_sales():
         'customer_sales.html',
         client=client,
         client_id=client_id,
+        sales_workspace_enabled=sales_workspace_enabled,
         customer_contacts=active_contacts,
+        client_financial_rows=client_financial_rows,
         archived_customer_contacts=archived_contacts,
         customer_activity=customer_activity,
         estimate_rows=estimate_rows,
@@ -15050,7 +15170,7 @@ def invoices():
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
             abort(403)
-        sales_workspace_enabled = premium_sales_access_enabled(client)
+        sales_workspace_enabled = sales_workspace_access_enabled(client)
         customer_contact_rows = conn.execute(
             '''SELECT *
                FROM customer_contacts
@@ -15561,8 +15681,8 @@ def estimates():
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
             abort(403)
-        if not premium_sales_access_enabled(client):
-            return premium_sales_redirect(client_id)
+        if not sales_workspace_access_enabled(client):
+            abort(403)
         customer_contact_rows = conn.execute(
             '''SELECT *
                FROM customer_contacts

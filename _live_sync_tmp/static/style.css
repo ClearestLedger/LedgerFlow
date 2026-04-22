@@ -172,16 +172,16 @@ html,body{max-width:100%;overflow-x:hidden}
 
 /* Phase 1.4 administrator business workspace */
 .workspace-container{max-width:1600px}
-.workspace-shell{display:grid;grid-template-columns:280px minmax(0,1fr);gap:20px;align-items:start}
-.workspace-sidebar{position:sticky;top:74px;background:linear-gradient(180deg,#1A2236,#141B2D);border:1px solid rgba(116,130,155,.28);border-radius:24px;box-shadow:var(--shadow);padding:18px;display:flex;flex-direction:column;gap:16px;max-height:calc(100vh - 110px);overflow:auto}
+.workspace-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px;align-items:start}
+.workspace-sidebar{position:sticky;top:18px;background:linear-gradient(180deg,#1A2236,#141B2D);border:1px solid rgba(116,130,155,.28);border-radius:24px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 36px);overflow:auto}
 .workspace-sidebar-head{padding-bottom:8px;border-bottom:1px solid rgba(116,130,155,.24)}
 .workspace-eyebrow{font-size:12px;font-weight:800;letter-spacing:.1em;color:rgba(248,248,246,.64);text-transform:uppercase}
 .workspace-business{font-size:24px;font-weight:800;color:var(--soft);line-height:1.15;margin-top:6px}
 .workspace-owner{font-size:14px;font-weight:600;color:rgba(231,232,230,.78);margin-top:4px}
-.workspace-switcher{display:flex;flex-direction:column;gap:8px}
+.workspace-switcher{display:flex;flex-direction:column;gap:6px}
 .workspace-switcher label{font-size:13px;font-weight:700;color:var(--soft);margin:0}
-.workspace-nav{display:flex;flex-direction:column;gap:8px}
-.workspace-link{display:flex;align-items:center;padding:11px 14px;border-radius:14px;background:rgba(248,248,246,.08);border:1px solid rgba(116,130,155,.26);color:var(--soft);font-weight:800;text-decoration:none}
+.workspace-nav{display:flex;flex-direction:column;gap:6px}
+.workspace-link{display:flex;align-items:center;padding:9px 12px;border-radius:14px;background:rgba(248,248,246,.08);border:1px solid rgba(116,130,155,.26);color:var(--soft);font-weight:800;text-decoration:none}
 .workspace-link:hover{background:rgba(248,248,246,.14);box-shadow:var(--shadow-soft)}
 .workspace-link.active{background:linear-gradient(135deg,var(--primary-dark),var(--primary));border-color:transparent;color:#fff;box-shadow:0 10px 18px rgba(34,37,43,.26)}
 .workspace-main{min-width:0}
@@ -604,20 +604,20 @@ linear-gradient(180deg,#f4f8ff 0%,#f8fbff 52%,#f6fafc 100%)}
 
 
 /* Prime navigation shell */
-.app-shell{display:grid;grid-template-columns:270px minmax(0,1fr);gap:22px;align-items:start;max-width:1600px;margin:0 auto;padding:18px 22px 0}
+.app-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px;align-items:start;max-width:1680px;margin:0 auto;padding:14px 20px 0}
 .app-shell-workspace{display:block;padding:0}
 .app-main{min-width:0}
-.app-sidebar{position:sticky;top:86px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;padding:0 0 18px}
+.app-sidebar{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:auto;padding:0 0 12px}
 .worker-app-sidebar{top:86px}
-.app-sidebar-card{padding:18px 18px 16px;border:1px solid rgba(116,130,155,.24);border-radius:22px;background:linear-gradient(180deg,#1A2236,#141B2D);box-shadow:0 18px 40px rgba(34,37,43,.18);margin-bottom:14px}
+.app-sidebar-card{padding:16px 16px 14px;border:1px solid rgba(116,130,155,.24);border-radius:22px;background:linear-gradient(180deg,#1A2236,#141B2D);box-shadow:0 18px 40px rgba(34,37,43,.18);margin-bottom:12px}
 .app-sidebar-kicker{font-size:11px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
 .app-sidebar-title{font-family:"Segoe UI Variable Display","Aptos Display","Bahnschrift","Segoe UI",sans-serif;font-size:1.6rem;font-weight:900;letter-spacing:-.04em;color:var(--soft);line-height:1.08}
-.app-sidebar-subtitle{font-size:13px;line-height:1.55;color:rgba(231,232,230,.78);margin-top:8px}
-.app-nav{display:flex;flex-direction:column;gap:14px}
-.app-nav-group{padding:14px;border:1px solid rgba(116,130,155,.22);border-radius:20px;background:linear-gradient(180deg,#1A2236,#141B2D);box-shadow:0 14px 30px rgba(34,37,43,.18)}
-.app-nav-group-label{font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:rgba(248,248,246,.60);margin-bottom:10px}
-.app-nav-link{display:flex;align-items:center;padding:11px 13px;border-radius:14px;font-weight:800;color:var(--soft);border:1px solid transparent;transition:.18s ease}
-.app-nav-link + .app-nav-link{margin-top:6px}
+.app-sidebar-subtitle{font-size:12px;line-height:1.48;color:rgba(231,232,230,.78);margin-top:7px}
+.app-nav{display:flex;flex-direction:column;gap:10px}
+.app-nav-group{padding:12px;border:1px solid rgba(116,130,155,.22);border-radius:20px;background:linear-gradient(180deg,#1A2236,#141B2D);box-shadow:0 14px 30px rgba(34,37,43,.18)}
+.app-nav-group-label{font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:rgba(248,248,246,.60);margin-bottom:8px}
+.app-nav-link{display:flex;align-items:center;padding:9px 12px;border-radius:14px;font-weight:800;color:var(--soft);border:1px solid transparent;transition:.18s ease}
+.app-nav-link + .app-nav-link{margin-top:4px}
 .app-nav-link:hover{background:rgba(248,248,246,.12);border-color:rgba(116,130,155,.24);box-shadow:var(--shadow-soft)}
 .app-nav-link.active{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border-color:transparent;box-shadow:0 14px 22px rgba(34,37,43,.26)}
 .worker-app-shell .app-sidebar-card{border-left:6px solid var(--primary)}

@@ -4,20 +4,27 @@
   <div>
     <div class='page-kicker'>{{ tr('Clients') }}</div>
     <div class='page-title'>{{ client.business_name }}</div>
-    <div class='page-subtitle'>{{ tr('Premium customer workspace for saved return clients, hosted estimates, customer invoices, and repeat billing relationships.') }}</div>
+    <div class='page-subtitle'>{{ tr('Customer workspace for saved return clients, hosted estimates, customer invoices, and repeat billing relationships.') }}</div>
   </div>
   <div class='stack-actions'>
     <a class='btn' href='#addSavedClientForm'>{{ tr('Add Client') }}</a>
+    {% if sales_workspace_enabled %}
     <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>{{ tr('Create Estimate') }}</a>
+    {% endif %}
     <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'>{{ tr('Create Invoice') }}</a>
   </div>
 </div>
 
 <div class='grid cards-4'>
   <div class='card stat-card premium-stat'><h3>{{ tr('Saved Clients') }}</h3><div class='metric big'>{{ metrics.customer_count }}</div></div>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Client revenue') }}</h3><div class='metric big'>${{ '%.2f'|format(metrics.client_revenue_total or 0) }}</div></div>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Client profit') }}</h3><div class='metric big'>${{ '%.2f'|format(metrics.client_profit_total or 0) }}</div></div>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Clients with active jobs') }}</h3><div class='metric big'>{{ metrics.clients_with_active_jobs }}</div></div>
+  <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Open Invoices') }}</h3><div class='metric big'>{{ metrics.open_invoices }}</div></div>
+  {% if sales_workspace_enabled %}
   <div class='card stat-card premium-stat'><h3>{{ tr('Open Estimates') }}</h3><div class='metric big'>{{ metrics.open_estimates }}</div></div>
   <div class='card stat-card premium-stat'><h3>{{ tr('Approved Estimates') }}</h3><div class='metric big'>{{ metrics.approved_estimates }}</div></div>
-  <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Open Invoices') }}</h3><div class='metric big'>{{ metrics.open_invoices }}</div></div>
+  {% endif %}
   <div class='card stat-card premium-stat'><h3>{{ tr('Projected recurring revenue') }}</h3><div class='metric big'>${{ '%.2f'|format(metrics.projected_recurring_revenue or 0) }}</div></div>
   <div class='card stat-card premium-stat'><h3>{{ tr('Upcoming recurring visits') }}</h3><div class='metric big'>{{ metrics.upcoming_recurring_visits }}</div></div>
 </div>
@@ -38,7 +45,7 @@
 
   <div class='card section-frame'>
     <div class='card-head'><h3>{{ tr('Add Saved Client') }}</h3><span class='badge'>{{ tr('Recurring Customers') }}</span></div>
-    <div class='small' style='margin-bottom:12px'>{{ tr('Keep repeat customers on file here so estimates and invoices can start faster the next time they come back.') }}</div>
+    <div class='small' style='margin-bottom:12px'>{{ tr('Saved customer records for repeat business, financial visibility, and faster quoting.') }}</div>
     <div class='small' style='margin-bottom:12px'>{{ tr('Use this for return clients whose work repeats on a regular schedule.') }}</div>
     <form method='post' class='form-grid' id='addSavedClientForm'>
       <input type='hidden' name='action' value='add_customer_contact'>
@@ -65,15 +72,23 @@
   </div>
 
   <div class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('How This Premium Flow Works') }}</h3><span class='badge'>{{ tr('Clients -> Estimates -> Invoices') }}</span></div>
+    <div class='card-head'><h3>{{ tr('How This Client Flow Works') }}</h3><span class='badge'>{{ tr('Clients -> Estimates -> Invoices') }}</span></div>
     <ol class='trial-compact-list'>
       <li>{{ tr('Save repeat clients here once so their information is ready for future work.') }}</li>
+      {% if sales_workspace_enabled %}
       <li>{{ tr('Create the estimate first when the scope or price still needs approval.') }}</li>
       <li>{{ tr('Send or copy the hosted estimate link so the client can review it online.') }}</li>
       <li>{{ tr('Convert approved work into the final invoice when you are ready to collect payment.') }}</li>
+      {% else %}
+      <li>{{ tr('Create the final invoice directly when the work is already approved and ready to bill.') }}</li>
+      <li>{{ tr('Use the saved client record to move faster into the calendar, invoice, and receipt workflow.') }}</li>
+      <li>{{ tr('Keep each recurring customer tied to schedule, pricing, and profit visibility in one place.') }}</li>
+      {% endif %}
     </ol>
     <div class='stack-actions' style='margin-top:14px'>
+      {% if sales_workspace_enabled %}
       <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}'>{{ tr('Open Estimates') }}</a>
+      {% endif %}
       <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Open Invoices') }}</a>
     </div>
   </div>
@@ -90,6 +105,7 @@
           <strong>{{ row.customer_name }}</strong>
           <div class='small'>{{ row.customer_email or tr('No email saved yet') }}</div>
           <div class='small'>{{ row.customer_phone or '-' }}</div>
+          <div class='small'>{{ row.job_count or 0 }} {{ tr('Jobs') }} &middot; {{ tr('Net Profit') }} ${{ '%.2f'|format(row.total_profit or 0) }} &middot; {{ tr('Open Balance') }} ${{ '%.2f'|format(row.open_balance or 0) }}</div>
         </td>
         <td>
           {% if row.recurring_frequency %}
@@ -105,11 +121,14 @@
           <div>{{ row.customer_notes or '-' }}</div>
           {% if row.recurring_scope %}<div class='small'>{{ row.recurring_scope }}</div>{% endif %}
           {% if row.customer_address %}<div class='small'>{{ row.customer_address }}</div>{% endif %}
+          {% if row.last_job_date %}<div class='small'>{{ tr('Last Job Date') }}: {{ row.last_job_date }}</div>{% endif %}
         </td>
         <td>
           <div style='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px'>
             <a class='btn btn-secondary btn-sm' href='{{ url_for("work_schedule", client_id=client_id, customer_contact_id=row.id) }}'>{{ tr('Add to Calendar') }}</a>
+            {% if sales_workspace_enabled %}
             <a class='btn btn-secondary btn-sm' href='{{ url_for("estimates", client_id=client_id, customer_contact_id=row.id) }}#estimateForm'>{{ tr('New Estimate') }}</a>
+            {% endif %}
             <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id, customer_contact_id=row.id) }}#customerInvoiceForm'>{{ tr('New Invoice') }}</a>
           </div>
           <details class='compact-details client-inline-editor'>
@@ -154,6 +173,35 @@
 </div>
 
 <div class='card section-frame' style='margin-top:16px'>
+  <div class='card-head'><h3>{{ tr('Client Profit Snapshot') }}</h3><div class='small'>{{ tr('Financial view by saved client') }}</div></div>
+  <div class='scroll-x'>
+    <table class='table'>
+      <tr><th>{{ tr('Client') }}</th><th>{{ tr('Jobs') }}</th><th>{{ tr('Price / Revenue') }}</th><th>{{ tr('Total Cost') }}</th><th>{{ tr('Net Profit') }}</th><th>{{ tr('Profit Margin') }}</th><th>{{ tr('Open Balance') }}</th><th>{{ tr('Last Job Date') }}</th></tr>
+      {% for row in client_financial_rows %}
+      <tr>
+        <td>
+          <strong>{{ row.customer_name }}</strong>
+          <div class='small'>{{ row.customer_email or tr('No email saved yet') }}</div>
+        </td>
+        <td>{{ row.job_count or 0 }}</td>
+        <td>${{ '%.2f'|format(row.total_revenue or 0) }}</td>
+        <td>${{ '%.2f'|format(row.total_cost or 0) }}</td>
+        <td>
+          <strong {% if (row.total_profit or 0) < 0 %}style='color:#B85A5A'{% endif %}>${{ '%.2f'|format(row.total_profit or 0) }}</strong>
+          <div class='small'>{{ row.active_job_count or 0 }} {{ tr('Active')|lower }} / {{ row.completed_job_count or 0 }} {{ tr('Completed')|lower }}</div>
+        </td>
+        <td>{{ '%.1f'|format(row.profit_margin_percent or 0) }}%</td>
+        <td>${{ '%.2f'|format(row.open_balance or 0) }}</td>
+        <td>{{ row.last_job_date or tr('No job financials yet') }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan='8' class='small'>{{ tr('No job financials yet') }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-top:16px'>
   <div class='card-head'><h3>{{ tr('Sales Activity Snapshot') }}</h3><div class='small'>{{ tr('Recent estimate and invoice relationships tied to your clients') }}</div></div>
   <div class='scroll-x'>
     <table class='table'>
@@ -181,6 +229,7 @@
   <div class='card section-frame'>
     <div class='card-head'><h3>{{ tr('Recent Estimates') }}</h3><div class='small'>{{ tr('Hosted link and approval workflow') }}</div></div>
     <div class='estimate-preview-list'>
+      {% if sales_workspace_enabled %}
       {% for row in estimate_rows %}
       <div class='estimate-preview-item'>
         <div>
@@ -195,6 +244,9 @@
       {% else %}
       <div class='small'>{{ tr('No estimates yet.') }}</div>
       {% endfor %}
+      {% else %}
+      <div class='small'>{{ tr('Estimates are available from the main business workflow for quoting and approval before invoicing.') }}</div>
+      {% endif %}
     </div>
   </div>
 

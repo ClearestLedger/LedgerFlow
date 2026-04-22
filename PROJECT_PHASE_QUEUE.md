@@ -127,6 +127,12 @@
   - admin shell messenger now supports switching business threads directly inside the drawer so one business cannot make the whole inbox feel frozen
   - unread counts are now aggregated across visible businesses for administrator messaging
   - dashboard pages no longer silently mark messages as read just by loading; read state now updates when the messenger thread is actually opened
+- Client workspace and operations hardening phase completed on 2026-04-22:
+  - hardened the operational templates path so a bad legacy schedule row cannot crash the whole templates page during ops migration
+  - business-side client management is now treated as a core workspace, not hidden behind the old premium-only gate
+  - client workspace now shows revenue, cost, profit, open balance, and last-job visibility per saved client
+  - left-side business and admin-workspace sidebars were widened and compressed so scrolling is reduced unless the screen truly needs it
+  - next structural phase should separate customer-facing sales documents from internal bookkeeping records more cleanly without removing the unified LedgerFlow vision
 
 ## Future Pricing Research Note
 
