@@ -36,8 +36,8 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 EMAIL_CONFIG_PATH = DATA_DIR / 'email_runtime_config.json'
 
 APP_NAME = 'Operational LedgerFlow'
-APP_SUBTITLE = 'Operational command for growing service businesses'
-BRAND_TAGLINE = 'Jobs, dispatch, scheduling, and team coordination for service businesses.'
+APP_SUBTITLE = 'Profit and job control for growing service businesses'
+BRAND_TAGLINE = 'See the job, control the numbers, and know the profit.'
 BRAND_LOGO_FILENAME = 'ledgerflow-logo.png'
 BRAND_MARK_FILENAME = 'ledgerflow-mark.png'
 TRACKING_PIXEL_GIF = base64.b64decode('R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==')
@@ -438,6 +438,84 @@ TRANSLATIONS.update({
     },
     'Saved income records': {'es': 'Registros de ingresos guardados', 'pt': 'Registros de receita salvos'},
     'Current operating profit view': {'es': 'Vista actual de ganancia operativa', 'pt': 'Visao atual do lucro operacional'},
+    'Owner View': {'es': 'Vista del propietario', 'pt': 'Visao do proprietario'},
+    'Profit and job control for growing service businesses': {
+        'es': 'Control de ganancias y trabajos para empresas de servicios en crecimiento',
+        'pt': 'Controle de lucro e servicos para empresas de servicos em crescimento',
+    },
+    'See the job, control the numbers, and know the profit.': {
+        'es': 'Ve el trabajo, controla los numeros y conoce la ganancia.',
+        'pt': 'Veja o servico, controle os numeros e conheca o lucro.',
+    },
+    'Jobs & Profit': {'es': 'Trabajos y ganancias', 'pt': 'Servicos e lucro'},
+    'Weekly revenue': {'es': 'Ingresos semanales', 'pt': 'Receita semanal'},
+    'Weekly profit': {'es': 'Ganancia semanal', 'pt': 'Lucro semanal'},
+    'Jobs losing money': {'es': 'Trabajos perdiendo dinero', 'pt': 'Servicos dando prejuizo'},
+    'Jobs missing pricing': {'es': 'Trabajos sin precio', 'pt': 'Servicos sem preco'},
+    'Price / Revenue': {'es': 'Precio / ingreso', 'pt': 'Preco / receita'},
+    'Materials Cost': {'es': 'Costo de materiales', 'pt': 'Custo de materiais'},
+    'Labor Cost': {'es': 'Costo de mano de obra', 'pt': 'Custo de mao de obra'},
+    'Other Costs': {'es': 'Otros costos', 'pt': 'Outros custos'},
+    'Net Profit': {'es': 'Ganancia neta', 'pt': 'Lucro liquido'},
+    'Profit Margin': {'es': 'Margen de ganancia', 'pt': 'Margem de lucro'},
+    'Service price, labor, material cost, and profit should be visible immediately.': {
+        'es': 'El precio del servicio, la mano de obra, el costo de materiales y la ganancia deben verse de inmediato.',
+        'pt': 'Preco do servico, mao de obra, custo de materiais e lucro devem ficar visiveis imediatamente.',
+    },
+    'Most owners buy clarity on money first. Scheduling, dispatch, and team tools stay important, but profit visibility must be instant.': {
+        'es': 'La mayoria de los propietarios compra claridad financiera primero. Agenda, despacho y equipo siguen siendo importantes, pero la visibilidad de la ganancia debe ser inmediata.',
+        'pt': 'A maioria dos proprietarios compra clareza financeira primeiro. Agenda, despacho e equipe continuam importantes, mas a visibilidade do lucro precisa ser imediata.',
+    },
+    'Today needs your attention': {'es': 'Hoy necesita tu atencion', 'pt': 'Hoje precisa da sua atencao'},
+    'Highest profit jobs': {'es': 'Trabajos con mayor ganancia', 'pt': 'Servicos com maior lucro'},
+    'Losing money right now': {'es': 'Dando prejuizo agora', 'pt': 'Dando prejuizo agora'},
+    'Price not set yet': {'es': 'Precio aun no definido', 'pt': 'Preco ainda nao definido'},
+    'Open Jobs Board': {'es': 'Abrir panel de trabajos', 'pt': 'Abrir painel de servicos'},
+    'Create Job': {'es': 'Crear trabajo', 'pt': 'Criar servico'},
+    'Open Owner View': {'es': 'Abrir vista del propietario', 'pt': 'Abrir visao do proprietario'},
+    'Profit per job visibility': {'es': 'Visibilidad de ganancia por trabajo', 'pt': 'Visibilidade de lucro por servico'},
+    'Financial control comes first': {'es': 'El control financiero va primero', 'pt': 'O controle financeiro vem primeiro'},
+    'Owner snapshot for this week': {'es': 'Resumen del propietario para esta semana', 'pt': 'Resumo do proprietario para esta semana'},
+    'Jobs should lead into invoices, payroll, and reporting.': {'es': 'Los trabajos deben llevar a facturas, nomina y reportes.', 'pt': 'Os servicos devem levar para faturas, folha e relatorios.'},
+    'Create, price, and protect profit per job.': {'es': 'Crea, fija precio y protege la ganancia por trabajo.', 'pt': 'Crie, precifique e proteja o lucro por servico.'},
+    'Use these first': {'es': 'Use estos primero', 'pt': 'Use estes primeiro'},
+    'Money first': {'es': 'Dinero primero', 'pt': 'Dinheiro primeiro'},
+    'Start with finances, then move into operational extras.': {'es': 'Empiece con las finanzas y luego pase a los extras operativos.', 'pt': 'Comece pelas financas e depois passe para os extras operacionais.'},
+    'Open Payroll / W-2': {'es': 'Abrir nomina / W-2', 'pt': 'Abrir folha / W-2'},
+    'Open Clients & Sales': {'es': 'Abrir clientes y ventas', 'pt': 'Abrir clientes e vendas'},
+    'Client billing': {'es': 'Cobro al cliente', 'pt': 'Cobranca ao cliente'},
+    'Quick actions': {'es': 'Acciones rapidas', 'pt': 'Acoes rapidas'},
+    'Create estimate from this job': {'es': 'Crear estimacion desde este trabajo', 'pt': 'Criar estimativa a partir deste servico'},
+    'Create invoice from this job': {'es': 'Crear factura desde este trabajo', 'pt': 'Criar fatura a partir deste servico'},
+    'Add this job to calendar': {'es': 'Agregar este trabajo al calendario', 'pt': 'Adicionar este servico ao calendario'},
+    'Open client workspace': {'es': 'Abrir area del cliente', 'pt': 'Abrir area do cliente'},
+    'Financial owner snapshot': {'es': 'Resumen financiero del propietario', 'pt': 'Resumo financeiro do proprietario'},
+    'Move money first, then operations.': {'es': 'Mueva el dinero primero y luego las operaciones.', 'pt': 'Organize o dinheiro primeiro e depois as operacoes.'},
+    'Jobs, invoices, and reports should work together from one owner view.': {
+        'es': 'Trabajos, facturas y reportes deben funcionar juntos desde una sola vista del propietario.',
+        'pt': 'Servicos, faturas e relatorios devem funcionar juntos a partir de uma unica visao do proprietario.',
+    },
+    'Quoted Revenue': {'es': 'Ingreso cotizado', 'pt': 'Receita cotada'},
+    'Budgeted Materials': {'es': 'Materiales presupuestados', 'pt': 'Materiais orcados'},
+    'Budgeted Labor': {'es': 'Mano de obra presupuestada', 'pt': 'Mao de obra orcada'},
+    'Budgeted Other Costs': {'es': 'Otros costos presupuestados', 'pt': 'Outros custos orcados'},
+    'Job profitability': {'es': 'Rentabilidad del trabajo', 'pt': 'Rentabilidade do servico'},
+    'Expected profit': {'es': 'Ganancia esperada', 'pt': 'Lucro esperado'},
+    'Complete the money side of each job so the owner view can show real profit.': {
+        'es': 'Complete la parte financiera de cada trabajo para que la vista del propietario muestre la ganancia real.',
+        'pt': 'Complete o lado financeiro de cada servico para que a visao do proprietario mostre o lucro real.',
+    },
+    'Saved Client (optional)': {'es': 'Cliente guardado (opcional)', 'pt': 'Cliente salvo (opcional)'},
+    'No money issue flagged': {'es': 'Ningun problema financiero marcado', 'pt': 'Nenhum problema financeiro marcado'},
+    'Owner snapshot': {'es': 'Resumen del propietario', 'pt': 'Resumo do proprietario'},
+    'Profit control starts with every active job carrying price and cost visibility.': {
+        'es': 'El control de ganancias comienza cuando cada trabajo activo tiene precio y costos visibles.',
+        'pt': 'O controle de lucro comeca quando cada servico ativo tem preco e custos visiveis.',
+    },
+    'Jobs, invoices, reporting, and profit visibility in one focused workspace.': {
+        'es': 'Trabajos, facturas, reportes y visibilidad de ganancias en un solo espacio enfocado.',
+        'pt': 'Servicos, faturas, relatorios e visibilidade de lucro em um unico espaco focado.',
+    },
     'LedgerFlow provides organization, summaries, and workflow tools. It does not provide financial, tax, legal, or accounting advice and does not replace a licensed professional.': {
         'es': 'LedgerFlow ofrece organizacion, resumos y herramientas de flujo. No brinda asesoramiento financiero, fiscal, legal ni contable y no reemplaza a un profesional licenciado.',
         'pt': 'A LedgerFlow oferece organizacao, resumos e ferramentas de fluxo. Nao fornece orientacao financeira, fiscal, juridica ou contabil e nao substitui um profissional licenciado.',
@@ -6408,6 +6486,10 @@ def init_db():
                 scheduled_start TEXT DEFAULT '',
                 scheduled_end TEXT DEFAULT '',
                 estimated_duration_minutes INTEGER NOT NULL DEFAULT 0,
+                revenue_amount REAL NOT NULL DEFAULT 0,
+                materials_cost_amount REAL NOT NULL DEFAULT 0,
+                labor_cost_amount REAL NOT NULL DEFAULT 0,
+                other_cost_amount REAL NOT NULL DEFAULT 0,
                 notes_summary TEXT DEFAULT '',
                 internal_notes TEXT DEFAULT '',
                 dispatch_notes TEXT DEFAULT '',
@@ -6541,6 +6623,10 @@ def init_db():
         ensure_column(conn, 'jobs', 'scheduled_start', "TEXT DEFAULT ''")
         ensure_column(conn, 'jobs', 'scheduled_end', "TEXT DEFAULT ''")
         ensure_column(conn, 'jobs', 'estimated_duration_minutes', 'INTEGER NOT NULL DEFAULT 0')
+        ensure_column(conn, 'jobs', 'revenue_amount', 'REAL NOT NULL DEFAULT 0')
+        ensure_column(conn, 'jobs', 'materials_cost_amount', 'REAL NOT NULL DEFAULT 0')
+        ensure_column(conn, 'jobs', 'labor_cost_amount', 'REAL NOT NULL DEFAULT 0')
+        ensure_column(conn, 'jobs', 'other_cost_amount', 'REAL NOT NULL DEFAULT 0')
         ensure_column(conn, 'jobs', 'notes_summary', "TEXT DEFAULT ''")
         ensure_column(conn, 'jobs', 'internal_notes', "TEXT DEFAULT ''")
         ensure_column(conn, 'jobs', 'dispatch_notes', "TEXT DEFAULT ''")
@@ -7905,6 +7991,17 @@ def ops_jobs_query(
                 COALESCE(sl.access_notes, '') AS access_notes,
                 COALESCE(sl.gate_code, '') AS gate_code,
                 COALESCE(sl.parking_notes, '') AS parking_notes,
+                COALESCE(j.revenue_amount, 0) AS revenue_amount,
+                COALESCE(j.materials_cost_amount, 0) AS materials_cost_amount,
+                COALESCE(j.labor_cost_amount, 0) AS labor_cost_amount,
+                COALESCE(j.other_cost_amount, 0) AS other_cost_amount,
+                (COALESCE(j.materials_cost_amount, 0) + COALESCE(j.labor_cost_amount, 0) + COALESCE(j.other_cost_amount, 0)) AS total_cost_amount,
+                (COALESCE(j.revenue_amount, 0) - (COALESCE(j.materials_cost_amount, 0) + COALESCE(j.labor_cost_amount, 0) + COALESCE(j.other_cost_amount, 0))) AS net_profit_amount,
+                CASE
+                    WHEN COALESCE(j.revenue_amount, 0) > 0 THEN
+                        ROUND(((COALESCE(j.revenue_amount, 0) - (COALESCE(j.materials_cost_amount, 0) + COALESCE(j.labor_cost_amount, 0) + COALESCE(j.other_cost_amount, 0))) / COALESCE(j.revenue_amount, 0)) * 100, 1)
+                    ELSE 0
+                END AS profit_margin_percent,
                 GROUP_CONCAT(w.name, ', ') AS assigned_worker_names,
                 GROUP_CONCAT(CAST(w.id AS TEXT), ',') AS assigned_worker_ids_csv,
                 COUNT(ja.id) AS assigned_count
@@ -7983,6 +8080,77 @@ def ops_finance_summary(conn: sqlite3.Connection, client_id: int):
         'revenue_week': float(invoice_row['revenue_week'] or 0) if invoice_row else 0.0,
         'pending_billing_alerts': int(billing_row['pending_billing_alerts'] or 0) if billing_row else 0,
         'pending_billing_amount': float(billing_row['pending_billing_amount'] or 0) if billing_row else 0.0,
+    }
+
+
+def ops_owner_snapshot(conn: sqlite3.Connection, client_id: int):
+    prepare_ops_workspace(conn, client_id)
+    today_iso = date.today().isoformat()
+    week_start = date.today() - timedelta(days=date.today().weekday())
+    week_end = week_start + timedelta(days=6)
+    jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id)]
+
+    def anchor_for_job(job_row: dict) -> str:
+        for field_name in ('scheduled_start', 'completed_at', 'updated_at', 'created_at'):
+            anchored = ops_schedule_date(job_row.get(field_name) or '')
+            if anchored:
+                return anchored
+        return ''
+
+    visible_jobs = [job for job in jobs if (job.get('status') or '') not in {'draft', 'cancelled'}]
+    today_jobs = [job for job in visible_jobs if anchor_for_job(job) == today_iso]
+    weekly_jobs = [
+        job for job in visible_jobs
+        if anchor_for_job(job) and week_start.isoformat() <= anchor_for_job(job) <= week_end.isoformat()
+    ]
+    losing_jobs = sorted(
+        [job for job in visible_jobs if float(job.get('revenue_amount') or 0) > 0 and float(job.get('net_profit_amount') or 0) < 0],
+        key=lambda item: float(item.get('net_profit_amount') or 0),
+    )
+    missing_pricing_jobs = [
+        job for job in visible_jobs
+        if float(job.get('revenue_amount') or 0) <= 0
+    ]
+    top_profit_jobs = sorted(
+        [job for job in visible_jobs if float(job.get('revenue_amount') or 0) > 0],
+        key=lambda item: float(item.get('net_profit_amount') or 0),
+        reverse=True,
+    )
+    open_customer_invoice_row = conn.execute(
+        '''SELECT
+               COUNT(*) AS total_count,
+               COALESCE(SUM(CASE
+                   WHEN COALESCE(invoice_total_amount, 0) > COALESCE(paid_amount, 0)
+                   THEN COALESCE(invoice_total_amount, 0) - COALESCE(paid_amount, 0)
+                   ELSE 0
+               END), 0) AS total_balance
+           FROM invoices
+           WHERE client_id=?
+             AND COALESCE(record_kind, '')='customer_invoice'
+             AND COALESCE(invoice_status, 'draft') NOT IN ('paid', 'cancelled')''',
+        (client_id,),
+    ).fetchone()
+    open_estimate_row = conn.execute(
+        '''SELECT COUNT(*) AS total_count
+           FROM invoices
+           WHERE client_id=?
+             AND COALESCE(record_kind, '')='estimate'
+             AND COALESCE(invoice_status, 'draft') NOT IN ('converted', 'declined', 'expired')''',
+        (client_id,),
+    ).fetchone()
+    return {
+        'today_jobs': today_jobs,
+        'weekly_jobs': weekly_jobs,
+        'weekly_revenue': round(sum(float(job.get('revenue_amount') or 0) for job in weekly_jobs), 2),
+        'weekly_cost': round(sum(float(job.get('total_cost_amount') or 0) for job in weekly_jobs), 2),
+        'weekly_profit': round(sum(float(job.get('net_profit_amount') or 0) for job in weekly_jobs), 2),
+        'completed_this_week': len([job for job in weekly_jobs if (job.get('status') or '') == 'completed']),
+        'losing_jobs': losing_jobs[:6],
+        'missing_pricing_jobs': missing_pricing_jobs[:6],
+        'top_profit_jobs': top_profit_jobs[:6],
+        'open_customer_invoice_count': int(open_customer_invoice_row['total_count'] or 0) if open_customer_invoice_row else 0,
+        'open_customer_invoice_balance': float(open_customer_invoice_row['total_balance'] or 0) if open_customer_invoice_row else 0.0,
+        'open_estimate_count': int(open_estimate_row['total_count'] or 0) if open_estimate_row else 0,
     }
 
 
@@ -8171,6 +8339,15 @@ def ops_dashboard_summary(conn: sqlite3.Connection, client_id: int):
 
 
 def ops_save_job(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int, form, existing=None) -> int:
+    def money_value(field_name: str) -> float:
+        raw = (form.get(field_name, '') or '').strip()
+        if not raw:
+            return 0.0
+        try:
+            return round(float(raw), 2)
+        except (TypeError, ValueError):
+            return 0.0
+
     title = (form.get('title', '') or '').strip()
     if not title:
         raise ValueError('Job title is required.')
@@ -8219,6 +8396,10 @@ def ops_save_job(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int
         parking_notes=(form.get('parking_notes', '') or '').strip(),
         location_notes=(form.get('location_notes', '') or '').strip(),
     ) or (existing['service_location_id'] if existing else None)
+    revenue_amount = money_value('revenue_amount')
+    materials_cost_amount = money_value('materials_cost_amount')
+    labor_cost_amount = money_value('labor_cost_amount')
+    other_cost_amount = money_value('other_cost_amount')
     payload = (
         ops_int(form.get('customer_contact_id')),
         location_id,
@@ -8239,6 +8420,10 @@ def ops_save_job(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int
         scheduled_start,
         scheduled_end,
         estimated_duration_minutes,
+        revenue_amount,
+        materials_cost_amount,
+        labor_cost_amount,
+        other_cost_amount,
         (form.get('notes_summary', '') or '').strip(),
         (form.get('internal_notes', '') or '').strip(),
         (form.get('dispatch_notes', '') or '').strip(),
@@ -8258,7 +8443,8 @@ def ops_save_job(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int
             '''UPDATE jobs
                SET customer_contact_id=?, service_location_id=?, service_type_id=?, template_id=?, title=?, customer_name=?, customer_reference=?,
                    service_type_name=?, priority=?, status=?, field_progress_status=?, tags=?, service_address=?, city=?, state=?, postal_code=?,
-                   scheduled_start=?, scheduled_end=?, estimated_duration_minutes=?, notes_summary=?, internal_notes=?, dispatch_notes=?,
+                   scheduled_start=?, scheduled_end=?, estimated_duration_minutes=?, revenue_amount=?, materials_cost_amount=?, labor_cost_amount=?, other_cost_amount=?,
+                   notes_summary=?, internal_notes=?, dispatch_notes=?,
                    completion_notes=?, recurrence_rule=?, is_recurring=?, cancellation_reason=?, issue_flag=?, requires_revisit=?, completed_at=?,
                    last_progress_at=?, updated_at=?, updated_by_user_id=?
                WHERE id=?''',
@@ -8291,9 +8477,10 @@ def ops_save_job(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int
                    client_id, customer_contact_id, service_location_id, service_type_id, template_id, created_by_user_id, updated_by_user_id,
                    title, customer_name, customer_reference, service_type_name, priority, status, field_progress_status, tags,
                    service_address, city, state, postal_code, scheduled_start, scheduled_end, estimated_duration_minutes,
+                   revenue_amount, materials_cost_amount, labor_cost_amount, other_cost_amount,
                    notes_summary, internal_notes, dispatch_notes, completion_notes, recurrence_rule, is_recurring, cancellation_reason,
                    issue_flag, requires_revisit, completed_at, last_progress_at, updated_at
-               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
             (
                 client_id,
                 payload[0],
@@ -8329,6 +8516,10 @@ def ops_save_job(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int
                 payload[28],
                 payload[29],
                 payload[30],
+                payload[31],
+                payload[32],
+                payload[33],
+                payload[34],
             ),
         )
         job_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
@@ -8354,9 +8545,10 @@ def ops_duplicate_job(conn: sqlite3.Connection, *, client_id: int, job_id: int, 
                client_id, customer_contact_id, service_location_id, service_type_id, template_id, created_by_user_id, updated_by_user_id,
                title, customer_name, customer_reference, service_type_name, priority, status, field_progress_status, tags,
                service_address, city, state, postal_code, scheduled_start, scheduled_end, estimated_duration_minutes,
+               revenue_amount, materials_cost_amount, labor_cost_amount, other_cost_amount,
                notes_summary, internal_notes, dispatch_notes, completion_notes, recurrence_rule, is_recurring, cancellation_reason,
                issue_flag, requires_revisit, completed_at, last_progress_at, updated_at
-           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
         (
             client_id,
             source['customer_contact_id'],
@@ -8380,6 +8572,10 @@ def ops_duplicate_job(conn: sqlite3.Connection, *, client_id: int, job_id: int, 
             '',
             '',
             source['estimated_duration_minutes'],
+            source['revenue_amount'],
+            source['materials_cost_amount'],
+            source['labor_cost_amount'],
+            source['other_cost_amount'],
             source['notes_summary'],
             source['internal_notes'],
             source['dispatch_notes'],
@@ -11615,6 +11811,7 @@ def dashboard():
     user = current_user()
     client_id = selected_client_id(user, 'get')
     with get_conn() as conn:
+        prepare_ops_workspace(conn, client_id)
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
             abort(403)
@@ -11633,6 +11830,7 @@ def dashboard():
                ORDER BY is_default DESC, is_backup DESC, updated_at DESC, id DESC''',
             (client_id,),
         ).fetchall()
+        owner_snapshot = ops_owner_snapshot(conn, client_id)
     admin_fee_summary = business_payment_summary(client_id)
     open_admin_fee_rows = [row for row in admin_fee_summary['rows'] if (row['status'] or 'pending') in {'pending', 'processing'}]
     return render_template(
@@ -11647,6 +11845,7 @@ def dashboard():
         admin_fee_summary=admin_fee_summary,
         open_fee_guidance=open_fee_guidance(open_admin_fee_rows),
         review_request=latest_review_request(client_id),
+        owner_snapshot=owner_snapshot,
     )
 
 
@@ -11662,6 +11861,7 @@ def ops_overview():
             abort(403)
         worker_rows = ops_worker_rows(conn, client_id)
         dashboard_summary = ops_dashboard_summary(conn, client_id)
+        owner_snapshot = ops_owner_snapshot(conn, client_id)
         service_types = ops_service_types(conn, client_id)
         templates = ops_job_templates(conn, client_id)
     mark_messages_read(client_id, user['id'])
@@ -11673,6 +11873,7 @@ def ops_overview():
         service_types=service_types,
         templates=templates,
         ops=dashboard_summary,
+        owner_snapshot=owner_snapshot,
         job_status_options=ops_job_status_options(),
         priority_options=ops_priority_options(),
         progress_status_options=ops_progress_status_options(),
@@ -11769,6 +11970,13 @@ def ops_jobs():
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, status=status_filter, worker_id=worker_filter, service_type_id=service_type_filter, search=search)]
         workers = ops_worker_rows(conn, client_id)
+        customer_contacts = conn.execute(
+            '''SELECT *
+               FROM customer_contacts
+               WHERE client_id=? AND COALESCE(status,'active')='active'
+               ORDER BY LOWER(customer_name), id DESC''',
+            (client_id,),
+        ).fetchall()
         service_types = ops_service_types(conn, client_id)
         templates = ops_job_templates(conn, client_id)
         locations = conn.execute('SELECT * FROM service_locations WHERE client_id=? ORDER BY location_name, address_line1', (client_id,)).fetchall()
@@ -11784,6 +11992,7 @@ def ops_jobs():
         client_id=client_id,
         jobs=jobs,
         workers=workers,
+        customer_contacts=customer_contacts,
         service_types=service_types,
         templates=templates,
         locations=locations,
@@ -12316,6 +12525,7 @@ def welcome_center():
     client_id = selected_client_id(user, 'get')
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        prepare_ops_workspace(conn, client_id)
         worker_count_row = conn.execute('SELECT COUNT(*) count FROM workers WHERE client_id=?', (client_id,)).fetchone()
         w2_worker_count_row = conn.execute(
             "SELECT COUNT(*) count FROM workers WHERE client_id=? AND worker_type='W-2'",
@@ -12342,6 +12552,7 @@ def welcome_center():
                  AND COALESCE(invoice_status,'draft') NOT IN ('declined','expired','converted')""",
             (client_id,),
         ).fetchone()
+        owner_snapshot = ops_owner_snapshot(conn, client_id)
     owner_name = (client['contact_name'] or '').strip() if client else ''
     summary = client_summary(client_id) if client else {}
     finance_focus_items = [
@@ -12389,6 +12600,8 @@ def welcome_center():
         open_customer_invoice_balance=float((open_customer_invoice_row['balance'] if open_customer_invoice_row else 0) or 0),
         open_estimate_count=int(open_estimate_row['count'] or 0) if open_estimate_row else 0,
         finance_focus_items=finance_focus_items,
+        owner_snapshot=owner_snapshot,
+        premium_sales_enabled=premium_sales_access_enabled(client) if client else False,
     )
 
 

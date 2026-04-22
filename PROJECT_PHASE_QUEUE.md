@@ -117,6 +117,11 @@
   - Welcome Center and dashboard now lead with financial clarity, summary, reports, billing, and payroll context before secondary operations tools
   - welcome actions are now real links instead of mostly static labels
   - next language follow-up should cover the newest finance-first copy added in this phase
+- Owner-view and jobs-profit product correction phase completed on 2026-04-21:
+  - business navigation now leads with Owner View and Jobs instead of reading like a generic dashboard shell
+  - Welcome Center now opens into clickable finance-first actions, owner weekly money snapshot, jobs board entry, and payroll / billing controls
+  - Jobs and Profit pages now center quoted revenue, labor, materials, other costs, net profit, and direct next steps into invoices, estimates, and reports
+  - mobile business dock now labels the core home screen as Owner View so the product positioning stays consistent across desktop and phone
 
 ## Future Pricing Research Note
 

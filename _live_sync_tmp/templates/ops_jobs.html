@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% block body %}
+{% set selected_ids = (selected_job.assigned_worker_ids_csv.split(',') if selected_job and selected_job.assigned_worker_ids_csv else []) %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>{{ tr('Jobs & Profit') }}</div>
+    <div class='page-title'>{{ client.business_name }}</div>
+    <div class='page-subtitle'>{{ tr('Complete the money side of each job so the owner view can show real profit.') }}</div>
+  </div>
+  <div class='stack-actions'>
+    <a class='btn btn-secondary' href='{{ url_for("dashboard", client_id=client_id) }}'>{{ tr('Open Owner View') }}</a>
+    <a class='btn btn-secondary' href='{{ url_for("ops_schedule", client_id=client_id) }}'>{{ tr('Schedule') }}</a>
+    <a class='btn btn-secondary' href='{{ url_for("reports", client_id=client_id) }}'>{{ tr('Report Center') }}</a>
+  </div>
+</div>
+
+<div class='grid cards-4 owner-kpi-grid' style='margin-bottom:18px'>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Jobs') }}</h3><div class='metric big'>{{ jobs|length }}</div></div>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Price / Revenue') }}</h3><div class='metric big'>${{ '%.2f'|format(jobs|sum(attribute='revenue_amount') or 0) }}</div></div>
+  <div class='card stat-card premium-stat'><h3>{{ tr('Other Costs') }}</h3><div class='metric big'>${{ '%.2f'|format(jobs|sum(attribute='total_cost_amount') or 0) }}</div></div>
+  <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Net Profit') }}</h3><div class='metric big'>${{ '%.2f'|format(jobs|sum(attribute='net_profit_amount') or 0) }}</div></div>
+</div>
+
+<div class='card section-frame' style='margin-bottom:18px'>
+  <div class='card-head'>
+    <h3>{{ tr('Quick actions') }}</h3>
+    <span class='badge'>{{ tr('Owner View') }}</span>
+  </div>
+  <div class='welcome-link-grid'>
+    <a class='welcome-link-card' href='{{ url_for("summary", client_id=client_id) }}'>
+      <strong>{{ tr('Open Finance Summary') }}</strong>
+      <span>{{ tr('Financial control first') }}</span>
+    </a>
+    <a class='welcome-link-card' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'>
+      <strong>{{ tr('Create Invoice') }}</strong>
+      <span>{{ tr('Client billing') }}</span>
+    </a>
+    {% if premium_sales_access_enabled(client) %}
+    <a class='welcome-link-card' href='{{ url_for("customer_sales", client_id=client_id) }}'>
+      <strong>{{ tr('Open Clients & Sales') }}</strong>
+      <span>{{ tr('Saved Clients') }}</span>
+    </a>
+    <a class='welcome-link-card' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>
+      <strong>{{ tr('Create Estimate') }}</strong>
+      <span>{{ tr('Estimate first, invoice second') }}</span>
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-bottom:18px'>
+  <form method='get' class='form-grid ops-filter-grid'>
+    <input type='hidden' name='client_id' value='{{ client_id }}'>
+    <div><label>{{ tr('Status') }}</label><select name='status'><option value=''>{{ tr('All') }}</option>{% for value, label in job_status_options %}<option value='{{ value }}' {% if filters.status == value %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
+    <div><label>{{ tr('Worker') }}</label><select name='worker_id'><option value=''>{{ tr('All') }}</option>{% for worker in workers %}<option value='{{ worker.id }}' {% if filters.worker_id == worker.id %}selected{% endif %}>{{ worker.name }}</option>{% endfor %}</select></div>
+    <div><label>{{ tr('Service Type') }}</label><select name='service_type_id'><option value=''>{{ tr('All') }}</option>{% for row in service_types %}<option value='{{ row.id }}' {% if filters.service_type_id == row.id %}selected{% endif %}>{{ row.name }}</option>{% endfor %}</select></div>
+    <div><label>{{ tr('Search') }}</label><input name='search' value='{{ filters.search }}' placeholder='{{ tr("Job, customer, location, or tag") }}'></div>
+    <div><button type='submit'>{{ tr('Filter Jobs') }}</button></div>
+  </form>
+</div>
+
+<div class='grid cards-2 ops-jobs-layout'>
+  <div class='card section-frame'>
+    <div class='card-head'>
+      <h3>{% if selected_job %}{{ tr('Update Job') }}{% else %}{{ tr('Create Job') }}{% endif %}</h3>
+      <div class='stack-actions'>
+        {% for template in templates[:3] %}
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("ops_jobs", client_id=client_id, template_id=template.id) }}'>{{ template.name }}</a>
+        {% endfor %}
+      </div>
+    </div>
+    <div class='small' style='margin-bottom:12px'>{{ tr('Service price, labor, material cost, and profit should be visible immediately.') }}</div>
+    <form method='post' class='form-grid'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <input type='hidden' name='action' value='{% if selected_job %}update_job{% else %}create_job{% endif %}'>
+      {% if selected_job %}<input type='hidden' name='job_id' value='{{ selected_job.id }}'>{% endif %}
+      {% if template_seed %}<input type='hidden' name='template_id' value='{{ template_seed.id }}'>{% endif %}
+
+      <div><label>{{ tr('Saved Client (optional)') }}</label>
+        <select id='ops_job_contact_select' name='customer_contact_id'>
+          <option value=''>{{ tr('Choose saved client (optional)') }}</option>
+          {% for row in customer_contacts %}
+          <option value='{{ row.id }}' {% if selected_job and selected_job.customer_contact_id == row.id %}selected{% endif %}
+                  data-name='{{ row.customer_name|e }}'
+                  data-address='{{ row.customer_address|e }}'
+                  data-notes='{{ (row.recurring_scope or row.customer_notes)|e }}'
+                  data-title='{{ (row.recurring_job_name or row.customer_name)|e }}'>{{ row.customer_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div><label>{{ tr('Service Type') }}</label><select name='service_type_id'>{% for row in service_types %}<option value='{{ row.id }}' {% if (selected_job and selected_job.service_type_id == row.id) or (template_seed and template_seed.service_type_id == row.id) %}selected{% endif %}>{{ row.name }}</option>{% endfor %}</select></div>
+      <div><label>{{ tr('Job Title') }}</label><input id='ops_job_title' name='title' required value='{{ selected_job.title if selected_job else (template_seed.default_title if template_seed else "") }}' placeholder='{{ tr("Move-out clean, trim hedges, paint foyer") }}'></div>
+      <div><label>{{ tr('Customer') }}</label><input id='ops_job_customer_name' name='customer_name' value='{{ selected_job.customer_name if selected_job else "" }}'></div>
+      <div><label>{{ tr('Priority') }}</label><select name='priority'>{% for value, label in priority_options %}<option value='{{ value }}' {% if (selected_job and selected_job.priority == value) or (not selected_job and template_seed and template_seed.default_priority == value) %}selected{% elif not selected_job and not template_seed and value == 'normal' %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
+      <div><label>{{ tr('Status') }}</label><select name='status'>{% for value, label in job_status_options %}<option value='{{ value }}' {% if (selected_job and selected_job.status == value) or (not selected_job and value == 'unscheduled') %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
+      <div><label>{{ tr('Field Progress') }}</label><select name='field_progress_status'>{% for value, label in progress_status_options %}<option value='{{ value }}' {% if (selected_job and selected_job.field_progress_status == value) or (not selected_job and value == 'not_started') %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
+
+      <div><label>{{ tr('Scheduled Date') }}</label><input type='date' name='scheduled_date' value='{{ selected_job.scheduled_start[:10] if selected_job and selected_job.scheduled_start else today_iso }}'></div>
+      <div><label>{{ tr('Start Time') }}</label><input type='time' name='start_time' value='{{ selected_job.scheduled_start[11:16] if selected_job and selected_job.scheduled_start|length > 10 else "" }}'></div>
+      <div><label>{{ tr('End Time') }}</label><input type='time' name='end_time' value='{{ selected_job.scheduled_end[11:16] if selected_job and selected_job.scheduled_end|length > 10 else "" }}'></div>
+      <div><label>{{ tr('Estimated Duration (min)') }}</label><input type='number' name='estimated_duration_minutes' min='0' value='{{ selected_job.estimated_duration_minutes if selected_job else (template_seed.default_duration_minutes if template_seed else 120) }}'></div>
+
+      <div><label>{{ tr('Quoted Revenue') }}</label><input name='revenue_amount' type='number' min='0' step='0.01' value='{{ '%.2f'|format(selected_job.revenue_amount or 0) if selected_job else "" }}' placeholder='350.00'></div>
+      <div><label>{{ tr('Budgeted Materials') }}</label><input name='materials_cost_amount' type='number' min='0' step='0.01' value='{{ '%.2f'|format(selected_job.materials_cost_amount or 0) if selected_job else "" }}' placeholder='45.00'></div>
+      <div><label>{{ tr('Budgeted Labor') }}</label><input name='labor_cost_amount' type='number' min='0' step='0.01' value='{{ '%.2f'|format(selected_job.labor_cost_amount or 0) if selected_job else "" }}' placeholder='120.00'></div>
+      <div><label>{{ tr('Budgeted Other Costs') }}</label><input name='other_cost_amount' type='number' min='0' step='0.01' value='{{ '%.2f'|format(selected_job.other_cost_amount or 0) if selected_job else "" }}' placeholder='0.00'></div>
+
+      <div style='grid-column:1/-1'><label>{{ tr('Assigned Crew') }}</label><div class='ops-checkbox-grid'>{% for worker in workers %}<label class='schedule-worker-item'><input type='checkbox' name='assigned_worker_ids' value='{{ worker.id }}' {% if worker.id|string in selected_ids %}checked{% endif %}> <span>{{ worker.name }}</span> <small>{{ worker.ops_role or worker.role_classification or 'Crew' }}</small></label>{% endfor %}</div></div>
+      <div style='grid-column:1/-1'><label>{{ tr('Tags') }}</label><input name='tags' value='{{ selected_job.tags if selected_job else (template_seed.default_tags if template_seed else "") }}' placeholder='urgent, recurring, key-holder, route-west'></div>
+      <div style='grid-column:1/-1'><label>{{ tr('Service Address') }}</label><input id='ops_job_service_address' name='service_address' value='{{ selected_job.service_address if selected_job else "" }}'></div>
+      <div><label>{{ tr('Location Name') }}</label><input name='location_name' value='{{ selected_job.location_name if selected_job else "" }}' placeholder='{{ tr("Main Office, Unit 2, Gate A") }}'></div>
+      <div><label>{{ tr('City') }}</label><input name='city' value='{{ selected_job.city if selected_job else "" }}'></div>
+      <div><label>{{ tr('State') }}</label><input name='state' value='{{ selected_job.state if selected_job else "" }}'></div>
+      <div><label>{{ tr('ZIP') }}</label><input name='postal_code' value='{{ selected_job.postal_code if selected_job else "" }}'></div>
+      <div><label>{{ tr('Customer Reference') }}</label><input name='customer_reference' value='{{ selected_job.customer_reference if selected_job else "" }}' placeholder='{{ tr("Optional reference ID") }}'></div>
+      <div style='grid-column:1/-1'><label>{{ tr('Scope / Summary') }}</label><textarea id='ops_job_notes_summary' name='notes_summary'>{{ selected_job.notes_summary if selected_job else (template_seed.default_notes if template_seed else "") }}</textarea></div>
+      <div style='grid-column:1/-1'><label>{{ tr('Internal Notes') }}</label><textarea name='internal_notes'>{{ selected_job.internal_notes if selected_job else "" }}</textarea></div>
+      <div style='grid-column:1/-1'><label>{{ tr('Dispatch Notes') }}</label><textarea name='dispatch_notes'>{{ selected_job.dispatch_notes if selected_job else "" }}</textarea></div>
+      <div><label>{{ tr('Access Notes') }}</label><input name='access_notes' value='{{ selected_job.access_notes if selected_job else "" }}' placeholder='{{ tr("Alarm, entry sequence") }}'></div>
+      <div><label>{{ tr('Gate Code') }}</label><input name='gate_code' value='{{ selected_job.gate_code if selected_job else "" }}'></div>
+      <div><label>{{ tr('Parking Notes') }}</label><input name='parking_notes' value='{{ selected_job.parking_notes if selected_job else "" }}'></div>
+      <div><label>{{ tr('Recurrence Rule') }}</label><input name='recurrence_rule' value='{{ selected_job.recurrence_rule if selected_job else "" }}' placeholder='{{ tr("Weekly Friday or RRULE text") }}'></div>
+      <div><label style='display:flex;gap:8px;align-items:center;margin-top:30px'><input type='checkbox' name='issue_flag' value='1' {% if selected_job and selected_job.issue_flag %}checked{% endif %}> {{ tr('Flag money or service issue') }}</label></div>
+      <div><label style='display:flex;gap:8px;align-items:center;margin-top:30px'><input type='checkbox' name='requires_revisit' value='1' {% if selected_job and selected_job.requires_revisit %}checked{% endif %}> {{ tr('Requires revisit') }}</label></div>
+      <div style='grid-column:1/-1'><button type='submit'>{% if selected_job %}{{ tr('Save Job') }}{% else %}{{ tr('Create Job') }}{% endif %}</button></div>
+    </form>
+  </div>
+
+  <div class='card section-frame'>
+    <div class='card-head'>
+      <h3>{{ tr('Jobs Queue') }}</h3>
+      <span class='badge'>{{ jobs|length }}</span>
+    </div>
+    {% if jobs %}
+    <div class='scroll-x'>
+      <table class='table'>
+        <tr><th>{{ tr('Job') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Status') }}</th><th>{{ tr('Price / Revenue') }}</th><th>{{ tr('Other Costs') }}</th><th>{{ tr('Net Profit') }}</th><th>{{ tr('Profit Margin') }}</th></tr>
+        {% for job in jobs %}
+        <tr {% if selected_job and selected_job.id == job.id %}class='selected-row'{% endif %}>
+          <td><a href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id, status=filters.status, worker_id=filters.worker_id, service_type_id=filters.service_type_id, search=filters.search) }}'>{{ job.title }}</a><div class='small'>{{ job.service_type_label }}</div></td>
+          <td>{{ job.customer_name or '-' }}<div class='small'>{{ job.assigned_worker_names or tr('Unassigned') }}</div></td>
+          <td>{{ job.status|replace('_',' ')|title }}</td>
+          <td>${{ '%.2f'|format(job.revenue_amount or 0) }}</td>
+          <td>${{ '%.2f'|format(job.total_cost_amount or 0) }}</td>
+          <td class='{% if (job.net_profit_amount or 0) < 0 %}profit-danger-text{% else %}profit-good-text{% endif %}'>${{ '%.2f'|format(job.net_profit_amount or 0) }}</td>
+          <td>{{ '%.1f'|format(job.profit_margin_percent or 0) }}%</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>{{ tr('No jobs match the current filters.') }}</strong><span>{{ tr('Clear filters or create a new job record.') }}</span></div>
+    {% endif %}
+  </div>
+</div>
+
+{% if selected_job %}
+<div class='grid cards-2' style='margin-top:18px'>
+  <div class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Job profitability') }}</h3><div class='stack-actions'><form method='post'><input type='hidden' name='action' value='duplicate_job'>{% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}<input type='hidden' name='job_id' value='{{ selected_job.id }}'><button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Duplicate') }}</button></form></div></div>
+    <div class='grid cards-2'>
+      <div class='card ops-subcard'><div class='small-label'>{{ tr('Price / Revenue') }}</div><div class='metric big'>${{ '%.2f'|format(selected_job.revenue_amount or 0) }}</div></div>
+      <div class='card ops-subcard'><div class='small-label'>{{ tr('Other Costs') }}</div><div class='metric big'>${{ '%.2f'|format(selected_job.total_cost_amount or 0) }}</div></div>
+      <div class='card ops-subcard'><div class='small-label'>{{ tr('Net Profit') }}</div><div class='metric big {% if (selected_job.net_profit_amount or 0) < 0 %}profit-danger-text{% else %}profit-good-text{% endif %}'>${{ '%.2f'|format(selected_job.net_profit_amount or 0) }}</div></div>
+      <div class='card ops-subcard'><div class='small-label'>{{ tr('Profit Margin') }}</div><div class='metric big'>{{ '%.1f'|format(selected_job.profit_margin_percent or 0) }}%</div></div>
+    </div>
+    <div class='small' style='margin-top:12px'>{{ tr('Profit control starts with every active job carrying price and cost visibility.') }}</div>
+  </div>
+
+  <div class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Job Controls') }}</h3><span class='badge'>{{ tr('Workflow') }}</span></div>
+    <div class='welcome-link-grid' style='margin-bottom:14px'>
+      <a class='welcome-link-card' href='{{ url_for("ops_schedule", client_id=client_id, customer_contact_id=selected_job.customer_contact_id or 0) }}'>
+        <strong>{{ tr('Add this job to calendar') }}</strong>
+        <span>{{ tr('Schedule') }}</span>
+      </a>
+      {% if selected_job.customer_contact_id and premium_sales_access_enabled(client) %}
+      <a class='welcome-link-card' href='{{ url_for("estimates", client_id=client_id, customer_contact_id=selected_job.customer_contact_id) }}#estimateForm'>
+        <strong>{{ tr('Create estimate from this job') }}</strong>
+        <span>{{ tr('Hosted estimate page') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("invoices", client_id=client_id, customer_contact_id=selected_job.customer_contact_id) }}#customerInvoiceForm'>
+        <strong>{{ tr('Create invoice from this job') }}</strong>
+        <span>{{ tr('Open customer invoices') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("customer_sales", client_id=client_id) }}'>
+        <strong>{{ tr('Open client workspace') }}</strong>
+        <span>{{ tr('Saved Clients') }}</span>
+      </a>
+      {% endif %}
+    </div>
+    <form method='post' class='form-grid'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <input type='hidden' name='action' value='update_status'>
+      <input type='hidden' name='job_id' value='{{ selected_job.id }}'>
+      <div><label>{{ tr('Status') }}</label><select name='status'>{% for value, label in job_status_options %}<option value='{{ value }}' {% if selected_job.status == value %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
+      <div><label>{{ tr('Field Progress') }}</label><select name='field_progress_status'>{% for value, label in progress_status_options %}<option value='{{ value }}' {% if selected_job.field_progress_status == value %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
+      <div style='grid-column:1/-1'><label>{{ tr('Completion / Follow-Up Notes') }}</label><textarea name='completion_notes'>{{ selected_job.completion_notes or "" }}</textarea></div>
+      <div><button type='submit'>{{ tr('Save Workflow') }}</button></div>
+    </form>
+  </div>
+</div>
+
+<div class='grid cards-2' style='margin-top:18px'>
+  <div class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Job Notes') }}</h3><span class='badge'>{{ selected_job_notes|length }}</span></div>
+    <form method='post' class='form-grid' style='margin-bottom:14px'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <input type='hidden' name='action' value='add_note'>
+      <input type='hidden' name='job_id' value='{{ selected_job.id }}'>
+      <div><label>{{ tr('Note Type') }}</label><select name='note_type'><option value='internal'>{{ tr('Internal') }}</option><option value='dispatch'>{{ tr('Dispatch') }}</option><option value='manager'>{{ tr('Manager') }}</option><option value='completion'>{{ tr('Completion') }}</option></select></div>
+      <div></div>
+      <div style='grid-column:1/-1'><label>{{ tr('Note') }}</label><textarea name='note_body'></textarea></div>
+      <div><button type='submit'>{{ tr('Add Note') }}</button></div>
+    </form>
+    {% if selected_job_notes %}
+    <div class='ops-timeline'>
+      {% for note in selected_job_notes %}
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>{{ note.note_type|replace('_', ' ')|title }}{% if note.full_name %} &middot; {{ note.full_name }}{% endif %}</div>
+        <div class='small'>{{ note.body }}</div>
+        <div class='small'>{{ note.created_at }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>{{ tr('No notes yet.') }}</strong><span>{{ tr('Use notes for job context, dispatch handoff, and follow-up history.') }}</span></div>
+    {% endif %}
+  </div>
+
+  <div class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Job Activity Timeline') }}</h3><span class='badge'>{{ selected_job_activity|length }}</span></div>
+    {% if selected_job_activity %}
+    <div class='ops-timeline'>
+      {% for item in selected_job_activity %}
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>{{ item.event_type|replace('_', ' ')|title }}</div>
+        <div class='small'>{{ item.event_text }}</div>
+        <div class='small'>{{ item.created_at }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>{{ tr('No activity yet.') }}</strong><span>{{ tr('Edits, assignments, and workflow changes will appear here.') }}</span></div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+(function(){
+  var select = document.getElementById('ops_job_contact_select');
+  if (!select) return;
+  select.addEventListener('change', function(){
+    var option = select.options[select.selectedIndex];
+    if (!option) return;
+    var title = document.getElementById('ops_job_title');
+    var customer = document.getElementById('ops_job_customer_name');
+    var address = document.getElementById('ops_job_service_address');
+    var notes = document.getElementById('ops_job_notes_summary');
+    if (customer && option.getAttribute('data-name')) customer.value = option.getAttribute('data-name');
+    if (title && option.getAttribute('data-title')) title.value = option.getAttribute('data-title');
+    if (address && option.getAttribute('data-address')) address.value = option.getAttribute('data-address');
+    if (notes && option.getAttribute('data-notes')) notes.value = option.getAttribute('data-notes');
+  });
+})();
+</script>
+{% endblock %}

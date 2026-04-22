@@ -1,151 +1,231 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% block body %}
 {% set is_trial_workspace = (client.trial_offer_days or 0) > 0 %}
 
-<div class='welcome-panel welcome-panel-large business-welcome-panel'>
-  <div class='welcome-stack'>
-    {% if current_user.role == 'admin' %}
-    <div class='welcome-kicker'>{{ tr('Welcome Administrator') }}</div>
-    <div class='welcome-business-name'>{{ client.business_name }}</div>
-    <div class='welcome-owner-name'>{{ client.contact_name or current_user.full_name or '' }}</div>
-    {% else %}
-    <div class='welcome-kicker'>{{ tr('Welcome Business') }}</div>
-    <div class='welcome-business-name'>{{ client.business_name }}</div>
-    <div class='welcome-owner-name'>{{ client.contact_name or current_user.full_name or '' }}</div>
-    {% endif %}
+<div class='hero-surface welcome-center-hero owner-view-hero'>
+  <div class='summary-strip'>
+    <span class='summary-pill'>{{ tr('Owner View') }}</span>
+    <span class='summary-pill'>{{ tr('Jobs & Profit') }}</span>
+    <span class='summary-pill'>{{ tr('Finance first') }}</span>
+    <span class='summary-pill'>{{ tr('Profit per job visibility') }}</span>
+  </div>
+  <div class='toolbar hero-toolbar' style='margin-top:14px'>
+    <div>
+      <div class='page-kicker'>{{ tr('Owner View') }}</div>
+      <div class='page-title'>{{ client.business_name }}</div>
+      <div class='page-subtitle'>{{ tr('Most owners buy clarity on money first. Scheduling, dispatch, and team tools stay important, but profit visibility must be instant.') }}</div>
+    </div>
+    <div class='stack-actions'>
+      <a class='btn btn-secondary' href='{{ url_for("ops_jobs", client_id=client_id) }}'>{{ tr('Open Jobs Board') }}</a>
+      <a class='btn btn-secondary' href='{{ url_for("summary", client_id=client_id) }}'>{{ tr('Open Finance Summary') }}</a>
+      <a class='btn btn-secondary' href='{{ url_for("reports", client_id=client_id) }}'>{{ tr('Report Center') }}</a>
+    </div>
   </div>
 </div>
 
-<div class='toolbar hero-toolbar'>
-  {% if current_user.role=='admin' %}
-  <form method='get' class='inline-form'>
-    <label>{{ tr('Business') }}</label>
-    <select name='client_id' onchange='this.form.submit()'>
-      {% for c in all_clients %}<option value='{{ c.id }}' {% if c.id==client_id %}selected{% endif %}>{{ c.business_name }}</option>{% endfor %}
-    </select>
-  </form>
-  {% endif %}
-  <div>
-    <div class='page-kicker'>{{ tr('Business Workspace') }}</div>
-    <div class='page-title'>{{ client.business_name }}</div>
-    <div class='page-subtitle'>{{ tr('Financial control, billing visibility, payroll context, and day-to-day business performance in one executive workspace.') }}</div>
+<div class='grid cards-4 owner-kpi-grid' style='margin-top:16px'>
+  <div class='card stat-card premium-stat premium-stat-accent'>
+    <h3>{{ tr('Today') }}</h3>
+    <div class='metric big'>{{ owner_snapshot.today_jobs|length }}</div>
+    <div class='small'>{{ tr('Jobs') }}</div>
   </div>
-  <button onclick='window.print()' class='btn btn-secondary' type='button'>{{ tr('Print Dashboard') }}</button>
-</div>
-
-<div class='card section-frame' style='margin-bottom:16px'>
-  <div class='card-head'><h3>{{ tr('Financial Actions') }}</h3><span class='badge'>{{ tr('Finance first') }}</span></div>
-  <div class='small' style='margin-bottom:12px'>{{ tr('This workspace is strongest when you begin with income, invoices, reports, payroll records, and billing clarity. Scheduling and team tools stay available as bonuses once the financial foundation is organized.') }}</div>
-  <div class='stack-actions'>
-    <a class='btn btn-secondary btn-sm' href='{{ url_for("summary", client_id=client_id) }}'>{{ tr('Summary Center') }}</a>
-    <a class='btn btn-secondary btn-sm' href='{{ url_for("reports", client_id=client_id) }}'>{{ tr('Report Center') }}</a>
-    <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Income Records') }}</a>
-    <a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Billing Setup') }}</a>
-    <a class='btn btn-secondary btn-sm' href='{{ url_for("workers", client_id=client_id) }}'>{{ tr('Payroll / W-2') }}</a>
+  <div class='card stat-card premium-stat'>
+    <h3>{{ tr('Weekly revenue') }}</h3>
+    <div class='metric big'>${{ '%.2f'|format(owner_snapshot.weekly_revenue or 0) }}</div>
+    <div class='small'>{{ tr('Price / Revenue') }}</div>
   </div>
-</div>
-
-{% if current_user.role != 'admin' %}
-{% if is_trial_workspace %}
-<div class='card section-frame' style='margin-bottom:16px'>
-  <div class='card-head'><h3>{{ tr('Trial Workspace Overview') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>{{ tr('Open Tutorial') }}</a></div>
-  <div class='grid cards-4'>
-    <div class='card stat-card premium-stat'><h3>{{ tr('Trial Plan') }}</h3><div class='metric'>{{ client.subscription_plan_code or tr('Not set') }}</div></div>
-    <div class='card stat-card premium-stat'><h3>{{ tr('Trial Status') }}</h3><div class='metric'>{{ tr('Active') }}</div></div>
-    <div class='card stat-card premium-stat'><h3>{{ tr('Access Level') }}</h3><div class='metric'>{{ effective_service_level_label(client) }}</div><div class='small'>{% if access_level_override_active(client) %}{{ tr('Administrator override active') }}{% else %}{{ tr('Matches pricing tier') }}{% endif %}</div></div>
-    <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Trial Ends') }}</h3><div class='metric'>{{ client.trial_ends_at[:10] if client.trial_ends_at else (client.subscription_next_billing_date or '&mdash;') }}</div></div>
+  <div class='card stat-card premium-stat'>
+    <h3>{{ tr('Weekly profit') }}</h3>
+    <div class='metric big'>${{ '%.2f'|format(owner_snapshot.weekly_profit or 0) }}</div>
+    <div class='small'>{{ tr('Net Profit') }}</div>
   </div>
-  <div class='small' style='margin-top:10px'>{{ tr('Your complimentary trial is open now. Start with the overview and tutorial first. Billing can be added later before the first charge date.') }}</div>
-  <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:14px'>
-    <a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>{{ tr('Open Welcome Tutorial') }}</a>
-    <a class='btn btn-secondary btn-sm' href='{{ url_for("estimates", client_id=client_id) }}'>{{ tr('Open Estimates') }}</a>
-    <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Open Invoice Center') }}</a>
-    <a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Add Billing Later') }}</a>
+  <div class='card stat-card premium-stat {% if owner_snapshot.losing_jobs %}profit-danger-card{% endif %}'>
+    <h3>{{ tr('Jobs losing money') }}</h3>
+    <div class='metric big'>{{ owner_snapshot.losing_jobs|length }}</div>
+    <div class='small'>{{ tr('Today needs your attention') }}</div>
   </div>
-</div>
-{% else %}
-<div class='card section-frame' style='margin-bottom:16px'>
-  <div class='card-head'><h3>{{ tr('Subscription Billing') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Open Billing') }}</a></div>
-  <div class='grid cards-4'>
-    <div class='card stat-card premium-stat'><h3>{{ tr('Plan') }}</h3><div class='metric'>{{ client.subscription_plan_code or tr('Not set') }}</div></div>
-    <div class='card stat-card premium-stat'><h3>{{ tr('Status') }}</h3><div class='metric'>{{ subscription_status_labels.get(client.subscription_status or 'inactive', 'Inactive') }}</div></div>
-    <div class='card stat-card premium-stat'><h3>{{ tr('Monthly Fee') }}</h3><div class='metric'>${{ '%.2f'|format(client.subscription_amount or 0) }}</div></div>
-    <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Access Level') }}</h3><div class='metric'>{{ effective_service_level_label(client) }}</div><div class='small'>{% if access_level_override_active(client) %}{{ tr('Administrator override active') }}{% else %}{{ tr('Matches pricing tier') }}{% endif %}</div></div>
+  <div class='card stat-card premium-stat'>
+    <h3>{{ tr('Open customer invoices') }}</h3>
+    <div class='metric big'>{{ owner_snapshot.open_customer_invoice_count }}</div>
+    <div class='small'>${{ '%.2f'|format(owner_snapshot.open_customer_invoice_balance or 0) }}</div>
   </div>
-  <div class='small' style='margin-top:10px'>{{ tr('Method on file') }}: <strong>{{ payment_method_summary.default_label or tr('No method recorded yet') }}</strong>{% if payment_method_summary.default_label %} ({{ (payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}){% endif %}. {{ tr('Open Billing to manage the subscription method on file and any one-time administrator fees.') }}</div>
-  {% if access_level_override_active(client) %}
-  <div class='small' style='margin-top:6px'>{{ tr('You are currently billed on') }} <strong>{{ service_level_labels.get(client.service_level or 'self_service', 'Essential') }}</strong>, {{ tr('but your administrator granted') }} <strong>{{ effective_service_level_label(client) }}</strong> {{ tr('workspace access.') }}{% if client.access_override_note %} {{ client.access_override_note }}{% endif %}</div>
-  {% endif %}
-</div>
-{% endif %}
-{% if (not is_trial_workspace) and admin_fee_summary and admin_fee_summary.pending_count %}
-<div class='card billing-inline-alert' style='margin-bottom:16px'>
-  <div class='card-head'><h3>{{ tr('Administrator Fee Notice') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Review Fees') }}</a></div>
-  <div class='small'><strong>${{ '%.2f'|format(admin_fee_summary.amount_due or 0) }}</strong> {{ tr('across') }} {{ admin_fee_summary.pending_count or 0 }} {{ tr('open fee items') }}. {{ open_fee_guidance.detail }} {{ tr('This stays separate from your day-to-day customer payment activity.') }}</div>
-</div>
-{% endif %}
-{% endif %}
-
-<div class='grid cards-4'>
-  <div class='card stat-card'><h3>{{ tr('Income Snapshot') }}</h3><div class='metric big'>${{ '%.2f'|format(summary.gross_income) }}</div><div class='small'>{{ summary.invoice_count }} {{ tr('invoice and income entries saved') }}</div></div>
-  <div class='card stat-card'><h3>{{ tr('Expenses') }}</h3><div class='metric'>{{ tr('Gas') }}: ${{ '%.2f'|format(summary.gas_total) }}<br>{{ tr('Materials') }}: ${{ '%.2f'|format(summary.materials_total) }}<br>{{ tr('Team Members') }}: ${{ '%.2f'|format(summary.worker_total) }}</div></div>
-  <div class='card stat-card'><h3>{{ tr('Tax Foundation') }}</h3><div class='metric'>{{ tr('Operating Profit') }}: ${{ '%.2f'|format(summary.operating_profit) }}<br>{{ tr('Adjusted Profit') }}: ${{ '%.2f'|format(summary.adjusted_profit) }}<br>{{ tr('SE Tax') }}: ${{ '%.2f'|format(summary.self_employment_tax_estimate) }}<br>{{ tr('Total Est.') }}: ${{ '%.2f'|format(summary.federal_plus_se_estimate) }}</div></div>
-  <div class='card stat-card'><h3>{{ tr('Mileage Deduction') }}</h3><div class='metric'>{{ tr('Miles') }}: {{ '%.2f'|format(summary.mileage_miles) }}<br>{{ tr('Deduction') }}: ${{ '%.2f'|format(summary.mileage_deduction) }}</div></div>
-</div>
-<div class='grid cards-2' style='margin-top:16px'>
-  <div class='card'>
-    <div class='card-head'><h3>{{ tr('Recent Invoice Activity') }}</h3><div style='display:flex;gap:8px;flex-wrap:wrap'><a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}'>{{ tr('Estimates') }}</a><a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Open Invoice Center') }}</a></div></div>
-    <table class='table'><tr><th>{{ tr('Job #') }}</th><th>{{ tr('Date') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Amount') }}</th></tr>{% for row in invoices %}<tr><td>{{ row.job_number or row.id }}</td><td>{{ row.invoice_date }}</td><td>{{ row.client_name }}</td><td>${{ '%.2f'|format(row.paid_amount or 0) }}</td></tr>{% endfor %}</table>
+  <div class='card stat-card premium-stat'>
+    <h3>{{ tr('Open estimates') }}</h3>
+    <div class='metric big'>{{ owner_snapshot.open_estimate_count }}</div>
+    <div class='small'>{{ tr('Estimate first, invoice second') }}</div>
   </div>
-  <div class='card'>
-    <div class='card-head'><h3>{{ tr('Team Members') }}</h3><a class='btn btn-secondary' href='{{ url_for("workers", client_id=client_id) }}'>{{ tr('Manage Team Members') }}</a></div>
-    <table class='table'><tr><th>{{ tr('Full Name') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Forms') }}</th></tr>{% for w in workers %}<tr><td>{{ w.name }}</td><td>{{ w.worker_type }}</td><td><a href='{{ url_for("w4", worker_id=w.id) }}'>{{ tr('W-4') }}</a> &middot; <a href='{{ url_for("w2", worker_id=w.id) }}'>{{ tr('W-2') }}</a> &middot; <a href='{{ url_for("form_1099", worker_id=w.id) }}'>{{ tr('1099') }}</a></td></tr>{% endfor %}</table>
+  <div class='card stat-card premium-stat'>
+    <h3>{{ tr('Jobs missing pricing') }}</h3>
+    <div class='metric big'>{{ owner_snapshot.missing_pricing_jobs|length }}</div>
+    <div class='small'>{{ tr('Price not set yet') }}</div>
+  </div>
+  <div class='card stat-card premium-stat'>
+    <h3>{{ tr('Completed') }}</h3>
+    <div class='metric big'>{{ owner_snapshot.completed_this_week }}</div>
+    <div class='small'>{{ tr('This week') }}</div>
   </div>
 </div>
 
-<div class='grid' style='margin-top:16px;align-items:start'>
-  <div class='card'>
-    <div class='card-head'><h3>{{ tr('Administrator Review Status') }}</h3><span class='badge'>{{ tr('Workspace') }}</span></div>
-    {% if current_user.role == 'client' %}
-      {% if review_request and review_request.status == 'pending' %}
-        <div class='badge'>{{ tr('Pending Administrator Review') }}</div>
-      {% elif review_request and review_request.status == 'approved' %}
-        <div class='badge'>{{ tr('Approved') }}</div>
-      {% elif review_request and review_request.status == 'needs_correction' %}
-        <div class='badge'>{{ tr('Needs Correction') }}</div>
+<div class='grid cards-2' style='margin-top:18px;align-items:start'>
+  <section class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Client Actions') }}</h3><span class='badge'>{{ tr('Owner snapshot') }}</span></div>
+    <div class='small' style='margin-bottom:12px'>{{ tr('Jobs, invoices, and reports should work together from one owner view.') }}</div>
+    <div class='welcome-link-grid'>
+      <a class='welcome-link-card' href='{{ url_for("ops_jobs", client_id=client_id) }}'>
+        <strong>{{ tr('Create Job') }}</strong>
+        <span>{{ tr('Price / Revenue') }}</span>
+      </a>
+      {% if premium_sales_access_enabled(client) %}
+      <a class='welcome-link-card' href='{{ url_for("customer_sales", client_id=client_id) }}'>
+        <strong>{{ tr('Add Client') }}</strong>
+        <span>{{ tr('Saved Clients') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>
+        <strong>{{ tr('Create Estimate') }}</strong>
+        <span>{{ tr('Hosted estimate page') }}</span>
+      </a>
       {% else %}
-        <div class='small' style='margin-bottom:12px'>{{ tr('Submit your updates to Administrator for review.') }}</div>
+      <a class='welcome-link-card' href='{{ url_for("business_payments_page", client_id=client_id) }}'>
+        <strong>{{ tr('Upgrade to Premium') }}</strong>
+        <span>{{ tr('Premium Sales Tools') }}</span>
+      </a>
       {% endif %}
-      <form method='post' action='{{ url_for("submit_for_cpa_review") }}' class='form-grid'>
-        <input type='hidden' name='client_id' value='{{ client_id }}'>
-        <div style='grid-column:1 / -1'><label>{{ tr('Note to Administrator (optional)') }}</label><input name='note' placeholder='{{ tr("Optional message for Administrator") }}'></div>
-        <div><button type='submit'>{{ tr('Submit for Administrator Review') }}</button></div>
-      </form>
+      <a class='welcome-link-card' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'>
+        <strong>{{ tr('Create Invoice') }}</strong>
+        <span>{{ tr('Open customer invoices') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("reports", client_id=client_id) }}'>
+        <strong>{{ tr('Report Center') }}</strong>
+        <span>{{ tr('Review reports and profit trends') }}</span>
+      </a>
+    </div>
+  </section>
+
+  <section class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Financial Snapshot') }}</h3><span class='badge'>{{ tr('Finance first') }}</span></div>
+    <div class='finance-focus-grid'>
+      <div class='finance-focus-item'>
+        <div class='finance-focus-head'><strong>{{ tr('Income') }}</strong><span>${{ '%.2f'|format(summary.gross_income or 0) }}</span></div>
+        <div class='small'>{{ tr('Saved income records') }}</div>
+      </div>
+      <div class='finance-focus-item'>
+        <div class='finance-focus-head'><strong>{{ tr('Operating Profit') }}</strong><span>${{ '%.2f'|format(summary.operating_profit or 0) }}</span></div>
+        <div class='small'>{{ tr('Current operating profit view') }}</div>
+      </div>
+      <div class='finance-focus-item'>
+        <div class='finance-focus-head'><strong>{{ tr('Materials Cost') }}</strong><span>${{ '%.2f'|format(summary.materials_total or 0) }}</span></div>
+        <div class='small'>{{ tr('Materials') }}</div>
+      </div>
+      <div class='finance-focus-item'>
+        <div class='finance-focus-head'><strong>{{ tr('Labor Cost') }}</strong><span>${{ '%.2f'|format(summary.worker_total or 0) }}</span></div>
+        <div class='small'>{{ tr('W-2 and payroll context') }}</div>
+      </div>
+    </div>
+    <div class='summary-strip' style='margin-top:14px'>
+      <span class='summary-pill'>{{ tr('Estimated Operating Profit') }}: ${{ '%.2f'|format(summary.operating_profit or 0) }}</span>
+      <span class='summary-pill'>{{ tr('Total Est.') }}: ${{ '%.2f'|format(summary.federal_plus_se_estimate or 0) }}</span>
+      <span class='summary-pill'>{{ tr('Mileage Deduction') }}: ${{ '%.2f'|format(summary.mileage_deduction or 0) }}</span>
+    </div>
+  </section>
+</div>
+
+<div class='grid cards-3' style='margin-top:18px;align-items:start'>
+  <section class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Today needs your attention') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("ops_jobs", client_id=client_id) }}'>{{ tr('Open Jobs Board') }}</a></div>
+    {% if owner_snapshot.today_jobs %}
+    <div class='ops-card-list'>
+      {% for job in owner_snapshot.today_jobs[:6] %}
+      <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+        <div class='ops-list-top'>
+          <strong>{{ job.title }}</strong>
+          <span class='badge ops-status ops-status-{{ job.status }}'>{{ job.status|replace('_',' ')|title }}</span>
+        </div>
+        <div class='small'>{{ job.customer_name or tr('Customer') }}{% if job.assigned_worker_names %} &middot; {{ job.assigned_worker_names }}{% endif %}</div>
+        <div class='small'>${{ '%.2f'|format(job.revenue_amount or 0) }} / ${{ '%.2f'|format(job.net_profit_amount or 0) }} {{ tr('Net Profit') }}</div>
+      </a>
+      {% endfor %}
+    </div>
     {% else %}
-      <div class='small'>{{ tr('Administrator workspace view.') }}</div>
+    <div class='empty-state'><strong>{{ tr('No jobs scheduled today.') }}</strong><span>{{ tr('Create Job') }}</span></div>
     {% endif %}
-  </div>
-  <div class='card welcome-center-card'>
-    <div class='card-head'><h3>{{ tr('Welcome Center') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>{{ tr('Open Welcome') }}</a></div>
-    <div class='small' style='margin-bottom:12px'>{{ tr('A guided finance-first welcome space for this business with owner details, overview direction, and future how-to video slots for Canva training content.') }}</div>
-    <div class='benefits-mini-points'>
-      <span>{{ tr('Financial control first') }}</span>
-      <span>{{ tr('Workspace overview') }}</span>
-      <span>{{ tr('Owner and user details') }}</span>
-      <span>{{ tr('How-to video space') }}</span>
-      <span>{{ tr('Quick first steps') }}</span>
+  </section>
+
+  <section class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Losing money right now') }}</h3><span class='badge'>{{ owner_snapshot.losing_jobs|length }}</span></div>
+    {% if owner_snapshot.losing_jobs %}
+    <div class='ops-card-list'>
+      {% for job in owner_snapshot.losing_jobs %}
+      <a class='ops-list-card profit-danger-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+        <div class='ops-list-top'>
+          <strong>{{ job.title }}</strong>
+          <span class='badge'>${{ '%.2f'|format(job.net_profit_amount or 0) }}</span>
+        </div>
+        <div class='small'>{{ tr('Price / Revenue') }}: ${{ '%.2f'|format(job.revenue_amount or 0) }}</div>
+        <div class='small'>{{ tr('Materials Cost') }}: ${{ '%.2f'|format(job.materials_cost_amount or 0) }} &middot; {{ tr('Labor Cost') }}: ${{ '%.2f'|format(job.labor_cost_amount or 0) }}</div>
+      </a>
+      {% endfor %}
     </div>
-  </div>
-  <div class='card benefits-dashboard-card'>
-    <div class='card-head'><h3>{{ tr('Benefits & Obligations') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("benefits_obligations", client_id=client_id) }}'>{{ tr('Open Guide') }}</a></div>
-    <div class='small' style='margin-bottom:12px'>{{ tr('Review tax-favored benefit options, employer obligations, and official federal resources before changing health, retirement, or leave offerings.') }}</div>
-    <div class='benefits-mini-points'>
-      <span>{{ tr('Health coverage options') }}</span>
-      <span>{{ tr('Tax-favored benefit accounts') }}</span>
-      <span>{{ tr('Retirement plan choices') }}</span>
-      <span>{{ tr('Federal obligations and notices') }}</span>
+    {% else %}
+    <div class='empty-state'><strong>{{ tr('No money issue flagged') }}</strong><span>{{ tr('Profit control starts with every active job carrying price and cost visibility.') }}</span></div>
+    {% endif %}
+  </section>
+
+  <section class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Jobs missing pricing') }}</h3><span class='badge'>{{ owner_snapshot.missing_pricing_jobs|length }}</span></div>
+    {% if owner_snapshot.missing_pricing_jobs %}
+    <div class='ops-card-list'>
+      {% for job in owner_snapshot.missing_pricing_jobs %}
+      <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+        <div class='ops-list-top'>
+          <strong>{{ job.title }}</strong>
+          <span class='badge'>{{ tr('Price not set yet') }}</span>
+        </div>
+        <div class='small'>{{ job.customer_name or tr('Customer') }}</div>
+        <div class='small'>{{ tr('Complete the money side of each job so the owner view can show real profit.') }}</div>
+      </a>
+      {% endfor %}
     </div>
-  </div>
+    {% else %}
+    <div class='empty-state'><strong>{{ tr('Every active job has a price.') }}</strong><span>{{ tr('Service price, labor, material cost, and profit should be visible immediately.') }}</span></div>
+    {% endif %}
+  </section>
+</div>
+
+<div class='grid cards-2' style='margin-top:18px;align-items:start'>
+  <section class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Highest profit jobs') }}</h3><span class='badge'>{{ tr('Weekly profit') }}</span></div>
+    <div class='scroll-x'>
+      <table class='table'>
+        <tr><th>{{ tr('Job') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Price / Revenue') }}</th><th>{{ tr('Other Costs') }}</th><th>{{ tr('Net Profit') }}</th><th>{{ tr('Profit Margin') }}</th></tr>
+        {% for job in owner_snapshot.top_profit_jobs %}
+        <tr>
+          <td><a href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>{{ job.title }}</a></td>
+          <td>{{ job.customer_name or '-' }}</td>
+          <td>${{ '%.2f'|format(job.revenue_amount or 0) }}</td>
+          <td>${{ '%.2f'|format(job.total_cost_amount or 0) }}</td>
+          <td>${{ '%.2f'|format(job.net_profit_amount or 0) }}</td>
+          <td>{{ '%.1f'|format(job.profit_margin_percent or 0) }}%</td>
+        </tr>
+        {% else %}
+        <tr><td colspan='6' class='small'>{{ tr('Complete the money side of each job so the owner view can show real profit.') }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </section>
+
+  <section class='card section-frame'>
+    <div class='card-head'><h3>{{ tr('Finance Controls') }}</h3><span class='badge'>{{ tr('Finance first') }}</span></div>
+    <div class='stack-actions'>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("summary", client_id=client_id) }}'>{{ tr('Summary Center') }}</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("reports", client_id=client_id) }}'>{{ tr('Report Center') }}</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Income Records') }}</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("workers", client_id=client_id) }}'>{{ tr('Payroll / W-2') }}</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Billing') }}</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>{{ tr('Welcome Center') }}</a>
+    </div>
+    {% if current_user.role != 'admin' and is_trial_workspace %}
+    <div class='small' style='margin-top:12px'>{{ tr('Your trial workspace is open.') }} {{ tr('Start here with the overview and tutorial, then use Continue Trial Setup when you are ready to save the business profile and selected subscription. Billing is still optional during the complimentary period.') }}</div>
+    {% endif %}
+  </section>
 </div>
 {% endblock %}
-

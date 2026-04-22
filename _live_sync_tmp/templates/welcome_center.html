@@ -4,22 +4,23 @@
 <div class='hero-surface welcome-center-hero'>
   <div class='summary-strip'>
     <span class='summary-pill'>{{ tr('Welcome page') }}</span>
-    <span class='summary-pill'>{{ tr('Finance first') }}</span>
-    <span class='summary-pill'>{{ tr('Workspace overview') }}</span>
+    <span class='summary-pill'>{{ tr('Financial control comes first') }}</span>
+    <span class='summary-pill'>{{ tr('Owner snapshot for this week') }}</span>
     <span class='summary-pill'>{{ tr('Canva video ready') }}</span>
   </div>
   <div class='toolbar hero-toolbar' style='margin-top:14px'>
     <div>
       <div class='page-kicker'>{{ tr('Welcome Center') }}</div>
       <div class='page-title'>{{ tr('Welcome to LedgerFlow') }}</div>
-      <div class='page-subtitle'>{{ tr('A guided landing page for this business with a real overview, clear first steps, and a future-ready training area for how-to videos.') }}</div>
+      <div class='page-subtitle'>{{ tr('A guided landing page for this business with a real overview, clear first steps, and a future-ready training area for how-to videos.') }} {{ tr('Jobs should lead into invoices, payroll, and reporting.') }}</div>
     </div>
     <div class='stack-actions'>
       {% if needs_onboarding %}
       <a class='btn btn-secondary' href='{{ url_for("business_onboarding") }}'>{{ tr('Continue Trial Setup') }}</a>
       {% else %}
+      <a class='btn btn-secondary' href='{{ url_for("dashboard", client_id=client_id) }}'>{{ tr('Open Owner View') }}</a>
+      <a class='btn btn-secondary' href='{{ url_for("ops_jobs", client_id=client_id) }}'>{{ tr('Open Jobs Board') }}</a>
       <a class='btn btn-secondary' href='{{ url_for("summary", client_id=client_id) }}'>{{ tr('Open Finance Summary') }}</a>
-      <a class='btn btn-secondary' href='{{ url_for("dashboard", client_id=client_id) }}'>{{ tr('Open Dashboard') }}</a>
       {% endif %}
     </div>
   </div>
@@ -59,6 +60,29 @@
   </div>
 </div>
 
+<div class='grid cards-4 owner-kpi-grid' style='margin-top:18px'>
+  <div class='card stat-card premium-stat premium-stat-accent'>
+    <h3>{{ tr('Weekly revenue') }}</h3>
+    <div class='metric big'>${{ '%.2f'|format(owner_snapshot.weekly_revenue or 0) }}</div>
+    <div class='small'>{{ tr('Price / Revenue') }}</div>
+  </div>
+  <div class='card stat-card premium-stat'>
+    <h3>{{ tr('Weekly profit') }}</h3>
+    <div class='metric big'>${{ '%.2f'|format(owner_snapshot.weekly_profit or 0) }}</div>
+    <div class='small'>{{ tr('Net Profit') }}</div>
+  </div>
+  <div class='card stat-card premium-stat {% if owner_snapshot.losing_jobs %}profit-danger-card{% endif %}'>
+    <h3>{{ tr('Jobs losing money') }}</h3>
+    <div class='metric big'>{{ owner_snapshot.losing_jobs|length }}</div>
+    <div class='small'>{{ tr('Today needs your attention') }}</div>
+  </div>
+  <div class='card stat-card premium-stat'>
+    <h3>{{ tr('Open customer invoices') }}</h3>
+    <div class='metric big'>{{ open_customer_invoice_count }}</div>
+    <div class='small'>${{ '%.2f'|format(open_customer_invoice_balance or 0) }}</div>
+  </div>
+</div>
+
 <div class='grid cards-2' style='margin-top:18px;align-items:start'>
   <section class='card section-frame welcome-message-card'>
     <div class='card-head'><h3>{{ tr('Welcome Message') }}</h3><span class='badge'>{{ tr('Personalized') }}</span></div>
@@ -69,11 +93,20 @@
       <p>{{ tr('Your business profile is currently tailored around') }} <strong>{{ client.business_category or tr('your service category') }}</strong>{% if client.business_specialty %} - {{ client.business_specialty }}{% endif %}.</p>
       {% endif %}
       <p>{{ tr('This workspace is strongest when you begin with income, invoices, reports, payroll records, and billing clarity. Scheduling and team tools stay available as bonuses once the financial foundation is organized.') }}</p>
+      <p>{{ tr('Create, price, and protect profit per job.') }}</p>
     </div>
     <div class='welcome-link-grid' style='margin-top:14px'>
+      <a class='welcome-link-card' href='{{ url_for("dashboard", client_id=client_id) }}'>
+        <strong>{{ tr('Open Owner View') }}</strong>
+        <span>{{ tr('Financial owner snapshot') }}</span>
+      </a>
       <a class='welcome-link-card' href='{{ url_for("summary", client_id=client_id) }}'>
         <strong>{{ tr('Open Finance Summary') }}</strong>
         <span>{{ tr('Financial control first') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("ops_jobs", client_id=client_id) }}'>
+        <strong>{{ tr('Open Jobs Board') }}</strong>
+        <span>{{ tr('Create, price, and protect profit per job.') }}</span>
       </a>
       <a class='welcome-link-card' href='{{ url_for("reports", client_id=client_id) }}'>
         <strong>{{ tr('Report Center') }}</strong>
@@ -129,32 +162,49 @@
 
 <div class='grid cards-2' style='margin-top:18px;align-items:start'>
   <section class='card section-frame welcome-first-steps'>
-    <div class='card-head'><h3>{{ tr('Recommended First Steps') }}</h3><span class='badge'>{{ tr('Start Here') }}</span></div>
-    <ol class='welcome-step-list'>
-      <li>{{ tr('Start with this Welcome Center and review the business name, owner details, and current workspace status.') if needs_onboarding else tr('Open the finance summary first and confirm the current income, profit, and tax-readiness view.') }}</li>
-      <li>{{ tr('Use Continue Trial Setup to save the business profile and selected subscription when you are ready.') if needs_onboarding else tr('Keep customer invoices, income records, and billing current before moving into secondary workflow tools.') }}</li>
-      <li>{{ tr('Use Income Records to begin saving business income in a tax-preparation-friendly format.') }}</li>
-      <li>{{ tr('Open Team Members if you need to add, update, or organize staff and payout information.') }}</li>
-      <li>{{ tr('Use the tutorial and overview cards here first, then add billing later before the trial period ends.') if is_trial_workspace else tr('Then use reports, payroll forms, and billing status as your weekly control center.') }}</li>
-    </ol>
+    <div class='card-head'><h3>{{ tr('Recommended First Steps') }}</h3><span class='badge'>{{ tr('Use these first') }}</span></div>
+    <div class='small' style='margin-bottom:14px'>{{ tr('Move money first, then operations.') }}</div>
+    <div class='welcome-link-grid'>
+      <a class='welcome-link-card' href='{{ url_for("summary", client_id=client_id) }}'>
+        <strong>{{ tr('Open Finance Summary') }}</strong>
+        <span>{{ tr('Open the finance summary first and confirm the current income, profit, and tax-readiness view.') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("invoices", client_id=client_id) }}'>
+        <strong>{{ tr('Income Records') }}</strong>
+        <span>{{ tr('Keep customer invoices, income records, and billing current before moving into secondary workflow tools.') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("workers", client_id=client_id) }}'>
+        <strong>{{ tr('Open Payroll / W-2') }}</strong>
+        <span>{{ tr('Open Team Members if you need to add, update, or organize staff and payout information.') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("business_payments_page", client_id=client_id) }}'>
+        <strong>{{ tr('Billing') }}</strong>
+        <span>{{ tr('Then use reports, payroll forms, and billing status as your weekly control center.') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("ops_jobs", client_id=client_id) }}'>
+        <strong>{{ tr('Open Jobs Board') }}</strong>
+        <span>{{ tr('Create, price, and protect profit per job.') }}</span>
+      </a>
+      {% if premium_sales_enabled %}
+      <a class='welcome-link-card' href='{{ url_for("customer_sales", client_id=client_id) }}'>
+        <strong>{{ tr('Open Clients & Sales') }}</strong>
+        <span>{{ tr('Client billing') }}</span>
+      </a>
+      {% endif %}
+    </div>
     <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:14px'>
       {% if needs_onboarding %}
       <a class='btn btn-secondary btn-sm' href='{{ url_for("business_onboarding") }}'>{{ tr('Continue Trial Setup') }}</a>
       {% else %}
-      <a class='btn btn-secondary btn-sm' href='{{ url_for("summary", client_id=client_id) }}'>{{ tr('Open Finance Summary') }}</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("dashboard", client_id=client_id) }}'>{{ tr('Open Owner View') }}</a>
       {% endif %}
-      {% if is_trial_workspace %}
-      <a class='btn btn-secondary btn-sm' href='{{ url_for("welcome_center", client_id=client_id) }}'>{{ tr('Tutorial') }}</a>
-      {% else %}
       <a class='btn btn-secondary btn-sm' href='{{ url_for("reports", client_id=client_id) }}'>{{ tr('Report Center') }}</a>
-      {% endif %}
-      <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Income Records') }}</a>
-      <a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=client_id) }}'>{{ tr('Billing') }}</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("ops_jobs", client_id=client_id) }}'>{{ tr('Jobs') }}</a>
     </div>
   </section>
 
   <section class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('Financial Actions') }}</h3><span class='badge'>{{ tr('Overview') }}</span></div>
+    <div class='card-head'><h3>{{ tr('Financial Actions') }}</h3><span class='badge'>{{ tr('Money first') }}</span></div>
     <div class='small' style='margin-bottom:14px'>{{ tr('This page should point you into the money side of the business first, because that is where most owners need the clearest control.') }}</div>
     <div class='benefits-mini-points'>
       <span>{{ tr('Financial control first') }}</span>
@@ -174,18 +224,28 @@
 <div class='grid cards-2' style='margin-top:18px;align-items:start'>
   <section class='card section-frame'>
     <div class='card-head'><h3>{{ tr('Operations Bonuses') }}</h3><span class='badge'>{{ tr('Secondary tools') }}</span></div>
-    <div class='small' style='margin-bottom:14px'>{{ tr('These tools stay available, but they should come after the finance workflow is stable.') }}</div>
-    <ol class='welcome-step-list'>
-      <li>{{ tr('Confirm the business profile and owner details are correct.') }}</li>
-      <li>{{ tr('Open Calendar and scheduling only after the financial baseline is clear.') }}</li>
-      <li>{{ tr('Use Team Members when payroll, W-2, or worker payment records need attention.') }}</li>
-      <li>{{ tr('Return here anytime for the next recommended step.') }}</li>
-    </ol>
+    <div class='small' style='margin-bottom:14px'>{{ tr('Start with finances, then move into operational extras.') }}</div>
+    <div class='welcome-link-grid'>
+      <a class='welcome-link-card' href='{{ url_for("ops_schedule", client_id=client_id) }}'>
+        <strong>{{ tr('Open Calendar') }}</strong>
+        <span>{{ tr('Open Calendar and scheduling only after the financial baseline is clear.') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("workers", client_id=client_id) }}'>
+        <strong>{{ tr('Open Team') }}</strong>
+        <span>{{ tr('Use Team Members when payroll, W-2, or worker payment records need attention.') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("clients", client_id=client_id, workspace=1) }}'>
+        <strong>{{ tr('Business Profile') }}</strong>
+        <span>{{ tr('Confirm the business profile and owner details are correct.') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("benefits_obligations", client_id=client_id) }}'>
+        <strong>{{ tr('Open Benefits Guide') }}</strong>
+        <span>{{ tr('Return here anytime for the next recommended step.') }}</span>
+      </a>
+    </div>
     <div class='stack-actions' style='margin-top:14px'>
-      <a class='btn btn-secondary btn-sm' href='{{ url_for("dashboard", client_id=client_id) }}'>{{ tr('Open Dashboard') }}</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("dashboard", client_id=client_id) }}'>{{ tr('Open Owner View') }}</a>
       <a class='btn btn-secondary btn-sm' href='{{ url_for("ops_schedule", client_id=client_id) }}'>{{ tr('Open Calendar') }}</a>
-      <a class='btn btn-secondary btn-sm' href='{{ url_for("workers", client_id=client_id) }}'>{{ tr('Open Team') }}</a>
-      <a class='btn btn-secondary btn-sm' href='{{ url_for("benefits_obligations", client_id=client_id) }}'>{{ tr('Open Benefits Guide') }}</a>
     </div>
   </section>
 

@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>{{ tr('Jobs & Profit') }}</div>
+    <div class='page-title'>{{ client.business_name }}</div>
+    <div class='page-subtitle'>{{ tr('See the job, control the numbers, and know the profit.') }}</div>
+  </div>
+  <div class='stack-actions'>
+    <a class='btn btn-secondary' href='{{ url_for("ops_jobs", client_id=client_id) }}'>{{ tr('Open Jobs Board') }}</a>
+    <a class='btn btn-secondary' href='{{ url_for("summary", client_id=client_id) }}'>{{ tr('Open Finance Summary') }}</a>
+    <a class='btn btn-secondary' href='{{ url_for("reports", client_id=client_id) }}'>{{ tr('Report Center') }}</a>
+  </div>
+</div>
+
+<div class='grid cards-4 owner-kpi-grid'>
+  <div class='card stat-card ops-stat-card'><h3>{{ tr('Today') }}</h3><div class='metric big'>{{ owner_snapshot.today_jobs|length }}</div><div class='small'>{{ tr('Jobs') }}</div></div>
+  <div class='card stat-card ops-stat-card'><h3>{{ tr('Weekly revenue') }}</h3><div class='metric big'>${{ '%.2f'|format(owner_snapshot.weekly_revenue or 0) }}</div><div class='small'>{{ tr('Quoted Revenue') }}</div></div>
+  <div class='card stat-card ops-stat-card'><h3>{{ tr('Weekly profit') }}</h3><div class='metric big'>${{ '%.2f'|format(owner_snapshot.weekly_profit or 0) }}</div><div class='small'>{{ tr('Expected profit') }}</div></div>
+  <div class='card stat-card ops-stat-card {% if owner_snapshot.losing_jobs %}profit-danger-card{% endif %}'><h3>{{ tr('Jobs losing money') }}</h3><div class='metric big'>{{ owner_snapshot.losing_jobs|length }}</div><div class='small'>{{ tr('Losing money right now') }}</div></div>
+  <div class='card stat-card ops-stat-card'><h3>{{ tr('Unassigned') }}</h3><div class='metric big'>{{ ops.unassigned_jobs|length }}</div><div class='small'>{{ tr('Jobs still waiting on a crew') }}</div></div>
+  <div class='card stat-card ops-stat-card'><h3>{{ tr('Overdue') }}</h3><div class='metric big'>{{ ops.overdue_jobs|length }}</div><div class='small'>{{ tr('Jobs that should already be moving') }}</div></div>
+  <div class='card stat-card ops-stat-card'><h3>{{ tr('Open customer invoices') }}</h3><div class='metric big'>{{ owner_snapshot.open_customer_invoice_count }}</div><div class='small'>${{ '%.2f'|format(owner_snapshot.open_customer_invoice_balance or 0) }}</div></div>
+  <div class='card stat-card ops-stat-card'><h3>{{ tr('Jobs missing pricing') }}</h3><div class='metric big'>{{ owner_snapshot.missing_pricing_jobs|length }}</div><div class='small'>{{ tr('Price not set yet') }}</div></div>
+</div>
+
+<div class='grid cards-2' style='margin-top:18px'>
+  <div class='card'>
+    <div class='card-head'><h3>{{ tr('Today needs your attention') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("ops_jobs", client_id=client_id) }}'>{{ tr('Open Jobs Board') }}</a></div>
+    {% if ops.today_jobs %}
+    <div class='ops-card-list'>
+      {% for job in ops.today_jobs[:8] %}
+      <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+        <div class='ops-list-top'>
+          <strong>{{ job.title }}</strong>
+          <span class='badge ops-status ops-status-{{ job.status }}'>{{ job.status|replace('_', ' ')|title }}</span>
+        </div>
+        <div class='small'>{{ job.customer_name or tr('Customer') }}{% if job.assigned_worker_names %} &middot; {{ job.assigned_worker_names }}{% endif %}</div>
+        <div class='small'>${{ '%.2f'|format(job.revenue_amount or 0) }} / ${{ '%.2f'|format(job.net_profit_amount or 0) }} {{ tr('Net Profit') }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>{{ tr('No jobs scheduled today.') }}</strong><span>{{ tr('Create Job') }}</span></div>
+    {% endif %}
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>{{ tr('Highest profit jobs') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("ops_jobs", client_id=client_id) }}'>{{ tr('Jobs') }}</a></div>
+    <div class='scroll-x'>
+      <table class='table'>
+        <tr><th>{{ tr('Job') }}</th><th>{{ tr('Price / Revenue') }}</th><th>{{ tr('Other Costs') }}</th><th>{{ tr('Net Profit') }}</th><th>{{ tr('Profit Margin') }}</th></tr>
+        {% for job in owner_snapshot.top_profit_jobs %}
+        <tr>
+          <td><a href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>{{ job.title }}</a></td>
+          <td>${{ '%.2f'|format(job.revenue_amount or 0) }}</td>
+          <td>${{ '%.2f'|format(job.total_cost_amount or 0) }}</td>
+          <td>${{ '%.2f'|format(job.net_profit_amount or 0) }}</td>
+          <td>{{ '%.1f'|format(job.profit_margin_percent or 0) }}%</td>
+        </tr>
+        {% else %}
+        <tr><td colspan='5' class='small'>{{ tr('Complete the money side of each job so the owner view can show real profit.') }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class='grid cards-2' style='margin-top:18px'>
+  <div class='card'>
+    <div class='card-head'><h3>{{ tr('Losing money right now') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("ops_jobs", client_id=client_id) }}'>{{ tr('Open Jobs Board') }}</a></div>
+    {% if owner_snapshot.losing_jobs %}
+    <div class='ops-card-list'>
+      {% for job in owner_snapshot.losing_jobs %}
+      <a class='ops-list-card profit-danger-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+        <div class='ops-list-top'><strong>{{ job.title }}</strong><span class='badge'>${{ '%.2f'|format(job.net_profit_amount or 0) }}</span></div>
+        <div class='small'>{{ tr('Quoted Revenue') }}: ${{ '%.2f'|format(job.revenue_amount or 0) }}</div>
+        <div class='small'>{{ tr('Budgeted Materials') }}: ${{ '%.2f'|format(job.materials_cost_amount or 0) }} &middot; {{ tr('Budgeted Labor') }}: ${{ '%.2f'|format(job.labor_cost_amount or 0) }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>{{ tr('No money issue flagged') }}</strong><span>{{ tr('Profit control starts with every active job carrying price and cost visibility.') }}</span></div>
+    {% endif %}
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>{{ tr('Jobs missing pricing') }}</h3><span class='badge'>{{ owner_snapshot.missing_pricing_jobs|length }}</span></div>
+    {% if owner_snapshot.missing_pricing_jobs %}
+    <div class='ops-card-list'>
+      {% for job in owner_snapshot.missing_pricing_jobs %}
+      <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+        <div class='ops-list-top'><strong>{{ job.title }}</strong><span class='badge'>{{ tr('Price not set yet') }}</span></div>
+        <div class='small'>{{ job.customer_name or tr('Customer') }}</div>
+        <div class='small'>{{ tr('Complete the money side of each job so the owner view can show real profit.') }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>{{ tr('Every active job has a price.') }}</strong><span>{{ tr('Service price, labor, material cost, and profit should be visible immediately.') }}</span></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
