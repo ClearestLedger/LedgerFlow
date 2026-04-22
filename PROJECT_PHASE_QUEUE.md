@@ -122,6 +122,11 @@
   - Welcome Center now opens into clickable finance-first actions, owner weekly money snapshot, jobs board entry, and payroll / billing controls
   - Jobs and Profit pages now center quoted revenue, labor, materials, other costs, net profit, and direct next steps into invoices, estimates, and reports
   - mobile business dock now labels the core home screen as Owner View so the product positioning stays consistent across desktop and phone
+- Messaging stability phase completed on 2026-04-21:
+  - admin shell messenger no longer defaults blindly to the first business thread when a newer unread business message exists
+  - admin shell messenger now supports switching business threads directly inside the drawer so one business cannot make the whole inbox feel frozen
+  - unread counts are now aggregated across visible businesses for administrator messaging
+  - dashboard pages no longer silently mark messages as read just by loading; read state now updates when the messenger thread is actually opened
 
 ## Future Pricing Research Note
 

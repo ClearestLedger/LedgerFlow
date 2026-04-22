@@ -24,8 +24,21 @@
     <button type='button' class='messenger-drawer-close' data-messenger-close aria-label='Close Messenger'>&times;</button>
   </div>
 
+  {% if shell_messenger.thread_clients %}
+  <div class='chat-recipient-bar compact' style='margin-bottom:12px'>
+    <div class='recipient-label'>Business</div>
+    <select id='shellMessengerThreadSelect' class='recipient-select'>
+      {% for thread in shell_messenger.thread_clients %}
+      <option value='{{ thread.id }}' {% if thread.id == shell_messenger.client_id %}selected{% endif %}>
+        {{ thread.business_name }}{% if thread.unread_count %} &middot; {{ thread.unread_count }} new{% endif %}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+
   {% if shell_messenger.latest_incoming %}
-  <div class='mini-chat-alert {% if shell_messenger.unread_count %}unread{% endif %}' style='margin:0 0 12px 0'>
+  <div class='mini-chat-alert {% if shell_messenger.thread_unread_count %}unread{% endif %}' style='margin:0 0 12px 0'>
     <strong>{{ shell_messenger.latest_incoming.sender_name }}</strong> &middot; {{ shell_messenger.latest_incoming.created_at }}<br>
     {{ shell_messenger.latest_incoming.body }}
   </div>
@@ -110,8 +123,23 @@
     const closeBtn = document.querySelector('[data-messenger-close]');
     const textarea = document.getElementById('shellMessengerBody');
     const thread = document.querySelector('.messenger-drawer-thread');
+    const threadSelect = document.getElementById('shellMessengerThreadSelect');
+    let markReadSent = false;
 
     if (!launcher || !drawer || !backdrop) return;
+
+    function markCurrentThreadRead() {
+      if (markReadSent || '{{ shell_messenger.kind }}' !== 'internal') return;
+      markReadSent = true;
+      fetch('{{ url_for("messenger_mark_read") }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: 'client_id={{ shell_messenger.client_id }}'
+      }).catch(function(){});
+    }
 
     function hideShellEmojiPickers() {
       document.querySelectorAll('.shell-emoji-picker').forEach(function (other) { other.setAttribute('hidden', 'hidden'); });
@@ -127,6 +155,7 @@
         backdrop.removeAttribute('hidden');
         localStorage.setItem(storageKey, '1');
         if (thread) thread.scrollTop = thread.scrollHeight;
+        markCurrentThreadRead();
       } else {
         backdrop.setAttribute('hidden', 'hidden');
         localStorage.setItem(storageKey, '0');
@@ -147,6 +176,14 @@
 
     if (localStorage.getItem(storageKey) === '1') {
       setOpen(true);
+    }
+
+    if (threadSelect) {
+      threadSelect.addEventListener('change', function () {
+        var url = new URL(window.location.href);
+        url.searchParams.set('messenger_client_id', threadSelect.value);
+        window.location.href = url.toString();
+      });
     }
 
     if (textarea) {

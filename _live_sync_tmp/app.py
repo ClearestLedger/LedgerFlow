@@ -8771,18 +8771,102 @@ def current_request_path() -> str:
     return full[:-1] if full.endswith('?') else full
 
 
+def recent_message_client_id_for_user(user_id: int, client_ids: list[int], unread_only: bool = False) -> int | None:
+    scoped_ids = [int(cid) for cid in client_ids if cid]
+    if not scoped_ids:
+        return None
+    placeholders = ','.join('?' for _ in scoped_ids)
+    with get_conn() as conn:
+        if unread_only:
+            row = conn.execute(
+                f'''SELECT client_id
+                    FROM internal_messages
+                    WHERE recipient_user_id=?
+                      AND COALESCE(is_read,0)=0
+                      AND client_id IN ({placeholders})
+                    ORDER BY id DESC
+                    LIMIT 1''',
+                (user_id, *scoped_ids),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                f'''SELECT client_id
+                    FROM internal_messages
+                    WHERE (sender_user_id=? OR recipient_user_id=?)
+                      AND client_id IN ({placeholders})
+                    ORDER BY id DESC
+                    LIMIT 1''',
+                (user_id, user_id, *scoped_ids),
+            ).fetchone()
+    return int(row['client_id']) if row and row['client_id'] else None
+
+
+def total_unread_message_count(client_ids: list[int], user_id: int) -> int:
+    scoped_ids = [int(cid) for cid in client_ids if cid]
+    if not scoped_ids:
+        return 0
+    placeholders = ','.join('?' for _ in scoped_ids)
+    with get_conn() as conn:
+        row = conn.execute(
+            f'''SELECT COUNT(*) unread_count
+                FROM internal_messages
+                WHERE recipient_user_id=?
+                  AND COALESCE(is_read,0)=0
+                  AND client_id IN ({placeholders})''',
+            (user_id, *scoped_ids),
+        ).fetchone()
+    return int(row['unread_count'] or 0) if row else 0
+
+
+def unread_message_counts_by_client(client_ids: list[int], user_id: int) -> dict[int, int]:
+    scoped_ids = [int(cid) for cid in client_ids if cid]
+    if not scoped_ids:
+        return {}
+    placeholders = ','.join('?' for _ in scoped_ids)
+    with get_conn() as conn:
+        rows = conn.execute(
+            f'''SELECT client_id, COUNT(*) unread_count
+                FROM internal_messages
+                WHERE recipient_user_id=?
+                  AND COALESCE(is_read,0)=0
+                  AND client_id IN ({placeholders})
+                GROUP BY client_id''',
+            (user_id, *scoped_ids),
+        ).fetchall()
+    return {int(row['client_id']): int(row['unread_count'] or 0) for row in rows}
+
+
+def preferred_admin_message_client_id(user, clients, active_client=None):
+    scoped_ids = [int(row['id']) for row in (clients or []) if row and row['id']]
+    if not scoped_ids:
+        return None
+    explicit = request.values.get('messenger_client_id', type=int) or request.values.get('client_id', type=int)
+    if explicit in scoped_ids:
+        session['admin_messenger_client_id'] = explicit
+        return explicit
+    unread_id = recent_message_client_id_for_user(user['id'], scoped_ids, unread_only=True)
+    if unread_id:
+        session['admin_messenger_client_id'] = unread_id
+        return unread_id
+    session_id = session.get('admin_messenger_client_id')
+    if session_id in scoped_ids:
+        return session_id
+    if active_client and active_client['id'] in scoped_ids:
+        return int(active_client['id'])
+    latest_thread_id = recent_message_client_id_for_user(user['id'], scoped_ids, unread_only=False)
+    if latest_thread_id:
+        session['admin_messenger_client_id'] = latest_thread_id
+        return latest_thread_id
+    session['admin_messenger_client_id'] = scoped_ids[0]
+    return scoped_ids[0]
+
+
 def shell_messenger_client_id(user, active_client, clients):
     if not user or user['role'] not in {'admin', 'client'}:
         return None
     if user['role'] == 'client':
         return user['client_id']
-    explicit = request.values.get('client_id', type=int) or request.values.get('messenger_client_id', type=int)
-    if explicit and allowed_client(user, explicit):
-        return explicit
-    if active_client:
-        return active_client['id']
-    ids = [row['id'] for row in clients or []]
-    return ids[0] if ids else None
+    return preferred_admin_message_client_id(user, clients, active_client=active_client)
 
 
 def internal_shell_messenger_context(user, active_client, clients):
@@ -8793,6 +8877,8 @@ def internal_shell_messenger_context(user, active_client, clients):
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
     if not client:
         return {'enabled': False}
+    thread_client_ids = [int(row['id']) for row in (clients or []) if row and row['id']]
+    thread_unread_counts = unread_message_counts_by_client(thread_client_ids, user['id']) if user['role'] == 'admin' else {}
     recipients = available_recipients(client_id, user['id'])
     latest = latest_incoming_message(client_id, user['id'])
     return {
@@ -8803,9 +8889,18 @@ def internal_shell_messenger_context(user, active_client, clients):
         'title': client['business_name'],
         'subtitle': 'Open a live thread without leaving the page you are working on.',
         'messages': normalized_internal_chat_rows(client_id, user['id']),
-        'unread_count': unread_message_count(client_id, user['id']),
+        'unread_count': total_unread_message_count(thread_client_ids, user['id']) if user['role'] == 'admin' else unread_message_count(client_id, user['id']),
+        'thread_unread_count': thread_unread_counts.get(client_id, unread_message_count(client_id, user['id'])),
         'recipients': recipients,
         'selected_recipient_id': default_recipient_id(client_id, user),
+        'thread_clients': [
+            {
+                'id': int(row['id']),
+                'business_name': row['business_name'],
+                'unread_count': thread_unread_counts.get(int(row['id']), 0),
+            }
+            for row in (clients or [])
+        ] if user['role'] == 'admin' else [],
         'latest_incoming': {
             'sender_name': latest['sender_name'],
             'created_at': latest['created_at'],
@@ -9842,6 +9937,19 @@ def set_language():
     return redirect(safe_next_path(request.form.get('next'), '/main-portal'))
 
 
+@app.route('/messenger/mark-read', methods=['POST'])
+@login_required
+def messenger_mark_read():
+    user = current_user()
+    client_id = request.form.get('client_id', type=int)
+    if not client_id or not allowed_client(user, client_id):
+        abort(403)
+    mark_messages_read(client_id, user['id'])
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return ('', 204)
+    return redirect(safe_next_path(request.form.get('next'), '/main-portal'))
+
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     setup_required = not admin_user_exists()
@@ -10328,7 +10436,7 @@ def logout():
 @admin_required
 def cpa_dashboard():
     user = current_user()
-    selected_id = request.values.get('client_id', type=int)
+    selected_id = request.values.get('client_id', type=int) or request.values.get('messenger_client_id', type=int)
     if request.method == 'POST':
         action = request.form.get('action', '').strip().lower()
         if action in {'update_subscription_profile', 'add_payment_item', 'update_payment_item', 'update_payment_status', 'cancel_payment_item', 'archive_payment_item', 'add_payment_method', 'update_payment_method', 'delete_payment_method'} and not valid_payment_csrf(request.form.get('csrf_token', '')):
@@ -10599,8 +10707,10 @@ def cpa_dashboard():
                 tuple(ids)
             ).fetchall()
 
+    if selected_id and selected_id not in visible_client_ids(user):
+        selected_id = None
     if not selected_id and businesses:
-        selected_id = businesses[0]['id']
+        selected_id = preferred_admin_message_client_id(user, businesses)
     selected_business = None
     messenger_rows = []
     participants = []
@@ -10625,7 +10735,6 @@ def cpa_dashboard():
                    ORDER BY is_default DESC, is_backup DESC, updated_at DESC, id DESC''',
                 (selected_id,)
             ).fetchall()
-        mark_messages_read(selected_id, user['id'])
         messenger_rows = chat_messages(selected_id)
         participants = chat_participants(selected_id)
         latest_review = latest_review_request(selected_id)
@@ -11864,7 +11973,6 @@ def ops_overview():
         owner_snapshot = ops_owner_snapshot(conn, client_id)
         service_types = ops_service_types(conn, client_id)
         templates = ops_job_templates(conn, client_id)
-    mark_messages_read(client_id, user['id'])
     return render_template(
         'ops_dashboard.html',
         client=client,
