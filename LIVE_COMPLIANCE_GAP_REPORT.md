@@ -21,6 +21,7 @@ Why the release is still blocked:
 - Privacy Notice page exists: PASS
 - Disclaimer page exists: PASS
 - Footer and login links present: PASS
+- Public legal wording expanded with contact/request and retention/deletion sections: PASS
 
 ### 2. Terms acceptance / consent
 - Mandatory acceptance before signup / onboarding: PASS
@@ -75,7 +76,7 @@ Why the release is still blocked:
 
 ### 13. Retention / deletion
 - Some archive / delete flows exist in product behavior: PARTIAL
-- Formal retention rules and deletion policy are still missing: FAIL
+- Public retention/deletion wording now exists on the Trust page, but deeper technical enforcement evidence is still limited: PARTIAL
 
 ### 14. Third-party / vendor inventory
 - Hosting / email / deployment are documented for the current launch baseline: PASS
@@ -97,8 +98,9 @@ Why the release is still blocked:
    - signup / acceptance video
    - DB proof of policy acceptance logging
    - proof that business billing stores labels / last4 / hosted references only
-2. Define upload/file-security evidence, formal critical-event audit review, and retention/deletion rules.
-3. Run the full release-gate checklist again only after those blockers are fixed.
+2. Define upload/file-security evidence and formal critical-event audit review.
+3. If you want stronger deletion evidence beyond public wording, add a documented technical deletion/retention workflow review.
+4. Run the full release-gate checklist again only after those blockers are fixed.
 
 ## Product rule preserved
 

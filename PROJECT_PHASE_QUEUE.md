@@ -247,6 +247,12 @@
   - generated `LAUNCH_VERIFICATION\\PHASE4_RESULTS.json` and `LAUNCH_VERIFICATION\\PHASE4_REPORT.md` with a clean pass on public legal-page and entry-point checks
   - created `PRIVACY_VENDOR_LEGAL_SIGNOFF.md` as the formal signoff artifact for the current launch baseline
   - updated release/compliance documents so privacy/vendor page alignment is no longer treated as an open blocker
+- Final public legal wording phase completed on 2026-04-22:
+  - expanded the public Trust page with stronger payroll/tax privacy detail, administrator-managed relationship wording, customer/public-link responsibility, stronger no-guarantee language, contact/request handling, and retention/deletion sections
+  - updated the Trust page route to expose the active support contact email when available from the current email settings
+  - created `LAUNCH_VERIFICATION\\phase5_public_legal_wording_verify.py` as a repeatable verifier on the clean reset baseline
+  - generated `LAUNCH_VERIFICATION\\PHASE5_RESULTS.json` and `LAUNCH_VERIFICATION\\PHASE5_REPORT.md` with a clean pass on the expanded legal wording checks
+  - created `PUBLIC_LEGAL_WORDING_SIGNOFF.md` as the current launch-baseline wording signoff artifact
 - Future product architecture note recorded on 2026-04-22:
   - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections

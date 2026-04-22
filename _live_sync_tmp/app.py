@@ -1069,6 +1069,10 @@ TRANSLATIONS.update({
         'es': 'La informacion almacenada puede incluir datos de contacto, registros del negocio, avisos, referencias de metodos de pago y registros de entrega de correos.',
         'pt': 'As informacoes armazenadas podem incluir dados de contato, registros da empresa, avisos, referencias de metodos de pagamento e logs de entrega de e-mails.',
     },
+    'Stored records may also include EIN, payroll-contact details, worker/payroll records, pay-stub history, and tax-form workflow context such as W-2, W-4, and 1099 support data.': {
+        'es': 'Los registros almacenados tambien pueden incluir EIN, datos de contacto de nomina, registros de trabajador/nomina, historial de recibos de pago y contexto de formularios fiscales como W-2, W-4 y 1099.',
+        'pt': 'Os registros armazenados tambem podem incluir EIN, dados de contato da folha, registros de trabalhador/folha, historico de holerites e contexto de formularios fiscais como W-2, W-4 e 1099.',
+    },
     'Clients should contact their administrator for record corrections, support questions, or account changes.': {
         'es': 'Los clientes deben contactar a su administrador para corregir registros, hacer preguntas de soporte o cambiar la cuenta.',
         'pt': 'Os clientes devem contatar o administrador para corrigir registros, tirar duvidas de suporte ou alterar a conta.',
@@ -1081,9 +1085,13 @@ TRANSLATIONS.update({
         'es': 'El uso de este portal esta limitado a cuentas de clientes invitados y autorizados. Los usuarios deben mantener privadas sus credenciales, usar informacion correcta del negocio y evitar compartir sin autorizacion, mal uso o interferencia con el portal.',
         'pt': 'O uso deste portal e limitado a contas de clientes convidados e autorizados. Os usuarios devem manter as credenciais privadas, usar informacoes corretas da empresa e evitar compartilhamento nao autorizado, uso indevido ou interferencia com o portal.',
     },
-    'Subscriptions, billing arrangements, and service scope are managed directly through the administrator.': {
-        'es': 'Las suscripciones, arreglos de cobro y alcance del servicio se gestionan directamente por medio del administrador.',
-        'pt': 'As assinaturas, acordos de cobranca e escopo do servico sao gerenciados diretamente pelo administrador.',
+    'Subscriptions, onboarding, permissions, billing arrangements, and service scope are managed directly through the administrator.': {
+        'es': 'Las suscripciones, incorporacion, permisos, arreglos de cobro y alcance del servicio se gestionan directamente por medio del administrador.',
+        'pt': 'As assinaturas, onboarding, permissoes, acordos de cobranca e escopo do servico sao gerenciados diretamente pelo administrador.',
+    },
+    'Businesses are responsible for the customers, recipients, addresses, and contact details they use when creating estimates, invoices, receipts, and public customer links.': {
+        'es': 'Los negocios son responsables de los clientes, destinatarios, direcciones y datos de contacto que usan al crear estimados, facturas, recibos y links publicos para clientes.',
+        'pt': 'As empresas sao responsaveis pelos clientes, destinatarios, enderecos e dados de contato usados ao criar estimativas, faturas, recibos e links publicos para clientes.',
     },
     'Access may be suspended or changed if service is canceled, permissions are removed, or account use becomes improper.': {
         'es': 'El acceso puede suspenderse o cambiarse si el servicio se cancela, se eliminan permisos o el uso de la cuenta se vuelve inapropiado.',
@@ -1109,6 +1117,10 @@ TRANSLATIONS.update({
         'es': 'La entrega de correos y los flujos de cobro dependen de la disponibilidad activa de servicios de terceros.',
         'pt': 'A entrega de e-mails e os fluxos de cobranca dependem da disponibilidade ativa de servicos de terceiros.',
     },
+    'LedgerFlow does not promise uninterrupted availability, guaranteed delivery, guaranteed accuracy, or guaranteed compliance outcomes.': {
+        'es': 'LedgerFlow no promete disponibilidad ininterrumpida, entrega garantizada, exactitud garantizada ni resultados de cumplimiento garantizados.',
+        'pt': 'O LedgerFlow nao promete disponibilidade ininterrupta, entrega garantida, precisao garantida nem resultados de conformidade garantidos.',
+    },
     'Third-Party Services': {'es': 'Servicios de terceros', 'pt': 'Servicos de terceiros'},
     'Processors': {'es': 'Procesadores', 'pt': 'Processadores'},
     'LedgerFlow is hosted on Render, sends transactional email through the configured SMTP provider, and may direct businesses to an external hosted billing processor selected by the administrator.': {
@@ -1126,6 +1138,50 @@ TRANSLATIONS.update({
     'The optional AI guide is not active in the current launch baseline. If it is enabled later, selected user questions and workflow context may be sent to the configured AI provider.': {
         'es': 'La guia opcional de IA no esta activa en la base actual de lanzamiento. Si se activa mas adelante, preguntas seleccionadas del usuario y el contexto del flujo podran enviarse al proveedor de IA configurado.',
         'pt': 'A guia opcional de IA nao esta ativa na base atual de lancamento. Se for ativada depois, perguntas selecionadas do usuario e o contexto do fluxo poderao ser enviados ao provedor de IA configurado.',
+    },
+    'LedgerFlow does not guarantee the completeness, accuracy, or legal sufficiency of user-entered records, uploaded information, customer communications, or filing outcomes.': {
+        'es': 'LedgerFlow no garantiza la integridad, exactitud ni suficiencia legal de registros ingresados por el usuario, informacion cargada, comunicaciones con clientes o resultados de presentacion.',
+        'pt': 'O LedgerFlow nao garante a integridade, precisao ou suficiencia legal de registros inseridos pelo usuario, informacoes enviadas, comunicacoes com clientes ou resultados de envio.',
+    },
+    'Contact & Requests': {'es': 'Contacto y solicitudes', 'pt': 'Contato e solicitacoes'},
+    'Support': {'es': 'Soporte', 'pt': 'Suporte'},
+    'Privacy, security, correction, support, and account-access requests should first be sent to the administrator managing the business relationship.': {
+        'es': 'Las solicitudes de privacidad, seguridad, correccion, soporte y acceso a la cuenta deben enviarse primero al administrador que gestiona la relacion comercial.',
+        'pt': 'Solicitacoes de privacidade, seguranca, correcao, suporte e acesso a conta devem ser enviadas primeiro ao administrador que gerencia a relacao comercial.',
+    },
+    'If the administrator cannot be reached, requests may also be sent to the current LedgerFlow support contact:': {
+        'es': 'Si no se puede contactar al administrador, las solicitudes tambien pueden enviarse al contacto actual de soporte de LedgerFlow:',
+        'pt': 'Se nao for possivel contatar o administrador, as solicitacoes tambem podem ser enviadas ao contato atual de suporte do LedgerFlow:',
+    },
+    'If the administrator cannot be reached, use the support contact listed in your LedgerFlow invite, billing, or account emails.': {
+        'es': 'Si no se puede contactar al administrador, usa el contacto de soporte que aparece en tus correos de invitacion, cobro o cuenta de LedgerFlow.',
+        'pt': 'Se nao for possivel contatar o administrador, use o contato de suporte listado nos seus emails de convite, cobranca ou conta do LedgerFlow.',
+    },
+    'Requests may include record correction, access review, invite problems, security concerns, and account-status questions.': {
+        'es': 'Las solicitudes pueden incluir correccion de registros, revision de acceso, problemas con invitaciones, preocupaciones de seguridad y preguntas sobre el estado de la cuenta.',
+        'pt': 'As solicitacoes podem incluir correcao de registros, revisao de acesso, problemas com convites, preocupacoes de seguranca e duvidas sobre o status da conta.',
+    },
+    'Identity or account ownership may need to be confirmed before certain requests are completed.': {
+        'es': 'Es posible que sea necesario confirmar la identidad o titularidad de la cuenta antes de completar ciertas solicitudes.',
+        'pt': 'A identidade ou a titularidade da conta pode precisar ser confirmada antes da conclusao de certas solicitacoes.',
+    },
+    'Retention & Deletion': {'es': 'Retencion y eliminacion', 'pt': 'Retencao e exclusao'},
+    'Records': {'es': 'Registros', 'pt': 'Registros'},
+    'LedgerFlow keeps active account, billing, operational, and business records while services remain active and for reasonable archive, billing, support, security, backup, and restoration needs afterward.': {
+        'es': 'LedgerFlow conserva registros activos de cuenta, cobro, operaciones y negocio mientras los servicios permanecen activos y luego por necesidades razonables de archivo, cobro, soporte, seguridad, respaldo y restauracion.',
+        'pt': 'O LedgerFlow mantem registros ativos de conta, cobranca, operacao e negocio enquanto os servicos permanecem ativos e depois por necessidades razoaveis de arquivo, cobranca, suporte, seguranca, backup e restauracao.',
+    },
+    'Archived or deactivated accounts may be retained for support, audit, legal, tax, billing, dispute, and restoration purposes.': {
+        'es': 'Las cuentas archivadas o desactivadas pueden conservarse para fines de soporte, auditoria, legales, fiscales, de cobro, disputa y restauracion.',
+        'pt': 'Contas arquivadas ou desativadas podem ser mantidas para fins de suporte, auditoria, legais, fiscais, de cobranca, disputa e restauracao.',
+    },
+    'Backup copies and delivery logs may continue to exist for reasonable system-recovery and security periods even after an account is deactivated.': {
+        'es': 'Las copias de respaldo y los registros de entrega pueden seguir existiendo durante periodos razonables de recuperacion del sistema y seguridad incluso despues de desactivar una cuenta.',
+        'pt': 'Copias de backup e logs de entrega podem continuar existindo por periodos razoaveis de recuperacao do sistema e seguranca mesmo depois da desativacao da conta.',
+    },
+    'Deletion or correction requests are reviewed case by case and may be limited when records must be kept for legal, billing, tax, payroll, security, or contractual reasons.': {
+        'es': 'Las solicitudes de eliminacion o correccion se revisan caso por caso y pueden limitarse cuando los registros deban mantenerse por razones legales, de cobro, fiscales, de nomina, seguridad o contractuales.',
+        'pt': 'Solicitacoes de exclusao ou correcao sao revisadas caso a caso e podem ser limitadas quando os registros precisarem ser mantidos por motivos legais, de cobranca, fiscais, de folha, seguranca ou contratuais.',
     },
     'Business Profiles': {'es': 'Perfiles de negocios', 'pt': 'Perfis de empresas'},
     'Back to Dashboard': {'es': 'Volver al panel', 'pt': 'Voltar ao painel'},
@@ -10646,7 +10702,13 @@ def index():
 
 @app.route('/trust-and-policies')
 def trust_center():
-    return render_template('trust_center.html', policy_versions=legal_policy_versions())
+    email_profile = load_email_settings_profile()
+    support_contact_email = (email_profile.get('smtp_email') or email_profile.get('smtp_username') or '').strip().lower()
+    return render_template(
+        'trust_center.html',
+        policy_versions=legal_policy_versions(),
+        support_contact_email=support_contact_email,
+    )
 
 
 @app.route('/legal-acceptance', methods=['GET', 'POST'])

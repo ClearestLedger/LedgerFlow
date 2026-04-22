@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-04-22 18:05:15",
+  "checks": [
+    {
+      "label": "Trust page loads publicly",
+      "passed": true,
+      "detail": "status=200"
+    },
+    {
+      "label": "Privacy section includes payroll/tax data detail",
+      "passed": true,
+      "detail": "payroll/tax detail present"
+    },
+    {
+      "label": "Terms section includes admin-managed relationship wording",
+      "passed": true,
+      "detail": "admin-managed wording present"
+    },
+    {
+      "label": "Terms section includes customer/public link responsibility",
+      "passed": true,
+      "detail": "public-link responsibility present"
+    },
+    {
+      "label": "Security section includes no-guarantee boundary",
+      "passed": true,
+      "detail": "no-guarantee wording present"
+    },
+    {
+      "label": "Disclaimer section includes no-accuracy/legal-sufficiency boundary",
+      "passed": true,
+      "detail": "expanded disclaimer present"
+    },
+    {
+      "label": "Contact section exists",
+      "passed": true,
+      "detail": "contact section present"
+    },
+    {
+      "label": "Contact section includes support contact path",
+      "passed": true,
+      "detail": "support contact path present"
+    },
+    {
+      "label": "Retention section exists",
+      "passed": true,
+      "detail": "retention section present"
+    },
+    {
+      "label": "Retention section includes archive/backup/deletion limits",
+      "passed": true,
+      "detail": "retention detail present"
+    }
+  ],
+  "total_checks": 10,
+  "passed_checks": 10,
+  "overall_pass": true
+}

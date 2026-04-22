@@ -47,17 +47,23 @@ Why release is still blocked:
 - `LAUNCH_VERIFICATION\\PHASE4_RESULTS.json`
 - current result: public legal page aligned to current privacy reality map, vendor inventory, and launch-baseline AI posture
 
-7. Incident response evidence
+7. Final public legal wording evidence
+- `PUBLIC_LEGAL_WORDING_SIGNOFF.md`
+- `LAUNCH_VERIFICATION\\PHASE5_REPORT.md`
+- `LAUNCH_VERIFICATION\\PHASE5_RESULTS.json`
+- current result: public Trust page upgraded with stronger privacy scope, admin-managed relationship wording, public-link responsibility, contact/request handling, retention/deletion language, and stronger no-guarantee boundaries
+
+8. Incident response evidence
 - `INCIDENT_RESPONSE_RUNBOOK.md`
 - current result: baseline incident categories, containment flow, preservation, and communication path documented
 
-8. AI review evidence
+9. AI review evidence
 - `AI_RED_TEAM_PROMPT_SUITE.md`
 - `LAUNCH_VERIFICATION\\PHASE3_REPORT.md`
 - `LAUNCH_VERIFICATION\\PHASE3_RESULTS.json`
 - current result: clean launch baseline verified with AI disabled and hidden in production by default; full prompt execution is deferred until any future AI activation
 
-9. Access-control and tenant-isolation evidence
+10. Access-control and tenant-isolation evidence
 - `LAUNCH_VERIFICATION\\PHASE2_REPORT.md`
 - `LAUNCH_VERIFICATION\\PHASE2_RESULTS.json`
 - current result: clean pass on adversarial admin, business-user, worker, and public-document isolation checks against the clean launch baseline
@@ -73,6 +79,7 @@ Why release is still blocked:
 - incident response baseline
 - privacy and vendor documentation baseline
 - privacy/vendor/legal-page signoff for the current launch baseline
+- final public legal wording for the current launch baseline
 - AI launch posture verification for the current baseline
 
 ### Still needed before release
