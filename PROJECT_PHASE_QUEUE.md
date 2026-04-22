@@ -219,3 +219,7 @@
   - added a one-time schema cleanup that purges legacy locally stored business billing numbers from `clients` and `business_payment_methods`
   - updated trust/compliance copy to reflect hosted billing references instead of local full-account capture
   - expanded the clean-launch verifier so Billing Center is now part of the repeatable admin/business route sweep, and the rerun passed cleanly on both sides
+- Billing Center navigation phase completed on 2026-04-22:
+  - converted the decorative billing pills into real section navigation for overview, subscription billing, method on file, administrator fees, and fee history
+  - added direct action buttons inside the billing summary cards so the page behaves like software controls instead of static status tiles
+  - made hash-linked sections auto-open compact details blocks like payment methods and fee history when those areas are targeted

@@ -11,21 +11,54 @@
   {% if current_user.role=='admin' %}<a class='btn btn-secondary' href='{{ url_for("cpa_dashboard", client_id=client_id) }}'>{{ tr('Back to Administrator') }}</a>{% endif %}
 </div>
 
-<div class='card hero-surface' style='margin-bottom:16px'>
+<div class='summary-strip' style='margin-bottom:16px'>
+  <a class='summary-pill' href='#billing-overview'>{{ tr('Billing Overview') }}</a>
+  <a class='summary-pill' href='#subscription-billing'>{{ tr('Subscription Billing') }}</a>
+  <a class='summary-pill' href='#payment-methods'>{{ tr('Method On File') }}</a>
+  <a class='summary-pill' href='#administrator-fees'>{{ tr('Administrator Fees') }}</a>
+  <a class='summary-pill' href='#fee-history'>{{ tr('Fee History') }}</a>
+</div>
+
+<div class='card hero-surface' id='billing-overview' style='margin-bottom:16px'>
   <div class='card-head'><h3>{{ tr('Billing Center') }}</h3><span class='badge'>{{ tr('Subscription + Administrator Fees') }}</span></div>
   <div class='grid cards-4'>
-    <div class='card stat-card premium-stat'><h3>{{ tr('Subscription Plan') }}</h3><div class='metric'>{{ billed_tier.label if billed_tier else (client.subscription_plan_code or tr('Not set')) }}</div><div class='small'>{{ billed_tier.plan_code if billed_tier else tr('Recurring monthly service') }}</div></div>
-    <div class='card stat-card premium-stat'><h3>{{ tr('Subscription Status') }}</h3><div class='metric'>{{ tr(subscription_status_labels.get(client.subscription_status or 'inactive', 'Inactive')) }}</div><div class='small'>{{ tr('Next billing') }} {{ client.subscription_next_billing_date or tr('not scheduled') }}</div></div>
-    <div class='card stat-card premium-stat'><h3>{{ tr('Access Granted') }}</h3><div class='metric'>{{ effective_service_level_label(client) }}</div><div class='small'>{% if access_level_override_active(client) %}{{ tr('Administrator override active') }}{% else %}{{ tr('Matches pricing tier') }}{% endif %}</div></div>
-    <div class='card stat-card premium-stat'><h3>{{ tr('Method On File') }}</h3><div class='metric'>{{ payment_method_summary.default_label or tr('No default method on file') }}</div><div class='small'>{{ tr((payment_method_summary.default_status or 'missing')|replace('_',' ')|title) }}</div></div>
-    <div class='card stat-card premium-stat premium-stat-accent'><h3>{{ tr('Administrator Fees') }}</h3><div class='metric'>${{ '%.2f'|format(payment_summary.amount_due or 0) }}</div><div class='small'>{{ payment_summary.pending_count or 0 }} {{ tr('Open Fees') }}</div></div>
+    <div class='card stat-card premium-stat'>
+      <h3>{{ tr('Subscription Plan') }}</h3>
+      <div class='metric'>{{ billed_tier.label if billed_tier else (client.subscription_plan_code or tr('Not set')) }}</div>
+      <div class='small'>{{ billed_tier.plan_code if billed_tier else tr('Recurring monthly service') }}</div>
+      <div style='margin-top:10px'><a class='btn btn-secondary btn-sm' href='#subscription-billing'>{{ tr('Open Subscription') }}</a></div>
+    </div>
+    <div class='card stat-card premium-stat'>
+      <h3>{{ tr('Subscription Status') }}</h3>
+      <div class='metric'>{{ tr(subscription_status_labels.get(client.subscription_status or 'inactive', 'Inactive')) }}</div>
+      <div class='small'>{{ tr('Next billing') }} {{ client.subscription_next_billing_date or tr('not scheduled') }}</div>
+      <div style='margin-top:10px'><a class='btn btn-secondary btn-sm' href='#subscription-billing'>{{ tr('Review Billing Preferences') }}</a></div>
+    </div>
+    <div class='card stat-card premium-stat'>
+      <h3>{{ tr('Access Granted') }}</h3>
+      <div class='metric'>{{ effective_service_level_label(client) }}</div>
+      <div class='small'>{% if access_level_override_active(client) %}{{ tr('Administrator override active') }}{% else %}{{ tr('Matches pricing tier') }}{% endif %}</div>
+      <div style='margin-top:10px'><a class='btn btn-secondary btn-sm' href='#subscription-billing'>{{ tr('View Access Context') }}</a></div>
+    </div>
+    <div class='card stat-card premium-stat'>
+      <h3>{{ tr('Method On File') }}</h3>
+      <div class='metric'>{{ payment_method_summary.default_label or tr('No default method on file') }}</div>
+      <div class='small'>{{ tr((payment_method_summary.default_status or 'missing')|replace('_',' ')|title) }}</div>
+      <div style='margin-top:10px'><a class='btn btn-secondary btn-sm' href='#payment-methods'>{{ tr('Manage Method') }}</a></div>
+    </div>
+    <div class='card stat-card premium-stat premium-stat-accent'>
+      <h3>{{ tr('Administrator Fees') }}</h3>
+      <div class='metric'>${{ '%.2f'|format(payment_summary.amount_due or 0) }}</div>
+      <div class='small'>{{ payment_summary.pending_count or 0 }} {{ tr('Open Fees') }}</div>
+      <div style='margin-top:10px'><a class='btn btn-secondary btn-sm' href='#administrator-fees'>{{ tr('Open Fee Review') }}</a></div>
+    </div>
   </div>
   <div class='summary-strip' style='margin-top:12px'>
-    <span class='summary-pill'>{{ tr('Recurring subscription tracked separately') }}</span>
-    <span class='summary-pill'>{{ tr('One-time administrator fees tracked separately') }}</span>
-    <span class='summary-pill'>{{ tr('Method on file') }} {{ tr((payment_method_summary.default_status or 'missing')|replace('_',' ')|title) }}</span>
+    <a class='summary-pill' href='#subscription-billing'>{{ tr('Recurring subscription tracked separately') }}</a>
+    <a class='summary-pill' href='#administrator-fees'>{{ tr('One-time administrator fees tracked separately') }}</a>
+    <a class='summary-pill' href='#payment-methods'>{{ tr('Method on file') }} {{ tr((payment_method_summary.default_status or 'missing')|replace('_',' ')|title) }}</a>
     {% if access_level_override_active(client) %}
-    <span class='summary-pill'>{{ tr('Access override active') }}</span>
+    <a class='summary-pill' href='#subscription-billing'>{{ tr('Access override active') }}</a>
     {% endif %}
   </div>
 </div>
@@ -125,7 +158,7 @@
       </form>
 
       {% if payment_methods %}
-        <details class='compact-details' style='margin-top:8px'>
+        <details id='existing-payment-methods' class='compact-details' style='margin-top:8px'>
           <summary>{{ tr('Review Existing Payment Methods') }} ({{ payment_methods|length }})</summary>
           <div style='margin-top:12px'>
             {% for method in payment_methods %}
@@ -203,7 +236,7 @@
   {% endif %}
 
   {% set paid_rows = payment_rows|selectattr('status', 'eq', 'paid')|list %}
-  <details class='compact-details' style='margin-top:16px'>
+  <details id='fee-history' class='compact-details' style='margin-top:16px'>
     <summary>{{ tr('Administrator Fee History') }}{% if paid_rows %} ({{ paid_rows|length }}){% endif %}</summary>
     <div class='card' style='margin-top:12px;box-shadow:none;border:1px solid #E6ECF2'>
       {% if paid_rows %}
@@ -240,6 +273,20 @@ document.addEventListener('DOMContentLoaded', function () {
     typeSelect.addEventListener('change', updateFields);
     updateFields();
   });
+
+  function openTargetDetailsFromHash() {
+    if (!window.location.hash) return;
+    var target = document.querySelector(window.location.hash);
+    if (!target) return;
+    var details = target.closest('details');
+    if (details) {
+      details.open = true;
+    }
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  openTargetDetailsFromHash();
+  window.addEventListener('hashchange', openTargetDetailsFromHash);
 });
 </script>
 {% endblock %}
