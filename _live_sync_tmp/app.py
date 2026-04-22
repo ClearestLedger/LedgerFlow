@@ -5722,6 +5722,40 @@ def log_account_activity(conn, *, client_id=None, account_type='login', account_
     )
 
 
+def audit_row_value(row, key: str, default=''):
+    if row is None:
+        return default
+    try:
+        value = row[key]
+    except Exception:
+        value = default
+    return default if value is None else value
+
+
+def log_auth_activity(conn, *, client_id=None, actor=None, account_type='login', account_email='', account_name='', status='event', detail=''):
+    log_account_activity(
+        conn,
+        client_id=client_id,
+        account_type=account_type,
+        account_email=account_email or audit_row_value(actor, 'email', ''),
+        account_name=account_name or audit_row_value(actor, 'full_name', audit_row_value(actor, 'name', '')),
+        created_by_user_id=audit_row_value(actor, 'id', None),
+        status=status,
+        detail=detail,
+    )
+
+
+def log_billing_activity(conn, *, client_id, actor, status='updated', detail=''):
+    log_auth_activity(
+        conn,
+        client_id=client_id,
+        actor=actor,
+        account_type='billing_change',
+        status=status,
+        detail=detail,
+    )
+
+
 def log_email_delivery(*, client_id=None, email_type='', recipient_email='', recipient_name='', subject='', body_text='', body_html='', status='sent', error_message='', created_by_user_id=None, related_invite_id=None, related_user_id=None, tracking_token: str = '', opened_at: str = '', open_count: int = 0, clicked_at: str = '', click_count: int = 0, conn: sqlite3.Connection | None = None):
     owns_connection = conn is None
     db = conn or get_conn()
@@ -10906,6 +10940,14 @@ def login():
                             'SELECT id, trial_offer_days, preferred_language FROM clients WHERE id=?',
                             (user['client_id'],)
                         ).fetchone()
+                    log_auth_activity(
+                        conn,
+                        client_id=int(user['client_id'] or 0) or None,
+                        actor=user,
+                        account_type='login',
+                        status='login_success',
+                        detail='Administrator or business login completed through the main portal.',
+                    )
                     session.clear()
                     session['user_id'] = user['id']
                     session['preferred_language'] = normalize_language(
@@ -10957,6 +10999,14 @@ def login():
                         break
 
                 if valid_worker:
+                    log_auth_activity(
+                        conn,
+                        client_id=int(valid_worker['client_id'] or 0) or None,
+                        actor=valid_worker,
+                        account_type='worker_portal',
+                        status='login_success',
+                        detail='Worker login completed through the main portal.',
+                    )
                     session.clear()
                     session['worker_id'] = valid_worker['id']
                     session['preferred_language'] = normalize_language(valid_worker['preferred_language'] or selected_language)
@@ -10977,6 +11027,18 @@ def login():
                 flash(translate_text('Team member portal access is no longer active.', selected_language), 'error')
             else:
                 flash(translate_text('Invalid email or password.', selected_language), 'error')
+            with get_conn() as conn:
+                log_auth_activity(
+                    conn,
+                    client_id=None,
+                    actor=None,
+                    account_type='login',
+                    account_email=email,
+                    account_name='',
+                    status='login_failed',
+                    detail='Invalid administrator, business, or worker credentials submitted through the main portal.',
+                )
+                conn.commit()
     return render_template('login.html', setup_required=setup_required)
 
 
@@ -11209,6 +11271,14 @@ def worker_login():
                     valid_worker = worker
                     break
             if valid_worker:
+                log_auth_activity(
+                    conn,
+                    client_id=int(valid_worker['client_id'] or 0) or None,
+                    actor=valid_worker,
+                    account_type='worker_portal',
+                    status='login_success',
+                    detail='Worker login completed through the worker portal.',
+                )
                 session.clear()
                 session['worker_id'] = valid_worker['id']
                 session['preferred_language'] = normalize_language(valid_worker['preferred_language'] or selected_language)
@@ -11229,6 +11299,17 @@ def worker_login():
                 flash(translate_text('Team member portal access is no longer active.', selected_language), 'error')
             else:
                 flash(translate_text('Invalid team member email or password.', selected_language), 'error')
+            log_auth_activity(
+                conn,
+                client_id=None,
+                actor=None,
+                account_type='worker_portal',
+                account_email=email,
+                account_name='',
+                status='login_failed',
+                detail='Invalid or unavailable worker portal credentials submitted.',
+            )
+            conn.commit()
     return render_template('worker_login.html')
 
 
@@ -11239,9 +11320,9 @@ def forgot_password():
         selected_language = normalize_language(request.form.get('preferred_language') or session.get('preferred_language'))
         session['preferred_language'] = selected_language
         with get_conn() as conn:
-            user = conn.execute('SELECT id, role FROM users WHERE lower(email)=?', (email,)).fetchone() if email else None
+            user = conn.execute('SELECT id, role, client_id, full_name, email FROM users WHERE lower(email)=?', (email,)).fetchone() if email else None
             approved_worker = conn.execute(
-                '''SELECT id
+                '''SELECT id, client_id, name, email
                    FROM workers
                    WHERE lower(COALESCE(email,''))=?
                      AND COALESCE(portal_approval_status,'approved')='approved'
@@ -11269,6 +11350,14 @@ def forgot_password():
                     "INSERT INTO password_reset_requests (email, account_kind, account_id, token, status, expires_at, requester_ip) VALUES (?,?,?,?,?,?,?)",
                     (email, account_kind, account_id, token, 'pending', expires_at, (request.headers.get('X-Forwarded-For', '') or request.remote_addr or '')[:120])
                 )
+                log_auth_activity(
+                    conn,
+                    client_id=int(user['client_id'] or 0) if user else int(approved_worker['client_id'] or 0),
+                    actor=user if user else approved_worker,
+                    account_type='password_reset',
+                    status='requested',
+                    detail=f'Password reset requested for {account_label}.',
+                )
                 conn.commit()
                 if smtp_email_ready():
                     try:
@@ -11276,6 +11365,18 @@ def forgot_password():
                         send_password_reset_email(email, reset_link, account_label)
                     except Exception:
                         pass
+            else:
+                log_auth_activity(
+                    conn,
+                    client_id=None,
+                    actor=None,
+                    account_type='password_reset',
+                    account_email=email,
+                    account_name='',
+                    status='requested_unknown',
+                    detail='Password reset requested for an unknown or unavailable email.',
+                )
+                conn.commit()
         flash(
             translate_text(
                 'If the email exists in {app_name}, a password reset request has been submitted. Check your email if delivery is enabled, or contact your administrator.',
@@ -11322,11 +11423,22 @@ def reset_password(token):
                 password_hash = generate_password_hash(password)
                 if reset_row['account_kind'] == 'user':
                     conn.execute('UPDATE users SET password_hash=? WHERE id=?', (password_hash, reset_row['account_id']))
+                    account_actor = conn.execute('SELECT id, client_id, full_name, email FROM users WHERE id=?', (reset_row['account_id'],)).fetchone()
                 else:
                     conn.execute('UPDATE workers SET portal_password_hash=? WHERE id=?', (password_hash, reset_row['account_id']))
+                    account_actor = conn.execute('SELECT id, client_id, name, email FROM workers WHERE id=?', (reset_row['account_id'],)).fetchone()
                 conn.execute(
                     "UPDATE password_reset_requests SET status='used', used_at=CURRENT_TIMESTAMP WHERE id=?",
                     (reset_row['id'],)
+                )
+                log_auth_activity(
+                    conn,
+                    client_id=int(audit_row_value(account_actor, 'client_id', 0) or 0) or None,
+                    actor=account_actor,
+                    account_type='password_reset',
+                    account_email=reset_row['email'],
+                    status='completed',
+                    detail='Password reset completed through the public reset flow.',
                 )
                 conn.commit()
                 flash(translate_text('Password reset complete. Sign in with your new password.', selected_language), 'success')
@@ -11385,6 +11497,13 @@ def cpa_dashboard():
                             client_id,
                         )
                     )
+                    log_billing_activity(
+                        conn,
+                        client_id=client_id,
+                        actor=user,
+                        status='subscription_profile_updated',
+                        detail=f"Administrator updated subscription profile to {cleaned['subscription_status']} on {cleaned['subscription_plan_code'] or 'custom plan'}.",
+                    )
                     conn.commit()
                     flash('Subscription billing foundation updated.', 'success')
                 else:
@@ -11429,6 +11548,13 @@ def cpa_dashboard():
                         )
                     )
                     sync_client_payment_method_summary(conn, client_id)
+                    log_billing_activity(
+                        conn,
+                        client_id=client_id,
+                        actor=user,
+                        status='payment_method_added',
+                        detail=f"Administrator added payment method '{cleaned['label']}'.",
+                    )
                     conn.commit()
                     flash('Payment method record saved.', 'success')
                 else:
@@ -11473,6 +11599,13 @@ def cpa_dashboard():
                         )
                     )
                     sync_client_payment_method_summary(conn, row['client_id'])
+                    log_billing_activity(
+                        conn,
+                        client_id=row['client_id'],
+                        actor=user,
+                        status='payment_method_updated',
+                        detail=f"Administrator updated payment method '{cleaned['label']}'.",
+                    )
                     conn.commit()
                     flash('Payment method updated.', 'success')
                 else:
@@ -11485,6 +11618,13 @@ def cpa_dashboard():
                 if row and row['client_id'] in visible_client_ids(user):
                     conn.execute('DELETE FROM business_payment_methods WHERE id=?', (method_id,))
                     sync_client_payment_method_summary(conn, row['client_id'])
+                    log_billing_activity(
+                        conn,
+                        client_id=row['client_id'],
+                        actor=user,
+                        status='payment_method_deleted',
+                        detail=f"Administrator removed payment method '{row['label'] or 'unnamed method'}'.",
+                    )
                     conn.commit()
                     flash('Payment method removed.', 'success')
                     return redirect(url_for('cpa_dashboard', client_id=row['client_id']))
@@ -12720,6 +12860,13 @@ def business_payments_page():
                         client_id,
                     )
                 )
+                log_billing_activity(
+                    conn,
+                    client_id=client_id,
+                    actor=user,
+                    status='subscription_preferences_updated',
+                    detail=f"Business updated subscription billing preferences. Autopay={'on' if autopay_enabled else 'off'}.",
+                )
                 conn.commit()
                 flash('Subscription billing preferences updated.', 'success')
                 return redirect(url_for('business_payments_page', client_id=client_id))
@@ -12756,6 +12903,13 @@ def business_payments_page():
                         )
                     )
                     sync_client_payment_method_summary(conn, client_id)
+                    log_billing_activity(
+                        conn,
+                        client_id=client_id,
+                        actor=user,
+                        status='payment_method_added',
+                        detail=f"Business added payment method '{cleaned['label']}'.",
+                    )
                     conn.commit()
                     flash('Payment method saved.', 'success')
                 else:
@@ -12801,6 +12955,13 @@ def business_payments_page():
                         )
                     )
                     sync_client_payment_method_summary(conn, client_id)
+                    log_billing_activity(
+                        conn,
+                        client_id=client_id,
+                        actor=user,
+                        status='payment_method_updated',
+                        detail=f"Business updated payment method '{cleaned['label']}'.",
+                    )
                     conn.commit()
                     flash('Payment method updated.', 'success')
                 else:
@@ -12809,9 +12970,17 @@ def business_payments_page():
                 return redirect(url_for('business_payments_page', client_id=client_id))
             elif action == 'delete_payment_method':
                 method_id = request.form.get('payment_method_id', type=int)
+                existing_method = conn.execute('SELECT * FROM business_payment_methods WHERE id=? AND client_id=?', (method_id, client_id)).fetchone() if method_id else None
                 deleted = conn.execute('DELETE FROM business_payment_methods WHERE id=? AND client_id=?', (method_id, client_id))
                 if deleted.rowcount:
                     sync_client_payment_method_summary(conn, client_id)
+                    log_billing_activity(
+                        conn,
+                        client_id=client_id,
+                        actor=user,
+                        status='payment_method_deleted',
+                        detail=f"Business removed payment method '{(existing_method['label'] if existing_method else '') or 'unnamed method'}'.",
+                    )
                     conn.commit()
                     flash('Payment method removed.', 'success')
                 else:

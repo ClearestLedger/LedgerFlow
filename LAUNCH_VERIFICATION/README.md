@@ -116,3 +116,22 @@ Phase 4 passes only if:
 - the Trust page loads publicly and includes Privacy, Terms, Disclaimer, vendor, billing-boundary, and AI-posture disclosures
 - login still links to Terms/Privacy access
 - create-account still links to Terms/Privacy access
+
+Phase 5 goal
+
+- verify the Trust page now reads as a fuller launch-grade legal/public wording surface
+- verify the page includes contact/request handling and retention/deletion sections
+- verify the wording covers payroll/tax-context privacy scope, public-link responsibility, and no-guarantee boundaries
+
+Phase 5 outputs
+
+- `PHASE5_RESULTS.json`
+- `PHASE5_REPORT.md`
+
+Phase 5 pass rule
+
+Phase 5 passes only if:
+
+- the Trust page includes the expanded privacy, terms, security, disclaimer, contact, and retention wording
+- the public legal page exposes a support/request path
+- the public legal page discloses archive/backup/deletion limitations
