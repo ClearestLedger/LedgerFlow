@@ -2471,7 +2471,16 @@ def quick_search_rank(query: str, entry: dict) -> int:
         return 0
     haystack = entry.get('search_text', '')
     aliases = entry.get('search_aliases', [])
+    title_text = normalize_search_text(entry.get('title', ''))
+    description_text = normalize_search_text(entry.get('description', ''))
+    category_text = normalize_search_text(entry.get('category', ''))
     score = 0
+    if normalized_query == title_text:
+        score = max(score, 128)
+    elif title_text and normalized_query in title_text:
+        score = max(score, 104)
+    elif title_text and title_text in normalized_query:
+        score = max(score, 90)
     for alias in aliases:
         if normalized_query == alias:
             score = max(score, 120)
@@ -2487,11 +2496,28 @@ def quick_search_rank(query: str, entry: dict) -> int:
     if not tokens:
         tokens = normalized_query.split()
     haystack_tokens = set(haystack.split())
+    matched_tokens = 0
     for token in tokens:
         if token in haystack_tokens:
             score += 12
+            matched_tokens += 1
         elif token and token in haystack:
             score += 7
+            matched_tokens += 1
+        elif token and token in title_text:
+            score += 10
+            matched_tokens += 1
+        elif token and token in description_text:
+            score += 5
+            matched_tokens += 1
+        elif token and token in category_text:
+            score += 4
+            matched_tokens += 1
+    if tokens:
+        coverage = matched_tokens / max(len(tokens), 1)
+        score += int(coverage * 36)
+        if matched_tokens >= len(tokens):
+            score += 22
     return score
 
 
@@ -2504,7 +2530,7 @@ def quick_search_matches(query: str, entries: list[dict]) -> list[dict]:
     return sorted(ranked, key=lambda item: (-item['score'], item['title']))
 
 
-def quick_search_entry(title: str, url: str, current_language: str, *, description: str = '', category: str = '', aliases: tuple[str, ...] = ()) -> dict:
+def quick_search_entry(title: str, url: str, current_language: str, *, description: str = '', category: str = '', aliases: tuple[str, ...] = (), context_label: str = '') -> dict:
     localized_title = translate_text(title, current_language)
     localized_description = translate_text(description, current_language) if description else ''
     localized_category = translate_text(category, current_language) if category else ''
@@ -2517,7 +2543,141 @@ def quick_search_entry(title: str, url: str, current_language: str, *, descripti
         'url': url,
         'search_text': search_text,
         'search_aliases': alias_terms,
+        'context_label': context_label,
     }
+
+
+def quick_search_workspace_url(endpoint: str, *, user=None, current_mode: str = 'guest', active_client=None, **values) -> str:
+    params = {key: value for key, value in values.items() if value not in (None, '')}
+    if user and row_value(user, 'role', '') == 'admin' and current_mode == 'business' and active_client:
+        params.setdefault('client_id', int(active_client['id']))
+    return url_for(endpoint, **params)
+
+
+def quick_search_business_scope_terms(client_row) -> tuple[str, ...]:
+    client_id = int(row_value(client_row, 'id', 0) or 0)
+    business_name = (row_value(client_row, 'business_name', '') or '').strip()
+    contact_name = (row_value(client_row, 'contact_name', '') or '').strip()
+    category = (row_value(client_row, 'business_category', '') or '').strip()
+    status = (row_value(client_row, 'record_status', '') or '').strip()
+    base_terms = [
+        business_name,
+        contact_name,
+        category,
+        f'business {client_id}' if client_id else '',
+        f'company {business_name}' if business_name else '',
+        f'client {business_name}' if business_name else '',
+        f'select business {business_name}' if business_name else '',
+        f'workspace {business_name}' if business_name else '',
+        f'business status {status}' if status else '',
+    ]
+    return tuple(term for term in base_terms if term)
+
+
+def quick_search_business_entries(client_row, current_language: str) -> list[dict]:
+    client_id = int(row_value(client_row, 'id', 0) or 0)
+    if not client_id:
+        return []
+    business_name = (row_value(client_row, 'business_name', '') or '').strip() or f'Business {client_id}'
+    business_terms = quick_search_business_scope_terms(client_row)
+    context_label = business_name
+
+    def entry(page_title: str, endpoint: str, *, description: str, category: str, aliases: tuple[str, ...] = (), include_sales: bool = False) -> dict | None:
+        if include_sales and not sales_workspace_access_enabled(client_row):
+            return None
+        route_aliases = (
+            f'{business_name} {page_title}',
+            f'business {client_id} {page_title}',
+            f'{business_name} {category}',
+            *business_terms,
+            *aliases,
+        )
+        return quick_search_entry(
+            f'{business_name} · {page_title}',
+            url_for(endpoint, client_id=client_id),
+            current_language,
+            description=description,
+            category=category,
+            aliases=route_aliases,
+            context_label=context_label,
+        )
+
+    entries = [
+        entry('Owner View', 'dashboard', description=f'Open the owner financial snapshot for {business_name}.', category='Business Search', aliases=('dashboard', 'owner view', 'financial snapshot', 'profit view')),
+        entry('Clients & Sales', 'customer_sales', description=f'Open saved clients, recurring work, and client profit visibility for {business_name}.', category='Business Search', aliases=('clients', 'client list', 'sales', 'customers', 'profit per client'), include_sales=True),
+        entry('Invoices & Income', 'invoices', description=f'Open invoices, receipts, and internal income records for {business_name}.', category='Business Search', aliases=('invoices', 'invoice', 'income', 'receipts', 'billing records')),
+        entry('Reports', 'reports', description=f'Open reports and business totals for {business_name}.', category='Business Search', aliases=('reports', 'financial reports', 'numbers', 'profit report')),
+        entry('Schedule', 'ops_schedule', description=f'Open the schedule and agenda for {business_name}.', category='Business Search', aliases=('schedule', 'calendar', 'agenda', 'appointments')),
+        entry('Dispatch', 'ops_dispatch', description=f'Open dispatch and active field coordination for {business_name}.', category='Business Search', aliases=('dispatch', 'routing', 'crew dispatch')),
+        entry('Team', 'ops_team', description=f'Open team members, crew assignments, and labor visibility for {business_name}.', category='Business Search', aliases=('team', 'workers', 'crew', 'team members')),
+        entry('Activity', 'ops_activity', description=f'Open recent operations activity and notes for {business_name}.', category='Business Search', aliases=('activity', 'history', 'recent activity')),
+        entry('Business Profile', 'clients', description=f'Open owners, job scope, and business profile details for {business_name}.', category='Business Search', aliases=('profile', 'owners', 'job scope', 'company info', 'business profile')),
+        entry('Billing', 'business_payments_page', description=f'Open subscription and billing controls for {business_name}.', category='Business Search', aliases=('billing', 'subscription', 'plan', 'autopay')),
+    ]
+    return [item for item in entries if item]
+
+
+def quick_search_direct_business_match(query: str, user) -> str | None:
+    if not user or row_value(user, 'role', '') != 'admin':
+        return None
+    normalized_query = normalize_search_text(query)
+    if not normalized_query:
+        return None
+    route_aliases = [
+        (('clients', 'client', 'customers', 'sales'), 'customer_sales'),
+        (('estimate', 'estimates', 'quote', 'quotes'), 'estimates'),
+        (('invoice', 'invoices', 'receipt', 'receipts', 'income'), 'invoices'),
+        (('report', 'reports', 'profit', 'financials'), 'reports'),
+        (('team', 'workers', 'crew'), 'ops_team'),
+        (('dispatch', 'routing', 'route'), 'ops_dispatch'),
+        (('schedule', 'calendar', 'agenda'), 'ops_schedule'),
+        (('activity', 'history'), 'ops_activity'),
+        (('profile', 'owners', 'job scope'), 'clients'),
+        (('billing', 'subscription', 'plan'), 'business_payments_page'),
+    ]
+    with get_conn() as conn:
+        client_rows = conn.execute(
+            '''SELECT *
+               FROM clients
+               ORDER BY CASE WHEN COALESCE(record_status,'active')='active' THEN 0 ELSE 1 END,
+                        LOWER(COALESCE(business_name,'')),
+                        id'''
+        ).fetchall()
+    best_client = None
+    best_score = 0
+    for client_row in client_rows:
+        client_id = int(row_value(client_row, 'id', 0) or 0)
+        if not client_id or not allowed_client(user, client_id):
+            continue
+        business_name = normalize_search_text(row_value(client_row, 'business_name', ''))
+        contact_name = normalize_search_text(row_value(client_row, 'contact_name', ''))
+        client_tokens = [token for token in [business_name, contact_name, f'business {client_id}', f'client {client_id}'] if token]
+        score = 0
+        for token in client_tokens:
+            if token and token in normalized_query:
+                score = max(score, len(token.split()) * 10 + 18)
+        if business_name:
+            business_words = [word for word in business_name.split() if word and word not in SEARCH_STOP_WORDS]
+            if business_words and all(word in normalized_query for word in business_words):
+                score = max(score, len(business_words) * 12 + 26)
+        if score > best_score:
+            best_score = score
+            best_client = client_row
+    if not best_client:
+        return None
+    matched_endpoint = None
+    for keywords, endpoint in route_aliases:
+        if any(keyword in normalized_query for keyword in keywords):
+            matched_endpoint = endpoint
+            break
+    if not matched_endpoint:
+        matched_endpoint = 'dashboard'
+    if matched_endpoint in {'customer_sales', 'estimates'} and not sales_workspace_access_enabled(best_client):
+        matched_endpoint = 'dashboard'
+    route_params = {'client_id': int(best_client['id'])}
+    if matched_endpoint == 'clients':
+        route_params['workspace'] = 1
+    return url_for(matched_endpoint, **route_params)
 
 
 def quick_search_catalog(user=None, worker=None, active_client=None, current_mode: str = 'guest', current_language: str = 'en') -> list[dict]:
@@ -2547,44 +2707,60 @@ def quick_search_catalog(user=None, worker=None, active_client=None, current_mod
             quick_search_entry('IRS Tips', url_for('irs_tips'), current_language, description='Read IRS and tax-readiness guidance references.', category='Administrator', aliases=('irs', 'tax', 'taxes', 'impostos', 'impuestos')),
             quick_search_entry('Help', url_for('help_center'), current_language, description='Open the help center and support area.', category='Administrator', aliases=('support', 'help', 'ajuda', 'soporte')),
         ])
+        with get_conn() as conn:
+            client_rows = conn.execute(
+                '''SELECT *
+                   FROM clients
+                   ORDER BY CASE WHEN COALESCE(record_status,'active')='active' THEN 0 ELSE 1 END,
+                            LOWER(COALESCE(business_name,'')),
+                            id'''
+            ).fetchall()
+        for client_row in client_rows:
+            entries.extend(quick_search_business_entries(client_row, current_language))
         return entries
 
     if not active_client:
         return entries
 
     client_id = int(active_client['id'])
+    workspace_url = lambda endpoint, **params: quick_search_workspace_url(
+        endpoint,
+        user=user,
+        current_mode=current_mode,
+        active_client=active_client,
+        **params,
+    )
     sales_enabled = sales_workspace_access_enabled(active_client)
-    premium_enabled = premium_sales_access_enabled(active_client)
     entries.extend([
-        quick_search_entry('Welcome Center', url_for('welcome_center', client_id=client_id), current_language, description='Start from the guided owner welcome and first-step overview.', category='Business Workspace', aliases=('welcome', 'tutorial', 'start', 'inicio', 'boas vindas')),
-        quick_search_entry('Owner View', url_for('dashboard', client_id=client_id), current_language, description='See owner-level revenue, profit, invoices, and weekly financial focus.', category='Business Workspace', aliases=('dashboard', 'home', 'overview', 'owner', 'financial snapshot', 'visao do dono')),
-        quick_search_entry('Jobs', url_for('ops_jobs', client_id=client_id), current_language, description='Manage jobs, pricing, labor, materials, and job profit.', category='Operations', aliases=('job', 'jobs', 'services', 'trabalhos', 'servicos', 'profit per job')),
-        quick_search_entry('Jobs & Profit', url_for('ops_overview', client_id=client_id), current_language, description='Review profit visibility and job engine controls in one place.', category='Operations', aliases=('profit', 'numbers', 'lucro', 'ganancia', 'job profit')),
-        quick_search_entry('Invoices & Income', url_for('invoices', client_id=client_id), current_language, description='Track customer invoices, receipts, and internal income records.', category='Financial Core', aliases=('invoice', 'invoices', 'income', 'receipt', 'receipts', 'faturas', 'facturas', 'recibo', 'payments')),
-        quick_search_entry('Reports', url_for('reports', client_id=client_id), current_language, description='Review financial reports, totals, and business trends.', category='Financial Core', aliases=('report', 'reports', 'financials', 'relatorios', 'reportes', 'profit report')),
-        quick_search_entry('Billing', url_for('business_payments_page', client_id=client_id), current_language, description='Manage the subscription, billing method, and renewal settings.', category='Financial Core', aliases=('billing', 'subscription', 'plan', 'plans', 'autopay', 'cobranca', 'faturamento')),
-        quick_search_entry('Mileage', url_for('mileage', client_id=client_id), current_language, description='Track mileage deductions and travel-based records.', category='Financial Core', aliases=('miles', 'mile', 'mileage', 'quilometragem', 'kilometraje')),
-        quick_search_entry('Schedule', url_for('ops_schedule', client_id=client_id), current_language, description='Open the business calendar and scheduled work view.', category='Operations', aliases=('calendar', 'agenda', 'calendario', 'appointments')),
-        quick_search_entry('Dispatch', url_for('ops_dispatch', client_id=client_id), current_language, description='Manage dispatch and active job coordination.', category='Operations', aliases=('dispatch', 'routing', 'rota', 'despacho')),
-        quick_search_entry('Team', url_for('ops_team', client_id=client_id), current_language, description='Review team members, crew assignments, and labor visibility.', category='Operations', aliases=('team', 'workers', 'crew', 'equipe', 'equipo', 'team members')),
-        quick_search_entry('Availability', url_for('ops_availability', client_id=client_id), current_language, description='Check worker availability and time-off context.', category='Operations', aliases=('availability', 'time off', 'disponibilidade', 'disponibilidad')),
-        quick_search_entry('Activity', url_for('ops_activity', client_id=client_id), current_language, description='Review recent operational activity and history.', category='Operations', aliases=('activity', 'recent activity', 'history', 'atividade', 'actividad')),
-        quick_search_entry('Locations', url_for('ops_locations', client_id=client_id), current_language, description='Manage saved service locations and client addresses.', category='Library', aliases=('locations', 'addresses', 'service addresses', 'locais', 'ubicaciones')),
-        quick_search_entry('Templates', url_for('ops_templates', client_id=client_id), current_language, description='Open reusable job templates and scope wording.', category='Library', aliases=('templates', 'template', 'modelos', 'plantillas')),
-        quick_search_entry('Business Profile', url_for('clients', client_id=client_id, workspace=1), current_language, description='Edit owners, job scopes, and business profile details.', category='Business Workspace', aliases=('profile', 'company info', 'owners', 'owner contacts', 'job scope', 'perfil da empresa')),
-        quick_search_entry('Read-Only Summary', url_for('summary', client_id=client_id), current_language, description='Open the business summary snapshot with key totals.', category='Business Workspace', aliases=('summary', 'snapshot', 'resumo', 'resumen')),
-        quick_search_entry('Help', url_for('help_center', client_id=client_id), current_language, description='Send support questions or suggestions to the administrator.', category='Business Workspace', aliases=('help', 'support', 'ajuda', 'soporte')),
+        quick_search_entry('Welcome Center', workspace_url('welcome_center'), current_language, description='Start from the guided owner welcome and first-step overview.', category='Business Workspace', aliases=('welcome', 'tutorial', 'start', 'inicio', 'boas vindas')),
+        quick_search_entry('Owner View', workspace_url('dashboard'), current_language, description='See owner-level revenue, profit, invoices, and weekly financial focus.', category='Business Workspace', aliases=('dashboard', 'home', 'overview', 'owner', 'financial snapshot', 'visao do dono')),
+        quick_search_entry('Jobs', workspace_url('ops_jobs'), current_language, description='Manage jobs, pricing, labor, materials, and job profit.', category='Operations', aliases=('job', 'jobs', 'services', 'trabalhos', 'servicos', 'profit per job')),
+        quick_search_entry('Jobs & Profit', workspace_url('ops_overview'), current_language, description='Review profit visibility and job engine controls in one place.', category='Operations', aliases=('profit', 'numbers', 'lucro', 'ganancia', 'job profit')),
+        quick_search_entry('Invoices & Income', workspace_url('invoices'), current_language, description='Track customer invoices, receipts, and internal income records.', category='Financial Core', aliases=('invoice', 'invoices', 'income', 'receipt', 'receipts', 'faturas', 'facturas', 'recibo', 'payments')),
+        quick_search_entry('Reports', workspace_url('reports'), current_language, description='Review financial reports, totals, and business trends.', category='Financial Core', aliases=('report', 'reports', 'financials', 'relatorios', 'reportes', 'profit report')),
+        quick_search_entry('Billing', workspace_url('business_payments_page'), current_language, description='Manage the subscription, billing method, and renewal settings.', category='Financial Core', aliases=('billing', 'subscription', 'plan', 'plans', 'autopay', 'cobranca', 'faturamento')),
+        quick_search_entry('Mileage', workspace_url('mileage'), current_language, description='Track mileage deductions and travel-based records.', category='Financial Core', aliases=('miles', 'mile', 'mileage', 'quilometragem', 'kilometraje')),
+        quick_search_entry('Schedule', workspace_url('ops_schedule'), current_language, description='Open the business calendar and scheduled work view.', category='Operations', aliases=('calendar', 'agenda', 'calendario', 'appointments')),
+        quick_search_entry('Dispatch', workspace_url('ops_dispatch'), current_language, description='Manage dispatch and active job coordination.', category='Operations', aliases=('dispatch', 'routing', 'rota', 'despacho')),
+        quick_search_entry('Team', workspace_url('ops_team'), current_language, description='Review team members, crew assignments, and labor visibility.', category='Operations', aliases=('team', 'workers', 'crew', 'equipe', 'equipo', 'team members')),
+        quick_search_entry('Availability', workspace_url('ops_availability'), current_language, description='Check worker availability and time-off context.', category='Operations', aliases=('availability', 'time off', 'disponibilidade', 'disponibilidad')),
+        quick_search_entry('Activity', workspace_url('ops_activity'), current_language, description='Review recent operational activity and history.', category='Operations', aliases=('activity', 'recent activity', 'history', 'atividade', 'actividad')),
+        quick_search_entry('Locations', workspace_url('ops_locations'), current_language, description='Manage saved service locations and client addresses.', category='Library', aliases=('locations', 'addresses', 'service addresses', 'locais', 'ubicaciones')),
+        quick_search_entry('Templates', workspace_url('ops_templates'), current_language, description='Open reusable job templates and scope wording.', category='Library', aliases=('templates', 'template', 'modelos', 'plantillas')),
+        quick_search_entry('Business Profile', workspace_url('clients', workspace=1), current_language, description='Edit owners, job scopes, and business profile details.', category='Business Workspace', aliases=('profile', 'company info', 'owners', 'owner contacts', 'job scope', 'perfil da empresa')),
+        quick_search_entry('Read-Only Summary', workspace_url('summary'), current_language, description='Open the business summary snapshot with key totals.', category='Business Workspace', aliases=('summary', 'snapshot', 'resumo', 'resumen')),
+        quick_search_entry('Help', workspace_url('help_center'), current_language, description='Send support questions or suggestions to the administrator.', category='Business Workspace', aliases=('help', 'support', 'ajuda', 'soporte')),
     ])
     if sales_enabled:
         entries.append(
-            quick_search_entry('Clients & Sales', url_for('customer_sales', client_id=client_id), current_language, description='Manage clients, recurring visits, sales workflow, and client profit visibility.', category='Sales Documents', aliases=('clients', 'client list', 'customers', 'sales', 'clientes', 'vendas', 'ventas', 'profit per client'))
+            quick_search_entry('Clients & Sales', workspace_url('customer_sales'), current_language, description='Manage clients, recurring visits, sales workflow, and client profit visibility.', category='Sales Documents', aliases=('clients', 'client list', 'customers', 'sales', 'clientes', 'vendas', 'ventas', 'profit per client'))
         )
         entries.append(
-            quick_search_entry('Estimates', url_for('estimates', client_id=client_id), current_language, description='Create and send estimates or convert them into invoices.', category='Sales Documents', aliases=('estimate', 'estimates', 'quote', 'quotes', 'orcamento', 'presupuesto'))
+            quick_search_entry('Estimates', workspace_url('estimates'), current_language, description='Create and send estimates or convert them into invoices.', category='Sales Documents', aliases=('estimate', 'estimates', 'quote', 'quotes', 'orcamento', 'presupuesto'))
         )
     if current_mode == 'business' and user['role'] == 'admin':
         entries.append(
-            quick_search_entry('Workers', url_for('workers', client_id=client_id), current_language, description='Manage team member payroll, forms, and worker portal access.', category='Operations', aliases=('worker records', 'w2', '1099', 'payroll', 'workers', 'funcionarios'))
+            quick_search_entry('Workers', workspace_url('workers'), current_language, description='Manage team member payroll, forms, and worker portal access.', category='Operations', aliases=('worker records', 'w2', '1099', 'payroll', 'workers', 'funcionarios'))
         )
     return entries
 
@@ -10257,6 +10433,11 @@ def quick_search():
             'error',
         )
         return redirect(fallback_next)
+
+    if user and user['role'] == 'admin' and not request.args.get('client_id', type=int):
+        direct_business_url = quick_search_direct_business_match(query, user)
+        if direct_business_url:
+            return redirect(direct_business_url)
 
     current_mode = 'guest'
     active_client = None

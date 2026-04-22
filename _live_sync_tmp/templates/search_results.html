@@ -19,6 +19,9 @@
             {{ tr('More matches') }}
           {% endif %}
         </div>
+        {% if result.context_label %}
+        <div class="quick-search-context">{{ result.context_label }}</div>
+        {% endif %}
         <h3>{{ tr(result.title) }}</h3>
       </div>
       {% if result.category %}

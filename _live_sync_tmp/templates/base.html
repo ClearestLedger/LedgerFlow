@@ -31,7 +31,7 @@
       <input type='hidden' name='client_id' value='{{ active_client.id }}'>
       {% endif %}
       <label class='sr-only' for='shell-search'>{{ tr('Quick Search') }}</label>
-      <input id='shell-search' type='search' name='q' placeholder='{{ tr("Type miles, team, invoices, reports, billing, or schedule") }}' autocomplete='off' required>
+      <input id='shell-search' type='search' name='q' placeholder='{{ tr("Search business, team, miles, invoices, reports, billing, or schedule") }}' autocomplete='off' required>
       <button type='submit'>{{ tr('Search') }}</button>
     </form>
     <form method='post' action='{{ url_for("set_language") }}' class='language-inline-form'>
