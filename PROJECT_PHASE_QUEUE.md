@@ -200,3 +200,10 @@
   - `Finance first` now opens the finance summary directly
   - `Profit per job visibility` now jumps straight into the Jobs page profit-entry form
   - Owner View now shows a direct profit-setup banner when jobs are missing pricing or profit data
+- Phase 1 clean launch verification completed on 2026-04-22:
+  - built a repeatable verifier that starts from the clean Render migration bundle, seeds one controlled demo business, and logs in as both admin and business user
+  - verified administrator-supervised and direct business-workspace routes across Owner View, Welcome Center, Jobs, Dispatch, Agenda, Team, Availability, Activity, Locations, Templates, Clients & Sales, Reports, and Summary
+  - the verifier writes `LAUNCH_VERIFICATION\\PHASE1_RESULTS.json` and `LAUNCH_VERIFICATION\\PHASE1_REPORT.md` so future phases can rerun the same gate before real clients are added
+  - Phase 1 sweep exposed one real bug in `Clients & Sales`: the page referenced a non-existent invoice `updated_at` field during sales-activity rollup
+  - fixed that bug by falling back to `sent_at`, `invoice_date`, and `created_at`, and made the page heading clearly read `Clients & Sales` for consistent route verification
+  - final Phase 1 result: clean pass on both admin-supervised and direct business-workspace route sweeps against the reset bundle

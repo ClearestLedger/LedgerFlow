@@ -13734,7 +13734,7 @@ def customer_sales():
             })
             activity['estimate_count'] += 1
             activity['last_estimate_status'] = status
-            activity['last_activity_at'] = max(activity['last_activity_at'], row['updated_at'] or row['invoice_date'] or '')
+            activity['last_activity_at'] = max(activity['last_activity_at'], row['sent_at'] or row['invoice_date'] or row['created_at'] or '')
 
         for row in invoice_source_rows:
             token = ensure_invoice_public_token(conn, row['id'])
@@ -13768,7 +13768,7 @@ def customer_sales():
             activity['invoice_count'] += 1
             activity['last_invoice_status'] = status
             activity['open_balance'] += balance_due
-            activity['last_activity_at'] = max(activity['last_activity_at'], row['updated_at'] or row['invoice_date'] or '')
+            activity['last_activity_at'] = max(activity['last_activity_at'], row['sent_at'] or row['invoice_date'] or row['created_at'] or '')
 
     customer_activity = sorted(
         customer_activity_map.values(),
