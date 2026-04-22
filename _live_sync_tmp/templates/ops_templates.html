@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Templates</div>
+    <div class='page-title'>Job Templates</div>
+    <div class='page-subtitle'>Reusable job blueprints for common service work, expected durations, crew defaults, and operational checklists.</div>
+  </div>
+  <div class='stack-actions'>
+    <a class='btn btn-secondary' href='{{ url_for("ops_jobs", client_id=client_id) }}'>Jobs</a>
+  </div>
+</div>
+
+<div class='grid cards-2 ops-jobs-layout'>
+  <div class='card' id='templateComposer'>
+    <div class='card-head'><h3>{% if selected_template %}Update Template{% else %}Add Template{% endif %}</h3><span class='badge'>Reusable</span></div>
+    <details class='compact-details' {% if selected_template %}open{% endif %}>
+      <summary>{% if selected_template %}{{ tr('Update Template') }}{% else %}{{ tr('Add Template') }}{% endif %}</summary>
+      <form method='post' class='form-grid' style='margin-top:12px'>
+        {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <input type='hidden' name='action' value='save_template'>
+        {% if selected_template %}<input type='hidden' name='template_id' value='{{ selected_template.id }}'>{% endif %}
+        <div><label>Template Name</label><input name='name' value='{{ selected_template.name if selected_template else "" }}' required></div>
+        <div><label>Service Type</label><select name='service_type_id'>{% for row in service_types %}<option value='{{ row.id }}' {% if selected_template and selected_template.service_type_id == row.id %}selected{% endif %}>{{ row.name }}</option>{% endfor %}</select></div>
+        <div><label>Default Job Title</label><input name='default_title' value='{{ selected_template.default_title if selected_template else "" }}'></div>
+        <div><label>Duration (min)</label><input type='number' name='default_duration_minutes' min='0' value='{{ selected_template.default_duration_minutes if selected_template else 120 }}'></div>
+        <div><label>Priority</label><select name='default_priority'>{% for value, label in priority_options %}<option value='{{ value }}' {% if selected_template and selected_template.default_priority == value %}selected{% elif not selected_template and value == 'normal' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+        <div><label>Crew Size</label><input type='number' name='default_crew_size' min='1' value='{{ selected_template.default_crew_size if selected_template else 1 }}'></div>
+        <div style='grid-column:1/-1'><label>Default Tags</label><input name='default_tags' value='{{ selected_template.default_tags if selected_template else "" }}' placeholder='recurring, west-route, premium'></div>
+        <div style='grid-column:1/-1'><label>Default Notes</label><textarea name='default_notes'>{{ selected_template.default_notes if selected_template else "" }}</textarea></div>
+        <div style='grid-column:1/-1'><label>Checklist</label><textarea name='checklist_text'>{{ selected_template.checklist_text if selected_template else "" }}</textarea></div>
+        <div><label style='display:flex;gap:8px;align-items:center;margin-top:30px'><input type='checkbox' name='is_active' value='1' {% if not selected_template or selected_template.is_active %}checked{% endif %}> Active template</label></div>
+        <div><button type='submit'>Save Template</button></div>
+      </form>
+    </details>
+    {% if selected_template %}
+    <form method='post' style='margin-top:12px'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <input type='hidden' name='action' value='delete_template'>
+      <input type='hidden' name='template_id' value='{{ selected_template.id }}'>
+      <button class='btn btn-secondary' type='submit'>Archive Template</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Saved Templates</h3><span class='badge'>{{ templates|length }}</span></div>
+    {% if templates %}
+    <div class='ops-card-list'>
+      {% for row in templates %}
+      <a class='ops-list-card {% if selected_template and selected_template.id == row.id %}is-selected{% endif %}' href='{{ url_for("ops_templates", client_id=client_id, template_id=row.id) }}'>
+        <div class='ops-list-top'>
+          <strong>{{ row.name }}</strong>
+          <span class='badge'>{{ row.service_type_name or 'Custom' }}</span>
+        </div>
+        <div class='small'>{{ row.default_title or 'Reusable job structure' }}</div>
+        <div class='small'>{{ row.default_duration_minutes or 0 }} min · crew {{ row.default_crew_size or 1 }}</div>
+        <div class='small'>{{ 'Active' if row.is_active else 'Archived' }}</div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>No templates saved.</strong><span>Templates make recurring service work much faster to dispatch.</span></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

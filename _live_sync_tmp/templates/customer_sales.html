@@ -7,11 +7,11 @@
     <div class='page-subtitle'>{{ tr('Customer workspace for saved return clients, hosted estimates, customer invoices, and repeat billing relationships.') }}</div>
   </div>
   <div class='stack-actions'>
-    <a class='btn' href='#addSavedClientForm'>{{ tr('Add Client') }}</a>
+    <a class='btn' href='#addSavedClientDetails'>{{ tr('Add Client') }}</a>
     {% if sales_workspace_enabled %}
-    <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>{{ tr('Create Estimate') }}</a>
+    <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}#estimateComposer'>{{ tr('Create Estimate') }}</a>
     {% endif %}
-    <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'>{{ tr('Create Invoice') }}</a>
+    <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceComposer'>{{ tr('Create Invoice') }}</a>
   </div>
 </div>
 
@@ -33,21 +33,26 @@
   <div class='card section-frame'>
     <div class='card-head'><h3>{{ tr('Client Actions') }}</h3><span class='badge'>{{ tr('Client Workspace') }}</span></div>
     <div class='small' style='margin-bottom:12px'>{{ tr('Jump directly from a saved client into scheduling, estimates, invoices, and receipts.') }}</div>
-    <div class='summary-strip' style='margin-bottom:14px'>
-      <span class='summary-pill'>{{ tr('Add Client') }}</span>
-      <span class='summary-pill'>{{ tr('Job Scope / Service Scope') }}</span>
-      <span class='summary-pill'>{{ tr('Add to Calendar') }}</span>
-      <span class='summary-pill'>{{ tr('Create Estimate') }}</span>
-      <span class='summary-pill'>{{ tr('Create Invoice') }}</span>
-      <span class='summary-pill'>{{ tr('Send Receipt') }}</span>
+    <div class='stack-actions client-action-grid' style='margin-bottom:14px'>
+      <a class='btn btn-secondary btn-sm' href='#addSavedClientDetails'>{{ tr('Add Client') }}</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("clients", client_id=client_id, workspace=1) }}'>{{ tr('Job Scope / Service Scope') }}</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("work_schedule", client_id=client_id) }}#scheduleComposer'>{{ tr('Add to Calendar') }}</a>
+      {% if sales_workspace_enabled %}
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("estimates", client_id=client_id) }}#estimateComposer'>{{ tr('Create Estimate') }}</a>
+      {% endif %}
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceComposer'>{{ tr('Create Invoice') }}</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}#savedCustomerInvoices'>{{ tr('Receipts') }}</a>
     </div>
+    <div class='small'>{{ tr('Receipts are sent from paid customer invoices after payment is marked or recorded.') }}</div>
   </div>
 
-  <div class='card section-frame'>
+  <div class='card section-frame' id='addSavedClientPanel'>
     <div class='card-head'><h3>{{ tr('Add Saved Client') }}</h3><span class='badge'>{{ tr('Recurring Customers') }}</span></div>
     <div class='small' style='margin-bottom:12px'>{{ tr('Saved customer records for repeat business, financial visibility, and faster quoting.') }}</div>
     <div class='small' style='margin-bottom:12px'>{{ tr('Use this for return clients whose work repeats on a regular schedule.') }}</div>
-    <form method='post' class='form-grid' id='addSavedClientForm'>
+    <details class='compact-details' id='addSavedClientDetails'>
+      <summary>{{ tr('Add Saved Client') }}</summary>
+      <form method='post' class='form-grid' id='addSavedClientForm' style='margin-top:12px'>
       <input type='hidden' name='action' value='add_customer_contact'>
       {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
       <div><label>{{ tr('Client Name') }}</label><input name='customer_name' required></div>
@@ -68,7 +73,8 @@
       <div style='grid-column:1/-1'><label>{{ tr('Job Scope / Service Scope') }}</label><textarea name='recurring_scope' placeholder='{{ tr("Example: exterior wash and wax, ceramic coating, interior detailing") }}'></textarea></div>
       <div style='grid-column:1/-1'><label><input type='checkbox' name='auto_add_to_calendar' value='1'> {{ tr('Auto-add upcoming visits to calendar') }}</label></div>
       <div><button type='submit'>{{ tr('Save Client') }}</button></div>
-    </form>
+      </form>
+    </details>
   </div>
 
   <div class='card section-frame'>
@@ -130,8 +136,9 @@
             <a class='btn btn-secondary btn-sm' href='{{ url_for("estimates", client_id=client_id, customer_contact_id=row.id) }}#estimateForm'>{{ tr('New Estimate') }}</a>
             {% endif %}
             <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id, customer_contact_id=row.id) }}#customerInvoiceForm'>{{ tr('New Invoice') }}</a>
+            <a class='btn btn-secondary btn-sm' href='#clientEditor-{{ row.id }}'>{{ tr('Edit Client') }}</a>
           </div>
-          <details class='compact-details client-inline-editor'>
+          <details class='compact-details client-inline-editor' id='clientEditor-{{ row.id }}'>
             <summary>{{ tr('Edit Client') }}</summary>
             <form method='post' class='form-grid' style='margin-top:12px'>
               <input type='hidden' name='action' value='update_customer_contact'>

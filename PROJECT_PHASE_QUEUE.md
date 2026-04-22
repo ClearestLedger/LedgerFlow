@@ -148,6 +148,12 @@
   - added a role-safe universal quick search box to the main workspace shell and the worker portal header
   - search now redirects users to the best matching page for terms like mileage, team, invoices, reports, billing, jobs, clients, and pay stubs without crossing business boundaries
   - added a fallback search results page for logged-in admin and business users when the query is broad and multiple in-scope matches are relevant
+- Phase 1 page stabilization and workflow hardening completed on 2026-04-22:
+  - client action shortcuts in Clients & Sales now jump into real workflow destinations instead of sitting as decorative pills
+  - folded composer forms now open safely by deep link across the workspace so hash links reveal the correct details panel instead of landing on hidden content
+  - administrator supervision can now open archived-business team, availability, activity, and template pages without breaking business data isolation
+  - sidebar navigation was tightened into cleaner grouped sections with less internal scrolling and clearer category shading
+  - authenticated sweep passed for business and administrator routes across dashboard, welcome center, clients and sales, invoices, estimates, reports, summary, work schedule, team, availability, activity, and templates
 
 ## Future Pricing Research Note
 

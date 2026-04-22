@@ -7105,7 +7105,7 @@ def visible_client_ids(user, *, include_non_active: bool = False):
     if user['role'] == 'admin':
         with get_conn() as conn:
             if include_non_active:
-                rows = conn.execute("SELECT id FROM clients WHERE COALESCE(record_status,'active')<>'archived' ORDER BY business_name").fetchall()
+                rows = conn.execute("SELECT id FROM clients ORDER BY business_name").fetchall()
             else:
                 rows = conn.execute("SELECT id FROM clients WHERE COALESCE(record_status,'active')='active' ORDER BY business_name").fetchall()
             return [r['id'] for r in rows]
@@ -7113,7 +7113,7 @@ def visible_client_ids(user, *, include_non_active: bool = False):
 
 
 def allowed_client(user, client_id):
-    return client_id in visible_client_ids(user)
+    return client_id in visible_client_ids(user, include_non_active=(user['role'] == 'admin'))
 
 
 def parse_date(value):

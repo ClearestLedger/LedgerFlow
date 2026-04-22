@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Availability</div>
+    <div class='page-title'>Crew Capacity & Availability</div>
+    <div class='page-subtitle'>Prevent overbooking, capture time-off impacts, and expose staffing conflicts before they become field problems.</div>
+  </div>
+  <div class='stack-actions'>
+    <a class='btn btn-secondary' href='{{ url_for("ops_dispatch", client_id=client_id) }}'>Dispatch</a>
+    <a class='btn btn-secondary' href='{{ url_for("ops_team", client_id=client_id) }}'>Team</a>
+  </div>
+</div>
+
+<div class='grid cards-2'>
+  <div class='card' id='availabilityComposer'>
+    <div class='card-head'><h3>Add Availability Block</h3><span class='badge'>Manager Entered</span></div>
+    <details class='compact-details'>
+      <summary>{{ tr('Add Availability Block') }}</summary>
+      <form method='post' class='form-grid' style='margin-top:12px'>
+        {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <input type='hidden' name='action' value='save_availability'>
+        <div><label>Worker</label><select name='worker_id'>{% for worker in workers %}<option value='{{ worker.id }}' {% if selected_worker_id == worker.id %}selected{% endif %}>{{ worker.name }}</option>{% endfor %}</select></div>
+        <div><label>Date</label><input type='date' name='available_date' value='{{ today_iso }}'></div>
+        <div><label>Status</label><select name='availability_status'>{% for value, label in availability_status_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+        <div><label>Start Time</label><input type='time' name='start_time'></div>
+        <div><label>End Time</label><input type='time' name='end_time'></div>
+        <div><label></label></div>
+        <div style='grid-column:1/-1'><label>Note</label><textarea name='note'></textarea></div>
+        <div><button type='submit'>Save Availability</button></div>
+      </form>
+    </details>
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Conflict Warnings</h3><span class='badge'>{{ conflicts|length }}</span></div>
+    {% if conflicts %}
+    <div class='ops-timeline'>
+      {% for conflict in conflicts[:12] %}
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>{{ conflict.worker_name }}</div>
+        <div class='small'>{{ conflict.detail }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class='empty-state'><strong>No availability conflicts detected.</strong><span>Current jobs and availability blocks are aligned.</span></div>
+    {% endif %}
+  </div>
+</div>
+
+<div class='card' style='margin-top:18px'>
+  <div class='card-head'><h3>Availability Blocks</h3><span class='badge'>{{ availability_rows|length }}</span></div>
+  {% if availability_rows %}
+  <table class='table'>
+    <tr><th>Worker</th><th>Date</th><th>Status</th><th>Window</th><th>Note</th><th>Action</th></tr>
+    {% for row in availability_rows %}
+    <tr>
+      <td>{{ row.worker_name }}</td>
+      <td>{{ row.available_date }}</td>
+      <td>{{ row.availability_status|replace('_', ' ')|title }}</td>
+      <td>{{ row.start_time or 'All day' }}{% if row.end_time %} - {{ row.end_time }}{% endif %}</td>
+      <td>{{ row.note or '—' }}</td>
+      <td>
+        <form method='post'>
+          {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+          <input type='hidden' name='action' value='delete_availability'>
+          <input type='hidden' name='availability_id' value='{{ row.id }}'>
+          <button class='btn btn-secondary btn-sm' type='submit'>Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class='empty-state'><strong>No availability blocks saved yet.</strong><span>Use blocks for time off, unavailable windows, or limited capacity warnings.</span></div>
+  {% endif %}
+</div>
+
+<div class='card' style='margin-top:18px'>
+  <div class='card-head'><h3>Worker Time-Off Requests</h3><span class='badge'>{{ time_off_rows|length }}</span></div>
+  {% if time_off_rows %}
+  <table class='table'>
+    <tr><th>Worker</th><th>Type</th><th>Dates</th><th>Status</th><th>Note</th></tr>
+    {% for row in time_off_rows %}
+    <tr>
+      <td>{{ row.worker_name }}</td>
+      <td>{{ row.request_type }}</td>
+      <td>{{ row.start_date }}{% if row.end_date and row.end_date != row.start_date %} to {{ row.end_date }}{% endif %}</td>
+      <td>{{ row.status|replace('_', ' ')|title }}</td>
+      <td>{{ row.note or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class='small'>No worker time-off requests are currently on file.</div>
+  {% endif %}
+</div>
+{% endblock %}

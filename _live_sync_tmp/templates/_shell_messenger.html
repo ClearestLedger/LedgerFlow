@@ -97,7 +97,7 @@
         ></textarea>
         <div class='chat-input-actions'>
           <div class='emoji-toolbar'>
-            <button type='button' class='emoji-toggle shell-emoji-toggle' data-picker='shellMessengerEmojiPicker' aria-expanded='false' aria-controls='shellMessengerEmojiPicker'>Emoji</button>
+            <button type='button' class='emoji-toggle shell-emoji-toggle' data-picker='shellMessengerEmojiPicker' aria-expanded='false' aria-controls='shellMessengerEmojiPicker'>&#128515; {{ tr('Emoji') }}</button>
             <div class='emoji-picker shell-emoji-picker' id='shellMessengerEmojiPicker' hidden>
               {% for icon in [('&#128172;',128172),('&#128578;',128578),('&#128077;',128077),('&#9989;',9989),('&#128204;',128204),('&#128197;',128197),('&#128181;',128181),('&#128161;',128161),('&#10024;',10024),('&#128640;',128640),('&#128588;',128588),('&#128226;',128226),('&#9200;',9200),('&#9888;&#65039;',9888),('&#128221;',128221),('&#128295;',128295),('&#128205;',128205),('&#127881;',127881)] %}
               <button type='button' class='emoji-option-inline shell-emoji-option' data-code='{{ icon[1] }}'>{{ icon[0]|safe }}</button>
