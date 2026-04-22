@@ -18,6 +18,7 @@
       </div>
     </div>
     <div class='header-right header-controls'>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("worker_time_summary") }}'>{{ tr('Back to Dashboard') }}</a>
       <form method='get' action='{{ url_for("quick_search") }}' class='workspace-search-form'>
         <input type='hidden' name='next' value='{{ current_request_path }}'>
         <label class='sr-only' for='worker-shell-search'>{{ tr('Quick Search') }}</label>

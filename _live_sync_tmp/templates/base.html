@@ -25,6 +25,15 @@
   </div>
   {% if current_user %}
   <div class='header-right header-controls'>
+    {% if current_user.role == 'admin' %}
+      {% if current_mode == 'business' and active_client %}
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Back to Dashboard') }}</a>
+      {% else %}
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("cpa_dashboard") }}'>{{ tr('Back to Dashboard') }}</a>
+      {% endif %}
+    {% elif active_client %}
+    <a class='btn btn-secondary btn-sm' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Back to Dashboard') }}</a>
+    {% endif %}
     <form method='get' action='{{ url_for("quick_search") }}' class='workspace-search-form'>
       <input type='hidden' name='next' value='{{ current_request_path }}'>
       {% if active_client %}
