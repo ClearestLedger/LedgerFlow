@@ -8320,29 +8320,53 @@ def migrate_legacy_schedule_to_jobs(conn: sqlite3.Connection):
 
 
 def prepare_ops_workspace(conn: sqlite3.Connection, client_id: int):
-    ops_ensure_reference_data(conn, client_id)
-    migrate_legacy_schedule_to_jobs(conn)
-    conn.commit()
+    try:
+        ops_ensure_reference_data(conn, client_id)
+        migrate_legacy_schedule_to_jobs(conn)
+        conn.commit()
+        return ''
+    except Exception as exc:
+        try:
+            conn.rollback()
+        except sqlite3.Error:
+            pass
+        return f"Operational workspace is still being stabilized for this business. ({str(exc)[:180]})"
+
+
+def safe_fetchall(conn: sqlite3.Connection, query: str, params=()):
+    try:
+        return conn.execute(query, params).fetchall()
+    except sqlite3.Error:
+        return []
+
+
+def safe_fetchone(conn: sqlite3.Connection, query: str, params=()):
+    try:
+        return conn.execute(query, params).fetchone()
+    except sqlite3.Error:
+        return None
 
 
 def ops_service_types(conn: sqlite3.Connection, client_id: int):
     prepare_ops_workspace(conn, client_id)
-    return conn.execute(
+    return safe_fetchall(
+        conn,
         'SELECT * FROM service_types WHERE client_id=? AND COALESCE(is_active, 1)=1 ORDER BY name',
         (client_id,),
-    ).fetchall()
+    )
 
 
 def ops_job_templates(conn: sqlite3.Connection, client_id: int):
     prepare_ops_workspace(conn, client_id)
-    return conn.execute(
+    return safe_fetchall(
+        conn,
         '''SELECT jt.*, st.name AS service_type_name
            FROM job_templates jt
            LEFT JOIN service_types st ON st.id = jt.service_type_id
            WHERE jt.client_id=?
            ORDER BY COALESCE(jt.is_active, 1) DESC, jt.name''',
         (client_id,),
-    ).fetchall()
+    )
 
 
 def ops_jobs_query(
@@ -8382,7 +8406,8 @@ def ops_jobs_query(
         clauses.append('substr(COALESCE(j.scheduled_start, ""), 1, 10) <= ?')
         params.append(date_to)
     where_sql = ' AND '.join(clauses)
-    return conn.execute(
+    return safe_fetchall(
+        conn,
         f'''SELECT
                 j.*,
                 COALESCE(st.name, j.service_type_name, 'Custom') AS service_type_label,
@@ -8429,29 +8454,31 @@ def ops_jobs_query(
                 COALESCE(j.scheduled_start, ''),
                 j.id DESC''',
         tuple(params),
-    ).fetchall()
+    )
 
 
 def ops_job_notes_for_job(conn: sqlite3.Connection, job_id: int):
-    return conn.execute(
+    return safe_fetchall(
+        conn,
         '''SELECT jn.*, u.full_name
            FROM job_notes jn
            LEFT JOIN users u ON u.id = jn.created_by_user_id
            WHERE jn.job_id=?
            ORDER BY jn.created_at DESC, jn.id DESC''',
         (job_id,),
-    ).fetchall()
+    )
 
 
 def ops_job_activity_for_job(conn: sqlite3.Connection, job_id: int, limit: int = 40):
-    return conn.execute(
+    return safe_fetchall(
+        conn,
         '''SELECT jal.*
            FROM job_activity_log jal
            WHERE jal.job_id=?
            ORDER BY jal.created_at DESC, jal.id DESC
            LIMIT ?''',
         (job_id, limit),
-    ).fetchall()
+    )
 
 
 def ops_finance_summary(conn: sqlite3.Connection, client_id: int):
@@ -8555,7 +8582,8 @@ def ops_owner_snapshot(conn: sqlite3.Connection, client_id: int):
 
 def ops_worker_rows(conn: sqlite3.Connection, client_id: int):
     today_iso = date.today().isoformat()
-    return conn.execute(
+    return safe_fetchall(
+        conn,
         '''SELECT
                w.*,
                COALESCE(NULLIF(w.worker_role, ''), NULLIF(w.role_classification, ''), 'Crew Member') AS ops_role,
@@ -8571,7 +8599,7 @@ def ops_worker_rows(conn: sqlite3.Connection, client_id: int):
            GROUP BY w.id
            ORDER BY CASE WHEN COALESCE(w.status, 'active')='active' THEN 0 ELSE 1 END, w.name''',
         (today_iso, client_id),
-    ).fetchall()
+    )
 
 
 def ops_availability_rows(conn: sqlite3.Connection, client_id: int, start_date: str = '', end_date: str = ''):
@@ -8583,19 +8611,21 @@ def ops_availability_rows(conn: sqlite3.Connection, client_id: int, start_date: 
     if end_date:
         clauses.append('wa.available_date<=?')
         params.append(end_date)
-    return conn.execute(
+    return safe_fetchall(
+        conn,
         f'''SELECT wa.*, w.name AS worker_name
             FROM worker_availability wa
             JOIN workers w ON w.id = wa.worker_id
             WHERE {' AND '.join(clauses)}
             ORDER BY wa.available_date, wa.start_time, w.name''',
         tuple(params),
-    ).fetchall()
+    )
 
 
 def ops_conflicts(conn: sqlite3.Connection, client_id: int):
     jobs = ops_jobs_query(conn, client_id=client_id)
-    assignments = conn.execute(
+    assignments = safe_fetchall(
+        conn,
         '''SELECT ja.job_id, ja.worker_id, w.name, COALESCE(w.status, 'active') AS worker_status
            FROM job_assignments ja
            JOIN workers w ON w.id = ja.worker_id
@@ -8604,7 +8634,7 @@ def ops_conflicts(conn: sqlite3.Connection, client_id: int):
              AND COALESCE(ja.status, 'assigned') <> 'removed'
              AND COALESCE(j.status, '') NOT IN ('completed', 'cancelled')''',
         (client_id,),
-    ).fetchall()
+    )
     jobs_by_id = {row['id']: row for row in jobs}
     conflicts = []
     by_worker = {}
@@ -8655,7 +8685,8 @@ def ops_conflicts(conn: sqlite3.Connection, client_id: int):
                     'detail': f"{row['name']} is marked {ops_label(availability_status)} during {job['title']}.",
                 })
                 break
-    time_off_rows = conn.execute(
+    time_off_rows = safe_fetchall(
+        conn,
         '''SELECT tor.*, w.name AS worker_name
            FROM worker_time_off_requests tor
            JOIN workers w ON w.id = tor.worker_id
@@ -8663,7 +8694,7 @@ def ops_conflicts(conn: sqlite3.Connection, client_id: int):
              AND COALESCE(tor.status, 'pending') IN ('pending', 'approved')
            ORDER BY tor.start_date, tor.end_date''',
         (client_id,),
-    ).fetchall()
+    )
     for row in time_off_rows:
         for worker_name, job in by_worker.get(row['worker_id'], []):
             job_date = ops_schedule_date(job['scheduled_start'])
@@ -8693,7 +8724,8 @@ def ops_recent_activity(conn: sqlite3.Connection, client_id: int, limit: int = 1
         term = f"%{search.strip().lower()}%"
         params.extend([term, term])
     params.append(limit)
-    return conn.execute(
+    return safe_fetchall(
+        conn,
         f'''SELECT jal.*, j.title AS job_title
             FROM job_activity_log jal
             LEFT JOIN jobs j ON j.id = jal.job_id
@@ -8701,7 +8733,7 @@ def ops_recent_activity(conn: sqlite3.Connection, client_id: int, limit: int = 1
             ORDER BY jal.created_at DESC, jal.id DESC
             LIMIT ?''',
         tuple(params),
-    ).fetchall()
+    )
 
 
 def ops_dashboard_summary(conn: sqlite3.Connection, client_id: int):
@@ -12460,25 +12492,28 @@ def dashboard():
     user = current_user()
     client_id = selected_client_id(user, 'get')
     with get_conn() as conn:
-        prepare_ops_workspace(conn, client_id)
-        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workspace_warning = prepare_ops_workspace(conn, client_id)
+        client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
         if not client or not allowed_client(user, client_id):
             abort(403)
-        worker_rows = conn.execute(
+        worker_rows = safe_fetchall(
+            conn,
             'SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name',
             (client_id,),
-        ).fetchall()
-        invoice_rows = conn.execute(
+        )
+        invoice_rows = safe_fetchall(
+            conn,
             "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate' ORDER BY invoice_date DESC, id DESC LIMIT 8",
             (client_id,),
-        ).fetchall()
-        payment_methods = conn.execute(
+        )
+        payment_methods = safe_fetchall(
+            conn,
             '''SELECT *
                FROM business_payment_methods
                WHERE client_id=?
                ORDER BY is_default DESC, is_backup DESC, updated_at DESC, id DESC''',
             (client_id,),
-        ).fetchall()
+        )
         owner_snapshot = ops_owner_snapshot(conn, client_id)
     admin_fee_summary = business_payment_summary(client_id)
     open_admin_fee_rows = [row for row in admin_fee_summary['rows'] if (row['status'] or 'pending') in {'pending', 'processing'}]
@@ -12495,6 +12530,7 @@ def dashboard():
         open_fee_guidance=open_fee_guidance(open_admin_fee_rows),
         review_request=latest_review_request(client_id),
         owner_snapshot=owner_snapshot,
+        ops_workspace_warning=workspace_warning,
     )
 
 
@@ -12504,8 +12540,8 @@ def ops_overview():
     user = current_user()
     client_id = selected_client_id(user, 'get')
     with get_conn() as conn:
-        prepare_ops_workspace(conn, client_id)
-        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workspace_warning = prepare_ops_workspace(conn, client_id)
+        client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
         if not client or not allowed_client(user, client_id):
             abort(403)
         worker_rows = ops_worker_rows(conn, client_id)
@@ -12526,6 +12562,7 @@ def ops_overview():
         priority_options=ops_priority_options(),
         progress_status_options=ops_progress_status_options(),
         today_iso=date.today().isoformat(),
+        ops_workspace_warning=workspace_warning,
     )
 
 
@@ -12535,12 +12572,15 @@ def ops_jobs():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     selected_job_id = request.values.get('job_id', type=int)
+    workspace_warning = ''
     if request.method == 'POST':
         action = (request.form.get('action') or 'create_job').strip()
         with get_conn() as conn:
-            prepare_ops_workspace(conn, client_id)
+            workspace_warning = prepare_ops_workspace(conn, client_id)
+            if workspace_warning:
+                flash(workspace_warning, 'warning')
             if action in {'create_job', 'update_job'}:
-                existing = conn.execute('SELECT * FROM jobs WHERE id=? AND client_id=?', (request.form.get('job_id', type=int), client_id)).fetchone() if action == 'update_job' else None
+                existing = safe_fetchone(conn, 'SELECT * FROM jobs WHERE id=? AND client_id=?', (request.form.get('job_id', type=int), client_id)) if action == 'update_job' else None
                 try:
                     selected_job_id = ops_save_job(conn, client_id=client_id, actor_user_id=user['id'], form=request.form, existing=existing)
                     conn.commit()
@@ -12559,7 +12599,7 @@ def ops_jobs():
                     flash('Job could not be duplicated.', 'error')
             elif action == 'update_status':
                 job_id = request.form.get('job_id', type=int) or 0
-                job = conn.execute('SELECT * FROM jobs WHERE id=? AND client_id=?', (job_id, client_id)).fetchone()
+                job = safe_fetchone(conn, 'SELECT * FROM jobs WHERE id=? AND client_id=?', (job_id, client_id))
                 if job:
                     status = normalize_ops_job_status(request.form.get('status'), default=job['status'])
                     progress_status = normalize_ops_progress_status(request.form.get('field_progress_status'), default=job['field_progress_status'])
@@ -12614,26 +12654,27 @@ def ops_jobs():
     worker_filter = request.args.get('worker_id', type=int)
     service_type_filter = request.args.get('service_type_id', type=int)
     with get_conn() as conn:
-        prepare_ops_workspace(conn, client_id)
-        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workspace_warning = prepare_ops_workspace(conn, client_id)
+        client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
         jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, status=status_filter, worker_id=worker_filter, service_type_id=service_type_filter, search=search)]
         workers = ops_worker_rows(conn, client_id)
-        customer_contacts = conn.execute(
+        customer_contacts = safe_fetchall(
+            conn,
             '''SELECT *
                FROM customer_contacts
                WHERE client_id=? AND COALESCE(status,'active')='active'
                ORDER BY LOWER(customer_name), id DESC''',
             (client_id,),
-        ).fetchall()
+        )
         service_types = ops_service_types(conn, client_id)
         templates = ops_job_templates(conn, client_id)
-        locations = conn.execute('SELECT * FROM service_locations WHERE client_id=? ORDER BY location_name, address_line1', (client_id,)).fetchall()
+        locations = safe_fetchall(conn, 'SELECT * FROM service_locations WHERE client_id=? ORDER BY location_name, address_line1', (client_id,))
         selected_job_id = selected_job_id or (jobs[0]['id'] if jobs else None)
         selected_job_rows = ops_jobs_query(conn, client_id=client_id, job_id=selected_job_id) if selected_job_id else []
         selected_job = dict(selected_job_rows[0]) if selected_job_rows else None
         selected_job_notes = ops_job_notes_for_job(conn, selected_job_id) if selected_job_id else []
         selected_job_activity = ops_job_activity_for_job(conn, selected_job_id) if selected_job_id else []
-        template_seed = conn.execute('SELECT * FROM job_templates WHERE id=? AND client_id=?', (request.args.get('template_id', type=int), client_id)).fetchone() if request.args.get('template_id', type=int) else None
+        template_seed = safe_fetchone(conn, 'SELECT * FROM job_templates WHERE id=? AND client_id=?', (request.args.get('template_id', type=int), client_id)) if request.args.get('template_id', type=int) else None
     return render_template(
         'ops_jobs.html',
         client=client,
@@ -12653,6 +12694,7 @@ def ops_jobs():
         progress_status_options=ops_progress_status_options(),
         priority_options=ops_priority_options(),
         today_iso=date.today().isoformat(),
+        ops_workspace_warning=workspace_warning,
     )
 
 
@@ -12662,12 +12704,15 @@ def ops_dispatch():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     dispatch_date = (request.values.get('date') or date.today().isoformat()).strip()
+    workspace_warning = ''
     if request.method == 'POST':
         action = (request.form.get('action') or '').strip()
         with get_conn() as conn:
-            prepare_ops_workspace(conn, client_id)
+            workspace_warning = prepare_ops_workspace(conn, client_id)
+            if workspace_warning:
+                flash(workspace_warning, 'warning')
             job_id = request.form.get('job_id', type=int) or 0
-            job = conn.execute('SELECT * FROM jobs WHERE id=? AND client_id=?', (job_id, client_id)).fetchone()
+            job = safe_fetchone(conn, 'SELECT * FROM jobs WHERE id=? AND client_id=?', (job_id, client_id))
             if not job:
                 flash('Job not found.', 'error')
                 return redirect(url_for('ops_dispatch', client_id=client_id, date=dispatch_date))
@@ -12716,8 +12761,8 @@ def ops_dispatch():
     anchor_date = date.fromisoformat(dispatch_date) if re.match(r'^\d{4}-\d{2}-\d{2}$', dispatch_date) else date.today()
     week_end = anchor_date + timedelta(days=6)
     with get_conn() as conn:
-        prepare_ops_workspace(conn, client_id)
-        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workspace_warning = prepare_ops_workspace(conn, client_id)
+        client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
         workers = [dict(row) for row in ops_worker_rows(conn, client_id)]
         jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, date_from=anchor_date.isoformat(), date_to=week_end.isoformat())]
         conflicts = ops_conflicts(conn, client_id)
@@ -12748,15 +12793,18 @@ def ops_dispatch():
         week_end=week_end.isoformat(),
         job_status_options=ops_job_status_options(),
         progress_status_options=ops_progress_status_options(),
+        ops_workspace_warning=workspace_warning,
     )
 
 
 @app.route('/schedule', methods=['GET', 'POST'])
+@app.route('/agenda', methods=['GET', 'POST'])
 @login_required
 def ops_schedule():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     view = (request.values.get('view') or 'week').strip().lower()
+    workspace_warning = ''
     if view not in {'day', 'week', 'month'}:
         view = 'week'
     date_value = (request.values.get('date') or date.today().isoformat()).strip()
@@ -12764,7 +12812,9 @@ def ops_schedule():
     if request.method == 'POST':
         action = (request.form.get('action') or '').strip()
         with get_conn() as conn:
-            prepare_ops_workspace(conn, client_id)
+            workspace_warning = prepare_ops_workspace(conn, client_id)
+            if workspace_warning:
+                flash(workspace_warning, 'warning')
             if action == 'quick_add_job':
                 try:
                     job_id = ops_save_job(conn, client_id=client_id, actor_user_id=user['id'], form=request.form)
@@ -12776,7 +12826,7 @@ def ops_schedule():
                     flash(str(exc), 'error')
             elif action == 'move_job':
                 job_id = request.form.get('job_id', type=int) or 0
-                job = conn.execute('SELECT * FROM jobs WHERE id=? AND client_id=?', (job_id, client_id)).fetchone()
+                job = safe_fetchone(conn, 'SELECT * FROM jobs WHERE id=? AND client_id=?', (job_id, client_id))
                 if job:
                     move_date = (request.form.get('scheduled_date', '') or '').strip()
                     move_start = (request.form.get('start_time', '') or '').strip()
@@ -12818,8 +12868,8 @@ def ops_schedule():
     status_filter = (request.args.get('status') or '').strip()
     service_type_filter = request.args.get('service_type_id', type=int)
     with get_conn() as conn:
-        prepare_ops_workspace(conn, client_id)
-        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workspace_warning = prepare_ops_workspace(conn, client_id)
+        client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
         workers = ops_worker_rows(conn, client_id)
         service_types = ops_service_types(conn, client_id)
         jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, worker_id=worker_filter, status=status_filter, service_type_id=service_type_filter, date_from=range_start.isoformat(), date_to=range_end.isoformat())]
@@ -12855,6 +12905,7 @@ def ops_schedule():
         job_status_options=ops_job_status_options(),
         priority_options=ops_priority_options(),
         today_iso=date.today().isoformat(),
+        ops_workspace_warning=workspace_warning,
     )
 
 
@@ -12864,12 +12915,15 @@ def ops_team():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     selected_worker_id = request.values.get('worker_id', type=int)
+    workspace_warning = ''
     if request.method == 'POST':
         action = (request.form.get('action') or '').strip()
         with get_conn() as conn:
-            prepare_ops_workspace(conn, client_id)
+            workspace_warning = prepare_ops_workspace(conn, client_id)
+            if workspace_warning:
+                flash(workspace_warning, 'warning')
             if action in {'create_worker', 'update_worker'}:
-                existing = conn.execute('SELECT * FROM workers WHERE id=? AND client_id=?', (request.form.get('worker_id', type=int), client_id)).fetchone() if action == 'update_worker' else None
+                existing = safe_fetchone(conn, 'SELECT * FROM workers WHERE id=? AND client_id=?', (request.form.get('worker_id', type=int), client_id)) if action == 'update_worker' else None
                 try:
                     selected_worker_id = ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=request.form, existing=existing)
                     conn.commit()
@@ -12879,8 +12933,8 @@ def ops_team():
                     flash(str(exc), 'error')
         return redirect(url_for('ops_team', client_id=client_id, worker_id=selected_worker_id))
     with get_conn() as conn:
-        prepare_ops_workspace(conn, client_id)
-        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workspace_warning = prepare_ops_workspace(conn, client_id)
+        client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
         workers = [dict(row) for row in ops_worker_rows(conn, client_id)]
         selected_worker_id = selected_worker_id or (workers[0]['id'] if workers else None)
         selected_worker = next((row for row in workers if row['id'] == selected_worker_id), None)
@@ -12895,6 +12949,7 @@ def ops_team():
         worker_jobs=worker_jobs,
         worker_availability=worker_availability,
         today_iso=date.today().isoformat(),
+        ops_workspace_warning=workspace_warning,
     )
 
 
@@ -12904,10 +12959,13 @@ def ops_availability():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     selected_worker_id = request.values.get('worker_id', type=int)
+    workspace_warning = ''
     if request.method == 'POST':
         action = (request.form.get('action') or 'save_availability').strip()
         with get_conn() as conn:
-            prepare_ops_workspace(conn, client_id)
+            workspace_warning = prepare_ops_workspace(conn, client_id)
+            if workspace_warning:
+                flash(workspace_warning, 'warning')
             if action == 'save_availability':
                 availability_id = request.form.get('availability_id', type=int)
                 worker_id = request.form.get('worker_id', type=int)
@@ -12949,19 +13007,20 @@ def ops_availability():
     start_date = request.args.get('start_date', date.today().isoformat())
     end_date = request.args.get('end_date', (date.today() + timedelta(days=21)).isoformat())
     with get_conn() as conn:
-        prepare_ops_workspace(conn, client_id)
-        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workspace_warning = prepare_ops_workspace(conn, client_id)
+        client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
         workers = [dict(row) for row in ops_worker_rows(conn, client_id)]
         selected_worker_id = selected_worker_id or (workers[0]['id'] if workers else None)
         availability_rows = ops_availability_rows(conn, client_id, start_date, end_date)
-        time_off_rows = conn.execute(
+        time_off_rows = safe_fetchall(
+            conn,
             '''SELECT tor.*, w.name AS worker_name
                FROM worker_time_off_requests tor
                JOIN workers w ON w.id = tor.worker_id
                WHERE w.client_id=?
                ORDER BY tor.start_date, tor.end_date''',
             (client_id,),
-        ).fetchall()
+        )
         conflicts = ops_conflicts(conn, client_id)
     return render_template(
         'ops_availability.html',
@@ -12976,6 +13035,7 @@ def ops_availability():
         start_date=start_date,
         end_date=end_date,
         today_iso=date.today().isoformat(),
+        ops_workspace_warning=workspace_warning,
     )
 
 
@@ -12986,10 +13046,11 @@ def ops_activity():
     client_id = selected_client_id(user, 'get')
     search = (request.args.get('search') or '').strip()
     with get_conn() as conn:
-        prepare_ops_workspace(conn, client_id)
-        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workspace_warning = prepare_ops_workspace(conn, client_id)
+        client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
         activity_rows = ops_recent_activity(conn, client_id, limit=80, search=search)
-        note_rows = conn.execute(
+        note_rows = safe_fetchall(
+            conn,
             '''SELECT jn.*, j.title AS job_title, u.full_name
                FROM job_notes jn
                LEFT JOIN jobs j ON j.id = jn.job_id
@@ -12998,7 +13059,7 @@ def ops_activity():
                ORDER BY jn.created_at DESC, jn.id DESC
                LIMIT 80''',
             (client_id,),
-        ).fetchall()
+        )
     return render_template(
         'ops_activity.html',
         client=client,
@@ -13006,6 +13067,7 @@ def ops_activity():
         activity_rows=activity_rows,
         note_rows=note_rows,
         search=search,
+        ops_workspace_warning=workspace_warning,
     )
 
 
@@ -13015,10 +13077,13 @@ def ops_locations():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     selected_location_id = request.values.get('location_id', type=int)
+    workspace_warning = ''
     if request.method == 'POST':
         action = (request.form.get('action') or 'save_location').strip()
         with get_conn() as conn:
-            prepare_ops_workspace(conn, client_id)
+            workspace_warning = prepare_ops_workspace(conn, client_id)
+            if workspace_warning:
+                flash(workspace_warning, 'warning')
             if action == 'save_location':
                 location_id = request.form.get('location_id', type=int)
                 payload = (
@@ -13053,7 +13118,7 @@ def ops_locations():
                 flash('Location saved.', 'success')
             elif action == 'delete_location':
                 location_id = request.form.get('location_id', type=int)
-                linked_job = conn.execute('SELECT 1 FROM jobs WHERE service_location_id=? LIMIT 1', (location_id,)).fetchone()
+                linked_job = safe_fetchone(conn, 'SELECT 1 FROM jobs WHERE service_location_id=? LIMIT 1', (location_id,))
                 if linked_job:
                     flash('Location is linked to jobs and cannot be removed.', 'error')
                 else:
@@ -13062,9 +13127,10 @@ def ops_locations():
                     flash('Location removed.', 'success')
         return redirect(url_for('ops_locations', client_id=client_id, location_id=selected_location_id))
     with get_conn() as conn:
-        prepare_ops_workspace(conn, client_id)
-        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
-        locations = conn.execute(
+        workspace_warning = prepare_ops_workspace(conn, client_id)
+        client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
+        locations = safe_fetchall(
+            conn,
             '''SELECT sl.*, COUNT(j.id) AS job_count, MAX(substr(COALESCE(j.scheduled_start, ''), 1, 10)) AS last_job_date
                FROM service_locations sl
                LEFT JOIN jobs j ON j.service_location_id = sl.id
@@ -13072,17 +13138,18 @@ def ops_locations():
                GROUP BY sl.id
                ORDER BY sl.location_name, sl.address_line1''',
             (client_id,),
-        ).fetchall()
+        )
         selected_location_id = selected_location_id or (locations[0]['id'] if locations else None)
-        selected_location = conn.execute('SELECT * FROM service_locations WHERE id=? AND client_id=?', (selected_location_id, client_id)).fetchone() if selected_location_id else None
-        location_jobs = conn.execute(
+        selected_location = safe_fetchone(conn, 'SELECT * FROM service_locations WHERE id=? AND client_id=?', (selected_location_id, client_id)) if selected_location_id else None
+        location_jobs = safe_fetchall(
+            conn,
             '''SELECT title, status, scheduled_start
                FROM jobs
                WHERE client_id=? AND service_location_id=?
                ORDER BY COALESCE(scheduled_start, '') DESC, id DESC
                LIMIT 20''',
             (client_id, selected_location_id),
-        ).fetchall() if selected_location_id else []
+        ) if selected_location_id else []
     return render_template(
         'ops_locations.html',
         client=client,
@@ -13090,6 +13157,7 @@ def ops_locations():
         locations=locations,
         selected_location=selected_location,
         location_jobs=location_jobs,
+        ops_workspace_warning=workspace_warning,
     )
 
 
@@ -13099,10 +13167,13 @@ def ops_templates():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     selected_template_id = request.values.get('template_id', type=int)
+    workspace_warning = ''
     if request.method == 'POST':
         action = (request.form.get('action') or 'save_template').strip()
         with get_conn() as conn:
-            prepare_ops_workspace(conn, client_id)
+            workspace_warning = prepare_ops_workspace(conn, client_id)
+            if workspace_warning:
+                flash(workspace_warning, 'warning')
             if action == 'save_template':
                 template_id = request.form.get('template_id', type=int)
                 payload = (
@@ -13149,12 +13220,12 @@ def ops_templates():
                 flash('Template archived.', 'success')
         return redirect(url_for('ops_templates', client_id=client_id, template_id=selected_template_id))
     with get_conn() as conn:
-        prepare_ops_workspace(conn, client_id)
-        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        workspace_warning = prepare_ops_workspace(conn, client_id)
+        client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
         service_types = ops_service_types(conn, client_id)
         templates = ops_job_templates(conn, client_id)
         selected_template_id = selected_template_id or (templates[0]['id'] if templates else None)
-        selected_template = conn.execute('SELECT * FROM job_templates WHERE id=? AND client_id=?', (selected_template_id, client_id)).fetchone() if selected_template_id else None
+        selected_template = safe_fetchone(conn, 'SELECT * FROM job_templates WHERE id=? AND client_id=?', (selected_template_id, client_id)) if selected_template_id else None
     return render_template(
         'ops_templates.html',
         client=client,
@@ -13163,6 +13234,7 @@ def ops_templates():
         templates=templates,
         selected_template=selected_template,
         priority_options=ops_priority_options(),
+        ops_workspace_warning=workspace_warning,
     )
 
 

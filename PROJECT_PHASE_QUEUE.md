@@ -160,6 +160,11 @@
   - shell messenger drawer composer was tightened again so the reply area stays visible lower in the drawer while the thread scrolls above it
   - light gray / mist palette variables were added and applied across cards, tables, quick-search surfaces, and grouped shell navigation to keep the software brighter and easier to scan
   - authenticated route sweep still passed after the new search, shell, and palette adjustments
+- Phase 3 operations route stabilization completed on 2026-04-22:
+  - hardened the operations workspace bootstrap so one malformed legacy migration step cannot take down dispatch, schedule, team, availability, activity, locations, jobs, templates, or owner-view pages
+  - added safe database fallbacks around shared operations queries so partially-migrated live data returns empty-state pages instead of 500 errors
+  - added `/agenda` as a real alias of the schedule page so business phrasing and direct links resolve consistently
+  - verified admin operations routes return 200 across the protected local database and an older live-style runtime backup when bound correctly before import
 
 ## Future Pricing Research Note
 
