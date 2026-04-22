@@ -138,6 +138,11 @@
   - client workspace now shows revenue, cost, profit, open balance, and last-job visibility per saved client
   - left-side business and admin-workspace sidebars were widened and compressed so scrolling is reduced unless the screen truly needs it
   - next structural phase should separate customer-facing sales documents from internal bookkeeping records more cleanly without removing the unified LedgerFlow vision
+- Full business page sweep stabilization completed on 2026-04-22:
+  - fixed a shared recurring-schedule SQL query that was throwing `sqlite3.OperationalError: incomplete input` and crashing multiple business pages
+  - confirmed the originally failing business routes now load cleanly in the test harness: Clients & Sales, Team, Availability, Activity, Templates, and Work Schedule
+  - completed a wider authenticated GET sweep across business, admin, and worker sessions with no remaining 500-level failures in the current codebase
+  - this phase was stabilization-only and did not remove or reset any real client data
 
 ## Future Pricing Research Note
 

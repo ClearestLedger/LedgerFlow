@@ -2066,12 +2066,12 @@ def recurring_occurrence_dates(contact, window_start: date | None = None, horizo
 def ensure_recurring_schedule_entries(conn: sqlite3.Connection, client_id: int, actor_user_id: int | None = None, horizon_days: int = 42) -> int:
     today = date.today()
     contact_rows = conn.execute(
-        '''SELECT *
+        """SELECT *
            FROM customer_contacts
            WHERE client_id=?
              AND COALESCE(status,'active')='active'
              AND COALESCE(auto_add_to_calendar,0)=1
-             AND COALESCE(recurring_frequency,'')<>''',
+             AND COALESCE(recurring_frequency,'')<>''""",
         (client_id,),
     ).fetchall()
     created_count = 0
