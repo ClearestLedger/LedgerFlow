@@ -43,12 +43,14 @@
         <div style='font-weight:800;color:var(--primary-dark);margin-top:6px'>Use this page only for team member portal access.</div>
         <div class='small' style='margin-top:6px'>If your business manager sent you here to set up access, use your worker email and password below or choose Forgot Password to create a new one.</div>
       </div>
-      <form method='post'>
+      <form method='post' autocomplete='off' data-form-context='worker-login'>
         <input type='hidden' name='preferred_language' value='{{ current_language }}'>
+        <input type='text' name='worker_portal_guard_user' autocomplete='section-worker username' tabindex='-1' aria-hidden='true' style='position:absolute;left:-9999px;opacity:0;pointer-events:none'>
+        <input type='password' name='worker_portal_guard_pass' autocomplete='section-worker new-password' tabindex='-1' aria-hidden='true' style='position:absolute;left:-9999px;opacity:0;pointer-events:none'>
         <label>{{ tr('Email') }}</label>
-        <input name='email' type='email' required>
+        <input name='email' type='email' required autocomplete='section-worker username' autocapitalize='off' spellcheck='false'>
         <label style='margin-top:12px'>{{ tr('Password') }}</label>
-        <div class='password-field'><input type='password' name='password' required><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div>
+        <div class='password-field'><input type='password' name='password' required autocomplete='section-worker current-password'><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div>
         <button style='margin-top:16px;width:100%'>{{ tr('Sign In to Worker Portal') }}</button>
         <div style='margin-top:10px;text-align:right'><a class='small' href='{{ url_for("forgot_password") }}'>{{ tr('Forgot Password?') }}</a></div>
       </form>
