@@ -303,6 +303,10 @@
   - leaving the worker password blank now consistently sends a worker password setup / reset email, even if the worker already had a prior portal password hash
   - worker password reset emails and the reset page now use worker-specific wording instead of falling back to the more generic business-facing reset experience
   - the worker login page copy was tightened so it reads as worker-only access instead of feeling like a mixed business login surface
+- Batch 1 first real business checklist passed on 2026-04-23:
+  - `RDS HOME SOLUTIONS` passed the full invited-client checklist
+  - no additional real business should be added yet
+  - next gate is a 24-hour observation window with no stop-level issues before Batch 2 can begin
 - Future product architecture note recorded on 2026-04-22:
   - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections
