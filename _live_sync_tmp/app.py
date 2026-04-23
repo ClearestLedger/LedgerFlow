@@ -26,7 +26,7 @@ from urllib import request as urlrequest, error as urlerror
 from geopy.distance import geodesic
 from geopy.geocoders import Nominatim
 
-from flask import Flask, Response, render_template, render_template_string, request, redirect, url_for, session, flash, abort, jsonify
+from flask import Flask, Response, render_template, render_template_string, request, redirect, url_for, session, flash, abort, jsonify, has_request_context
 from werkzeug.security import generate_password_hash, check_password_hash
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -3388,6 +3388,21 @@ def normalize_payment_link(value: str) -> str | None:
     return value
 
 
+def normalize_public_base_url(value: str) -> str:
+    value = (value or '').strip()
+    if not value:
+        return ''
+    parsed = urlparse(value)
+    if parsed.scheme not in {'http', 'https'} or not parsed.netloc:
+        return ''
+    cleaned = f"{parsed.scheme}://{parsed.netloc}{parsed.path}".rstrip('/')
+    for suffix in ('/main-portal', '/login', '/worker-login', '/business-comeback'):
+        if cleaned.lower().endswith(suffix):
+            cleaned = cleaned[:-len(suffix)]
+            break
+    return cleaned.rstrip('/')
+
+
 def normalize_money_amount(value) -> Decimal | None:
     text = '' if value is None else str(value).strip()
     if not text:
@@ -4018,6 +4033,7 @@ def load_email_runtime_config() -> dict:
 def save_email_runtime_config(values: dict):
     current = load_email_runtime_config()
     current.update({k: (values.get(k) or '') for k in ['smtp_email', 'smtp_host', 'smtp_port', 'smtp_username', 'smtp_sender_name', 'smtp_password_enc', 'app_base_url']})
+    current['app_base_url'] = normalize_public_base_url(current.get('app_base_url', ''))
     EMAIL_CONFIG_PATH.write_text(json.dumps(current, indent=2), encoding='utf-8')
 
 
@@ -4030,7 +4046,7 @@ def legacy_email_settings_values() -> dict:
         'smtp_username': (get_setting('smtp_username') or runtime_cfg.get('smtp_username', '')).strip(),
         'smtp_sender_name': (get_setting('smtp_sender_name') or runtime_cfg.get('smtp_sender_name', '')).strip() or APP_NAME,
         'smtp_password_enc': get_setting('smtp_password_enc') or runtime_cfg.get('smtp_password_enc', ''),
-        'app_base_url': (get_setting('app_base_url') or runtime_cfg.get('app_base_url', '')).strip().rstrip('/'),
+        'app_base_url': normalize_public_base_url(get_setting('app_base_url') or runtime_cfg.get('app_base_url', '')),
     }
 
 
@@ -4101,7 +4117,7 @@ def save_email_settings_profile(values: dict, updated_by_user_id=None):
         'smtp_username': (values.get('smtp_username') or '').strip() or (values.get('smtp_email') or '').strip().lower(),
         'smtp_sender_name': (values.get('smtp_sender_name') or '').strip() or APP_NAME,
         'smtp_password_enc': (values.get('smtp_password_enc') or current.get('smtp_password_enc') or '').strip(),
-        'app_base_url': (values.get('app_base_url') or '').strip().rstrip('/'),
+        'app_base_url': normalize_public_base_url(values.get('app_base_url') or ''),
         'last_tested_at': current.get('last_tested_at', ''),
         'last_test_status': current.get('last_test_status', ''),
         'last_test_recipient': current.get('last_test_recipient', ''),
@@ -4300,13 +4316,10 @@ def ai_assistant_config() -> dict:
 def configured_base_url() -> str:
     profile = load_email_settings_profile()
     runtime_cfg = load_email_runtime_config()
-    base = (profile.get('app_base_url') or get_setting('app_base_url') or runtime_cfg.get('app_base_url', '')).strip()
-    cleaned = base.rstrip('/')
-    for suffix in ('/main-portal', '/login', '/worker-login', '/business-comeback'):
-        if cleaned.lower().endswith(suffix):
-            cleaned = cleaned[:-len(suffix)]
-            break
-    return cleaned if cleaned else ''
+    request_base = normalize_public_base_url(request.url_root) if has_request_context() else ''
+    env_base = normalize_public_base_url(os.environ.get('APP_BASE_URL') or os.environ.get('RENDER_EXTERNAL_URL') or '')
+    stored_base = normalize_public_base_url(profile.get('app_base_url') or get_setting('app_base_url') or runtime_cfg.get('app_base_url', ''))
+    return request_base or env_base or stored_base
 
 
 def static_asset_version_value(filename: str) -> int:
@@ -15447,12 +15460,13 @@ def email_settings():
     if request.method == 'POST':
         action = request.form.get('action', 'save_settings').strip().lower()
         current_profile = load_email_settings_profile()
+        current_public_base = configured_base_url() or normalize_public_base_url(current_profile.get('app_base_url') or '')
         smtp_email_input = request.form.get('smtp_email', '').strip().lower()
         smtp_host_input = request.form.get('smtp_host', '').strip()
         smtp_port_input = request.form.get('smtp_port', '').strip()
         smtp_username_input = request.form.get('smtp_username', '').strip()
         sender_name_input = request.form.get('sender_name', '').strip()
-        app_base_url_input = request.form.get('app_base_url', '').strip().rstrip('/')
+        app_base_url_input = normalize_public_base_url(request.form.get('app_base_url', ''))
         password = request.form.get('smtp_password', '').strip()
 
         if action == 'send_test_email':
@@ -15461,14 +15475,14 @@ def email_settings():
             smtp_port = smtp_port_input or (current_profile.get('smtp_port') or '').strip() or '587'
             smtp_username = smtp_username_input or (current_profile.get('smtp_username') or '').strip() or smtp_email
             sender_name = sender_name_input or (current_profile.get('smtp_sender_name') or '').strip() or APP_NAME
-            app_base_url = app_base_url_input or (current_profile.get('app_base_url') or '').strip().rstrip('/')
+            app_base_url = app_base_url_input or current_public_base
         else:
             smtp_email = smtp_email_input
             smtp_host = smtp_host_input or 'smtp.gmail.com'
             smtp_port = smtp_port_input or '587'
             smtp_username = smtp_username_input or smtp_email
             sender_name = sender_name_input or APP_NAME
-            app_base_url = app_base_url_input
+            app_base_url = app_base_url_input or current_public_base
 
         runtime_values = {
             'smtp_email': smtp_email,
@@ -15531,7 +15545,7 @@ def email_settings():
     smtp_port = profile.get('smtp_port') or '587'
     smtp_username = profile.get('smtp_username') or smtp_email
     sender_name = profile.get('smtp_sender_name') or APP_NAME
-    app_base_url = profile.get('app_base_url') or ''
+    app_base_url = configured_base_url() or profile.get('app_base_url') or ''
     password_configured = bool(profile.get('smtp_password_enc'))
     with get_conn() as conn:
         failures = conn.execute("SELECT bi.*, c.business_name FROM business_invites bi JOIN clients c ON c.id=bi.client_id WHERE bi.status='failed' ORDER BY bi.created_at DESC LIMIT 20").fetchall()
