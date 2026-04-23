@@ -295,6 +295,10 @@
   - active Day / Week / Month schedule buttons now keep readable text on the dark selected state
   - team-member portal setup now supports first-time password setup by email when a manager enables access without manually creating a password
   - targeted Portuguese wording cleanup was applied for invoice / billing phrases such as `orçamento`, `cobrança`, and related finance copy
+- Operations Team manager login setup fix completed on 2026-04-23:
+  - `Operations Team` now includes a real `Set Up Team Member Login` section inside the selected team member panel
+  - managers can set portal email, enable access, save a password directly, or leave the password blank to send a first-time password setup email
+  - the team page now exposes the worker login page link from the same operational screen so managers do not have to switch to the legacy worker page
 - Future product architecture note recorded on 2026-04-22:
   - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections

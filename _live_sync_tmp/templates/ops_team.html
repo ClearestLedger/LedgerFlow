@@ -111,6 +111,27 @@
     {% else %}
     <div class='small'>No manager-entered availability blocks are saved for this worker yet.</div>
     {% endif %}
+
+    <details class='compact-details' style='margin-top:16px'>
+      <summary>Set Up Team Member Login</summary>
+      <form method='post' class='form-grid' style='margin-top:12px'>
+        {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <input type='hidden' name='action' value='update_worker_portal'>
+        <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
+        <div><label>Portal Email</label><input name='portal_email' type='email' value='{{ selected_worker.email or "" }}' placeholder='teammember@email.com'></div>
+        <div><label>Portal Password</label><input name='portal_password' type='password' placeholder='Set a password or leave blank for setup email'></div>
+        <div>
+          <label>Portal Access</label>
+          <label style='display:flex;gap:8px;align-items:center;margin-top:8px'><input type='checkbox' name='portal_access_enabled' value='1' {% if selected_worker.portal_access_enabled %}checked{% endif %}> Enabled</label>
+        </div>
+        <div><label>Login Page</label><div class='small' style='padding-top:10px'><a href='{{ worker_login_url }}' target='_blank'>Open Team Member Login Page</a></div></div>
+        <div style='grid-column:1/-1'>
+          <div class='small'>Managers can enable the restricted worker portal here without leaving Operations Team.</div>
+          <div class='small' style='margin-top:8px'>Set a password manually, or leave it blank and LedgerFlow will send a first-time password setup email.</div>
+        </div>
+        <div><button type='submit'>Save Team Member Login</button></div>
+      </form>
+    </details>
   </div>
 </div>
 {% endif %}

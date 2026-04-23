@@ -13545,6 +13545,119 @@ def ops_team():
                 except ValueError as exc:
                     conn.rollback()
                     flash(str(exc), 'error')
+            elif action == 'update_worker_portal':
+                selected_worker_id = request.form.get('worker_id', type=int) or selected_worker_id
+                worker = safe_fetchone(conn, 'SELECT * FROM workers WHERE id=? AND client_id=?', (selected_worker_id, client_id)) if selected_worker_id else None
+                if not worker:
+                    flash('Team member not found.', 'error')
+                else:
+                    portal_email = request.form.get('portal_email', '').strip().lower()
+                    portal_password = request.form.get('portal_password', '').strip()
+                    portal_enabled = 1 if request.form.get('portal_access_enabled') else 0
+                    if portal_enabled and not portal_email:
+                        flash('Team member portal email is required when portal access is enabled.', 'error')
+                        return redirect(url_for('ops_team', client_id=client_id, worker_id=selected_worker_id))
+                    if portal_password and len(portal_password) < 4:
+                        flash('Team member portal password must be at least 4 characters.', 'error')
+                        return redirect(url_for('ops_team', client_id=client_id, worker_id=selected_worker_id))
+                    password_hash = worker['portal_password_hash'] or ''
+                    if portal_password:
+                        password_hash = generate_password_hash(portal_password)
+                    approval_status = 'approved'
+                    requested_at = worker['portal_requested_at'] or ''
+                    approved_at = worker['portal_approved_at'] or ''
+                    approved_by = worker['portal_approved_by']
+                    if portal_enabled:
+                        approval_status = 'approved'
+                        approved_at = datetime.now().isoformat(timespec='seconds')
+                        approved_by = user['id']
+                        if not requested_at:
+                            requested_at = approved_at
+                    else:
+                        approval_status = 'disabled'
+                        approved_at = ''
+                        approved_by = None
+                    target_portal_email = portal_email or worker['email']
+                    portal_saved_at = now_iso()
+                    conn.execute(
+                        'UPDATE workers SET email=?, portal_access_enabled=?, portal_password_hash=?, portal_approval_status=?, portal_requested_at=?, portal_approved_at=?, portal_approved_by=?, updated_at=?, updated_by_user_id=? WHERE id=?',
+                        (target_portal_email, portal_enabled, password_hash, approval_status, requested_at, approved_at, approved_by, portal_saved_at, user['id'], selected_worker_id)
+                    )
+                    client_row = conn.execute('SELECT business_name FROM clients WHERE id=?', (client_id,)).fetchone()
+                    if portal_enabled:
+                        log_account_activity(
+                            conn,
+                            client_id=client_id,
+                            account_type='worker_portal',
+                            account_email=target_portal_email,
+                            account_name=worker['name'],
+                            created_by_user_id=user['id'],
+                            status='auto_approved',
+                            detail='Manager updated team member portal access from Operations Team.',
+                        )
+                    log_worker_profile_history(
+                        conn,
+                        worker_id=selected_worker_id,
+                        client_id=client_id,
+                        action='portal_access_updated',
+                        changed_by_user_id=user['id'],
+                        detail=f"Portal access {'enabled' if portal_enabled else 'disabled'} from Operations Team.",
+                    )
+                    conn.commit()
+                    welcome_sent = False
+                    welcome_error = ''
+                    setup_reset_sent = False
+                    setup_reset_error = ''
+                    if portal_enabled and approval_status == 'approved' and target_portal_email and not password_hash and smtp_email_ready():
+                        try:
+                            token = secrets.token_urlsafe(32)
+                            expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat(timespec='seconds')
+                            conn.execute(
+                                "INSERT INTO password_reset_requests (email, account_kind, account_id, token, status, expires_at, requester_ip) VALUES (?,?,?,?,?,?,?)",
+                                (target_portal_email, 'worker', selected_worker_id, token, 'pending', expires_at, (request.headers.get('X-Forwarded-For', '') or request.remote_addr or '')[:120])
+                            )
+                            log_auth_activity(
+                                conn,
+                                client_id=client_id,
+                                actor=worker,
+                                account_type='password_reset',
+                                account_email=target_portal_email,
+                                account_name=worker['name'],
+                                status='requested',
+                                detail='First-time team member portal password setup requested from Operations Team.',
+                            )
+                            conn.commit()
+                            reset_link = f"{configured_base_url()}{url_for('reset_password', token=token)}"
+                            send_password_reset_email(target_portal_email, reset_link, 'team member portal')
+                            setup_reset_sent = True
+                        except Exception as e:
+                            setup_reset_error = str(e)[:200]
+                    elif portal_enabled and approval_status == 'approved' and target_portal_email and smtp_email_ready():
+                        try:
+                            send_welcome_email(
+                                target_portal_email,
+                                worker['name'],
+                                'worker',
+                                login_path='/worker-login',
+                                business_name=(client_row['business_name'] if client_row else '')
+                            )
+                            welcome_sent = True
+                        except Exception as e:
+                            welcome_error = str(e)[:200]
+                    if portal_enabled and setup_reset_sent:
+                        flash('Team member portal access updated. First-time password setup email sent.', 'success')
+                    elif portal_enabled and not password_hash and smtp_email_ready():
+                        flash(f'Team member portal access updated, but the first-time password setup email failed: {setup_reset_error}', 'error')
+                    elif portal_enabled and not password_hash:
+                        flash('Team member portal access updated. Use Forgot Password on the team member login page to create the first password.', 'success')
+                    elif portal_enabled and welcome_sent:
+                        flash('Team member portal access updated. Welcome email sent.', 'success')
+                    elif portal_enabled and smtp_email_ready():
+                        flash(f'Team member portal access updated, but welcome email failed: {welcome_error}', 'error')
+                    elif portal_enabled:
+                        flash('Team member portal access updated.', 'success')
+                    else:
+                        flash('Team member portal access disabled.', 'success')
         return redirect(url_for('ops_team', client_id=client_id, worker_id=selected_worker_id))
     with get_conn() as conn:
         workspace_warning = prepare_ops_workspace(conn, client_id)
@@ -13562,6 +13675,7 @@ def ops_team():
         selected_worker=selected_worker,
         worker_jobs=worker_jobs,
         worker_availability=worker_availability,
+        worker_login_url=url_for('worker_login'),
         today_iso=date.today().isoformat(),
         ops_workspace_warning=workspace_warning,
     )
