@@ -7631,6 +7631,10 @@ def default_post_login_path(user) -> str:
     return url_for('dashboard')
 
 
+def business_completed_landing_path(user) -> str:
+    return url_for('welcome_center') if user_has_trial_offer(user) else url_for('dashboard')
+
+
 def login_required(fn):
     @wraps(fn)
     def wrap(*args, **kwargs):
@@ -10622,6 +10626,9 @@ def enforce_business_onboarding_gate():
     endpoint = request.endpoint or ''
     allowed = {'business_onboarding', 'business_comeback', 'logout', 'static', 'help_center', 'irs_tips', 'forgot_password', 'reset_password'}
     if endpoint in allowed:
+        return
+    if endpoint in {'dashboard', 'welcome_center'} and session.get('skip_onboarding_gate_once') == '1':
+        session.pop('skip_onboarding_gate_once', None)
         return
     if endpoint == 'welcome_center' and user_has_trial_offer(user):
         return
@@ -16319,9 +16326,11 @@ def business_onboarding():
                     flash(f'Setup complete, but the welcome email failed: {welcome_error}', 'error')
                 else:
                     flash('Setup complete. Your LedgerFlow workspace is ready.', 'success')
+                session['skip_onboarding_gate_once'] = '1'
                 return redirect(url_for('welcome_center'))
-        if (client['onboarding_status'] or 'completed') == 'completed':
-            return redirect(url_for('dashboard'))
+        if not user_requires_business_onboarding(user):
+            session['skip_onboarding_gate_once'] = '1'
+            return redirect(business_completed_landing_path(user))
         suggested_amount = suggested_payment_amount(client['service_level'] or default_service_level(), 'monthly_platform_fee') or Decimal('0.00')
         return render_template(
             'business_onboarding.html',
