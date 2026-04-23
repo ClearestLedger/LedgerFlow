@@ -148,6 +148,7 @@
     <div><label>Team Member Login</label><div class='small' style='padding-top:10px'><a href='{{ worker_login_url }}' target='_blank'>Open Team Member Login Page</a></div></div>
     <div style='grid-column:1/-1'>
       <div class='small'>This team member portal is separate from administrator and business-owner logins. Team members only see time summary, pay stubs, messenger, time-off requests, and notices.</div>
+      <div class='small' style='margin-top:8px'>Enter the portal email and either set a password here or leave the password blank to send a first-time password setup email.</div>
       <div class='small' style='margin-top:8px'><strong>Approval Status:</strong> {{ (selected_worker.portal_approval_status or 'approved')|replace('_',' ')|title }}{% if selected_worker.portal_requested_at %} · Requested {{ selected_worker.portal_requested_at }}{% endif %}{% if selected_worker.portal_approved_at %} · Approved {{ selected_worker.portal_approved_at }}{% endif %}</div>
     </div>
     <div><button type='submit'>Save Team Member Portal Access</button></div>

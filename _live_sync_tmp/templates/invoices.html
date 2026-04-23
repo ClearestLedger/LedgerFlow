@@ -18,17 +18,32 @@
 <div class='card section-frame' style='margin-bottom:16px'>
   <div class='summary-strip'>
     {% if sales_workspace_enabled %}
-    <span class='summary-pill'>{{ tr('Estimate first, invoice second') }}</span>
-    <span class='summary-pill'>{{ tr('Hosted customer invoices') }}</span>
-    <span class='summary-pill'>{{ tr('Pay-online links supported') }}</span>
-    <span class='summary-pill'>{{ tr('Automatic overdue reminders') }}</span>
+    <a class='summary-pill summary-pill-link' href='{{ url_for("estimates", client_id=client_id) }}#estimateComposerDetails'>
+      <strong>{{ tr('Estimate first, invoice second') }}</strong>
+      <small>{{ tr('Open the estimate workflow before billing the customer.') }}</small>
+    </a>
+    <a class='summary-pill summary-pill-link' href='#savedCustomerInvoices'>
+      <strong>{{ tr('Hosted customer invoices') }}</strong>
+      <small>{{ tr('Open the live customer invoice list and hosted links.') }}</small>
+    </a>
+    <a class='summary-pill summary-pill-link' href='#customerInvoiceComposerDetails'>
+      <strong>{{ tr('Pay-online links supported') }}</strong>
+      <small>{{ tr('Open the invoice composer and add an online payment link.') }}</small>
+    </a>
+    <a class='summary-pill summary-pill-link' href='#savedCustomerInvoices'>
+      <strong>{{ tr('Automatic overdue reminders') }}</strong>
+      <small>{{ tr('Review open balances and send reminder actions from the invoice list.') }}</small>
+    </a>
     {% else %}
     <span class='summary-pill'>{{ tr('Internal income records') }}</span>
     <span class='summary-pill'>{{ tr('Mileage attachments') }}</span>
     <span class='summary-pill'>{{ tr('Tax-ready bookkeeping') }}</span>
     <span class='summary-pill'>{{ tr('Premium sales tools available') }}</span>
     {% endif %}
-    <span class='summary-pill'>{{ tr('Internal income records preserved') }}</span>
+    <a class='summary-pill summary-pill-link' href='#internalIncomeRecordDetails'>
+      <strong>{{ tr('Internal income records preserved') }}</strong>
+      <small>{{ tr('Jump to bookkeeping-only income entries below.') }}</small>
+    </a>
   </div>
   {% if sales_workspace_enabled %}
     {% if auto_reminder_count %}
@@ -103,8 +118,8 @@
 </div>
 
 <div class='grid cards-2'>
-  <div class='card section-frame'>
-    <details class='compact-details' open>
+  <div class='card section-frame' id='customerInvoiceComposer'>
+    <details class='compact-details' id='customerInvoiceComposerDetails'>
       <summary>{{ tr('Create Customer Invoice') }}</summary>
       <div class='small' style='margin:12px 0'>{{ tr('Build a real customer invoice with line items, optional pay-online link, and a hosted invoice page that can be emailed right away. If the customer still needs approval first, use the estimate workflow above.') }}</div>
       <form method='post' class='form-grid' id='customerInvoiceForm'>
@@ -118,7 +133,7 @@
         <div><label>{{ tr('Customer Address') }}</label><input id='customer_invoice_address' name='client_address' value='{{ prefill_contact.customer_address if prefill_contact else "" }}'></div>
         <div><label>{{ tr('Issue Date') }}</label><input name='invoice_date' type='date' value='{{ today }}'></div>
         <div><label>{{ tr('Due Date') }}</label><input name='due_date' type='date' value='{{ default_due_date }}'></div>
-        <div><label>{{ tr('Online Payment Link') }}</label><input name='public_payment_link' placeholder='{{ tr("https://stripe.com/... or hosted payment page") }}'></div>
+        <div id='customerInvoicePaymentLink'><label>{{ tr('Online Payment Link') }}</label><input name='public_payment_link' placeholder='{{ tr("https://stripe.com/... or hosted payment page") }}'></div>
         <div><label>{{ tr('Sales Tax') }}</label><input id='customer_invoice_sales_tax' name='sales_tax_amount' type='number' step='0.01' min='0' value='0.00'></div>
         <div style='grid-column:1/-1'>
           <label>{{ tr('Line Items') }}</label>
@@ -156,7 +171,7 @@
   </div>
 </div>
 
-<div class='card section-frame' style='margin-top:16px'>
+<div class='card section-frame' style='margin-top:16px' id='savedCustomerInvoices'>
   <div class='card-head'><h3>{{ tr('Saved Customer Invoices') }}</h3><div class='small'>{{ tr('Hosted invoice pages, reminders, and pay-online links') }}</div></div>
   <div class='scroll-x'>
     <table class='table'>
@@ -236,7 +251,7 @@
 
 <div class='grid cards-2' style='margin-top:16px'>
   <div class='card section-frame'>
-    <details class='compact-details' {% if not sales_workspace_enabled %}open{% endif %}>
+    <details class='compact-details' id='internalIncomeRecordDetails'>
       <summary>{{ tr('Create Internal Income Record') }}</summary>
       <div class='small' style='margin:12px 0'>{{ tr('Use this when you need a bookkeeping-only revenue entry that is not being sent to a customer as an invoice.') }}</div>
       <form method='post' class='form-grid'>

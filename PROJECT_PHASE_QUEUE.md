@@ -253,6 +253,48 @@
   - created `LAUNCH_VERIFICATION\\phase5_public_legal_wording_verify.py` as a repeatable verifier on the clean reset baseline
   - generated `LAUNCH_VERIFICATION\\PHASE5_RESULTS.json` and `LAUNCH_VERIFICATION\\PHASE5_REPORT.md` with a clean pass on the expanded legal wording checks
   - created `PUBLIC_LEGAL_WORDING_SIGNOFF.md` as the current launch-baseline wording signoff artifact
+- Release evidence completion phase completed on 2026-04-22:
+  - added low-risk audit logging for login success/failure, password-reset requests/completions, and billing-change events so the clean launch baseline has stronger traceability
+  - created `LAUNCH_VERIFICATION\\phase6_release_evidence_verify.py` as a repeatable verifier for legal acceptance DB proof, billing-storage minimization proof, upload-path posture, and audit-event evidence
+  - generated `LAUNCH_VERIFICATION\\PHASE6_RESULTS.json`, `LAUNCH_VERIFICATION\\PHASE6_REPORT.md`, `LAUNCH_VERIFICATION\\LEGAL_ACCEPTANCE_DB_PROOF.json`, `LAUNCH_VERIFICATION\\BILLING_STORAGE_PROOF.json`, and `LAUNCH_VERIFICATION\\AUDIT_EVENT_PROOF.json`
+  - created `UPLOAD_FILE_SECURITY_REVIEW.md` and `CRITICAL_EVENT_AUDIT_REVIEW.md` to close the remaining evidence gaps around uploads and critical-event logging
+  - reran the clean route sweep after the audit patch and kept the clean launch baseline green
+  - next phase: final release signoff bundle and optional stricter retention/deletion technical review
+- Final release signoff bundle phase completed on 2026-04-22:
+  - created `RETENTION_DELETION_TECHNICAL_REVIEW.md` to document the current archive-first / dependency-aware delete posture behind the public retention wording
+  - created `MARKETING_CLAIMS_TRUTH_REVIEW.md` so launch assets stay within approved business-control / jobs / billing / profit-visibility claims
+  - created `FINAL_RELEASE_SIGNOFF_SUMMARY.md` as the one-page release answer for the current invited-client launch baseline
+  - created `RELEASE_EVIDENCE_CAPTURE_CHECKLIST.md` so the remaining manual screenshots/video captures are explicit instead of implied
+  - updated the release package and compliance gap report so the current state is now conditional release pending manual evidence attachment, not open-ended blocker drift
+  - next phase: capture the manual evidence bundle and make the invited-client launch decision
+- Release packet capture and invited-client launch decision phase completed on 2026-04-22:
+  - created `LAUNCH_VERIFICATION\\phase7_release_packet_capture.py` to automate the invited-client release packet assembly
+  - captured live public evidence for the login page and Trust page
+  - captured clean-reset protected evidence for legal acceptance, Owner View, and Billing Center / payment-method proof using the seeded local runtime
+  - generated `LAUNCH_VERIFICATION\\PHASE7_RESULTS.json` and `LAUNCH_VERIFICATION\\PHASE7_REPORT.md` with a clean `9/9` pass
+  - assembled `RELEASE_PACKET` in the project, plus a Desktop folder and zip bundle for signoff handoff
+  - moved the current launch answer from conditional release to ready for invited-client release
+  - next phase: controlled invited-client onboarding in small batches, followed by product refinement phases that do not threaten launch stability
+- Controlled invited-client onboarding kit phase completed on 2026-04-22:
+  - created `INVITED_CLIENT_ONBOARDING\\README.md` as the rollout entrypoint
+  - created `INVITED_CLIENT_ONBOARDING\\BATCH_RUNBOOK.md` with the exact add-business process and stop rules
+  - created `INVITED_CLIENT_ONBOARDING\\PER_BUSINESS_CHECKLIST.md` for one-business-at-a-time approval checks
+  - created `INVITED_CLIENT_ONBOARDING\\BATCH_TRACKER_TEMPLATE.csv` for structured batch tracking
+  - created `INVITED_CLIENT_ONBOARDING\\ISSUE_ESCALATION_RULES.md` to separate stop-level issues from later polish notes
+  - locked the recommended rollout cadence at 1 business, then 2, then 3 max until the platform proves stable with real usage
+  - next phase: admit Batch 1 with one real invited business and verify it for at least 24 hours before Batch 2
+- Marketing prompt kit prepared on 2026-04-23:
+  - created `MARKETING_VIDEO_PROMPTS\\README.md`
+  - created `MARKETING_VIDEO_PROMPTS\\MASTER_INVVIDEO_SYSTEM_PROMPT.md`
+  - created three focused InVideo prompts for brand overview, finance-first, and jobs/clients/billing
+  - created `MARKETING_VIDEO_PROMPTS\\CLAIMS_AND_WORDING_GUARDRAILS.md`
+  - this is a sidecar marketing asset pack and does not change the current launch or onboarding phase order
+- Batch 1 workflow polish fix completed on 2026-04-23:
+  - invoice center summary pills now open real estimate, hosted invoice, payment-link, reminder, and bookkeeping sections instead of acting like static labels
+  - estimates page summary actions now open the real estimate composer and the estimate composer now uses a wider full-page working area
+  - active Day / Week / Month schedule buttons now keep readable text on the dark selected state
+  - team-member portal setup now supports first-time password setup by email when a manager enables access without manually creating a password
+  - targeted Portuguese wording cleanup was applied for invoice / billing phrases such as `orçamento`, `cobrança`, and related finance copy
 - Future product architecture note recorded on 2026-04-22:
   - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections

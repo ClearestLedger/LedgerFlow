@@ -340,7 +340,7 @@ TRANSLATIONS.update({
     'Search': {'es': 'Buscar', 'pt': 'Buscar'},
     'Type miles, team, invoices, reports, billing, or schedule': {
         'es': 'Escribe kilometraje, equipo, facturas, reportes, cobro o agenda',
-        'pt': 'Digite quilometragem, equipe, faturas, relatorios, cobranca ou agenda',
+        'pt': 'Digite quilometragem, equipe, faturas, relatórios, cobrança ou agenda',
     },
     'Search results': {'es': 'Resultados de busqueda', 'pt': 'Resultados da busca'},
     'Showing the best matches for "{query}".': {
@@ -353,14 +353,14 @@ TRANSLATIONS.update({
     },
     'Try mileage, team, invoices, reports, billing, clients, or schedule.': {
         'es': 'Prueba kilometraje, equipo, facturas, reportes, cobro, clientes o agenda.',
-        'pt': 'Tente quilometragem, equipe, faturas, relatorios, cobranca, clientes ou agenda.',
+        'pt': 'Tente quilometragem, equipe, faturas, relatórios, cobrança, clientes ou agenda.',
     },
     'Best match': {'es': 'Mejor coincidencia', 'pt': 'Melhor correspondencia'},
     'More matches': {'es': 'Mas coincidencias', 'pt': 'Mais correspondencias'},
     'Open': {'es': 'Abrir', 'pt': 'Abrir'},
     'Keep the search simple. Use words like miles, team, reports, invoices, billing, jobs, or clients.': {
         'es': 'Manten la busqueda simple. Usa palabras como kilometraje, equipo, reportes, facturas, cobro, trabajos o clientes.',
-        'pt': 'Mantenha a busca simples. Use palavras como quilometragem, equipe, relatorios, faturas, cobranca, servicos ou clientes.',
+        'pt': 'Mantenha a busca simples. Use palavras como quilometragem, equipe, relatórios, faturas, cobrança, serviços ou clientes.',
     },
     'Payroll': {'es': 'Nomina', 'pt': 'Folha'},
     'Tax Ready': {'es': 'Listo para impuestos', 'pt': 'Pronto para impostos'},
@@ -426,11 +426,11 @@ TRANSLATIONS.update({
     },
     'Save income, review profit, and keep billing clarity before you spend time on scheduling extras.': {
         'es': 'Guarde ingresos, revise la ganancia y mantenga claridad de cobro antes de gastar tiempo en extras de agenda.',
-        'pt': 'Salve receitas, revise o lucro e mantenha clareza de cobranca antes de gastar tempo com extras de agenda.',
+        'pt': 'Salve receitas, revise o lucro e mantenha clareza de cobrança antes de gastar tempo com extras de agenda.',
     },
     'This workspace is strongest when you begin with income, invoices, reports, payroll records, and billing clarity. Scheduling and team tools stay available as bonuses once the financial foundation is organized.': {
         'es': 'Este espacio funciona mejor cuando comienza con ingresos, facturas, reportes, registros de nomina y claridad de cobro. Agenda y equipo siguen disponibles como bonus despues de organizar la base financiera.',
-        'pt': 'Este espaco funciona melhor quando voce comeca com receitas, faturas, relatorios, registros de folha e clareza de cobranca. Agenda e equipe continuam disponiveis como bonus depois que a base financeira estiver organizada.',
+        'pt': 'Este espaço funciona melhor quando você começa com receitas, faturas, relatórios, registros de folha e clareza de cobrança. Agenda e equipe continuam disponíveis como bônus depois que a base financeira estiver organizada.',
     },
     'Customer Invoice Balance': {'es': 'Saldo de facturas de clientes', 'pt': 'Saldo de faturas de clientes'},
     'Open customer invoices': {'es': 'Facturas de clientes abiertas', 'pt': 'Faturas de clientes em aberto'},
@@ -1318,7 +1318,7 @@ TRANSLATIONS.update({
     'Clients': {'es': 'Clientes', 'pt': 'Clientes'},
     'Estimates': {'es': 'Presupuestos', 'pt': 'Orcamentos'},
     'Phone': {'es': 'Telefono', 'pt': 'Telefone'},
-    'Create Estimate': {'es': 'Crear presupuesto', 'pt': 'Criar orcamento'},
+    'Create Estimate': {'es': 'Crear presupuesto', 'pt': 'Criar orçamento'},
     'Create Invoice': {'es': 'Crear factura', 'pt': 'Criar fatura'},
     'Saved Clients': {'es': 'Clientes guardados', 'pt': 'Clientes salvos'},
     'Open Estimates': {'es': 'Presupuestos abiertos', 'pt': 'Orcamentos abertos'},
@@ -1448,33 +1448,42 @@ TRANSLATIONS.update({
     'Invoices & Income': {'es': 'Facturas e ingresos', 'pt': 'Faturas e receitas'},
     'Move from estimate to invoice in one premium sales workflow, then keep internal income records and mileage organized below.': {
         'es': 'Pasa del presupuesto a la factura en un solo flujo premium y mantiene abajo los ingresos internos y el kilometraje organizados.',
-        'pt': 'Passe do orcamento para a fatura em um unico fluxo premium e mantenha abaixo as receitas internas e a quilometragem organizadas.',
+        'pt': 'Passe do orçamento para a fatura em um único fluxo premium e mantenha abaixo as receitas internas e a quilometragem organizadas.',
     },
     'Track bookkeeping income records and mileage in one place. Customer-facing estimates, invoicing, and saved client tools are available on Premium.': {
         'es': 'Controla en un solo lugar los ingresos contables y el kilometraje. Los presupuestos, facturas y clientes guardados para clientes estan disponibles en Premium.',
-        'pt': 'Acompanhe em um so lugar os registros contabeis de receita e a quilometragem. Orcamentos, faturamento e clientes salvos para atendimento ao cliente estao disponiveis no Premium.',
+        'pt': 'Acompanhe em um só lugar os registros contábeis de receita e a quilometragem. Orçamentos, faturamento e clientes salvos para atendimento ao cliente estão disponíveis no Premium.',
     },
     'Print This Page': {'es': 'Imprimir esta pagina', 'pt': 'Imprimir esta pagina'},
-    'Estimate first, invoice second': {'es': 'Primero presupuesto, luego factura', 'pt': 'Primeiro orcamento, depois fatura'},
+    'Estimate first, invoice second': {'es': 'Primero presupuesto, luego factura', 'pt': 'Primeiro orçamento, depois fatura'},
     'Hosted customer invoices': {'es': 'Facturas hospedadas para clientes', 'pt': 'Faturas hospedadas para clientes'},
     'Pay-online links supported': {'es': 'Links de pago online compatibles', 'pt': 'Links de pagamento online suportados'},
-    'Automatic overdue reminders': {'es': 'Recordatorios automaticos por atraso', 'pt': 'Lembretes automaticos de atraso'},
+    'Automatic overdue reminders': {'es': 'Recordatorios automaticos por atraso', 'pt': 'Lembretes automáticos de atraso'},
     'Internal income records': {'es': 'Registros internos de ingresos', 'pt': 'Registros internos de receita'},
     'Mileage attachments': {'es': 'Adjuntos de kilometraje', 'pt': 'Anexos de quilometragem'},
     'Tax-ready bookkeeping': {'es': 'Contabilidad lista para impuestos', 'pt': 'Contabilidade pronta para impostos'},
     'Premium sales tools available': {'es': 'Herramientas premium de ventas disponibles', 'pt': 'Ferramentas premium de vendas disponiveis'},
     'Internal income records preserved': {'es': 'Registros internos preservados', 'pt': 'Registros internos preservados'},
+    'Open the estimate workflow before billing the customer.': {'es': 'Abre el flujo de presupuesto antes de facturar al cliente.', 'pt': 'Abra o fluxo de orçamento antes de faturar o cliente.'},
+    'Open the live customer invoice list and hosted links.': {'es': 'Abre la lista de facturas de clientes y los enlaces hospedados.', 'pt': 'Abra a lista de faturas de clientes e os links hospedados.'},
+    'Open the invoice composer and add an online payment link.': {'es': 'Abre el creador de facturas y agrega un enlace de pago online.', 'pt': 'Abra o criador de faturas e adicione um link de pagamento online.'},
+    'Review open balances and send reminder actions from the invoice list.': {'es': 'Revisa saldos abiertos y envia recordatorios desde la lista de facturas.', 'pt': 'Revise saldos em aberto e envie lembretes pela lista de faturas.'},
+    'Jump to bookkeeping-only income entries below.': {'es': 'Salta abajo a los ingresos solo contables.', 'pt': 'Vá direto para os lançamentos internos de receita logo abaixo.'},
+    'Open the full estimate composer and build the hosted quote.': {'es': 'Abre el creador completo y arma el presupuesto hospedado.', 'pt': 'Abra o criador completo e monte o orçamento hospedado.'},
+    'Review customer responses from the saved estimate list.': {'es': 'Revisa las respuestas del cliente desde la lista de presupuestos guardados.', 'pt': 'Revise as respostas do cliente pela lista de orçamentos salvos.'},
+    'Move approved work into the invoice center when ready.': {'es': 'Mueve el trabajo aprobado al centro de facturas cuando estés listo.', 'pt': 'Leve o trabalho aprovado para o centro de faturas quando estiver pronto.'},
+    'Reuse saved client details instead of rebuilding customer info.': {'es': 'Reutiliza los datos guardados del cliente en vez de reconstruir la información.', 'pt': 'Reutilize os dados salvos do cliente em vez de refazer as informações.'},
     'overdue invoice reminder(s) were just sent automatically because this invoice center was opened.': {
         'es': 'recordatorio(s) de factura vencida se enviaron automaticamente al abrir este centro de facturas.',
         'pt': 'lembrete(s) de fatura vencida foram enviados automaticamente ao abrir esta central de faturas.',
     },
     'Use customer invoices for what clients receive. Keep internal income records below for tax-ready revenue tracking when you need bookkeeping-only entries.': {
         'es': 'Usa las facturas de clientes para lo que ellos reciben. Deja abajo los registros internos para el control contable cuando necesites movimientos solo de contabilidad.',
-        'pt': 'Use faturas de clientes para o que eles recebem. Mantenha abaixo os registros internos para controle contabil quando precisar de lancamentos apenas de contabilidade.',
+        'pt': 'Use faturas de clientes para o que eles recebem. Mantenha abaixo os registros internos para controle contábil quando precisar de lançamentos apenas de contabilidade.',
     },
     'This tier keeps bookkeeping income records available. Upgrade to Premium when you want saved clients, hosted estimates, customer invoices, and reminder automation.': {
         'es': 'Este plan mantiene disponibles los registros contables. Sube a Premium cuando quieras clientes guardados, presupuestos hospedados, facturas de clientes y recordatorios automaticos.',
-        'pt': 'Este plano mantem disponiveis os registros contabeis. Faca upgrade para Premium quando quiser clientes salvos, orcamentos hospedados, faturas de clientes e lembretes automaticos.',
+        'pt': 'Este plano mantém disponíveis os registros contábeis. Faça upgrade para Premium quando quiser clientes salvos, orçamentos hospedados, faturas de clientes e lembretes automáticos.',
     },
     'Estimate Workflow': {'es': 'Flujo de presupuestos', 'pt': 'Fluxo de orcamentos'},
     'Wave-style flow': {'es': 'Flujo estilo Wave', 'pt': 'Fluxo estilo Wave'},
@@ -17477,7 +17486,33 @@ def workers():
                 conn.commit()
                 welcome_sent = False
                 welcome_error = ''
-                if portal_enabled and approval_status == 'approved' and target_portal_email and smtp_email_ready():
+                setup_reset_sent = False
+                setup_reset_error = ''
+                if portal_enabled and approval_status == 'approved' and target_portal_email and not password_hash and smtp_email_ready():
+                    try:
+                        token = secrets.token_urlsafe(32)
+                        expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat(timespec='seconds')
+                        conn.execute(
+                            "INSERT INTO password_reset_requests (email, account_kind, account_id, token, status, expires_at, requester_ip) VALUES (?,?,?,?,?,?,?)",
+                            (target_portal_email, 'worker', worker_id, token, 'pending', expires_at, (request.headers.get('X-Forwarded-For', '') or request.remote_addr or '')[:120])
+                        )
+                        log_auth_activity(
+                            conn,
+                            client_id=client_id,
+                            actor=worker,
+                            account_type='password_reset',
+                            account_email=target_portal_email,
+                            account_name=worker['name'],
+                            status='requested',
+                            detail='First-time team member portal password setup requested from the manager portal.',
+                        )
+                        conn.commit()
+                        reset_link = f"{configured_base_url()}{url_for('reset_password', token=token)}"
+                        send_password_reset_email(target_portal_email, reset_link, 'team member portal')
+                        setup_reset_sent = True
+                    except Exception as e:
+                        setup_reset_error = str(e)[:200]
+                elif portal_enabled and approval_status == 'approved' and target_portal_email and smtp_email_ready():
                     try:
                         send_welcome_email(
                             target_portal_email,
@@ -17489,7 +17524,13 @@ def workers():
                         welcome_sent = True
                     except Exception as e:
                         welcome_error = str(e)[:200]
-                if portal_enabled and welcome_sent:
+                if portal_enabled and setup_reset_sent:
+                    flash('Worker portal access updated. First-time password setup email sent.', 'success')
+                elif portal_enabled and not password_hash and smtp_email_ready():
+                    flash(f'Worker portal access updated, but the first-time password setup email failed: {setup_reset_error}', 'error')
+                elif portal_enabled and not password_hash:
+                    flash('Worker portal access updated. Use Forgot Password on the team member login page to create the first password.', 'success')
+                elif portal_enabled and welcome_sent:
                     flash('Worker portal access updated and approved. Welcome email sent.', 'success')
                 elif portal_enabled and smtp_email_ready():
                     flash(f'Worker portal access updated and approved, but welcome email failed: {welcome_error}', 'error')

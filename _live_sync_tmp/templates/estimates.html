@@ -11,10 +11,22 @@
 
 <div class='card section-frame' style='margin-bottom:16px'>
   <div class='summary-strip'>
-    <span class='summary-pill'>{{ tr('Hosted estimate page') }}</span>
-    <span class='summary-pill'>{{ tr('Customer approve / decline') }}</span>
-    <span class='summary-pill'>{{ tr('Convert to invoice') }}</span>
-    <span class='summary-pill'>{{ tr('Saved clients supported') }}</span>
+    <a class='summary-pill summary-pill-link' href='#estimateComposerDetails'>
+      <strong>{{ tr('Hosted estimate page') }}</strong>
+      <small>{{ tr('Open the full estimate composer and build the hosted quote.') }}</small>
+    </a>
+    <a class='summary-pill summary-pill-link' href='#savedEstimates'>
+      <strong>{{ tr('Customer approve / decline') }}</strong>
+      <small>{{ tr('Review customer responses from the saved estimate list.') }}</small>
+    </a>
+    <a class='summary-pill summary-pill-link' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceComposerDetails'>
+      <strong>{{ tr('Convert to invoice') }}</strong>
+      <small>{{ tr('Move approved work into the invoice center when ready.') }}</small>
+    </a>
+    <a class='summary-pill summary-pill-link' href='{{ url_for("customer_sales", client_id=client_id) }}'>
+      <strong>{{ tr('Saved clients supported') }}</strong>
+      <small>{{ tr('Reuse saved client details instead of rebuilding customer info.') }}</small>
+    </a>
   </div>
   <div class='small' style='margin-top:10px'>{{ tr('Use estimates before billing starts. Once the customer approves, convert the estimate into a customer invoice without rebuilding the line items.') }}</div>
 </div>
@@ -42,9 +54,8 @@
   </div>
 </div>
 
-<div class='grid cards-2'>
-  <div class='card section-frame'>
-    <details class='compact-details' open>
+<div class='card section-frame estimate-composer-wide' id='estimateComposer'>
+    <details class='compact-details' id='estimateComposerDetails'>
       <summary>{{ tr('Create Estimate') }}</summary>
       <div class='small' style='margin:12px 0'>{{ tr('Build the scope, email the hosted estimate link right away, and let the customer approve or decline it from a clean page.') }}</div>
       <form method='post' class='form-grid' id='estimateForm'>
@@ -84,18 +95,17 @@
     </details>
   </div>
 
-  <div class='card section-frame'>
+<div class='card section-frame' style='margin-top:16px'>
     <div class='card-head'><h3>{{ tr('Hosted Link Actions') }}</h3><span class='badge'>{{ tr('Send · Copy · Convert') }}</span></div>
     <div class='small'>{{ tr('Every saved estimate keeps a hosted customer page. Use the quick actions below to open it, copy the link, resend it, or convert approved work into an invoice.') }}</div>
     <div class='summary-strip' style='margin-top:14px'>
       <a class='btn btn-secondary btn-sm' href='{{ url_for("customer_sales", client_id=client_id) }}'>{{ tr('Clients') }}</a>
       <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Open Invoice Center') }}</a>
-      <a class='btn btn-secondary btn-sm' href='#estimateForm'>{{ tr('Create New Estimate') }}</a>
+      <a class='btn btn-secondary btn-sm' href='#estimateComposerDetails'>{{ tr('Create New Estimate') }}</a>
     </div>
   </div>
-</div>
 
-<div class='card section-frame' style='margin-top:16px'>
+<div class='card section-frame' style='margin-top:16px' id='savedEstimates'>
   <div class='card-head'><h3>{{ tr('Saved Estimates') }}</h3><div class='small'>{{ tr('Hosted estimates waiting for customer response or ready for invoice conversion') }}</div></div>
   <div class='scroll-x'>
     <table class='table'>
