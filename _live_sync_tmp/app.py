@@ -10637,7 +10637,7 @@ def enforce_business_onboarding_gate():
     if not user or user['role'] != 'client':
         return
     endpoint = request.endpoint or ''
-    allowed = {'business_onboarding', 'business_comeback', 'logout', 'static', 'help_center', 'irs_tips', 'forgot_password', 'reset_password'}
+    allowed = {'business_onboarding', 'business_comeback', 'legal_acceptance', 'logout', 'static', 'help_center', 'irs_tips', 'forgot_password', 'reset_password'}
     if endpoint in allowed:
         return
     if endpoint in {'dashboard', 'welcome_center'} and session.get('skip_onboarding_gate_once') == '1':
