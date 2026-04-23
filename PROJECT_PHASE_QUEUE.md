@@ -307,6 +307,14 @@
   - `RDS HOME SOLUTIONS` passed the full invited-client checklist
   - no additional real business should be added yet
   - next gate is a 24-hour observation window with no stop-level issues before Batch 2 can begin
+- Bookkeeping and bank architecture planning pack completed on 2026-04-23:
+  - created `BOOKKEEPING_BANK_ARCHITECTURE\\README.md`
+  - created `BOOKKEEPING_BANK_ARCHITECTURE\\TARGET_DATA_MODEL.md`
+  - created `BOOKKEEPING_BANK_ARCHITECTURE\\IMPLEMENTATION_PHASES.md`
+  - created `BOOKKEEPING_BANK_ARCHITECTURE\\STATEMENT_IMPORT_RULES.md`
+  - created `BOOKKEEPING_BANK_ARCHITECTURE\\PROVIDER_EVALUATION.md`
+  - recommended Plaid Transactions as the primary future bookkeeping feed and Stripe Financial Connections as a secondary payment-linked bank-data option
+  - kept this phase sidecar-only so Batch 1 live observation is not disturbed
 - Future product architecture note recorded on 2026-04-22:
   - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections
