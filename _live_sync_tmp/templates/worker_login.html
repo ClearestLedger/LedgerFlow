@@ -39,9 +39,9 @@
       <h1>{{ tr('Worker Portal') }}</h1>
       <p class='small'>{{ tr('Secure worker access for time, schedule, pay stubs, and notices.') }}</p>
       <div class='card section-frame' style='box-shadow:none;margin:14px 0 16px 0;padding:14px 16px'>
-        <div class='small-label'>{{ tr('NEED ADMIN OR BUSINESS LOGIN?') }}</div>
-        <div style='font-weight:800;color:var(--primary-dark);margin-top:6px'>{{ tr('Use the main LedgerFlow portal for administrator and business access.') }}</div>
-        <div class='small' style='margin-top:6px'>{{ tr('If you landed here by mistake, use the return button above or below this sign-in form.') }}</div>
+        <div class='small-label'>WORKER-ONLY SIGN IN</div>
+        <div style='font-weight:800;color:var(--primary-dark);margin-top:6px'>Use this page only for team member portal access.</div>
+        <div class='small' style='margin-top:6px'>If your business manager sent you here to set up access, use your worker email and password below or choose Forgot Password to create a new one.</div>
       </div>
       <form method='post'>
         <input type='hidden' name='preferred_language' value='{{ current_language }}'>

@@ -5378,7 +5378,7 @@ def send_rich_email(cfg: dict, *, subject: str, to_email: str, plain_text: str, 
         s.send_message(msg)
 
 
-def send_password_reset_email(to_email: str, reset_link: str, account_label: str = 'account'):
+def send_password_reset_email(to_email: str, reset_link: str, account_label: str = 'account', *, account_type: str = 'user'):
     cfg = smtp_config()
     sender_email = cfg['sender_email']
     smtp_username = cfg['smtp_username']
@@ -5387,6 +5387,17 @@ def send_password_reset_email(to_email: str, reset_link: str, account_label: str
         raise RuntimeError('Saved SMTP password must be entered again once after the security-key update.')
     if not sender_email or not smtp_username or not smtp_password:
         raise RuntimeError('SMTP not configured')
+    is_worker = account_type == 'worker'
+    subject_label = 'Worker portal password setup' if is_worker else f'{APP_NAME} password reset'
+    intro = 'Use the secure link below to choose a password for your worker portal.' if is_worker else 'Use the secure link below to choose a new password and get back into your workspace.'
+    greeting = 'Your worker portal password setup is ready.' if is_worker else 'We received a password reset request.'
+    body_lines = [
+        f'This request was submitted for your {APP_NAME} {account_label}.',
+        'Use the secure button below to set a new password.',
+        'This link expires in 60 minutes. If you did not request this, you can safely ignore this email.',
+    ]
+    feature_tags = ['Worker Portal', 'Password Setup'] if is_worker else ['Secure Access', 'Password Reset']
+    support_note = 'If you continue having trouble signing in, contact your business manager for support.' if is_worker else 'If you continue having trouble signing in, contact your administrator for support.'
     body = "\n".join([
         f"We received a password reset request for your {APP_NAME} {account_label}.",
         "",
@@ -5396,21 +5407,32 @@ def send_password_reset_email(to_email: str, reset_link: str, account_label: str
         "This link expires in 60 minutes. If you did not request this, you can ignore this email.",
     ])
     email_html = render_marketing_email(
-        eyebrow='Password Reset',
-        title=f'{APP_NAME} password reset',
-        intro='Use the secure link below to choose a new password and get back into your workspace.',
-        greeting='We received a password reset request.',
-        body_lines=[
-            f'This request was submitted for your {APP_NAME} {account_label}.',
-            'Use the secure button below to set a new password.',
-            'This link expires in 60 minutes. If you did not request this, you can safely ignore this email.',
-        ],
-        cta_label='Reset Password',
+        eyebrow='Worker Portal' if is_worker else 'Password Reset',
+        title=subject_label,
+        intro=intro,
+        greeting=greeting,
+        body_lines=body_lines,
+        cta_label='Set Worker Password' if is_worker else 'Reset Password',
         cta_link=reset_link,
-        feature_tags=['Secure Access', 'Password Reset'],
-        support_note='If you continue having trouble signing in, contact your administrator for support.'
+        feature_tags=feature_tags,
+        support_note=support_note
     )
-    send_rich_email(cfg, subject=f'{APP_NAME} password reset request', to_email=to_email, plain_text=body, html=email_html)
+    send_rich_email(cfg, subject=subject_label, to_email=to_email, plain_text=body, html=email_html)
+
+
+def create_password_reset_request(conn, *, email: str, account_kind: str, account_id: int, requester_ip: str = '', supersede_existing: bool = False) -> str:
+    if supersede_existing:
+        conn.execute(
+            "UPDATE password_reset_requests SET status='superseded', used_at=CURRENT_TIMESTAMP WHERE account_kind=? AND account_id=? AND status='pending'",
+            (account_kind, account_id),
+        )
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat(timespec='seconds')
+    conn.execute(
+        "INSERT INTO password_reset_requests (email, account_kind, account_id, token, status, expires_at, requester_ip) VALUES (?,?,?,?,?,?,?)",
+        (email, account_kind, account_id, token, 'pending', expires_at, requester_ip[:120]),
+    )
+    return token
 
 
 def public_app_url(path: str) -> str:
@@ -11500,6 +11522,7 @@ def reset_password(token):
         if not reset_row:
             flash(translate_text('This reset link is invalid or has already been used.', selected_language), 'error')
             return redirect(url_for('forgot_password'))
+        is_worker_reset = reset_row['account_kind'] == 'worker'
         try:
             expires_at = datetime.fromisoformat((reset_row['expires_at'] or '').replace('Z', ''))
         except Exception:
@@ -11544,7 +11567,16 @@ def reset_password(token):
                 flash(translate_text('Password reset complete. Sign in with your new password.', selected_language), 'success')
                 return redirect(url_for('login' if reset_row['account_kind'] == 'user' else 'worker_login'))
 
-    return render_template('reset_password.html', token=token)
+    return render_template(
+        'reset_password.html',
+        token=token,
+        account_kind=reset_row['account_kind'],
+        reset_badge='Worker Password Setup' if is_worker_reset else 'Set New Password',
+        reset_title='Set Worker Portal Password' if is_worker_reset else 'Reset Password',
+        reset_intro='Choose a new password for your worker portal.' if is_worker_reset else 'Choose a new password for your LedgerFlow account.',
+        back_login_url=url_for('worker_login' if is_worker_reset else 'login'),
+        back_login_label='Back to Worker Login' if is_worker_reset else 'Back to Main Login',
+    )
 
 
 @app.route('/logout')
@@ -13608,13 +13640,15 @@ def ops_team():
                     welcome_error = ''
                     setup_reset_sent = False
                     setup_reset_error = ''
-                    if portal_enabled and approval_status == 'approved' and target_portal_email and not password_hash and smtp_email_ready():
+                    if portal_enabled and approval_status == 'approved' and target_portal_email and not portal_password and smtp_email_ready():
                         try:
-                            token = secrets.token_urlsafe(32)
-                            expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat(timespec='seconds')
-                            conn.execute(
-                                "INSERT INTO password_reset_requests (email, account_kind, account_id, token, status, expires_at, requester_ip) VALUES (?,?,?,?,?,?,?)",
-                                (target_portal_email, 'worker', selected_worker_id, token, 'pending', expires_at, (request.headers.get('X-Forwarded-For', '') or request.remote_addr or '')[:120])
+                            token = create_password_reset_request(
+                                conn,
+                                email=target_portal_email,
+                                account_kind='worker',
+                                account_id=selected_worker_id,
+                                requester_ip=(request.headers.get('X-Forwarded-For', '') or request.remote_addr or ''),
+                                supersede_existing=True,
                             )
                             log_auth_activity(
                                 conn,
@@ -13624,15 +13658,15 @@ def ops_team():
                                 account_email=target_portal_email,
                                 account_name=worker['name'],
                                 status='requested',
-                                detail='First-time team member portal password setup requested from Operations Team.',
+                                detail='Team member portal password setup or reset requested from Operations Team.',
                             )
                             conn.commit()
                             reset_link = f"{configured_base_url()}{url_for('reset_password', token=token)}"
-                            send_password_reset_email(target_portal_email, reset_link, 'team member portal')
+                            send_password_reset_email(target_portal_email, reset_link, 'team member portal', account_type='worker')
                             setup_reset_sent = True
                         except Exception as e:
                             setup_reset_error = str(e)[:200]
-                    elif portal_enabled and approval_status == 'approved' and target_portal_email and smtp_email_ready():
+                    elif portal_enabled and approval_status == 'approved' and target_portal_email and portal_password and smtp_email_ready():
                         try:
                             send_welcome_email(
                                 target_portal_email,
@@ -13645,11 +13679,11 @@ def ops_team():
                         except Exception as e:
                             welcome_error = str(e)[:200]
                     if portal_enabled and setup_reset_sent:
-                        flash('Team member portal access updated. First-time password setup email sent.', 'success')
-                    elif portal_enabled and not password_hash and smtp_email_ready():
-                        flash(f'Team member portal access updated, but the first-time password setup email failed: {setup_reset_error}', 'error')
-                    elif portal_enabled and not password_hash:
-                        flash('Team member portal access updated. Use Forgot Password on the team member login page to create the first password.', 'success')
+                        flash('Team member portal access updated. Worker password setup email sent.', 'success')
+                    elif portal_enabled and not portal_password and smtp_email_ready():
+                        flash(f'Team member portal access updated, but the worker password setup email failed: {setup_reset_error}', 'error')
+                    elif portal_enabled and not portal_password:
+                        flash('Team member portal access updated. Use Forgot Password on the team member login page to create or reset the worker password.', 'success')
                     elif portal_enabled and welcome_sent:
                         flash('Team member portal access updated. Welcome email sent.', 'success')
                     elif portal_enabled and smtp_email_ready():
@@ -17602,13 +17636,15 @@ def workers():
                 welcome_error = ''
                 setup_reset_sent = False
                 setup_reset_error = ''
-                if portal_enabled and approval_status == 'approved' and target_portal_email and not password_hash and smtp_email_ready():
+                if portal_enabled and approval_status == 'approved' and target_portal_email and not portal_password and smtp_email_ready():
                     try:
-                        token = secrets.token_urlsafe(32)
-                        expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat(timespec='seconds')
-                        conn.execute(
-                            "INSERT INTO password_reset_requests (email, account_kind, account_id, token, status, expires_at, requester_ip) VALUES (?,?,?,?,?,?,?)",
-                            (target_portal_email, 'worker', worker_id, token, 'pending', expires_at, (request.headers.get('X-Forwarded-For', '') or request.remote_addr or '')[:120])
+                        token = create_password_reset_request(
+                            conn,
+                            email=target_portal_email,
+                            account_kind='worker',
+                            account_id=worker_id,
+                            requester_ip=(request.headers.get('X-Forwarded-For', '') or request.remote_addr or ''),
+                            supersede_existing=True,
                         )
                         log_auth_activity(
                             conn,
@@ -17618,15 +17654,15 @@ def workers():
                             account_email=target_portal_email,
                             account_name=worker['name'],
                             status='requested',
-                            detail='First-time team member portal password setup requested from the manager portal.',
+                            detail='Team member portal password setup or reset requested from the manager portal.',
                         )
                         conn.commit()
                         reset_link = f"{configured_base_url()}{url_for('reset_password', token=token)}"
-                        send_password_reset_email(target_portal_email, reset_link, 'team member portal')
+                        send_password_reset_email(target_portal_email, reset_link, 'team member portal', account_type='worker')
                         setup_reset_sent = True
                     except Exception as e:
                         setup_reset_error = str(e)[:200]
-                elif portal_enabled and approval_status == 'approved' and target_portal_email and smtp_email_ready():
+                elif portal_enabled and approval_status == 'approved' and target_portal_email and portal_password and smtp_email_ready():
                     try:
                         send_welcome_email(
                             target_portal_email,
@@ -17639,11 +17675,11 @@ def workers():
                     except Exception as e:
                         welcome_error = str(e)[:200]
                 if portal_enabled and setup_reset_sent:
-                    flash('Worker portal access updated. First-time password setup email sent.', 'success')
-                elif portal_enabled and not password_hash and smtp_email_ready():
-                    flash(f'Worker portal access updated, but the first-time password setup email failed: {setup_reset_error}', 'error')
-                elif portal_enabled and not password_hash:
-                    flash('Worker portal access updated. Use Forgot Password on the team member login page to create the first password.', 'success')
+                    flash('Worker portal access updated. Worker password setup email sent.', 'success')
+                elif portal_enabled and not portal_password and smtp_email_ready():
+                    flash(f'Worker portal access updated, but the worker password setup email failed: {setup_reset_error}', 'error')
+                elif portal_enabled and not portal_password:
+                    flash('Worker portal access updated. Use Forgot Password on the team member login page to create or reset the worker password.', 'success')
                 elif portal_enabled and welcome_sent:
                     flash('Worker portal access updated and approved. Welcome email sent.', 'success')
                 elif portal_enabled and smtp_email_ready():

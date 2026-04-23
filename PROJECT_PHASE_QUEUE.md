@@ -299,6 +299,10 @@
   - `Operations Team` now includes a real `Set Up Team Member Login` section inside the selected team member panel
   - managers can set portal email, enable access, save a password directly, or leave the password blank to send a first-time password setup email
   - the team page now exposes the worker login page link from the same operational screen so managers do not have to switch to the legacy worker page
+- Worker portal password setup email fix completed on 2026-04-23:
+  - leaving the worker password blank now consistently sends a worker password setup / reset email, even if the worker already had a prior portal password hash
+  - worker password reset emails and the reset page now use worker-specific wording instead of falling back to the more generic business-facing reset experience
+  - the worker login page copy was tightened so it reads as worker-only access instead of feeling like a mixed business login surface
 - Future product architecture note recorded on 2026-04-22:
   - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections
