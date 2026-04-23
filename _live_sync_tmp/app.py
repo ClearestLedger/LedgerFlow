@@ -11357,8 +11357,8 @@ def worker_login():
     if request.method == 'POST':
         selected_language = normalize_language(request.form.get('preferred_language') or session.get('preferred_language'))
         session['preferred_language'] = selected_language
-        email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password', '').strip()
+        email = (request.form.get('worker_email') or request.form.get('email') or '').strip().lower()
+        password = (request.form.get('worker_password') or request.form.get('password') or '').strip()
         with get_conn() as conn:
             workers = conn.execute(
                 '''SELECT w.*, c.business_name, c.contact_name business_contact_name,

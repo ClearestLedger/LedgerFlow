@@ -42,15 +42,16 @@
         <div class='small-label'>WORKER-ONLY SIGN IN</div>
         <div style='font-weight:800;color:var(--primary-dark);margin-top:6px'>Use this page only for team member portal access.</div>
         <div class='small' style='margin-top:6px'>If your business manager sent you here to set up access, use your worker email and password below or choose Forgot Password to create a new one.</div>
+        <div class='small' style='margin-top:6px'>For security, this page clears carried-over business login autofill before the worker signs in.</div>
       </div>
       <form method='post' autocomplete='off' data-form-context='worker-login'>
         <input type='hidden' name='preferred_language' value='{{ current_language }}'>
         <input type='text' name='worker_portal_guard_user' autocomplete='section-worker username' tabindex='-1' aria-hidden='true' style='position:absolute;left:-9999px;opacity:0;pointer-events:none'>
         <input type='password' name='worker_portal_guard_pass' autocomplete='section-worker new-password' tabindex='-1' aria-hidden='true' style='position:absolute;left:-9999px;opacity:0;pointer-events:none'>
         <label>{{ tr('Email') }}</label>
-        <input name='email' type='email' required autocomplete='section-worker username' autocapitalize='off' spellcheck='false'>
+        <input name='worker_email' type='email' required autocomplete='off' autocapitalize='off' spellcheck='false' data-worker-auth='email'>
         <label style='margin-top:12px'>{{ tr('Password') }}</label>
-        <div class='password-field'><input type='password' name='password' required autocomplete='section-worker current-password'><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div>
+        <div class='password-field'><input type='password' name='worker_password' required autocomplete='new-password' data-worker-auth='password'><button class='password-toggle' type='button' aria-label='{{ tr("Show password") }}' title='{{ tr("Show password") }}'><span class='toggle-show'>{{ tr('Show') }}</span><span class='toggle-hide'>{{ tr('Hide') }}</span></button></div>
         <button style='margin-top:16px;width:100%'>{{ tr('Sign In to Worker Portal') }}</button>
         <div style='margin-top:10px;text-align:right'><a class='small' href='{{ url_for("forgot_password") }}'>{{ tr('Forgot Password?') }}</a></div>
       </form>
@@ -70,6 +71,20 @@
 document.addEventListener('DOMContentLoaded', function () {
   var showPasswordLabel = {{ tr('Show password')|tojson }};
   var hidePasswordLabel = {{ tr('Hide password')|tojson }};
+  var workerAuthInputs = Array.prototype.slice.call(document.querySelectorAll('[data-worker-auth]'));
+  var workerUserInteracted = false;
+  function clearWorkerAutofill() {
+    if (workerUserInteracted) return;
+    workerAuthInputs.forEach(function (input) {
+      if (input && input.value) {
+        input.value = '';
+      }
+    });
+  }
+  workerAuthInputs.forEach(function (input) {
+    input.addEventListener('focus', function () { workerUserInteracted = true; });
+    input.addEventListener('input', function () { workerUserInteracted = true; });
+  });
   document.querySelectorAll('.password-field').forEach(function (field) {
     var input = field.querySelector('input');
     var toggle = field.querySelector('.password-toggle');
@@ -84,6 +99,11 @@ document.addEventListener('DOMContentLoaded', function () {
       toggle.setAttribute('title', visible ? showPasswordLabel : hidePasswordLabel);
     });
   });
+  clearWorkerAutofill();
+  window.addEventListener('pageshow', clearWorkerAutofill);
+  setTimeout(clearWorkerAutofill, 80);
+  setTimeout(clearWorkerAutofill, 400);
+  setTimeout(clearWorkerAutofill, 1200);
 });
 </script>
 </body>
