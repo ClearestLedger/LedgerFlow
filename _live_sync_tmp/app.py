@@ -7635,6 +7635,19 @@ def business_completed_landing_path(user) -> str:
     return url_for('welcome_center') if user_has_trial_offer(user) else url_for('dashboard')
 
 
+def normalize_legal_next_path(user, next_path: str) -> str:
+    target = safe_next_path(next_path, default_post_login_path(user))
+    if not user:
+        return target
+    if user['role'] == 'client':
+        if target == url_for('business_onboarding') and not user_requires_business_onboarding(user):
+            return business_completed_landing_path(user)
+        issue = client_access_issue_for_user(user)
+        if issue and target not in {url_for('business_comeback'), url_for('logout')}:
+            return url_for('business_comeback')
+    return target
+
+
 def login_required(fn):
     @wraps(fn)
     def wrap(*args, **kwargs):
@@ -10822,7 +10835,12 @@ def trust_center():
 @login_required
 def legal_acceptance():
     user = current_user()
-    next_path = safe_next_path(request.values.get('next'), default_post_login_path(user))
+    next_path = normalize_legal_next_path(user, request.values.get('next'))
+    with get_conn() as conn:
+        acceptance_row = latest_legal_acceptance(conn, user['id'])
+        if acceptance_row and user_has_current_legal_acceptance(conn, user['id']):
+            cache_legal_acceptance_in_session(acceptance_row)
+            return redirect(next_path)
     if request.method == 'POST':
         accept_terms = request.form.get('accept_terms') in {'1', 'on', 'true', 'yes'}
         accept_privacy = request.form.get('accept_privacy') in {'1', 'on', 'true', 'yes'}
