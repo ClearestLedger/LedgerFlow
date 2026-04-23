@@ -147,7 +147,7 @@
             <form method='post' style='margin:0'>
               <input type='hidden' name='action' value='resend_invite'>
               <input type='hidden' name='invite_id' value='{{ invite.id }}'>
-              <button class='btn btn-secondary btn-sm' type='submit'>Resend</button>
+              <button class='btn btn-secondary btn-sm' type='submit'>{{ 'Send Access Again' if invite.accepted_user_id or invite.accepted_user_email else 'Resend' }}</button>
             </form>
           </td>
           <td class='small'>{{ invite.invite_error or '' }}</td>

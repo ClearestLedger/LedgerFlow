@@ -2366,6 +2366,59 @@ def resolve_invite_recipient_email(invited_email: str, client_email: str = '') -
     return '', 'Saved invite email is invalid. Update the business email first.'
 
 
+def resolve_business_access_recipient(conn: sqlite3.Connection, invite_row) -> dict:
+    client_id = invite_row['client_id']
+    invited_email = normalize_email_address(invite_row['invited_email'] or '')
+    accepted_user_id = invite_row['accepted_user_id'] if 'accepted_user_id' in invite_row.keys() else None
+    fallback_name = (invite_row['invited_name'] or '').strip()
+
+    if accepted_user_id:
+        row = conn.execute(
+            'SELECT id, email, full_name FROM users WHERE id=? AND role="client"',
+            (accepted_user_id,),
+        ).fetchone()
+        if row and normalize_email_address(row['email'] or ''):
+            return {
+                'email': normalize_email_address(row['email'] or ''),
+                'name': (row['full_name'] or fallback_name or '').strip(),
+                'user_id': row['id'],
+                'note': 'Business already has a login, so LedgerFlow sent a fresh access email instead of another signup invite.',
+            }
+
+    if invited_email:
+        row = conn.execute(
+            'SELECT id, email, full_name FROM users WHERE role="client" AND client_id=? AND lower(email)=? ORDER BY id DESC LIMIT 1',
+            (client_id, invited_email),
+        ).fetchone()
+        if row:
+            return {
+                'email': invited_email,
+                'name': (row['full_name'] or fallback_name or '').strip(),
+                'user_id': row['id'],
+                'note': 'That email already belongs to the business login, so LedgerFlow sent a fresh access email instead of another signup invite.',
+            }
+
+    row = conn.execute(
+        'SELECT id, email, full_name FROM users WHERE role="client" AND client_id=? ORDER BY id LIMIT 1',
+        (client_id,),
+    ).fetchone()
+    if row and normalize_email_address(row['email'] or ''):
+        return {
+            'email': normalize_email_address(row['email'] or ''),
+            'name': (row['full_name'] or fallback_name or '').strip(),
+            'user_id': row['id'],
+            'note': 'Business already has a login, so LedgerFlow sent the access email to the active business login on file.',
+        }
+
+    recipient_email, recipient_note = resolve_invite_recipient_email(invite_row['invited_email'], invite_row['client_email'] or '')
+    return {
+        'email': recipient_email,
+        'name': fallback_name,
+        'user_id': None,
+        'note': recipient_note,
+    }
+
+
 def business_category_display(value: str) -> str:
     normalized = normalize_business_category(value)
     return normalized or 'Service Business'
@@ -15100,33 +15153,47 @@ def client_users():
                            c.business_name,
                            c.business_category,
                            c.email AS client_email,
-                           COALESCE(c.record_status, 'active') AS business_record_status
+                           COALESCE(c.record_status, 'active') AS business_record_status,
+                           accepted.email AS accepted_user_email,
+                           accepted.full_name AS accepted_user_name
                        FROM business_invites bi
                        JOIN clients c ON c.id=bi.client_id
+                       LEFT JOIN users accepted ON accepted.id=bi.accepted_user_id
                        WHERE bi.id=?''',
                     (invite_id,)
                 ).fetchone()
                 if not inv:
                     flash('Invite not found.', 'error')
                     return redirect(url_for('client_users'))
-                invite_link = build_invite_link(inv['token'])
                 renewed_expires_at = (datetime.utcnow() + timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')
                 tracking_token = generate_email_tracking_token()
-                recipient_email, recipient_note = resolve_invite_recipient_email(inv['invited_email'], inv['client_email'] or '')
+                recipient = resolve_business_access_recipient(conn, inv)
+                recipient_email = recipient['email']
+                recipient_name = recipient['name'] or inv['invited_name']
+                recipient_note = recipient['note']
+                existing_login_user_id = recipient['user_id']
                 if not recipient_email:
                     conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (recipient_note, invite_id))
                     conn.commit()
                     flash(recipient_note, 'error')
                     return redirect(url_for('client_users'))
-                if recipient_email != normalize_email_address(inv['invited_email'] or ''):
+                if recipient_email != normalize_email_address(inv['invited_email'] or '') and not existing_login_user_id:
                     conn.execute('UPDATE business_invites SET invited_email=?, invite_error=? WHERE id=?', (recipient_email, recipient_note, invite_id))
                     inv = dict(inv)
                     inv['invited_email'] = recipient_email
                 try:
-                    if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial':
+                    if existing_login_user_id:
+                        invite_payload = send_welcome_email(
+                            recipient_email,
+                            recipient_name,
+                            account_type='business',
+                            business_name=inv['business_name'],
+                        )
+                    elif normalize_invite_kind(inv['invite_kind']) == 'prospect_trial':
+                        invite_link = build_invite_link(inv['token'])
                         invite_payload = send_trial_invite_email(
                             recipient_email,
-                            inv['invited_name'],
+                            recipient_name,
                             inv['business_name'],
                             invite_link,
                             trial_days=int(inv['trial_days'] or 0),
@@ -15134,8 +15201,11 @@ def client_users():
                             tracking_token=tracking_token,
                         )
                     else:
-                        invite_payload = send_invite_email(recipient_email, inv['invited_name'], inv['business_name'], invite_link)
-                    if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial':
+                        invite_link = build_invite_link(inv['token'])
+                        invite_payload = send_invite_email(recipient_email, recipient_name, inv['business_name'], invite_link)
+                    if existing_login_user_id:
+                        conn.execute('UPDATE business_invites SET invite_error="" WHERE id=?', (invite_id,))
+                    elif normalize_invite_kind(inv['invite_kind']) == 'prospect_trial':
                         conn.execute(
                             'UPDATE business_invites SET status="sent", invite_error="", created_at=CURRENT_TIMESTAMP, expires_at=?, followup_sent_at="", followup_status="pending", followup_error="" WHERE id=?',
                             (renewed_expires_at, invite_id),
@@ -15147,16 +15217,20 @@ def client_users():
                         client_id=inv['client_id'],
                         email_type=invite_payload['email_type'],
                         recipient_email=recipient_email,
-                        recipient_name=inv['invited_name'],
+                        recipient_name=recipient_name,
                         subject=invite_payload['subject'],
                         body_text=invite_payload['body_text'],
                         body_html=invite_payload['body_html'],
                         status='sent',
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
-                        tracking_token=tracking_token if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else '',
+                        tracking_token=tracking_token if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' and not existing_login_user_id else '',
                     )
-                    if recipient_note:
+                    if existing_login_user_id and recipient_note:
+                        flash(f'Access email sent. {recipient_note}', 'success')
+                    elif existing_login_user_id:
+                        flash('Access email sent. View it below in Recent Business Emails.', 'success')
+                    elif recipient_note:
                         flash(f'Invite re-sent. {recipient_note}', 'success')
                     else:
                         flash('Invite re-sent. View it below in Recent Business Emails.', 'success')
@@ -15165,21 +15239,29 @@ def client_users():
                     conn.commit()
                     log_email_delivery(
                         client_id=inv['client_id'],
-                        email_type='prospect_trial_invite' if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else 'business_invite',
+                        email_type=(
+                            'business_welcome'
+                            if existing_login_user_id else
+                            ('prospect_trial_invite' if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else 'business_invite')
+                        ),
                         recipient_email=recipient_email,
-                        recipient_name=inv['invited_name'],
+                        recipient_name=recipient_name,
                         subject=(
-                            f"Start your {int(inv['trial_days'] or default_trial_offer_days())}-day LedgerFlow trial for {inv['business_name']}"
-                            if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else
-                            f"Welcome to LedgerFlow - set up your business access for {inv['business_name']}"
+                            f"Welcome to LedgerFlow - Business Login"
+                            if existing_login_user_id else
+                            (
+                                f"Start your {int(inv['trial_days'] or default_trial_offer_days())}-day LedgerFlow trial for {inv['business_name']}"
+                                if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else
+                                f"Welcome to LedgerFlow - set up your business access for {inv['business_name']}"
+                            )
                         ),
                         status='failed',
                         error_message=str(e)[:500],
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
-                        tracking_token=tracking_token if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' else '',
+                        tracking_token=tracking_token if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' and not existing_login_user_id else '',
                     )
-                    flash(f'Invite email failed: {str(e)[:180]}', 'error')
+                    flash(f'Access email failed: {str(e)[:180]}' if existing_login_user_id else f'Invite email failed: {str(e)[:180]}', 'error')
                 return redirect(url_for('client_users'))
         active_clients = conn.execute("SELECT * FROM clients WHERE COALESCE(record_status,'active')='active' ORDER BY business_name").fetchall()
         users = conn.execute('SELECT u.*, c.business_name FROM users u LEFT JOIN clients c ON c.id=u.client_id WHERE u.role="client" ORDER BY c.business_name, u.full_name').fetchall()
