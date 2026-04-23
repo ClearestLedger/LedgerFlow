@@ -16058,6 +16058,7 @@ def business_onboarding():
     if user['role'] != 'client':
         return redirect(url_for('cpa_dashboard'))
     client_id = user['client_id']
+    today = date.today().isoformat()
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client:
