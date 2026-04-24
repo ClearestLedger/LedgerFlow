@@ -374,3 +374,9 @@
   - `Rafa` was created as the third real business in Batch 2
   - the free-trial invite email was sent, received, and opened correctly, and the initial invite-start flow is working
   - the rollout is now in the `Business 3` checklist stage; finish the full checklist before any Batch 2 observation decision
+- Video placement sidecar plan completed on 2026-04-24:
+  - reviewed the first two draft marketing videos and assigned temporary roles without interrupting the rollout schedule
+  - `19.4-invideo-video_tools.mp4` is the temporary main welcome / free-trial page video
+  - `1.1-invideo-veo_31_fast_preview (1).mp4` is the short teaser / email-thumbnail support asset
+  - email strategy is to use a poster image with play icon and CTA, not raw embedded MP4
+  - placement, CTA copy, and improvement notes are documented in the video placement plan pack for later implementation
