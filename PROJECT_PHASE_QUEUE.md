@@ -351,3 +351,18 @@
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections
   - each leg should have its own submenu and compact default state so businesses unfold only the area they are actively working in
   - invoice and estimate UX should be upgraded later toward a cleaner Wave-plus workflow while staying fully inside the business workspace structure
+- Future onboarding and trial-conversion upgrade note recorded on 2026-04-24:
+  - `business-onboarding` should be shortened and rebalanced so free-trial users reach the excitement and trial entry faster with less scrolling and less early friction
+  - the free-trial claim page should not lead with subscription plans or pricing; it should feel like a friendly invitation with minimal business information required up front
+  - onboarding should clearly support `save and continue later`, show a rough estimated setup time, and reduce large blank-space / split-layout imbalance on desktop
+  - after trial entry, the first business-facing experience should be a stronger welcome / tutorial / marketing mode that sells the value of the trial before the normal workspace takes over
+  - daily reminder messaging and email nurture for active trial users should be considered later as a controlled follow-up phase, not mixed into current rollout stability work
+- Future welcome-center and tutorial navigation upgrade note recorded on 2026-04-24:
+  - the first stop after trial entry should be a stronger free-trial welcome experience with tutorial video space, marketing energy, and a guided `what to do first` path
+  - this stronger trial welcome surface should disappear once the business becomes a paid subscriber
+  - tutorials should remain available afterward from the left-side navigation so businesses can keep learning each page without re-showing the launch experience
+- Future team/workspace layout upgrade note recorded on 2026-04-24:
+  - `Operations Team` add/edit flows should open centered and full working width instead of feeling narrow or visually pushed to one side
+  - the team-member count should stay inside the team menu context instead of competing with the editing surface
+  - the selected worker page should be reorganized into clearer submenus so each task opens in full-size working space without mixing too many functions on one screen
+  - this follows the wider product rule: left-side menu -> choose menu leg -> choose submenu task -> open one focused full-size working page
