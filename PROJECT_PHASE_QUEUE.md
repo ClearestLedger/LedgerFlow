@@ -366,3 +366,7 @@
   - the team-member count should stay inside the team menu context instead of competing with the editing surface
   - the selected worker page should be reorganized into clearer submenus so each task opens in full-size working space without mixing too many functions on one screen
   - this follows the wider product rule: left-side menu -> choose menu leg -> choose submenu task -> open one focused full-size working page
+- Batch 2 business 2 checkpoint recorded on 2026-04-24:
+  - the second real business completed the live checklist successfully
+  - Batch 2 remains within the safe limit and `Business 3` is now unlocked
+  - continue with exactly one more real business only, then run the same checklist before deciding on the next rollout gate
