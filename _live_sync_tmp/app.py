@@ -16763,6 +16763,7 @@ def invoices():
                             body_html=email_result['body_html'],
                             status='sent',
                             created_by_user_id=user['id'],
+                            conn=conn,
                         )
                         flash('Customer invoice saved and sent.', 'success')
                     except Exception as exc:
@@ -16775,6 +16776,7 @@ def invoices():
                             status='failed',
                             error_message=str(exc)[:500],
                             created_by_user_id=user['id'],
+                            conn=conn,
                         )
                         flash(f'Customer invoice saved, but sending failed: {exc}', 'error')
                 else:
@@ -16824,6 +16826,7 @@ def invoices():
                         body_html=email_result['body_html'],
                         status='sent',
                         created_by_user_id=user['id'],
+                        conn=conn,
                     )
                     conn.commit()
                     flash('Customer invoice sent.', 'success')
@@ -16837,6 +16840,7 @@ def invoices():
                         status='failed',
                         error_message=str(exc)[:500],
                         created_by_user_id=user['id'],
+                        conn=conn,
                     )
                     conn.commit()
                     flash(f'Invoice send failed: {exc}', 'error')
@@ -16883,6 +16887,7 @@ def invoices():
                         body_html=email_result['body_html'],
                         status='sent',
                         created_by_user_id=user['id'],
+                        conn=conn,
                     )
                     conn.commit()
                     flash('Invoice reminder sent.', 'success')
@@ -16896,6 +16901,7 @@ def invoices():
                         status='failed',
                         error_message=str(exc)[:500],
                         created_by_user_id=user['id'],
+                        conn=conn,
                     )
                     conn.commit()
                     flash(f'Invoice reminder failed: {exc}', 'error')
@@ -16967,6 +16973,7 @@ def invoices():
                         body_html=email_result['body_html'],
                         status='sent',
                         created_by_user_id=user['id'],
+                        conn=conn,
                     )
                     conn.commit()
                     flash('Payment receipt sent.', 'success')
@@ -16980,6 +16987,7 @@ def invoices():
                         status='failed',
                         error_message=str(exc)[:500],
                         created_by_user_id=user['id'],
+                        conn=conn,
                     )
                     conn.commit()
                     flash(f'Receipt send failed: {exc}', 'error')
@@ -17256,6 +17264,7 @@ def estimates():
                             body_html=email_result['body_html'],
                             status='sent',
                             created_by_user_id=user['id'],
+                            conn=conn,
                         )
                         flash('Estimate saved and sent.', 'success')
                     except Exception as exc:
@@ -17268,6 +17277,7 @@ def estimates():
                             status='failed',
                             error_message=str(exc)[:500],
                             created_by_user_id=user['id'],
+                            conn=conn,
                         )
                         flash(f'Estimate saved, but sending failed: {exc}', 'error')
                 else:
@@ -17309,6 +17319,7 @@ def estimates():
                         body_html=email_result['body_html'],
                         status='sent',
                         created_by_user_id=user['id'],
+                        conn=conn,
                     )
                     conn.commit()
                     flash('Estimate sent.', 'success')
@@ -17322,6 +17333,7 @@ def estimates():
                         status='failed',
                         error_message=str(exc)[:500],
                         created_by_user_id=user['id'],
+                        conn=conn,
                     )
                     conn.commit()
                     flash(f'Estimate send failed: {exc}', 'error')

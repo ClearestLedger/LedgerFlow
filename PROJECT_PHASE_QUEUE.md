@@ -328,6 +328,10 @@
   - `Estimates` now uses the same pattern: overview, full-width create form, and saved-estimates list with deep links that auto-open the correct section
   - deep links into folded invoice and estimate sections now auto-open the target details block on load, which keeps the new compact layout usable from buttons and anchors
   - this phase was template-and-style only so the live invoice/estimate logic stayed unchanged while the pages became cleaner and less crowded
+- Sales-document save lock fix completed on 2026-04-24:
+  - creating an estimate or customer invoice with `send now` enabled could create the record and then fail on a SQLite `database is locked` error during email-delivery logging
+  - fixed the estimate and invoice routes so their email-delivery log writes reuse the already-open transaction instead of opening a second write connection mid-request
+  - verified locally that both `create_estimate` and `create_customer_invoice` now save and redirect cleanly with `send now` enabled
 - Future product architecture note recorded on 2026-04-22:
   - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections
