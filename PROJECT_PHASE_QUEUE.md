@@ -342,6 +342,10 @@
   - `client-logins` free-trial invite sending could fail on internal error because the trial prospect insert used the wrong placeholder count and the invite flow could also re-enter SQLite for email/base-url work while a write transaction was still open
   - fixed the trial prospect insert to use the correct value count, updated invite email logging to reuse the active transaction, and changed public base-url resolution to prefer the current request/env before touching stored email settings
   - verified locally that `send_trial_invite` now creates the prospect business, creates the invite, logs the sent email, and redirects back to `client-logins` without a 500
+- Batch 2 invite email-hardening fix completed on 2026-04-24:
+  - obvious mistyped recipient domains like `yahoo.comm` could still be accepted as syntactically valid and the admin flow could also show `sent` even when SMTP returned a refused-recipient response
+  - added pre-send delivery validation for invite email addresses with typo-domain correction hints and domain-resolution checks, tightened the admin invite form inputs to use browser email fields, and made `send_rich_email` treat SMTP refused-recipient results as failures instead of silent success
+  - verified locally that typo domains are blocked before any prospect/invite record is created and that SMTP refused recipients now come back as readable `correct the email and try again` failures in both the invite row and email-delivery log
 - Future product architecture note recorded on 2026-04-22:
   - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections

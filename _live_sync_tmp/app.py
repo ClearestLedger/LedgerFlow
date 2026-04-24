@@ -7,6 +7,7 @@ import json
 import html
 import secrets
 import smtplib
+import socket
 import shutil
 import tempfile
 import zipfile
@@ -2370,14 +2371,97 @@ def normalize_email_address(value: str) -> str:
     return cleaned
 
 
+COMMON_EMAIL_DOMAIN_CORRECTIONS = {
+    'gmail.con': 'gmail.com',
+    'gmail.comm': 'gmail.com',
+    'gamil.com': 'gmail.com',
+    'gmial.com': 'gmail.com',
+    'gnail.com': 'gmail.com',
+    'hotmail.con': 'hotmail.com',
+    'hotmail.comm': 'hotmail.com',
+    'hotnail.com': 'hotmail.com',
+    'outlook.con': 'outlook.com',
+    'outlook.comm': 'outlook.com',
+    'yaho.com': 'yahoo.com',
+    'yahoo.con': 'yahoo.com',
+    'yahoo.comm': 'yahoo.com',
+}
+
+COMMON_EMAIL_TLD_CORRECTIONS = {
+    'comm': 'com',
+    'con': 'com',
+    'cmo': 'com',
+    'cm': 'com',
+    'nett': 'net',
+    'ogr': 'org',
+}
+
+
+def suggested_email_domain(domain: str) -> str:
+    normalized = (domain or '').strip().lower()
+    if not normalized:
+        return ''
+    direct = COMMON_EMAIL_DOMAIN_CORRECTIONS.get(normalized, '')
+    if direct:
+        return direct
+    name, sep, tld = normalized.rpartition('.')
+    corrected_tld = COMMON_EMAIL_TLD_CORRECTIONS.get(tld, '')
+    if name and sep and corrected_tld:
+        return f'{name}.{corrected_tld}'
+    return ''
+
+
+@lru_cache(maxsize=512)
+def email_domain_resolves(domain: str) -> bool:
+    hostname = (domain or '').strip().lower()
+    if not hostname:
+        return False
+    try:
+        socket.getaddrinfo(hostname, 25, proto=socket.IPPROTO_TCP)
+        return True
+    except socket.gaierror:
+        return False
+    except Exception:
+        return True
+
+
+def validate_email_address_for_delivery(value: str) -> tuple[str, str]:
+    normalized = normalize_email_address(value)
+    if not normalized:
+        return '', 'Enter a valid email before sending.'
+    local_part, domain_part = normalized.split('@', 1)
+    suggestion_domain = suggested_email_domain(domain_part)
+    if suggestion_domain:
+        return '', f'This email looks mistyped. Did you mean {local_part}@{suggestion_domain}?'
+    if not email_domain_resolves(domain_part):
+        return '', 'This email domain does not appear to exist. Correct the email and try again.'
+    return normalized, ''
+
+
+def user_facing_email_delivery_error(exc: Exception) -> str:
+    if isinstance(exc, smtplib.SMTPRecipientsRefused):
+        recipients = getattr(exc, 'recipients', {}) or {}
+        if recipients:
+            recipient, detail = next(iter(recipients.items()))
+            code = detail[0] if isinstance(detail, tuple) and len(detail) > 0 else ''
+            message = detail[1] if isinstance(detail, tuple) and len(detail) > 1 else detail
+            if isinstance(message, (bytes, bytearray)):
+                message = message.decode('utf-8', errors='ignore')
+            compact = ' '.join(str(message or '').split())
+            prefix = f'SMTP rejected {recipient}. Correct the email and try again.'
+            return f'{prefix} {compact[:180]}'.strip() if compact else prefix
+        return 'SMTP rejected the recipient email. Correct the email and try again.'
+    return str(exc)
+
+
 def resolve_invite_recipient_email(invited_email: str, client_email: str = '') -> tuple[str, str]:
-    normalized_invited_email = normalize_email_address(invited_email)
+    normalized_invited_email, invited_error = validate_email_address_for_delivery(invited_email)
     if normalized_invited_email:
         return normalized_invited_email, ''
-    normalized_client_email = normalize_email_address(client_email)
+    normalized_client_email, client_error = validate_email_address_for_delivery(client_email)
     if normalized_client_email:
-        return normalized_client_email, 'Saved invite email was invalid, so LedgerFlow used the business email on file instead.'
-    return '', 'Saved invite email is invalid. Update the business email first.'
+        return normalized_client_email, invited_error or 'Saved invite email was invalid, so LedgerFlow used the business email on file instead.'
+    return '', invited_error or client_error or 'Saved invite email is invalid. Update the business email first.'
 
 
 def resolve_business_access_recipient(conn: sqlite3.Connection, invite_row) -> dict:
@@ -5382,7 +5466,9 @@ def send_rich_email(cfg: dict, *, subject: str, to_email: str, plain_text: str, 
         s.starttls()
         s.ehlo()
         s.login(smtp_username, smtp_password)
-        s.send_message(msg)
+        refused = s.send_message(msg)
+        if refused:
+            raise smtplib.SMTPRecipientsRefused(refused)
 
 
 def send_password_reset_email(to_email: str, reset_link: str, account_label: str = 'account', *, account_type: str = 'user'):
@@ -15123,12 +15209,12 @@ def client_users():
                 business_name = request.form.get('business_name', '').strip()
                 invite_name = request.form.get('full_name', '').strip()
                 invite_email_raw = request.form.get('email', '').strip()
-                invite_email = normalize_email_address(invite_email_raw)
+                invite_email, invite_email_error = validate_email_address_for_delivery(invite_email_raw)
                 if not business_name or not invite_name or not invite_email_raw:
                     flash('Enter new customer name, contact name, and email before sending the invite.', 'error')
                     return redirect(url_for('client_users'))
                 if not invite_email:
-                    flash('Enter a valid customer email before sending the invite.', 'error')
+                    flash(invite_email_error or 'Enter a valid customer email before sending the invite.', 'error')
                     return redirect(url_for('client_users'))
                 existing_user = conn.execute('SELECT id FROM users WHERE lower(email)=?', (invite_email,)).fetchone()
                 if existing_user:
@@ -15205,7 +15291,8 @@ def client_users():
                     conn.commit()
                     flash('New customer invite sent. The prospect is now tracked until onboarding is completed.', 'success')
                 except Exception as e:
-                    conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (str(e)[:500], invite_id))
+                    friendly_error = user_facing_email_delivery_error(e)
+                    conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (friendly_error[:500], invite_id))
                     log_email_delivery(
                         client_id=client_id,
                         email_type='business_invite',
@@ -15213,26 +15300,26 @@ def client_users():
                         recipient_name=invite_name,
                         subject=f"Welcome to LedgerFlow - set up your business access for {business_name}",
                         status='failed',
-                        error_message=str(e)[:500],
+                        error_message=friendly_error[:500],
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
                         conn=conn,
                     )
                     conn.commit()
-                    flash(f'New customer invite email failed: {str(e)[:180]}', 'error')
+                    flash(f'New customer invite email failed: {friendly_error[:180]}', 'error')
                 return redirect(url_for('client_users'))
             if action == 'send_trial_invite':
                 business_name = request.form.get('business_name', '').strip()
                 invite_name = request.form.get('full_name', '').strip()
                 invite_email_raw = request.form.get('email', '').strip()
-                invite_email = normalize_email_address(invite_email_raw)
+                invite_email, invite_email_error = validate_email_address_for_delivery(invite_email_raw)
                 business_category = normalize_business_category(request.form.get('business_category', ''))
                 trial_days = default_trial_offer_days()
                 if not business_name or not invite_name or not invite_email_raw:
                     flash('Enter business name, contact name, and email before sending the trial invite.', 'error')
                     return redirect(url_for('client_users'))
                 if not invite_email:
-                    flash('Enter a valid business email before sending the trial invite.', 'error')
+                    flash(invite_email_error or 'Enter a valid business email before sending the trial invite.', 'error')
                     return redirect(url_for('client_users'))
                 existing_user = conn.execute('SELECT id FROM users WHERE lower(email)=?', (invite_email,)).fetchone()
                 if existing_user:
@@ -15326,7 +15413,8 @@ def client_users():
                     conn.commit()
                     flash('7-day trial invite sent. The prospect is now tracked in the pipeline until setup is completed.', 'success')
                 except Exception as e:
-                    conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (str(e)[:500], invite_id))
+                    friendly_error = user_facing_email_delivery_error(e)
+                    conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (friendly_error[:500], invite_id))
                     log_email_delivery(
                         client_id=client_id,
                         email_type='prospect_trial_invite',
@@ -15334,20 +15422,20 @@ def client_users():
                         recipient_name=invite_name,
                         subject=f"Start your {trial_days}-day LedgerFlow trial for {business_name}",
                         status='failed',
-                        error_message=str(e)[:500],
+                        error_message=friendly_error[:500],
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
                         tracking_token=tracking_token,
                         conn=conn,
                     )
                     conn.commit()
-                    flash(f'Trial invite email failed: {str(e)[:180]}', 'error')
+                    flash(f'Trial invite email failed: {friendly_error[:180]}', 'error')
                 return redirect(url_for('client_users'))
             if action == 'send_invite':
                 client_id = request.form.get('client_id', type=int)
                 invite_name = request.form.get('full_name', '').strip()
                 invite_email_raw = request.form.get('email', '').strip()
-                invite_email = normalize_email_address(invite_email_raw)
+                invite_email, invite_email_error = validate_email_address_for_delivery(invite_email_raw)
                 business = conn.execute('SELECT business_name FROM clients WHERE id=?', (client_id,)).fetchone() if client_id else None
                 if not business:
                     flash('Choose a valid business before sending the invite.', 'error')
@@ -15356,7 +15444,7 @@ def client_users():
                     flash('Enter the invitee name and email before sending the invite.', 'error')
                     return redirect(url_for('client_users'))
                 if not invite_email:
-                    flash('Enter a valid invitee email before sending the invite.', 'error')
+                    flash(invite_email_error or 'Enter a valid invitee email before sending the invite.', 'error')
                     return redirect(url_for('client_users'))
                 token = generate_invite_token()
                 expires_at = (datetime.utcnow() + timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')
@@ -15385,7 +15473,8 @@ def client_users():
                     conn.commit()
                     flash('Invite sent. View it below in Recent Business Emails.', 'success')
                 except Exception as e:
-                    conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (str(e)[:500], invite_id))
+                    friendly_error = user_facing_email_delivery_error(e)
+                    conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (friendly_error[:500], invite_id))
                     log_email_delivery(
                         client_id=client_id,
                         email_type='business_invite',
@@ -15393,13 +15482,13 @@ def client_users():
                         recipient_name=invite_name,
                         subject=f"Welcome to LedgerFlow - set up your business access for {business['business_name']}",
                         status='failed',
-                        error_message=str(e)[:500],
+                        error_message=friendly_error[:500],
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
                         conn=conn,
                     )
                     conn.commit()
-                    flash(f'Invite email failed: {str(e)[:180]}', 'error')
+                    flash(f'Invite email failed: {friendly_error[:180]}', 'error')
                 return redirect(url_for('client_users'))
             if action == 'resend_invite':
                 invite_id = request.form.get('invite_id', type=int)
@@ -15492,7 +15581,8 @@ def client_users():
                     else:
                         flash('Invite re-sent. View it below in Recent Business Emails.', 'success')
                 except Exception as e:
-                    conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (str(e)[:500], invite_id))
+                    friendly_error = user_facing_email_delivery_error(e)
+                    conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (friendly_error[:500], invite_id))
                     log_email_delivery(
                         client_id=inv['client_id'],
                         email_type=(
@@ -15512,14 +15602,14 @@ def client_users():
                             )
                         ),
                         status='failed',
-                        error_message=str(e)[:500],
+                        error_message=friendly_error[:500],
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
                         tracking_token=tracking_token if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' and not existing_login_user_id else '',
                         conn=conn,
                     )
                     conn.commit()
-                    flash(f'Access email failed: {str(e)[:180]}' if existing_login_user_id else f'Invite email failed: {str(e)[:180]}', 'error')
+                    flash(f'Access email failed: {friendly_error[:180]}' if existing_login_user_id else f'Invite email failed: {friendly_error[:180]}', 'error')
                 return redirect(url_for('client_users'))
         active_clients = conn.execute("SELECT * FROM clients WHERE COALESCE(record_status,'active')='active' ORDER BY business_name").fetchall()
         users = conn.execute('SELECT u.*, c.business_name FROM users u LEFT JOIN clients c ON c.id=u.client_id WHERE u.role="client" ORDER BY c.business_name, u.full_name').fetchall()

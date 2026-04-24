@@ -30,7 +30,7 @@
       <input type='hidden' name='action' value='send_invite'>
       <div><label>Business</label><select name='client_id' required>{% for c in clients %}<option value='{{ c.id }}'>{{ c.business_name }}</option>{% endfor %}</select></div>
       <div><label>Invitee Name</label><input name='full_name' required></div>
-      <div><label>Invitee Email</label><input name='email' required></div>
+      <div><label>Invitee Email</label><input name='email' type='email' required></div>
       <div><button>Send Invite Email</button></div>
     </form>
     </details>
@@ -41,7 +41,7 @@
       <input type='hidden' name='action' value='send_prospect_invite'>
       <div><label>New Customer / Business Name</label><input name='business_name' required></div>
       <div><label>Primary Contact Name</label><input name='full_name' required></div>
-      <div><label>Primary Contact Email</label><input name='email' required></div>
+      <div><label>Primary Contact Email</label><input name='email' type='email' required></div>
       <div><button>Send New Customer Invite</button></div>
     </form>
     </details>
@@ -53,7 +53,7 @@
       <div><label>Business Name</label><input name='business_name' required></div>
       <div><label>Kind of Business</label><select name='business_category'><option value=''>Select kind of business</option>{% for category in business_categories %}<option value='{{ category }}'>{{ category }}</option>{% endfor %}</select></div>
       <div><label>Primary Contact Name</label><input name='full_name' required></div>
-      <div><label>Primary Contact Email</label><input name='email' required></div>
+      <div><label>Primary Contact Email</label><input name='email' type='email' required></div>
       <div><button>Send 7-Day Trial Invite</button></div>
     </form>
     </details>
@@ -64,7 +64,7 @@
       <input type='hidden' name='action' value='create_login'>
       <div><label>Business</label><select name='client_id' required>{% for c in clients %}<option value='{{ c.id }}'>{{ c.business_name }}</option>{% endfor %}</select></div>
       <div><label>Full Name</label><input name='full_name' required></div>
-      <div><label>Email</label><input name='email' required></div>
+      <div><label>Email</label><input name='email' type='email' required></div>
       <div><label>Password</label><div class='password-field'><input name='password' type='password' required><button class='password-toggle' type='button' aria-label='Show password' title='Show password'><span class='toggle-show'>👁</span><span class='toggle-hide'>🙈</span></button></div></div>
       <div><button>Create Login</button></div>
     </form>
