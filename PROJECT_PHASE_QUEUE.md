@@ -307,6 +307,10 @@
   - `RDS HOME SOLUTIONS` passed the full invited-client checklist
   - no additional real business should be added yet
   - next gate is a 24-hour observation window with no stop-level issues before Batch 2 can begin
+- Batch 1 observation passed on 2026-04-24:
+  - `RDS HOME SOLUTIONS` stayed stable through the Batch 1 observation window
+  - Batch 2 is now unlocked
+  - next rollout gate is up to 2 real businesses only, followed by another controlled observation pass before Batch 3
 - Bookkeeping and bank architecture planning pack completed on 2026-04-23:
   - created `BOOKKEEPING_BANK_ARCHITECTURE\\README.md`
   - created `BOOKKEEPING_BANK_ARCHITECTURE\\TARGET_DATA_MODEL.md`
