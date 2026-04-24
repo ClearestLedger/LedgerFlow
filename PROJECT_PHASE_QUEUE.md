@@ -338,6 +338,10 @@
   - creating an estimate or customer invoice with `send now` enabled could create the record and then fail on a SQLite `database is locked` error during email-delivery logging
   - fixed the estimate and invoice routes so their email-delivery log writes reuse the already-open transaction instead of opening a second write connection mid-request
   - verified locally that both `create_estimate` and `create_customer_invoice` now save and redirect cleanly with `send now` enabled
+- Batch 2 trial-invite stop fix completed on 2026-04-24:
+  - `client-logins` free-trial invite sending could fail on internal error because the trial prospect insert used the wrong placeholder count and the invite flow could also re-enter SQLite for email/base-url work while a write transaction was still open
+  - fixed the trial prospect insert to use the correct value count, updated invite email logging to reuse the active transaction, and changed public base-url resolution to prefer the current request/env before touching stored email settings
+  - verified locally that `send_trial_invite` now creates the prospect business, creates the invite, logs the sent email, and redirects back to `client-logins` without a 500
 - Future product architecture note recorded on 2026-04-22:
   - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections

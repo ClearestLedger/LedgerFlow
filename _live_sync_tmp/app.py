@@ -4381,12 +4381,14 @@ def ai_assistant_config() -> dict:
 
 
 def configured_base_url() -> str:
-    profile = load_email_settings_profile()
-    runtime_cfg = load_email_runtime_config()
     request_base = normalize_public_base_url(request.url_root) if has_request_context() else ''
     env_base = normalize_public_base_url(os.environ.get('APP_BASE_URL') or os.environ.get('RENDER_EXTERNAL_URL') or '')
+    if request_base or env_base:
+        return request_base or env_base
+    profile = load_email_settings_profile()
+    runtime_cfg = load_email_runtime_config()
     stored_base = normalize_public_base_url(profile.get('app_base_url') or get_setting('app_base_url') or runtime_cfg.get('app_base_url', ''))
-    return request_base or env_base or stored_base
+    return stored_base
 
 
 def static_asset_version_value(filename: str) -> int:
@@ -15090,7 +15092,9 @@ def client_users():
                             status='sent',
                             created_by_user_id=user['id'],
                             related_user_id=conn.execute('SELECT id FROM users WHERE lower(email)=?', (email,)).fetchone()['id'],
+                            conn=conn,
                         )
+                        conn.commit()
                     elif welcome_error:
                         log_email_delivery(
                             client_id=client_id,
@@ -15102,7 +15106,9 @@ def client_users():
                             error_message=welcome_error,
                             created_by_user_id=user['id'],
                             related_user_id=conn.execute('SELECT id FROM users WHERE lower(email)=?', (email,)).fetchone()['id'],
+                            conn=conn,
                         )
+                        conn.commit()
                     if welcome_sent:
                         flash('Business login created. Welcome email sent. View it below in Recent Business Emails.', 'success')
                     elif smtp_email_ready():
@@ -15183,7 +15189,6 @@ def client_users():
                 try:
                     invite_payload = send_invite_email(invite_email, invite_name, business_name, invite_link)
                     conn.execute('UPDATE business_invites SET status="sent", invite_error="" WHERE id=?', (invite_id,))
-                    conn.commit()
                     log_email_delivery(
                         client_id=client_id,
                         email_type=invite_payload['email_type'],
@@ -15195,11 +15200,12 @@ def client_users():
                         status='sent',
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
+                        conn=conn,
                     )
+                    conn.commit()
                     flash('New customer invite sent. The prospect is now tracked until onboarding is completed.', 'success')
                 except Exception as e:
                     conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (str(e)[:500], invite_id))
-                    conn.commit()
                     log_email_delivery(
                         client_id=client_id,
                         email_type='business_invite',
@@ -15210,7 +15216,9 @@ def client_users():
                         error_message=str(e)[:500],
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
+                        conn=conn,
                     )
+                    conn.commit()
                     flash(f'New customer invite email failed: {str(e)[:180]}', 'error')
                 return redirect(url_for('client_users'))
             if action == 'send_trial_invite':
@@ -15241,14 +15249,14 @@ def client_users():
                 expires_at = (datetime.utcnow() + timedelta(days=14)).strftime('%Y-%m-%d %H:%M:%S')
                 now_value = datetime.now().isoformat(timespec='seconds')
                 conn.execute(
-                    '''INSERT INTO clients (
+                    f'''INSERT INTO clients (
                            business_name, business_type, service_level, subscription_plan_code, subscription_status,
                            subscription_amount, subscription_interval, subscription_autopay_enabled, subscription_next_billing_date,
                            subscription_started_at, subscription_canceled_at, subscription_paused_at, onboarding_status,
                            onboarding_started_at, onboarding_completed_at, onboarding_completed_by_user_id, record_status,
                            archive_reason, archived_at, archived_by_user_id, reactivated_at, contact_name, email, billing_notes,
                            trial_offer_days, trial_started_at, trial_ends_at, business_category
-                       ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                       ) VALUES ({",".join(["?"] * 28)})''',
                     (
                         business_name,
                         'Prospect',
@@ -15301,7 +15309,6 @@ def client_users():
                         tracking_token=tracking_token,
                     )
                     conn.execute('UPDATE business_invites SET status="sent", invite_error="" WHERE id=?', (invite_id,))
-                    conn.commit()
                     log_email_delivery(
                         client_id=client_id,
                         email_type=invite_payload['email_type'],
@@ -15314,11 +15321,12 @@ def client_users():
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
                         tracking_token=tracking_token,
+                        conn=conn,
                     )
+                    conn.commit()
                     flash('7-day trial invite sent. The prospect is now tracked in the pipeline until setup is completed.', 'success')
                 except Exception as e:
                     conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (str(e)[:500], invite_id))
-                    conn.commit()
                     log_email_delivery(
                         client_id=client_id,
                         email_type='prospect_trial_invite',
@@ -15330,7 +15338,9 @@ def client_users():
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
                         tracking_token=tracking_token,
+                        conn=conn,
                     )
+                    conn.commit()
                     flash(f'Trial invite email failed: {str(e)[:180]}', 'error')
                 return redirect(url_for('client_users'))
             if action == 'send_invite':
@@ -15359,7 +15369,6 @@ def client_users():
                 try:
                     invite_payload = send_invite_email(invite_email, invite_name, business['business_name'], invite_link)
                     conn.execute('UPDATE business_invites SET status="sent", invite_error="" WHERE id=?', (invite_id,))
-                    conn.commit()
                     log_email_delivery(
                         client_id=client_id,
                         email_type=invite_payload['email_type'],
@@ -15371,11 +15380,12 @@ def client_users():
                         status='sent',
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
+                        conn=conn,
                     )
+                    conn.commit()
                     flash('Invite sent. View it below in Recent Business Emails.', 'success')
                 except Exception as e:
                     conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (str(e)[:500], invite_id))
-                    conn.commit()
                     log_email_delivery(
                         client_id=client_id,
                         email_type='business_invite',
@@ -15386,7 +15396,9 @@ def client_users():
                         error_message=str(e)[:500],
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
+                        conn=conn,
                     )
+                    conn.commit()
                     flash(f'Invite email failed: {str(e)[:180]}', 'error')
                 return redirect(url_for('client_users'))
             if action == 'resend_invite':
@@ -15456,7 +15468,6 @@ def client_users():
                         )
                     else:
                         conn.execute('UPDATE business_invites SET status="sent", invite_error="" WHERE id=?', (invite_id,))
-                    conn.commit()
                     log_email_delivery(
                         client_id=inv['client_id'],
                         email_type=invite_payload['email_type'],
@@ -15469,7 +15480,9 @@ def client_users():
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
                         tracking_token=tracking_token if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' and not existing_login_user_id else '',
+                        conn=conn,
                     )
+                    conn.commit()
                     if existing_login_user_id and recipient_note:
                         flash(f'Access email sent. {recipient_note}', 'success')
                     elif existing_login_user_id:
@@ -15480,7 +15493,6 @@ def client_users():
                         flash('Invite re-sent. View it below in Recent Business Emails.', 'success')
                 except Exception as e:
                     conn.execute('UPDATE business_invites SET status="failed", invite_error=? WHERE id=?', (str(e)[:500], invite_id))
-                    conn.commit()
                     log_email_delivery(
                         client_id=inv['client_id'],
                         email_type=(
@@ -15504,7 +15516,9 @@ def client_users():
                         created_by_user_id=user['id'],
                         related_invite_id=invite_id,
                         tracking_token=tracking_token if normalize_invite_kind(inv['invite_kind']) == 'prospect_trial' and not existing_login_user_id else '',
+                        conn=conn,
                     )
+                    conn.commit()
                     flash(f'Access email failed: {str(e)[:180]}' if existing_login_user_id else f'Invite email failed: {str(e)[:180]}', 'error')
                 return redirect(url_for('client_users'))
         active_clients = conn.execute("SELECT * FROM clients WHERE COALESCE(record_status,'active')='active' ORDER BY business_name").fetchall()
