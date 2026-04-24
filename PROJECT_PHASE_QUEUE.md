@@ -311,6 +311,12 @@
   - `RDS HOME SOLUTIONS` stayed stable through the Batch 1 observation window
   - Batch 2 is now unlocked
   - next rollout gate is up to 2 real businesses only, followed by another controlled observation pass before Batch 3
+- Batch 2 start phase completed on 2026-04-24:
+  - created `INVITED_CLIENT_ONBOARDING\\BATCH_2_20260424` with a fresh precheck report, two-business tracker, and separate Business 2 / Business 3 checklists
+  - live Batch 2 precheck passed `8/8`
+  - Batch 2 may now start with up to 2 additional real businesses only
+  - Business 3 should not be added until Business 2 is created and checked first
+  - next gate after both businesses are onboarded is a clean Batch 2 observation window before Batch 3
 - Bookkeeping and bank architecture planning pack completed on 2026-04-23:
   - created `BOOKKEEPING_BANK_ARCHITECTURE\\README.md`
   - created `BOOKKEEPING_BANK_ARCHITECTURE\\TARGET_DATA_MODEL.md`
