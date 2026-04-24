@@ -43,13 +43,28 @@
       <input type='hidden' name='action' value='{% if selected_worker %}update_worker{% else %}create_worker{% endif %}'>
       {% if selected_worker %}<input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>{% endif %}
       <div><label>Name</label><input name='name' required value='{{ selected_worker.name if selected_worker else "" }}'></div>
+      <div><label>Classification</label><select name='worker_type'><option value='1099' {% if not selected_worker or selected_worker.worker_type == '1099' %}selected{% endif %}>1099</option><option value='W-2' {% if selected_worker and selected_worker.worker_type == 'W-2' %}selected{% endif %}>W-2</option></select></div>
       <div><label>Operational Role</label><input name='worker_role' value='{{ selected_worker.worker_role if selected_worker else "" }}' placeholder='Crew Lead, Painter, Dispatcher'></div>
       <div><label>Phone</label><input name='phone' value='{{ selected_worker.phone if selected_worker else "" }}'></div>
       <div><label>Email</label><input name='email' value='{{ selected_worker.email if selected_worker else "" }}'></div>
       <div><label>Language</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if selected_worker and selected_worker.preferred_language == option.code %}selected{% elif not selected_worker and option.code == 'en' %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
       <div><label>Status</label><select name='status'><option value='active' {% if not selected_worker or selected_worker.status == 'active' %}selected{% endif %}>Active</option><option value='inactive' {% if selected_worker and selected_worker.status == 'inactive' %}selected{% endif %}>Inactive</option><option value='terminated' {% if selected_worker and selected_worker.status == 'terminated' %}selected{% endif %}>Terminated</option></select></div>
+      <div><label>Payroll Frequency</label><select name='payroll_frequency'><option value='weekly' {% if not selected_worker or selected_worker.payroll_frequency == 'weekly' %}selected{% endif %}>Weekly</option><option value='biweekly' {% if selected_worker and selected_worker.payroll_frequency == 'biweekly' %}selected{% endif %}>Biweekly</option><option value='semimonthly' {% if selected_worker and selected_worker.payroll_frequency == 'semimonthly' %}selected{% endif %}>Semimonthly</option><option value='monthly' {% if selected_worker and selected_worker.payroll_frequency == 'monthly' %}selected{% endif %}>Monthly</option></select></div>
+      <div><label>Hire Date</label><input name='hire_date' type='date' value='{{ selected_worker.hire_date if selected_worker else today_iso }}'></div>
+      <div><label>SSN / Tax ID</label><input name='ssn' value='{{ selected_worker.ssn if selected_worker else "" }}'></div>
       <div><label>Crew / Group</label><input name='crew_label' value='{{ selected_worker.crew_label if selected_worker else "" }}' placeholder='Crew A, East Route'></div>
       <div><label>Skill Tags</label><input name='skill_tags' value='{{ selected_worker.skill_tags if selected_worker else "" }}' placeholder='deep clean, ladder work, trim'></div>
+      <div><label>Team Member Payment Preference</label><select name='payout_preference' class='worker-payout-select'>{% for value, label in worker_payout_preferences %}<option value='{{ value }}' {% if selected_worker and (selected_worker.payout_preference or 'paper_check') == value %}selected{% elif not selected_worker and value == 'paper_check' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class='worker-payout-field payout-zelle'><label>Zelle Email / Phone</label><input name='zelle_contact' value='{{ selected_worker.zelle_contact if selected_worker else "" }}' placeholder='teammember@email.com or phone'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Bank Name</label><input name='deposit_bank_name' value='{{ selected_worker.deposit_bank_name if selected_worker else "" }}' placeholder='Chase Business Checking'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Holder Name</label><input name='deposit_account_holder_name' value='{{ selected_worker.deposit_account_holder_name if selected_worker else "" }}' placeholder='Team member legal name'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Type</label><select name='deposit_account_type'><option value='checking' {% if not selected_worker or (selected_worker.deposit_account_type or 'checking') == 'checking' %}selected{% endif %}>Checking</option><option value='savings' {% if selected_worker and selected_worker.deposit_account_type == 'savings' %}selected{% endif %}>Savings</option></select></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Routing Number</label><input name='deposit_routing_number' inputmode='numeric' maxlength='9' placeholder='{% if selected_worker and selected_worker.deposit_account_last4 %}Leave blank to keep current{% else %}9 digits{% endif %}'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Number</label><input name='deposit_account_number' inputmode='numeric' placeholder='{% if selected_worker and selected_worker.deposit_account_last4 %}Leave blank to keep current{% else %}Enter account number{% endif %}'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Confirm Account Number</label><input name='confirm_deposit_account_number' inputmode='numeric' placeholder='{% if selected_worker and selected_worker.deposit_account_last4 %}Re-enter only if changing{% else %}Re-enter account number{% endif %}'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Last 4 Digits</label><input name='deposit_account_last4' value='{{ selected_worker.deposit_account_last4 if selected_worker else "" }}' inputmode='numeric' maxlength='4' placeholder='6789'></div>
+      <div style='grid-column:1/-1'><label>Address</label><input name='address' value='{{ selected_worker.address if selected_worker else "" }}'></div>
+      <div style='grid-column:1/-1'><label>Pay Notes</label><textarea name='pay_notes'>{{ selected_worker.pay_notes if selected_worker else "" }}</textarea></div>
       <div style='grid-column:1/-1'><label>Availability Baseline</label><textarea name='availability_baseline'>{{ selected_worker.availability_baseline if selected_worker else "" }}</textarea></div>
       <div><button type='submit'>{% if selected_worker %}Save Team Member{% else %}Add Team Member{% endif %}</button></div>
       </form>
@@ -95,6 +110,61 @@
         <div class='small'>{{ selected_worker.skill_tags or 'No skills tagged yet' }}</div>
       </div>
     </div>
+
+    <div class='card-head' style='margin-top:18px'>
+      <h3>Payroll & Tax Snapshot</h3>
+      <div class='stack-actions'>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("workers", client_id=client_id, worker_id=selected_worker.id) }}'>Legacy HR Records</a>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("w4", worker_id=selected_worker.id) }}' target='_blank'>Printable W-4</a>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("w2", worker_id=selected_worker.id) }}' target='_blank'>W-2</a>
+        {% if selected_worker.worker_type != 'W-2' %}<a class='btn btn-secondary btn-sm' href='{{ url_for("form_1099", worker_id=selected_worker.id) }}' target='_blank'>1099</a>{% endif %}
+      </div>
+    </div>
+    <div class='ops-timeline'>
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>Classification</div>
+        <div class='small'>{{ selected_worker.worker_type or '1099' }}</div>
+      </div>
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>Payroll Frequency</div>
+        <div class='small'>{{ (selected_worker.payroll_frequency or 'weekly')|replace('_', ' ')|title }}</div>
+      </div>
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>Hire Date</div>
+        <div class='small'>{{ selected_worker.hire_date or 'Not set yet' }}</div>
+      </div>
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>Payment Method</div>
+        <div class='small'>{{ (selected_worker.payout_preference or 'paper_check')|replace('_', ' ')|title }}</div>
+      </div>
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>Payment Details</div>
+        <div class='small'>{% if selected_worker.deposit_bank_name %}{{ selected_worker.deposit_bank_name }}{% if selected_worker.deposit_account_last4 %} · ending in {{ selected_worker.deposit_account_last4 }}{% endif %}{% elif selected_worker.zelle_contact %}{{ selected_worker.zelle_contact }}{% else %}Not configured yet{% endif %}</div>
+      </div>
+      <div class='ops-timeline-item'>
+        <div class='ops-timeline-title'>Tax ID / SSN</div>
+        <div class='small'>{{ selected_worker.ssn or 'Not set yet' }}</div>
+      </div>
+    </div>
+
+    <details class='compact-details' style='margin-top:16px'>
+      <summary>Open W-4 Answers</summary>
+      <form method='post' action='{{ url_for("save_worker_w4", worker_id=selected_worker.id) }}' class='form-grid' style='margin-top:12px'>
+        <input type='hidden' name='next_view' value='ops_team'>
+        <div><label>1(a) Employee name</label><input value='{{ selected_worker.name }}' readonly></div>
+        <div><label>1(b) SSN</label><input value='{{ selected_worker.ssn or "" }}' readonly></div>
+        <div><label>1(c) Filing Status</label><select name='filing_status'><option value='single' {% if answers and answers.filing_status == 'single' %}selected{% endif %}>Single or Married filing separately</option><option value='married' {% if answers and answers.filing_status == 'married' %}selected{% endif %}>Married filing jointly or Qualifying surviving spouse</option><option value='head' {% if answers and answers.filing_status == 'head' %}selected{% endif %}>Head of household</option></select></div>
+        <div><label>Step 2 Multiple Jobs or Spouse Works</label><select name='multiple_jobs'><option value=''>No</option><option value='1' {% if answers and answers.multiple_jobs %}selected{% endif %}>Yes</option></select></div>
+        <div><label>Step 3 Qualifying children under 17</label><input name='qualifying_children' type='number' step='0.01' value='{{ answers.qualifying_children if answers else "" }}'></div>
+        <div><label>Step 3 Other dependents</label><input name='other_dependents' type='number' step='0.01' value='{{ answers.other_dependents if answers else "" }}'></div>
+        <div><label>Step 4(a) Other income</label><input name='other_income' type='number' step='0.01' value='{{ answers.other_income if answers else "" }}'></div>
+        <div><label>Step 4(b) Deductions</label><input name='deductions' type='number' step='0.01' value='{{ answers.deductions if answers else "" }}'></div>
+        <div><label>Step 4(c) Extra withholding</label><input name='extra_withholding' type='number' step='0.01' value='{{ answers.extra_withholding if answers else "" }}'></div>
+        <div><label>Signature Name</label><input name='signature_name' value='{{ answers.signature_name if answers else selected_worker.name }}'></div>
+        <div><label>Signed Date</label><input name='signed_date' type='date' value='{{ answers.signed_date if answers else today_iso }}'></div>
+        <div style='grid-column:1/-1'><button type='submit'>Save W-4 Answers</button></div>
+      </form>
+    </details>
     <div class='card-head' style='margin-top:18px'><h3>Upcoming Availability</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("ops_availability", client_id=client_id, worker_id=selected_worker.id) }}'>Manage</a></div>
     {% if worker_availability %}
     <table class='table'>
@@ -135,4 +205,24 @@
   </div>
 </div>
 {% endif %}
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('form').forEach(function (form) {
+    var select = form.querySelector('.worker-payout-select');
+    if (!select) return;
+    function updatePayoutFields() {
+      var value = select.value;
+      form.querySelectorAll('.worker-payout-field').forEach(function (field) {
+        var show = field.classList.contains('payout-' + value);
+        field.style.display = show ? '' : 'none';
+      });
+    }
+    select.addEventListener('change', updatePayoutFields);
+    updatePayoutFields();
+  });
+});
+</script>
 {% endblock %}

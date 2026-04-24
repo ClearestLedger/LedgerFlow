@@ -319,6 +319,10 @@
   - created `BOOKKEEPING_BANK_ARCHITECTURE\\PROVIDER_EVALUATION.md`
   - recommended Plaid Transactions as the primary future bookkeeping feed and Stripe Financial Connections as a secondary payment-linked bank-data option
   - kept this phase sidecar-only so Batch 1 live observation is not disturbed
+- Operations Team payroll restoration fix completed on 2026-04-24:
+  - `Operations Team` now restores the hiring/payroll fields that had effectively been left behind on `Legacy HR Records`
+  - businesses and administrators can again manage worker classification, payroll frequency, hire date, SSN/tax ID, payout setup, address, pay notes, and W-4 answers from the main team workflow
+  - `/team` now fails soft for admin when a stale business id is used after the reset by redirecting to the first available business team page instead of stopping on a hard forbidden state
 - Future product architecture note recorded on 2026-04-22:
   - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections

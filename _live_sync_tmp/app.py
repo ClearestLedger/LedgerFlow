@@ -9481,28 +9481,53 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
     if not name:
         raise ValueError('Worker name is required.')
     worker_role = (form.get('worker_role', '') or '').strip()
+    worker_type = (form.get('worker_type', '1099') or '1099').strip()
+    if worker_type not in {'1099', 'W-2'}:
+        worker_type = '1099'
+    payroll_frequency = (form.get('payroll_frequency', 'weekly') or 'weekly').strip().lower()
+    if payroll_frequency not in {'weekly', 'biweekly', 'semimonthly', 'monthly'}:
+        payroll_frequency = 'weekly'
     status = (form.get('status', '') or '').strip().lower() or 'active'
     if status not in {'active', 'inactive', 'terminated'}:
         status = 'active'
+    payout_cleaned, payout_errors = validate_worker_payout_setup(form, existing=existing or {})
+    if payout_errors:
+        raise ValueError(payout_errors[0])
     payload = (
         name,
+        worker_type,
+        (form.get('ssn', '') or '').strip(),
+        (form.get('address', '') or '').strip(),
         worker_role,
         worker_role,
         (form.get('phone', '') or '').strip(),
         (form.get('email', '') or '').strip(),
         normalize_language(form.get('preferred_language') or 'en'),
+        (form.get('hire_date', '') or '').strip(),
+        (form.get('pay_notes', '') or '').strip(),
+        payroll_frequency,
         (form.get('crew_label', '') or '').strip(),
         ops_clean_csv(form.get('skill_tags', '')),
         (form.get('availability_baseline', '') or '').strip(),
         status,
+        payout_cleaned['payout_preference'],
+        payout_cleaned['deposit_bank_name'],
+        payout_cleaned['deposit_account_holder_name'],
+        payout_cleaned['deposit_account_type'],
+        payout_cleaned['deposit_account_last4'],
+        payout_cleaned['deposit_routing_number_enc'],
+        payout_cleaned['deposit_account_number_enc'],
+        payout_cleaned['zelle_contact'],
         now_iso(),
         actor_user_id,
     )
     if existing:
         conn.execute(
             '''UPDATE workers
-               SET name=?, worker_role=?, role_classification=?, phone=?, email=?, preferred_language=?, crew_label=?, skill_tags=?,
-                   availability_baseline=?, status=?, updated_at=?, updated_by_user_id=?
+               SET name=?, worker_type=?, ssn=?, address=?, worker_role=?, role_classification=?, phone=?, email=?, preferred_language=?,
+                   hire_date=?, pay_notes=?, payroll_frequency=?, crew_label=?, skill_tags=?, availability_baseline=?, status=?,
+                   payout_preference=?, deposit_bank_name=?, deposit_account_holder_name=?, deposit_account_type=?, deposit_account_last4=?,
+                   deposit_routing_number_enc=?, deposit_account_number_enc=?, zelle_contact=?, updated_at=?, updated_by_user_id=?
                WHERE id=?''',
             payload + (existing['id'],),
         )
@@ -9511,22 +9536,38 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
     else:
         conn.execute(
             '''INSERT INTO workers (
-                   client_id, name, worker_type, phone, email, preferred_language, role_classification, worker_role,
-                   crew_label, skill_tags, availability_baseline, status, created_by_user_id, updated_at, updated_by_user_id
-               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                   client_id, name, worker_type, ssn, address, phone, email, preferred_language, hire_date, pay_notes,
+                   payroll_frequency, role_classification, worker_role, crew_label, skill_tags, availability_baseline,
+                   status, payout_preference, deposit_bank_name, deposit_account_holder_name, deposit_account_type,
+                   deposit_account_last4, deposit_routing_number_enc, deposit_account_number_enc, zelle_contact,
+                   created_by_user_id, updated_at, updated_by_user_id
+               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
             (
                 client_id,
                 name,
-                '1099',
+                worker_type,
+                payload[2],
                 payload[3],
-                payload[4],
-                payload[5],
-                worker_role,
-                worker_role,
                 payload[6],
                 payload[7],
                 payload[8],
+                payload[9],
+                payload[10],
+                payload[11],
+                worker_role,
+                worker_role,
+                payload[12],
+                payload[13],
+                payload[14],
                 status,
+                payload[16],
+                payload[17],
+                payload[18],
+                payload[19],
+                payload[20],
+                payload[21],
+                payload[22],
+                payload[23],
                 actor_user_id,
                 now_iso(),
                 actor_user_id,
@@ -13559,8 +13600,21 @@ def ops_schedule():
 @login_required
 def ops_team():
     user = current_user()
-    client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     selected_worker_id = request.values.get('worker_id', type=int)
+    if user['role'] == 'admin':
+        requested_client_id = request.form.get('client_id', type=int) if request.method == 'POST' else request.args.get('client_id', type=int)
+        visible_ids = visible_client_ids(user, include_non_active=True)
+        if not visible_ids:
+            abort(403)
+        if requested_client_id and requested_client_id in visible_ids:
+            client_id = requested_client_id
+        else:
+            client_id = visible_ids[0]
+            if request.method == 'GET' and requested_client_id:
+                flash('Requested team page business was not available. Showing the first available business instead.', 'warning')
+                return redirect(url_for('ops_team', client_id=client_id))
+    else:
+        client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     workspace_warning = ''
     if request.method == 'POST':
         action = (request.form.get('action') or '').strip()
@@ -13701,6 +13755,7 @@ def ops_team():
         selected_worker = next((row for row in workers if row['id'] == selected_worker_id), None)
         worker_jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, worker_id=selected_worker_id)] if selected_worker_id else []
         worker_availability = [row for row in ops_availability_rows(conn, client_id, date.today().isoformat(), (date.today() + timedelta(days=21)).isoformat()) if row['worker_id'] == selected_worker_id]
+        answers = conn.execute('SELECT * FROM w4_answers WHERE worker_id=?', (selected_worker_id,)).fetchone() if selected_worker_id else None
     return render_template(
         'ops_team.html',
         client=client,
@@ -13712,6 +13767,8 @@ def ops_team():
         worker_login_url=url_for('worker_login'),
         today_iso=date.today().isoformat(),
         ops_workspace_warning=workspace_warning,
+        worker_payout_preferences=worker_payout_preference_options(),
+        answers=answers,
     )
 
 
@@ -17786,6 +17843,8 @@ def save_worker_w4(worker_id):
             conn.execute('INSERT INTO w4_answers (filing_status, multiple_jobs, qualifying_children, other_dependents, other_income, deductions, extra_withholding, signature_name, signed_date, updated_at, worker_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)', data + (worker_id,))
         conn.commit()
     flash('W-4 answers saved.', 'success')
+    if (request.form.get('next_view') or '').strip() == 'ops_team':
+        return redirect(url_for('ops_team', client_id=worker['client_id'], worker_id=worker_id))
     return redirect(url_for('workers', client_id=worker['client_id'], worker_id=worker_id))
 
 
