@@ -15,7 +15,7 @@
       <strong>{{ tr('Hosted estimate page') }}</strong>
       <small>{{ tr('Open the full estimate composer and build the hosted quote.') }}</small>
     </a>
-    <a class='summary-pill summary-pill-link' href='#savedEstimates'>
+    <a class='summary-pill summary-pill-link' href='#savedEstimatesDetails'>
       <strong>{{ tr('Customer approve / decline') }}</strong>
       <small>{{ tr('Review customer responses from the saved estimate list.') }}</small>
     </a>
@@ -31,132 +31,149 @@
   <div class='small' style='margin-top:10px'>{{ tr('Use estimates before billing starts. Once the customer approves, convert the estimate into a customer invoice without rebuilding the line items.') }}</div>
 </div>
 
-<div class='grid cards-2' style='margin-bottom:16px'>
-  <div class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('Estimate Pipeline') }}</h3><span class='badge'>{{ tr('Hosted Sales Flow') }}</span></div>
-    <div class='summary-strip'>
-      <span class='summary-pill'>{{ estimates|length }} {{ tr('Total') }}</span>
-      <span class='summary-pill'>{{ estimates|selectattr("invoice_status","equalto","sent")|list|length + estimates|selectattr("invoice_status","equalto","viewed")|list|length }} {{ tr('Sent / Viewed') }}</span>
-      <span class='summary-pill'>{{ estimates|selectattr("invoice_status","equalto","approved")|list|length }} {{ tr('Approved') }}</span>
-      <span class='summary-pill'>{{ estimates|selectattr("invoice_status","equalto","converted")|list|length }} {{ tr('Converted') }}</span>
-    </div>
-    <div class='small' style='margin-top:12px'>{{ tr('The stronger sales pattern is simple: create estimate, send hosted link, wait for approval, then convert to invoice when the work is ready to bill.') }}</div>
-  </div>
-
-  <div class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('Best Use') }}</h3><span class='badge'>{{ tr('Premium Workflow') }}</span></div>
-    <ol class='trial-compact-list'>
-      <li>{{ tr('Choose a saved client first when this is repeat business.') }}</li>
-      <li>{{ tr('Create the estimate with the real scope, pricing, and valid-until date.') }}</li>
-      <li>{{ tr('Send the hosted estimate link so the customer can review it cleanly online.') }}</li>
-      <li>{{ tr('Convert the approved estimate into an invoice when you are ready to collect payment.') }}</li>
-    </ol>
-  </div>
+<div class='section-anchor-bar'>
+  <a class='section-anchor-link' href='#estimateOverviewDetails'>{{ tr('Estimate Pipeline') }}</a>
+  <a class='section-anchor-link' href='#estimateComposerDetails'>{{ tr('Create Estimate') }}</a>
+  <a class='section-anchor-link' href='#savedEstimatesDetails'>{{ tr('Saved Estimates') }}</a>
+  <a class='section-anchor-link' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceComposerDetails'>{{ tr('Open Invoice Center') }}</a>
 </div>
 
-<div class='card section-frame estimate-composer-wide' id='estimateComposer'>
-    <details class='compact-details' id='estimateComposerDetails'>
-      <summary>{{ tr('Create Estimate') }}</summary>
-      <div class='small' style='margin:12px 0'>{{ tr('Build the scope, email the hosted estimate link right away, and let the customer approve or decline it from a clean page.') }}</div>
-      <form method='post' class='form-grid' id='estimateForm'>
-        <input type='hidden' name='action' value='create_estimate'>
-        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-        <div><label>{{ tr('Saved Client') }}</label><select id='estimate_contact_select' name='customer_contact_id'><option value=''>{{ tr('Choose saved client (optional)') }}</option>{% for row in customer_contacts %}<option value='{{ row.id }}' {% if prefill_contact_id and row.id == prefill_contact_id %}selected{% endif %} data-name='{{ row.customer_name|e }}' data-email='{{ row.customer_email|e }}' data-phone='{{ row.customer_phone|e }}' data-address='{{ row.customer_address|e }}' data-notes='{{ row.customer_notes|e }}'>{{ row.customer_name }}{% if row.customer_email %} &middot; {{ row.customer_email }}{% endif %}</option>{% endfor %}</select></div>
-        <div><label>{{ tr('Estimate Title') }}</label><input name='invoice_title' value='{{ tr("Project Estimate") }}'></div>
-        <div><label>{{ tr('Customer Name') }}</label><input id='estimate_client_name' name='client_name' value='{{ prefill_contact.customer_name if prefill_contact else "" }}' required></div>
-        <div><label>{{ tr('Recipient Email') }}</label><input id='estimate_recipient_email' name='recipient_email' type='email' value='{{ prefill_contact.customer_email if prefill_contact else "" }}' required></div>
-        <div><label>{{ tr('Customer Phone') }}</label><input id='estimate_customer_phone' name='customer_phone' value='{{ prefill_contact.customer_phone if prefill_contact else "" }}'></div>
-        <div><label>{{ tr('Customer Address') }}</label><input id='estimate_client_address' name='client_address' value='{{ prefill_contact.customer_address if prefill_contact else "" }}'></div>
-        <div><label>{{ tr('Estimate Date') }}</label><input name='invoice_date' type='date' value='{{ today }}'></div>
-        <div><label>{{ tr('Valid Until') }}</label><input name='estimate_expiration_date' type='date' value='{{ default_valid_until }}'></div>
-        <div><label>{{ tr('Sales Tax') }}</label><input id='estimate_sales_tax' name='sales_tax_amount' type='number' step='0.01' min='0' value='0.00'></div>
-        <div style='grid-column:1/-1'>
-          <label>{{ tr('Line Items') }}</label>
-          <div class='scroll-x'>
-            <table class='table' id='estimateLineItemsTable'>
-              <tr><th>{{ tr('Description') }}</th><th>{{ tr('Qty') }}</th><th>{{ tr('Unit Price') }}</th><th>{{ tr('Line Total') }}</th></tr>
-              {% for idx in range(4) %}
-              <tr>
-                <td><input name='line_description' placeholder='{{ tr("Service, visit, scope item, or phase") }}'></td>
-                <td><input name='line_quantity' type='number' min='0.01' step='0.01' value='{% if idx == 0 %}1{% endif %}'></td>
-                <td><input name='line_unit_price' type='number' min='0' step='0.01'></td>
-                <td><input class='estimate-line-total' type='text' readonly value='$0.00'></td>
-              </tr>
-              {% endfor %}
-            </table>
-          </div>
+<div class='card section-frame sales-doc-panel-wide'>
+  <details class='compact-details sales-doc-workspace-details' id='estimateOverviewDetails' open>
+    <summary>{{ tr('Estimate Pipeline') }}</summary>
+    <div class='small'>{{ tr('The stronger sales pattern is simple: create estimate, send hosted link, wait for approval, then convert to invoice when the work is ready to bill.') }}</div>
+    <div class='sales-doc-mini-grid'>
+      <div class='sales-doc-mini-card'>
+        <div class='card-head'><h3>{{ tr('Estimate Pipeline') }}</h3><span class='badge'>{{ tr('Hosted Sales Flow') }}</span></div>
+        <div class='summary-strip'>
+          <span class='summary-pill'>{{ estimates|length }} {{ tr('Total') }}</span>
+          <span class='summary-pill'>{{ estimates|selectattr("invoice_status","equalto","sent")|list|length + estimates|selectattr("invoice_status","equalto","viewed")|list|length }} {{ tr('Sent / Viewed') }}</span>
+          <span class='summary-pill'>{{ estimates|selectattr("invoice_status","equalto","approved")|list|length }} {{ tr('Approved') }}</span>
+          <span class='summary-pill'>{{ estimates|selectattr("invoice_status","equalto","converted")|list|length }} {{ tr('Converted') }}</span>
         </div>
-        <div><label>{{ tr('Subtotal') }}</label><input id='estimate_subtotal' type='text' readonly value='$0.00'></div>
-        <div><label>{{ tr('Total Estimate') }}</label><input id='estimate_total' type='text' readonly value='$0.00'></div>
-        <div style='grid-column:1/-1'><label>{{ tr('Notes') }}</label><textarea id='estimate_notes' name='notes' placeholder='{{ tr("Scope note, exclusions, or customer-facing context") }}'>{{ prefill_contact.customer_notes if prefill_contact else "" }}</textarea></div>
-        <div style='grid-column:1/-1'><label><input type='checkbox' name='send_now' value='1' checked> {{ tr('Send hosted estimate link immediately after saving') }}</label></div>
-        <div><button type='submit'>{{ tr('Save Estimate') }}</button></div>
-      </form>
-    </details>
-  </div>
+      </div>
 
-<div class='card section-frame' style='margin-top:16px'>
-    <div class='card-head'><h3>{{ tr('Hosted Link Actions') }}</h3><span class='badge'>{{ tr('Send · Copy · Convert') }}</span></div>
-    <div class='small'>{{ tr('Every saved estimate keeps a hosted customer page. Use the quick actions below to open it, copy the link, resend it, or convert approved work into an invoice.') }}</div>
-    <div class='summary-strip' style='margin-top:14px'>
-      <a class='btn btn-secondary btn-sm' href='{{ url_for("customer_sales", client_id=client_id) }}'>{{ tr('Clients') }}</a>
-      <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Open Invoice Center') }}</a>
-      <a class='btn btn-secondary btn-sm' href='#estimateComposerDetails'>{{ tr('Create New Estimate') }}</a>
+      <div class='sales-doc-mini-card'>
+        <div class='card-head'><h3>{{ tr('Best Use') }}</h3><span class='badge'>{{ tr('Premium Workflow') }}</span></div>
+        <ol class='trial-compact-list'>
+          <li>{{ tr('Choose a saved client first when this is repeat business.') }}</li>
+          <li>{{ tr('Create the estimate with the real scope, pricing, and valid-until date.') }}</li>
+          <li>{{ tr('Send the hosted estimate link so the customer can review it cleanly online.') }}</li>
+          <li>{{ tr('Convert the approved estimate into an invoice when you are ready to collect payment.') }}</li>
+        </ol>
+      </div>
     </div>
-  </div>
 
-<div class='card section-frame' style='margin-top:16px' id='savedEstimates'>
-  <div class='card-head'><h3>{{ tr('Saved Estimates') }}</h3><div class='small'>{{ tr('Hosted estimates waiting for customer response or ready for invoice conversion') }}</div></div>
-  <div class='scroll-x'>
-    <table class='table'>
-      <tr><th>{{ tr('Estimate #') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Status') }}</th><th>{{ tr('Total') }}</th><th>{{ tr('Valid Until') }}</th><th>{{ tr('Hosted Link') }}</th><th>{{ tr('Actions') }}</th></tr>
-      {% for row in estimates %}
-      {% set line_items = estimate_line_items_map.get(row.id, []) %}
-      <tr>
-        <td>#{{ row.job_number or row.id }}</td>
-        <td>
-          <strong>{{ row.client_name }}</strong>
-          <div class='small'>{{ row.recipient_email }}</div>
-          <div class='small'>{{ line_items|length }} {{ tr('items') }}{% if row.sent_at %} &middot; {{ tr('sent') }} {{ row.sent_at[:10] }}{% endif %}{% if row.customer_viewed_at %} &middot; {{ tr('viewed') }} {{ row.customer_viewed_at[:10] }}{% endif %}</div>
-        </td>
-        <td>{{ estimate_status_labels.get(row.invoice_status, row.invoice_status|title) }}</td>
-        <td>${{ '%.2f'|format(row.invoice_total_amount or 0) }}</td>
-        <td>{{ row.estimate_expiration_date or tr('Not set') }}</td>
-        <td>
-          <div class='estimate-link-stack'>
-            <a class='estimate-link-inline' href='{{ estimate_public_links.get(row.id) }}' target='_blank'>{{ estimate_public_links.get(row.id) }}</a>
-            <button class='btn btn-secondary btn-sm copy-link-btn' type='button' data-copy-url='{{ estimate_public_links.get(row.id) }}' data-copy-label='{{ tr("Copy Link") }}' data-copied-label='{{ tr("Copied") }}'>{{ tr('Copy Link') }}</button>
-          </div>
-        </td>
-        <td>
-          <div style='display:flex;gap:8px;flex-wrap:wrap'>
-            <a class='btn btn-secondary btn-sm' href='{{ estimate_public_links.get(row.id) }}' target='_blank'>{{ tr('Open Hosted') }}</a>
-            <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>{{ tr('Print') }}</a>
-            {% if row.invoice_status not in ['converted', 'approved', 'declined', 'expired'] %}
-            <form method='post' style='display:inline'>
-              <input type='hidden' name='action' value='send_estimate'>
-              <input type='hidden' name='estimate_id' value='{{ row.id }}'>
-              <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Send Estimate') }}</button>
-            </form>
-            {% endif %}
-            {% if row.invoice_status in ['approved', 'sent', 'viewed'] %}
-            <form method='post' style='display:inline'>
-              <input type='hidden' name='action' value='convert_estimate_to_invoice'>
-              <input type='hidden' name='estimate_id' value='{{ row.id }}'>
-              <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Convert to Invoice') }}</button>
-            </form>
-            {% endif %}
-            {% if row.converted_invoice_id %}
-            <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.converted_invoice_id) }}' target='_blank'>{{ tr('Open Invoice') }}</a>
-            {% endif %}
-          </div>
-        </td>
-      </tr>
-      {% else %}
-      <tr><td colspan='7' class='small'>{{ tr('No estimates saved yet.') }}</td></tr>
-      {% endfor %}
-    </table>
-  </div>
+    <div class='sales-doc-detail-stack'>
+      <div class='sales-doc-mini-card'>
+        <div class='card-head'><h3>{{ tr('Hosted Link Actions') }}</h3><span class='badge'>{{ tr('Send / Copy / Convert') }}</span></div>
+        <div class='small'>{{ tr('Every saved estimate keeps a hosted customer page. Use the quick actions below to open it, copy the link, resend it, or convert approved work into an invoice.') }}</div>
+        <div class='summary-strip' style='margin-top:14px'>
+          <a class='btn btn-secondary btn-sm' href='{{ url_for("customer_sales", client_id=client_id) }}'>{{ tr('Clients') }}</a>
+          <a class='btn btn-secondary btn-sm' href='{{ url_for("invoices", client_id=client_id) }}'>{{ tr('Open Invoice Center') }}</a>
+          <a class='btn btn-secondary btn-sm' href='#estimateComposerDetails'>{{ tr('Create New Estimate') }}</a>
+        </div>
+      </div>
+    </div>
+  </details>
+</div>
+
+<div class='card section-frame estimate-composer-wide sales-doc-panel-wide' id='estimateComposer'>
+  <details class='compact-details' id='estimateComposerDetails'>
+    <summary>{{ tr('Create Estimate') }}</summary>
+    <div class='small' style='margin:12px 0'>{{ tr('Build the scope, email the hosted estimate link right away, and let the customer approve or decline it from a clean page.') }}</div>
+    <form method='post' class='form-grid' id='estimateForm'>
+      <input type='hidden' name='action' value='create_estimate'>
+      {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <div><label>{{ tr('Saved Client') }}</label><select id='estimate_contact_select' name='customer_contact_id'><option value=''>{{ tr('Choose saved client (optional)') }}</option>{% for row in customer_contacts %}<option value='{{ row.id }}' {% if prefill_contact_id and row.id == prefill_contact_id %}selected{% endif %} data-name='{{ row.customer_name|e }}' data-email='{{ row.customer_email|e }}' data-phone='{{ row.customer_phone|e }}' data-address='{{ row.customer_address|e }}' data-notes='{{ row.customer_notes|e }}'>{{ row.customer_name }}{% if row.customer_email %} &middot; {{ row.customer_email }}{% endif %}</option>{% endfor %}</select></div>
+      <div><label>{{ tr('Estimate Title') }}</label><input name='invoice_title' value='{{ tr("Project Estimate") }}'></div>
+      <div><label>{{ tr('Customer Name') }}</label><input id='estimate_client_name' name='client_name' value='{{ prefill_contact.customer_name if prefill_contact else "" }}' required></div>
+      <div><label>{{ tr('Recipient Email') }}</label><input id='estimate_recipient_email' name='recipient_email' type='email' value='{{ prefill_contact.customer_email if prefill_contact else "" }}' required></div>
+      <div><label>{{ tr('Customer Phone') }}</label><input id='estimate_customer_phone' name='customer_phone' value='{{ prefill_contact.customer_phone if prefill_contact else "" }}'></div>
+      <div><label>{{ tr('Customer Address') }}</label><input id='estimate_client_address' name='client_address' value='{{ prefill_contact.customer_address if prefill_contact else "" }}'></div>
+      <div><label>{{ tr('Estimate Date') }}</label><input name='invoice_date' type='date' value='{{ today }}'></div>
+      <div><label>{{ tr('Valid Until') }}</label><input name='estimate_expiration_date' type='date' value='{{ default_valid_until }}'></div>
+      <div><label>{{ tr('Sales Tax') }}</label><input id='estimate_sales_tax' name='sales_tax_amount' type='number' step='0.01' min='0' value='0.00'></div>
+      <div style='grid-column:1/-1'>
+        <label>{{ tr('Line Items') }}</label>
+        <div class='scroll-x'>
+          <table class='table' id='estimateLineItemsTable'>
+            <tr><th>{{ tr('Description') }}</th><th>{{ tr('Qty') }}</th><th>{{ tr('Unit Price') }}</th><th>{{ tr('Line Total') }}</th></tr>
+            {% for idx in range(4) %}
+            <tr>
+              <td><input name='line_description' placeholder='{{ tr("Service, visit, scope item, or phase") }}'></td>
+              <td><input name='line_quantity' type='number' min='0.01' step='0.01' value='{% if idx == 0 %}1{% endif %}'></td>
+              <td><input name='line_unit_price' type='number' min='0' step='0.01'></td>
+              <td><input class='estimate-line-total' type='text' readonly value='$0.00'></td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+      <div><label>{{ tr('Subtotal') }}</label><input id='estimate_subtotal' type='text' readonly value='$0.00'></div>
+      <div><label>{{ tr('Total Estimate') }}</label><input id='estimate_total' type='text' readonly value='$0.00'></div>
+      <div style='grid-column:1/-1'><label>{{ tr('Notes') }}</label><textarea id='estimate_notes' name='notes' placeholder='{{ tr("Scope note, exclusions, or customer-facing context") }}'>{{ prefill_contact.customer_notes if prefill_contact else "" }}</textarea></div>
+      <div style='grid-column:1/-1'><label><input type='checkbox' name='send_now' value='1' checked> {{ tr('Send hosted estimate link immediately after saving') }}</label></div>
+      <div><button type='submit'>{{ tr('Save Estimate') }}</button></div>
+    </form>
+  </details>
+</div>
+
+<div class='card section-frame sales-doc-panel-wide' id='savedEstimates'>
+  <details class='compact-details sales-doc-workspace-details' id='savedEstimatesDetails' open>
+    <summary>{{ tr('Saved Estimates') }}</summary>
+    <div class='small' style='margin:12px 0'>{{ tr('Hosted estimates waiting for customer response or ready for invoice conversion') }}</div>
+    <div class='scroll-x'>
+      <table class='table'>
+        <tr><th>{{ tr('Estimate #') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Status') }}</th><th>{{ tr('Total') }}</th><th>{{ tr('Valid Until') }}</th><th>{{ tr('Hosted Link') }}</th><th>{{ tr('Actions') }}</th></tr>
+        {% for row in estimates %}
+        {% set line_items = estimate_line_items_map.get(row.id, []) %}
+        <tr>
+          <td>#{{ row.job_number or row.id }}</td>
+          <td>
+            <strong>{{ row.client_name }}</strong>
+            <div class='small'>{{ row.recipient_email }}</div>
+            <div class='small'>{{ line_items|length }} {{ tr('items') }}{% if row.sent_at %} &middot; {{ tr('sent') }} {{ row.sent_at[:10] }}{% endif %}{% if row.customer_viewed_at %} &middot; {{ tr('viewed') }} {{ row.customer_viewed_at[:10] }}{% endif %}</div>
+          </td>
+          <td>{{ estimate_status_labels.get(row.invoice_status, row.invoice_status|title) }}</td>
+          <td>${{ '%.2f'|format(row.invoice_total_amount or 0) }}</td>
+          <td>{{ row.estimate_expiration_date or tr('Not set') }}</td>
+          <td>
+            <div class='estimate-link-stack'>
+              <a class='estimate-link-inline' href='{{ estimate_public_links.get(row.id) }}' target='_blank'>{{ estimate_public_links.get(row.id) }}</a>
+              <button class='btn btn-secondary btn-sm copy-link-btn' type='button' data-copy-url='{{ estimate_public_links.get(row.id) }}' data-copy-label='{{ tr("Copy Link") }}' data-copied-label='{{ tr("Copied") }}'>{{ tr('Copy Link') }}</button>
+            </div>
+          </td>
+          <td>
+            <div style='display:flex;gap:8px;flex-wrap:wrap'>
+              <a class='btn btn-secondary btn-sm' href='{{ estimate_public_links.get(row.id) }}' target='_blank'>{{ tr('Open Hosted') }}</a>
+              <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>{{ tr('Print') }}</a>
+              {% if row.invoice_status not in ['converted', 'approved', 'declined', 'expired'] %}
+              <form method='post' style='display:inline'>
+                <input type='hidden' name='action' value='send_estimate'>
+                <input type='hidden' name='estimate_id' value='{{ row.id }}'>
+                <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Send Estimate') }}</button>
+              </form>
+              {% endif %}
+              {% if row.invoice_status in ['approved', 'sent', 'viewed'] %}
+              <form method='post' style='display:inline'>
+                <input type='hidden' name='action' value='convert_estimate_to_invoice'>
+                <input type='hidden' name='estimate_id' value='{{ row.id }}'>
+                <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Convert to Invoice') }}</button>
+              </form>
+              {% endif %}
+              {% if row.converted_invoice_id %}
+              <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.converted_invoice_id) }}' target='_blank'>{{ tr('Open Invoice') }}</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan='7' class='small'>{{ tr('No estimates saved yet.') }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </details>
 </div>
 
 <script>
@@ -211,6 +228,14 @@
     });
   }
 
+  function openDetailsForHash(){
+    if (!window.location.hash) return;
+    var target = document.querySelector(window.location.hash);
+    if (!target) return;
+    var details = target.tagName && target.tagName.toLowerCase() === 'details' ? target : target.closest('details');
+    if (details) details.open = true;
+  }
+
   document.querySelectorAll('#estimateLineItemsTable input, #estimate_sales_tax').forEach(function(el){
     el.addEventListener('input', recalcEstimate);
     el.addEventListener('change', recalcEstimate);
@@ -232,6 +257,8 @@
     notes: 'estimate_notes'
   });
   recalcEstimate();
+  openDetailsForHash();
+  window.addEventListener('hashchange', openDetailsForHash);
 })();
 </script>
 {% endblock %}

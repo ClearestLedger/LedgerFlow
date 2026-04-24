@@ -22,7 +22,7 @@
       <strong>{{ tr('Estimate first, invoice second') }}</strong>
       <small>{{ tr('Open the estimate workflow before billing the customer.') }}</small>
     </a>
-    <a class='summary-pill summary-pill-link' href='#savedCustomerInvoices'>
+    <a class='summary-pill summary-pill-link' href='#savedCustomerInvoicesDetails'>
       <strong>{{ tr('Hosted customer invoices') }}</strong>
       <small>{{ tr('Open the live customer invoice list and hosted links.') }}</small>
     </a>
@@ -30,7 +30,7 @@
       <strong>{{ tr('Pay-online links supported') }}</strong>
       <small>{{ tr('Open the invoice composer and add an online payment link.') }}</small>
     </a>
-    <a class='summary-pill summary-pill-link' href='#savedCustomerInvoices'>
+    <a class='summary-pill summary-pill-link' href='#savedCustomerInvoicesDetails'>
       <strong>{{ tr('Automatic overdue reminders') }}</strong>
       <small>{{ tr('Review open balances and send reminder actions from the invoice list.') }}</small>
     </a>
@@ -56,69 +56,83 @@
   {% endif %}
 </div>
 
-{% if sales_workspace_enabled %}
-<div class='grid cards-2' style='margin-bottom:16px'>
-  <div class='card section-frame'>
-    <div class='card-head'>
-      <h3>{{ tr('Estimate Workflow') }}</h3>
-      <span class='badge'>{{ tr('Wave-style flow') }}</span>
-    </div>
-    <div class='small'>{{ tr('Create the quote first, send the hosted link, track whether the customer opened it, then convert approved work into the final invoice when you are ready to bill.') }}</div>
-    <div class='summary-strip' style='margin-top:14px'>
-      <span class='summary-pill'>{{ estimate_status_counts['draft'] }} {{ tr('Draft') }}</span>
-      <span class='summary-pill'>{{ estimate_status_counts['sent'] + estimate_status_counts['viewed'] }} {{ tr('Sent / Viewed') }}</span>
-      <span class='summary-pill'>{{ estimate_status_counts['approved'] }} {{ tr('Approved') }}</span>
-      <span class='summary-pill'>{{ estimate_status_counts['converted'] }} {{ tr('Converted') }}</span>
-    </div>
-    <div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:16px'>
-      <a class='btn' href='{{ url_for("estimates", client_id=client_id) }}'>{{ tr('Open Estimates') }}</a>
-      <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>{{ tr('Create Estimate') }}</a>
-      <a class='btn btn-secondary' href='{{ url_for("customer_sales", client_id=client_id) }}'>{{ tr('Clients') }}</a>
-    </div>
-  </div>
-
-  <div class='card section-frame'>
-    <div class='card-head'>
-      <h3>{{ tr('Recent Estimates') }}</h3>
-      <div class='small'>{{ tr('Hosted links and send actions surfaced right here') }}</div>
-    </div>
-    <div class='estimate-preview-list'>
-      {% for row in estimate_preview_rows %}
-      <div class='estimate-preview-item'>
-        <div>
-          <strong>#{{ row.job_number or row.id }} &middot; {{ row.client_name }}</strong>
-          <div class='small'>{{ estimate_status_labels.get(row.invoice_status, row.invoice_status|title) }} &middot; ${{ '%.2f'|format(row.invoice_total_amount or 0) }}{% if row.recipient_email %} &middot; {{ row.recipient_email }}{% endif %}</div>
-        </div>
-        <div class='estimate-preview-actions'>
-          <a class='btn btn-secondary btn-sm' href='{{ estimate_preview_links.get(row.id) }}' target='_blank'>{{ tr('Open Link') }}</a>
-          <button class='btn btn-secondary btn-sm copy-link-btn' type='button' data-copy-url='{{ estimate_preview_links.get(row.id) }}' data-copy-label='{{ tr("Copy Link") }}' data-copied-label='{{ tr("Copied") }}'>{{ tr('Copy Link') }}</button>
-          {% if row.invoice_status not in ['converted', 'declined', 'expired'] %}
-          <form method='post' style='display:inline' action='{{ url_for("estimates", client_id=client_id) }}'>
-            <input type='hidden' name='action' value='send_estimate'>
-            <input type='hidden' name='estimate_id' value='{{ row.id }}'>
-            {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-            <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Send Estimate') }}</button>
-          </form>
-          {% endif %}
-          {% if row.invoice_status in ['approved', 'sent', 'viewed'] %}
-          <form method='post' style='display:inline' action='{{ url_for("estimates", client_id=client_id) }}'>
-            <input type='hidden' name='action' value='convert_estimate_to_invoice'>
-            <input type='hidden' name='estimate_id' value='{{ row.id }}'>
-            {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-            <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Convert to Invoice') }}</button>
-          </form>
-          {% endif %}
-        </div>
-      </div>
-      {% else %}
-      <div class='small'>{{ tr('No estimates yet. Start with an estimate when you want the customer to review the scope before invoicing.') }}</div>
-      {% endfor %}
-    </div>
-  </div>
+<div class='section-anchor-bar'>
+  {% if sales_workspace_enabled %}
+  <a class='section-anchor-link' href='#invoiceSalesOverviewDetails'>{{ tr('Estimate Workflow') }}</a>
+  <a class='section-anchor-link' href='#customerInvoiceComposerDetails'>{{ tr('Create Customer Invoice') }}</a>
+  <a class='section-anchor-link' href='#savedCustomerInvoicesDetails'>{{ tr('Saved Customer Invoices') }}</a>
+  {% endif %}
+  <a class='section-anchor-link' href='#internalIncomeRecordDetails'>{{ tr('Create Internal Income Record') }}</a>
+  <a class='section-anchor-link' href='#savedIncomeRecordsDetails'>{{ tr('Saved Income Records') }}</a>
 </div>
 
-<div class='grid cards-2'>
-  <div class='card section-frame' id='customerInvoiceComposer'>
+{% if sales_workspace_enabled %}
+<div class='card section-frame sales-doc-panel-wide' id='invoiceSalesOverview'>
+  <details class='compact-details sales-doc-workspace-details' id='invoiceSalesOverviewDetails' open>
+    <summary>{{ tr('Estimate Workflow') }}</summary>
+    <div class='small'>{{ tr('Create the quote first, send the hosted link, track whether the customer opened it, then convert approved work into the final invoice when you are ready to bill.') }}</div>
+    <div class='sales-doc-mini-grid'>
+      <div class='sales-doc-mini-card'>
+        <div class='card-head'>
+          <h3>{{ tr('Estimate Workflow') }}</h3>
+          <span class='badge'>{{ tr('Wave-style flow') }}</span>
+        </div>
+        <div class='summary-strip' style='margin-top:14px'>
+          <span class='summary-pill'>{{ estimate_status_counts['draft'] }} {{ tr('Draft') }}</span>
+          <span class='summary-pill'>{{ estimate_status_counts['sent'] + estimate_status_counts['viewed'] }} {{ tr('Sent / Viewed') }}</span>
+          <span class='summary-pill'>{{ estimate_status_counts['approved'] }} {{ tr('Approved') }}</span>
+          <span class='summary-pill'>{{ estimate_status_counts['converted'] }} {{ tr('Converted') }}</span>
+        </div>
+        <div class='sales-doc-action-row'>
+          <a class='btn' href='{{ url_for("estimates", client_id=client_id) }}'>{{ tr('Open Estimates') }}</a>
+          <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>{{ tr('Create Estimate') }}</a>
+          <a class='btn btn-secondary' href='{{ url_for("customer_sales", client_id=client_id) }}'>{{ tr('Clients') }}</a>
+        </div>
+      </div>
+
+      <div class='sales-doc-mini-card'>
+        <div class='card-head'>
+          <h3>{{ tr('Recent Estimates') }}</h3>
+          <div class='small'>{{ tr('Hosted links and send actions surfaced right here') }}</div>
+        </div>
+        <div class='estimate-preview-list'>
+          {% for row in estimate_preview_rows %}
+          <div class='estimate-preview-item'>
+            <div>
+              <strong>#{{ row.job_number or row.id }} &middot; {{ row.client_name }}</strong>
+              <div class='small'>{{ estimate_status_labels.get(row.invoice_status, row.invoice_status|title) }} &middot; ${{ '%.2f'|format(row.invoice_total_amount or 0) }}{% if row.recipient_email %} &middot; {{ row.recipient_email }}{% endif %}</div>
+            </div>
+            <div class='estimate-preview-actions'>
+              <a class='btn btn-secondary btn-sm' href='{{ estimate_preview_links.get(row.id) }}' target='_blank'>{{ tr('Open Link') }}</a>
+              <button class='btn btn-secondary btn-sm copy-link-btn' type='button' data-copy-url='{{ estimate_preview_links.get(row.id) }}' data-copy-label='{{ tr("Copy Link") }}' data-copied-label='{{ tr("Copied") }}'>{{ tr('Copy Link') }}</button>
+              {% if row.invoice_status not in ['converted', 'declined', 'expired'] %}
+              <form method='post' style='display:inline' action='{{ url_for("estimates", client_id=client_id) }}'>
+                <input type='hidden' name='action' value='send_estimate'>
+                <input type='hidden' name='estimate_id' value='{{ row.id }}'>
+                {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+                <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Send Estimate') }}</button>
+              </form>
+              {% endif %}
+              {% if row.invoice_status in ['approved', 'sent', 'viewed'] %}
+              <form method='post' style='display:inline' action='{{ url_for("estimates", client_id=client_id) }}'>
+                <input type='hidden' name='action' value='convert_estimate_to_invoice'>
+                <input type='hidden' name='estimate_id' value='{{ row.id }}'>
+                {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+                <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Convert to Invoice') }}</button>
+              </form>
+              {% endif %}
+            </div>
+          </div>
+          {% else %}
+          <div class='small'>{{ tr('No estimates yet. Start with an estimate when you want the customer to review the scope before invoicing.') }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </details>
+</div>
+
+<div class='card section-frame sales-doc-panel-wide' id='customerInvoiceComposer'>
     <details class='compact-details' id='customerInvoiceComposerDetails'>
       <summary>{{ tr('Create Customer Invoice') }}</summary>
       <div class='small' style='margin:12px 0'>{{ tr('Build a real customer invoice with line items, optional pay-online link, and a hosted invoice page that can be emailed right away. If the customer still needs approval first, use the estimate workflow above.') }}</div>
@@ -158,79 +172,83 @@
         <div><button type='submit'>{{ tr('Save Customer Invoice') }}</button></div>
       </form>
     </details>
-  </div>
+</div>
 
-  <div class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('Premium Invoice Tools') }}</h3><span class='badge'>{{ tr('Saved Clients + Reminders') }}</span></div>
-    <ol class='trial-compact-list'>
+<div class='card section-frame sales-doc-panel-wide'>
+  <details class='compact-details sales-doc-workspace-details'>
+    <summary>{{ tr('Premium Invoice Tools') }}</summary>
+    <ol class='trial-compact-list' style='margin-top:14px'>
       <li>{{ tr('Choose a saved client to reuse email and address details instantly.') }}</li>
       <li>{{ tr('Add a pay-online link when you want the invoice page to include a payment button.') }}</li>
       <li>{{ tr('Use reminders only for open balances so repeat follow-up stays organized.') }}</li>
       <li>{{ tr('Keep bookkeeping-only income below when money is received outside the hosted invoice flow.') }}</li>
     </ol>
-  </div>
+  </details>
 </div>
 
-<div class='card section-frame' style='margin-top:16px' id='savedCustomerInvoices'>
-  <div class='card-head'><h3>{{ tr('Saved Customer Invoices') }}</h3><div class='small'>{{ tr('Hosted invoice pages, reminders, and pay-online links') }}</div></div>
-  <div class='scroll-x'>
-    <table class='table'>
-      <tr><th>{{ tr('Invoice #') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Status') }}</th><th>{{ tr('Total') }}</th><th>{{ tr('Paid') }}</th><th>{{ tr('Balance') }}</th><th>{{ tr('Due') }}</th><th>{{ tr('Actions') }}</th></tr>
-      {% for row in customer_invoices %}
-      {% set line_items = invoice_line_items_map.get(row.id, []) %}
-      <tr>
-        <td>#{{ row.job_number or row.id }}</td>
-        <td>
-          <strong>{{ row.client_name }}</strong>
-          <div class='small'>{{ row.recipient_email }}</div>
-          <div class='small'>{{ line_items|length }} {{ tr('items') }}{% if row.sent_at %} &middot; {{ tr('sent') }} {{ row.sent_at[:10] }}{% endif %}{% if row.last_reminder_at %} &middot; {{ tr('reminder') }} {{ row.last_reminder_at[:10] }}{% endif %}</div>
-        </td>
-        <td>{{ invoice_status_labels.get(row.invoice_status, row.invoice_status|title) }}</td>
-        <td>${{ '%.2f'|format(row.invoice_total_amount or 0) }}</td>
-        <td>${{ '%.2f'|format(row.paid_amount or 0) }}</td>
-        <td>${{ '%.2f'|format(row.balance_due or 0) }}</td>
-        <td>{{ row.due_date or tr('Not set') }}</td>
-        <td>
-          <div style='display:flex;gap:8px;flex-wrap:wrap'>
-            <a class='btn btn-secondary btn-sm' href='{{ invoice_public_links.get(row.id) }}' target='_blank'>{{ tr('Open Hosted') }}</a>
-            <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>{{ tr('Print') }}</a>
-            {% if row.balance_due > 0 %}
-            <form method='post' style='display:inline'>
-              <input type='hidden' name='action' value='send_customer_invoice'>
-              <input type='hidden' name='invoice_id' value='{{ row.id }}'>
-              <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Send') }}</button>
-            </form>
-            <form method='post' style='display:inline'>
-              <input type='hidden' name='action' value='send_customer_invoice_reminder'>
-              <input type='hidden' name='invoice_id' value='{{ row.id }}'>
-              <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Reminder') }}</button>
-            </form>
-            {% if row.public_payment_link %}
-            <a class='btn btn-secondary btn-sm' href='{{ url_for("customer_invoice_pay", token=row.public_invoice_token) }}' target='_blank'>{{ tr('Pay Online') }}</a>
-            {% endif %}
-            <form method='post' style='display:inline'>
-              <input type='hidden' name='action' value='mark_customer_invoice_paid'>
-              <input type='hidden' name='invoice_id' value='{{ row.id }}'>
-              <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Mark Paid') }}</button>
-            </form>
-            {% else %}
-            <span class='badge'>{{ tr('Closed') }}</span>
-            {% if row.recipient_email %}
-            <form method='post' style='display:inline'>
-              <input type='hidden' name='action' value='send_customer_receipt'>
-              <input type='hidden' name='invoice_id' value='{{ row.id }}'>
-              <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Send Receipt') }}</button>
-            </form>
-            {% endif %}
-            {% endif %}
-          </div>
-        </td>
-      </tr>
-      {% else %}
-      <tr><td colspan='8' class='small'>{{ tr('No customer invoices saved yet.') }}</td></tr>
-      {% endfor %}
-    </table>
-  </div>
+<div class='card section-frame sales-doc-panel-wide' id='savedCustomerInvoices'>
+  <details class='compact-details sales-doc-workspace-details' id='savedCustomerInvoicesDetails' open>
+    <summary>{{ tr('Saved Customer Invoices') }}</summary>
+    <div class='small' style='margin:12px 0'>{{ tr('Hosted invoice pages, reminders, and pay-online links') }}</div>
+    <div class='scroll-x'>
+      <table class='table'>
+        <tr><th>{{ tr('Invoice #') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Status') }}</th><th>{{ tr('Total') }}</th><th>{{ tr('Paid') }}</th><th>{{ tr('Balance') }}</th><th>{{ tr('Due') }}</th><th>{{ tr('Actions') }}</th></tr>
+        {% for row in customer_invoices %}
+        {% set line_items = invoice_line_items_map.get(row.id, []) %}
+        <tr>
+          <td>#{{ row.job_number or row.id }}</td>
+          <td>
+            <strong>{{ row.client_name }}</strong>
+            <div class='small'>{{ row.recipient_email }}</div>
+            <div class='small'>{{ line_items|length }} {{ tr('items') }}{% if row.sent_at %} &middot; {{ tr('sent') }} {{ row.sent_at[:10] }}{% endif %}{% if row.last_reminder_at %} &middot; {{ tr('reminder') }} {{ row.last_reminder_at[:10] }}{% endif %}</div>
+          </td>
+          <td>{{ invoice_status_labels.get(row.invoice_status, row.invoice_status|title) }}</td>
+          <td>${{ '%.2f'|format(row.invoice_total_amount or 0) }}</td>
+          <td>${{ '%.2f'|format(row.paid_amount or 0) }}</td>
+          <td>${{ '%.2f'|format(row.balance_due or 0) }}</td>
+          <td>{{ row.due_date or tr('Not set') }}</td>
+          <td>
+            <div style='display:flex;gap:8px;flex-wrap:wrap'>
+              <a class='btn btn-secondary btn-sm' href='{{ invoice_public_links.get(row.id) }}' target='_blank'>{{ tr('Open Hosted') }}</a>
+              <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>{{ tr('Print') }}</a>
+              {% if row.balance_due > 0 %}
+              <form method='post' style='display:inline'>
+                <input type='hidden' name='action' value='send_customer_invoice'>
+                <input type='hidden' name='invoice_id' value='{{ row.id }}'>
+                <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Send') }}</button>
+              </form>
+              <form method='post' style='display:inline'>
+                <input type='hidden' name='action' value='send_customer_invoice_reminder'>
+                <input type='hidden' name='invoice_id' value='{{ row.id }}'>
+                <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Reminder') }}</button>
+              </form>
+              {% if row.public_payment_link %}
+              <a class='btn btn-secondary btn-sm' href='{{ url_for("customer_invoice_pay", token=row.public_invoice_token) }}' target='_blank'>{{ tr('Pay Online') }}</a>
+              {% endif %}
+              <form method='post' style='display:inline'>
+                <input type='hidden' name='action' value='mark_customer_invoice_paid'>
+                <input type='hidden' name='invoice_id' value='{{ row.id }}'>
+                <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Mark Paid') }}</button>
+              </form>
+              {% else %}
+              <span class='badge'>{{ tr('Closed') }}</span>
+              {% if row.recipient_email %}
+              <form method='post' style='display:inline'>
+                <input type='hidden' name='action' value='send_customer_receipt'>
+                <input type='hidden' name='invoice_id' value='{{ row.id }}'>
+                <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Send Receipt') }}</button>
+              </form>
+              {% endif %}
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan='8' class='small'>{{ tr('No customer invoices saved yet.') }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </details>
 </div>
 {% else %}
 <div class='card section-frame locked-sales-card' style='margin-bottom:16px'>
@@ -249,77 +267,87 @@
 </div>
 {% endif %}
 
-<div class='grid cards-2' style='margin-top:16px'>
-  <div class='card section-frame'>
-    <details class='compact-details' id='internalIncomeRecordDetails'>
-      <summary>{{ tr('Create Internal Income Record') }}</summary>
-      <div class='small' style='margin:12px 0'>{{ tr('Use this when you need a bookkeeping-only revenue entry that is not being sent to a customer as an invoice.') }}</div>
-      <form method='post' class='form-grid'>
-        <input type='hidden' name='action' value='add_invoice'>
-        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-        <div><label>{{ tr('Income Type') }}</label><select name='income_category'>{% for value, label in income_category_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
-        <div><label>{{ tr('Gross Income Received') }}</label><input name='paid_amount' type='number' step='0.01' min='0'></div>
-        <div><label>{{ tr('Income Source / Customer') }}</label><input name='client_name' required></div>
-        <div><label>{{ tr('Service Address / Sale Location') }}</label><input name='client_address'></div>
-        <div><label>{{ tr('Date Received') }}</label><input name='invoice_date' type='date' value='{{ today }}'></div>
-        <div><label>{{ tr('Sales Tax Portion') }}</label><input name='sales_tax_amount' type='number' step='0.01' min='0' value='0.00'></div>
-        <div style='grid-column:1/-1'><label><input type='checkbox' name='sales_tax_paid' value='1'> {{ tr('Sales tax on this record has already been paid / remitted') }}</label></div>
-        <div style='grid-column:1/-1'><label>{{ tr('Notes') }}</label><textarea name='notes' placeholder='{{ tr("Service performed, payment source, tax note, or internal documentation") }}'></textarea></div>
-        <div><button type='submit'>{{ tr('Save Income Record') }}</button></div>
-      </form>
-    </details>
-  </div>
+<div class='card section-frame sales-doc-panel-wide' id='internalBookkeepingWorkspace'>
+  <details class='compact-details sales-doc-workspace-details' id='internalBookkeepingWorkspaceDetails' open>
+    <summary>{{ tr('Income Records') }}</summary>
+    <div class='small'>{{ tr('Use the customer invoice workflow for what clients receive. Keep these internal records for bookkeeping-only revenue and mileage support when you are not sending a customer-facing document.') }}</div>
+    <div class='sales-doc-mini-grid'>
+      <div class='sales-doc-mini-card'>
+        <details class='compact-details' id='internalIncomeRecordDetails'>
+          <summary>{{ tr('Create Internal Income Record') }}</summary>
+          <div class='small' style='margin:12px 0'>{{ tr('Use this when you need a bookkeeping-only revenue entry that is not being sent to a customer as an invoice.') }}</div>
+          <form method='post' class='form-grid'>
+            <input type='hidden' name='action' value='add_invoice'>
+            {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+            <div><label>{{ tr('Income Type') }}</label><select name='income_category'>{% for value, label in income_category_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+            <div><label>{{ tr('Gross Income Received') }}</label><input name='paid_amount' type='number' step='0.01' min='0'></div>
+            <div><label>{{ tr('Income Source / Customer') }}</label><input name='client_name' required></div>
+            <div><label>{{ tr('Service Address / Sale Location') }}</label><input name='client_address'></div>
+            <div><label>{{ tr('Date Received') }}</label><input name='invoice_date' type='date' value='{{ today }}'></div>
+            <div><label>{{ tr('Sales Tax Portion') }}</label><input name='sales_tax_amount' type='number' step='0.01' min='0' value='0.00'></div>
+            <div style='grid-column:1/-1'><label><input type='checkbox' name='sales_tax_paid' value='1'> {{ tr('Sales tax on this record has already been paid / remitted') }}</label></div>
+            <div style='grid-column:1/-1'><label>{{ tr('Notes') }}</label><textarea name='notes' placeholder='{{ tr("Service performed, payment source, tax note, or internal documentation") }}'></textarea></div>
+            <div><button type='submit'>{{ tr('Save Income Record') }}</button></div>
+          </form>
+        </details>
+      </div>
 
-  <div class='card section-frame'>
-    <details class='compact-details'>
-      <summary>{{ tr('Income Mileage Attachment') }}</summary>
-      <div class='small' style='margin:12px 0'>{{ tr('Attach deductible travel only when you need to tie mileage to a saved internal income record.') }}</div>
-      <form method='post' class='form-grid invoice-mileage-form' id='invoiceMileageForm'>
-        <input type='hidden' name='action' value='add_mileage'>
-        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-        <div><label>{{ tr('Income Record') }}</label><select name='invoice_id' required><option value=''>{{ tr('Select saved record') }}</option>{% for row in income_records %}<option value='{{ row.id }}'>{{ tr('Record #') }}{{ row.job_number }} &middot; {{ row.client_name }}</option>{% endfor %}</select></div>
-        <div><label>{{ tr('Trip Date') }}</label><input name='trip_date' type='date' value='{{ today }}'></div>
-        <div><label>{{ tr('Starting Point') }}</label><input name='start_point' value='{{ home_address }}'></div>
-        <div><label>{{ tr('Destination') }}</label><input name='destination' placeholder='{{ tr("Customer or job address") }}'></div>
-        <div><label>{{ tr('Trip Type') }}</label><select name='trip_type' id='trip_type'><option value='two_way' selected>{{ tr('Two-way') }}</option><option value='one_way'>{{ tr('One-way') }}</option></select></div>
-        <div><label>{{ tr('Number of Round Trips') }}</label><input name='round_trips' id='round_trips' type='number' min='1' step='1' value='1'></div>
-        <div><label>{{ tr('One-Way Miles') }}</label><input name='one_way_miles' id='one_way_miles' type='number' min='0' step='0.01' placeholder='{{ tr("Leave blank to auto-estimate") }}'></div>
-        <div><label>{{ tr('Rate / Cost') }}</label><input name='rate' id='rate' type='number' min='0' step='0.0001' value='0.67'></div>
-        <div><label>{{ tr('Total Miles') }}</label><input name='total_miles_preview' id='total_miles_preview' type='text' value='0.00' readonly></div>
-        <div><label>{{ tr('Total Mileage Amount') }}</label><input name='total_amount_preview' id='total_amount_preview' type='text' value='$0.00' readonly></div>
-        <div style='grid-column:1/-1'><label>{{ tr('Note') }}</label><textarea name='note' placeholder='{{ tr("Optional job or trip note") }}'></textarea></div>
-        <div><button type='submit'>{{ tr('Save Mileage Attachment') }}</button></div>
-      </form>
-    </details>
-  </div>
-</div>
+      <div class='sales-doc-mini-card'>
+        <details class='compact-details' id='invoiceMileageAttachmentDetails'>
+          <summary>{{ tr('Income Mileage Attachment') }}</summary>
+          <div class='small' style='margin:12px 0'>{{ tr('Attach deductible travel only when you need to tie mileage to a saved internal income record.') }}</div>
+          <form method='post' class='form-grid invoice-mileage-form' id='invoiceMileageForm'>
+            <input type='hidden' name='action' value='add_mileage'>
+            {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+            <div><label>{{ tr('Income Record') }}</label><select name='invoice_id' required><option value=''>{{ tr('Select saved record') }}</option>{% for row in income_records %}<option value='{{ row.id }}'>{{ tr('Record #') }}{{ row.job_number }} &middot; {{ row.client_name }}</option>{% endfor %}</select></div>
+            <div><label>{{ tr('Trip Date') }}</label><input name='trip_date' type='date' value='{{ today }}'></div>
+            <div><label>{{ tr('Starting Point') }}</label><input name='start_point' value='{{ home_address }}'></div>
+            <div><label>{{ tr('Destination') }}</label><input name='destination' placeholder='{{ tr("Customer or job address") }}'></div>
+            <div><label>{{ tr('Trip Type') }}</label><select name='trip_type' id='trip_type'><option value='two_way' selected>{{ tr('Two-way') }}</option><option value='one_way'>{{ tr('One-way') }}</option></select></div>
+            <div><label>{{ tr('Number of Round Trips') }}</label><input name='round_trips' id='round_trips' type='number' min='1' step='1' value='1'></div>
+            <div><label>{{ tr('One-Way Miles') }}</label><input name='one_way_miles' id='one_way_miles' type='number' min='0' step='0.01' placeholder='{{ tr("Leave blank to auto-estimate") }}'></div>
+            <div><label>{{ tr('Rate / Cost') }}</label><input name='rate' id='rate' type='number' min='0' step='0.0001' value='0.67'></div>
+            <div><label>{{ tr('Total Miles') }}</label><input name='total_miles_preview' id='total_miles_preview' type='text' value='0.00' readonly></div>
+            <div><label>{{ tr('Total Mileage Amount') }}</label><input name='total_amount_preview' id='total_amount_preview' type='text' value='$0.00' readonly></div>
+            <div style='grid-column:1/-1'><label>{{ tr('Note') }}</label><textarea name='note' placeholder='{{ tr("Optional job or trip note") }}'></textarea></div>
+            <div><button type='submit'>{{ tr('Save Mileage Attachment') }}</button></div>
+          </form>
+        </details>
+      </div>
+    </div>
 
-<div class='card section-frame' style='margin-top:16px'>
-  <div class='card-head'><h3>{{ tr('Saved Income Records') }}</h3><div class='small'>{{ tr('Bookkeeping-only received income entries') }}</div></div>
-  <div class='scroll-x'>
-    <table class='table'>
-      <tr><th>{{ tr('Record #') }}</th><th>{{ tr('Date') }}</th><th>{{ tr('Source') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Gross') }}</th><th>{{ tr('Sales Tax') }}</th><th>{{ tr('Tax Status') }}</th><th>{{ tr('Actions') }}</th></tr>
-      {% for row in income_records %}
-      <tr>
-        <td>{{ row.job_number }}</td>
-        <td>{{ row.invoice_date }}</td>
-        <td>{{ row.client_name }}</td>
-        <td>{{ income_category_labels.get(row.income_category or 'service_income', tr('Service Income')) }}</td>
-        <td>${{ '%.2f'|format(row.paid_amount or 0) }}</td>
-        <td>${{ '%.2f'|format(row.sales_tax_amount or 0) }}</td>
-        <td>{{ tr('Paid / Remitted') if row.sales_tax_paid else tr('Not marked paid') }}</td>
-        <td><a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>{{ tr('Print Record') }}</a></td>
-      </tr>
-      {% else %}
-      <tr><td colspan='8' class='small'>{{ tr('No internal income records saved yet.') }}</td></tr>
-      {% endfor %}
-    </table>
-  </div>
-</div>
+    <div class='sales-doc-detail-stack'>
+      <details class='compact-details' id='savedIncomeRecordsDetails' open>
+        <summary>{{ tr('Saved Income Records') }}</summary>
+        <div class='small' style='margin:12px 0'>{{ tr('Bookkeeping-only received income entries') }}</div>
+        <div class='scroll-x'>
+          <table class='table'>
+            <tr><th>{{ tr('Record #') }}</th><th>{{ tr('Date') }}</th><th>{{ tr('Source') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Gross') }}</th><th>{{ tr('Sales Tax') }}</th><th>{{ tr('Tax Status') }}</th><th>{{ tr('Actions') }}</th></tr>
+            {% for row in income_records %}
+            <tr>
+              <td>{{ row.job_number }}</td>
+              <td>{{ row.invoice_date }}</td>
+              <td>{{ row.client_name }}</td>
+              <td>{{ income_category_labels.get(row.income_category or 'service_income', tr('Service Income')) }}</td>
+              <td>${{ '%.2f'|format(row.paid_amount or 0) }}</td>
+              <td>${{ '%.2f'|format(row.sales_tax_amount or 0) }}</td>
+              <td>{{ tr('Paid / Remitted') if row.sales_tax_paid else tr('Not marked paid') }}</td>
+              <td><a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>{{ tr('Print Record') }}</a></td>
+            </tr>
+            {% else %}
+            <tr><td colspan='8' class='small'>{{ tr('No internal income records saved yet.') }}</td></tr>
+            {% endfor %}
+          </table>
+        </div>
+      </details>
 
-<div class='card section-frame' style='margin-top:16px'>
-  <div class='card-head'><h3>{{ tr('Saved Mileage Attachments') }}</h3><div class='small'>{{ tr('Mileage entries tied to internal income records') }}</div></div>
-  <div class='scroll-x'><table class='table'><tr><th>{{ tr('Date') }}</th><th>{{ tr('Record #') }}</th><th>{{ tr('Source') }}</th><th>{{ tr('Route') }}</th><th>{{ tr('Total Miles') }}</th><th>{{ tr('Rate / Cost') }}</th><th>{{ tr('Amount') }}</th></tr>{% for row in invoice_mileage_entries %}<tr><td>{{ row.trip_date or '' }}</td><td>{% if row.job_number %}#{{ row.job_number }}{% else %}-{% endif %}</td><td>{{ row.client_name or '' }}</td><td>{{ row.start_point }} &rarr; {{ row.destination }}</td><td>{{ '%.2f'|format(row.total_miles or 0) }}</td><td>${{ '%.4f'|format(row.rate or 0) }}</td><td>${{ '%.2f'|format(row.total_amount or 0) }}</td></tr>{% else %}<tr><td colspan='7' class='small'>{{ tr('No mileage attachments saved yet.') }}</td></tr>{% endfor %}</table></div>
+      <details class='compact-details' id='savedMileageAttachmentsDetails'>
+        <summary>{{ tr('Saved Mileage Attachments') }}</summary>
+        <div class='small' style='margin:12px 0'>{{ tr('Mileage entries tied to internal income records') }}</div>
+        <div class='scroll-x'><table class='table'><tr><th>{{ tr('Date') }}</th><th>{{ tr('Record #') }}</th><th>{{ tr('Source') }}</th><th>{{ tr('Route') }}</th><th>{{ tr('Total Miles') }}</th><th>{{ tr('Rate / Cost') }}</th><th>{{ tr('Amount') }}</th></tr>{% for row in invoice_mileage_entries %}<tr><td>{{ row.trip_date or '' }}</td><td>{% if row.job_number %}#{{ row.job_number }}{% else %}-{% endif %}</td><td>{{ row.client_name or '' }}</td><td>{{ row.start_point }} &rarr; {{ row.destination }}</td><td>{{ '%.2f'|format(row.total_miles or 0) }}</td><td>${{ '%.4f'|format(row.rate or 0) }}</td><td>${{ '%.2f'|format(row.total_amount or 0) }}</td></tr>{% else %}<tr><td colspan='7' class='small'>{{ tr('No mileage attachments saved yet.') }}</td></tr>{% endfor %}</table></div>
+      </details>
+    </div>
+  </details>
 </div>
 
 <script>
@@ -388,6 +416,14 @@
     });
   }
 
+  function openDetailsForHash(){
+    if (!window.location.hash) return;
+    var target = document.querySelector(window.location.hash);
+    if (!target) return;
+    var details = target.tagName && target.tagName.toLowerCase() === 'details' ? target : target.closest('details');
+    if (details) details.open = true;
+  }
+
   document.querySelectorAll('#invoiceLineItemsTable input, #customer_invoice_sales_tax').forEach(function(el){
     el.addEventListener('input', recalcCustomerInvoice);
     el.addEventListener('change', recalcCustomerInvoice);
@@ -415,6 +451,8 @@
   });
   recalcCustomerInvoice();
   recalcInvoiceMileage();
+  openDetailsForHash();
+  window.addEventListener('hashchange', openDetailsForHash);
 })();
 </script>
 {% endblock %}

@@ -1611,6 +1611,10 @@ TRANSLATIONS.update({
     'Save Mileage Attachment': {'es': 'Guardar adjunto de kilometraje', 'pt': 'Salvar anexo de quilometragem'},
     'Saved Income Records': {'es': 'Registros internos guardados', 'pt': 'Registros internos salvos'},
     'Bookkeeping-only received income entries': {'es': 'Entradas de ingreso recibidas solo para contabilidad', 'pt': 'Lancamentos de receita recebida apenas para contabilidade'},
+    'Use the customer invoice workflow for what clients receive. Keep these internal records for bookkeeping-only revenue and mileage support when you are not sending a customer-facing document.': {
+        'es': 'Usa el flujo de factura al cliente para lo que el cliente recibe. Conserva estos registros internos para ingresos y kilometraje de contabilidad cuando no estas enviando un documento al cliente.',
+        'pt': 'Use o fluxo de fatura ao cliente para o que o cliente recebe. Mantenha estes registros internos para receita e quilometragem de contabilidade quando voce nao estiver enviando um documento ao cliente.',
+    },
     'Record #': {'es': 'Registro #', 'pt': 'Registro #'},
     'Source': {'es': 'Origen', 'pt': 'Origem'},
     'Gross': {'es': 'Bruto', 'pt': 'Bruto'},
@@ -1689,6 +1693,7 @@ TRANSLATIONS.update({
     },
     'Open Invoice Center': {'es': 'Abrir central de facturas', 'pt': 'Abrir central de faturas'},
     'Create New Estimate': {'es': 'Crear nuevo presupuesto', 'pt': 'Criar novo orcamento'},
+    'Send / Copy / Convert': {'es': 'Enviar / Copiar / Convertir', 'pt': 'Enviar / Copiar / Converter'},
     'Saved Estimates': {'es': 'Presupuestos guardados', 'pt': 'Orcamentos salvos'},
     'Hosted estimates waiting for customer response or ready for invoice conversion': {
         'es': 'Presupuestos hospedados esperando respuesta del cliente o listos para convertirse en factura',

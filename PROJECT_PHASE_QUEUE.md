@@ -323,6 +323,11 @@
   - `Operations Team` now restores the hiring/payroll fields that had effectively been left behind on `Legacy HR Records`
   - businesses and administrators can again manage worker classification, payroll frequency, hire date, SSN/tax ID, payout setup, address, pay notes, and W-4 answers from the main team workflow
   - `/team` now fails soft for admin when a stale business id is used after the reset by redirecting to the first available business team page instead of stopping on a hard forbidden state
+- Sales-document declutter phase completed on 2026-04-24:
+  - `Invoices & Income` now uses a page-local section menu and clearer folded work areas instead of stacking every sales and bookkeeping block open at once
+  - `Estimates` now uses the same pattern: overview, full-width create form, and saved-estimates list with deep links that auto-open the correct section
+  - deep links into folded invoice and estimate sections now auto-open the target details block on load, which keeps the new compact layout usable from buttons and anchors
+  - this phase was template-and-style only so the live invoice/estimate logic stayed unchanged while the pages became cleaner and less crowded
 - Future product architecture note recorded on 2026-04-22:
   - after current launch blockers are complete, the business workspace should be reorganized into clearer folded product legs instead of crowded all-at-once pages
   - target business legs include: `Clients & Sales`, `Jobs & Profit`, `Estimates & Invoices`, `Workers & Time`, `Payroll & Payments`, and related finance/reporting sections
