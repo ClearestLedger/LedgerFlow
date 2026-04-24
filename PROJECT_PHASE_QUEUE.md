@@ -370,3 +370,7 @@
   - the second real business completed the live checklist successfully
   - Batch 2 remains within the safe limit and `Business 3` is now unlocked
   - continue with exactly one more real business only, then run the same checklist before deciding on the next rollout gate
+- Batch 2 business 3 start recorded on 2026-04-24:
+  - `Rafa` was created as the third real business in Batch 2
+  - the free-trial invite email was sent, received, and opened correctly, and the initial invite-start flow is working
+  - the rollout is now in the `Business 3` checklist stage; finish the full checklist before any Batch 2 observation decision
