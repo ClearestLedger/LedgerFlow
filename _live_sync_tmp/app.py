@@ -42,6 +42,7 @@ APP_SUBTITLE = 'Profit and job control for growing service businesses'
 BRAND_TAGLINE = 'See the job, control the numbers, and know the profit.'
 BRAND_LOGO_FILENAME = 'ledgerflow-logo.png'
 BRAND_MARK_FILENAME = 'ledgerflow-mark.png'
+FOUNDER_MARKETING_FILENAME = 'marketing/founder-marketing.png'
 TRIAL_WELCOME_VIDEO_FILENAME = 'marketing/trial-welcome-preview.mp4'
 TRIAL_WELCOME_POSTER_FILENAME = 'marketing/trial-welcome-preview-poster.png'
 TERMS_VERSION = '2026-04-22.1'
@@ -3131,16 +3132,15 @@ def trial_welcome_email_preview_html(target_link: str) -> str:
 
 
 def prospect_visual_card_html(business_category: str, business_name: str) -> str:
-    profile = prospect_visual_profile(business_category)
-    image_url = html.escape(static_asset_absolute_url(profile['filename']))
-    alt_text = html.escape(profile['alt'])
+    image_url = html.escape(static_asset_absolute_url(FOUNDER_MARKETING_FILENAME))
+    alt_text = html.escape('Founder of LedgerFlow with the LedgerFlow workspace')
     category_label = html.escape(business_category_display(business_category))
     business_label = html.escape((business_name or 'Your business').strip() or 'Your business')
     return (
         f"<div style='margin-top:22px;padding:18px;border:1px solid #dbe3ef;border-radius:22px;background:#ffffff'>"
         f"<img src='{image_url}' alt='{alt_text}' style='display:block;width:100%;height:auto;border-radius:16px'>"
-        f"<div style='margin-top:14px;color:#151a2c;font-size:18px;line-height:1.35;font-weight:800'>{html.escape(profile['headline'])}</div>"
-        f"<div style='margin-top:8px;color:#61718a;font-size:13px;line-height:1.7'>{business_label} is currently being invited as a <strong style='color:#1d2336'>{category_label}</strong> business.</div>"
+        f"<div style='margin-top:14px;color:#151a2c;font-size:18px;line-height:1.35;font-weight:800'>LedgerFlow was shaped by real small-business pressure to bring jobs, billing, and clearer numbers into one place.</div>"
+        f"<div style='margin-top:8px;color:#61718a;font-size:13px;line-height:1.7'>{business_label} is currently being invited as a <strong style='color:#1d2336'>{category_label}</strong> business through a founder-led rollout focused on calmer operations and stronger financial visibility.</div>"
         f"</div>"
     )
 

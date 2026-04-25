@@ -390,3 +390,7 @@
   - the public trial invite page now embeds the draft welcome video directly so new businesses can watch the preview before claiming the trial
   - when an invite email already belongs to a business login, the invite page now stops showing the create-login form and instead gives direct `Sign In` and `Forgot Password` actions
   - this keeps reused invite emails and already-existing business accounts from landing on a dead-end create-password screen during rollout
+- Founder-led trial marketing image refinement completed on 2026-04-25:
+  - replaced the stock service-category prospect image in the trial invite marketing card with the founder marketing image
+  - updated the founder-card copy to position LedgerFlow as being shaped by real small-business pressure instead of generic category stock marketing
+  - kept the business-category rollout context and the rest of the safe invite flow unchanged
