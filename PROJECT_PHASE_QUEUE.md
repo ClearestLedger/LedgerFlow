@@ -381,7 +381,7 @@
   - email strategy is to use a poster image with play icon and CTA, not raw embedded MP4
   - placement, CTA copy, and improvement notes are documented in the video placement plan pack for later implementation
 - Invite email reuse utility completed on 2026-04-25:
-  - added an admin-side `Release Blocked Invite Email` action inside `Business Users`
-  - this safely frees an email from unused prospect records so it can be reused for a new invite
-  - active business logins remain protected and cannot be cleared through this utility
-  - verified locally that a blocked prospect email is released from both the prospect record and invite row while active login emails remain untouched
+  - added an admin-side `Release Business Email For Reuse` action inside `Business Users`
+  - this safely frees an email from unused prospect records or from an existing business login so it can be reused for a new invite
+  - when the email belongs to a current business login, LedgerFlow preserves the old login under a private placeholder address instead of deleting the account
+  - verified locally that blocked prospect emails are released from the prospect/invite rows and that active client-login emails are moved to a placeholder while the original address becomes reusable

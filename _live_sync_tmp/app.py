@@ -2438,6 +2438,18 @@ def validate_email_address_for_delivery(value: str) -> tuple[str, str]:
     return normalized, ''
 
 
+def released_client_login_placeholder(conn: sqlite3.Connection, user_id: int) -> str:
+    counter = 0
+    while True:
+        suffix = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        extra = f'-{counter}' if counter else ''
+        candidate = f'released-client-{user_id}-{suffix}{extra}@ledgerflow.local'
+        taken = conn.execute('SELECT 1 FROM users WHERE lower(email)=? LIMIT 1', (candidate,)).fetchone()
+        if not taken:
+            return candidate
+        counter += 1
+
+
 def user_facing_email_delivery_error(exc: Exception) -> str:
     if isinstance(exc, smtplib.SMTPRecipientsRefused):
         recipients = getattr(exc, 'recipients', {}) or {}
@@ -15437,6 +15449,20 @@ def client_users():
                 if not release_email:
                     flash('Enter the blocked invite email you want to release first.', 'error')
                     return redirect(url_for('client_users'))
+                matching_login = conn.execute(
+                    '''SELECT
+                           u.id AS user_id,
+                           u.full_name,
+                           u.client_id,
+                           c.business_name,
+                           c.billing_notes
+                       FROM users u
+                       LEFT JOIN clients c ON c.id = u.client_id
+                       WHERE u.role='client' AND lower(u.email)=?
+                       ORDER BY u.id DESC
+                       LIMIT 1''',
+                    (release_email,),
+                ).fetchone()
                 matching_prospects = conn.execute(
                     '''SELECT
                            c.id AS client_id,
@@ -15456,28 +15482,59 @@ def client_users():
                        ORDER BY c.id DESC, bi.id DESC''',
                     (release_email, release_email),
                 ).fetchall()
-                if not matching_prospects:
-                    flash('That email is not currently blocking a prospect invite on this live list.', 'error')
+                if not matching_prospects and not matching_login:
+                    flash('That email is not currently blocking a prospect invite or business login on this live list.', 'error')
                     return redirect(url_for('client_users'))
                 released_businesses = []
-                blocked_businesses = []
                 processed_client_ids = set()
+                released_login_note = ''
+                if matching_login:
+                    replacement_email = released_client_login_placeholder(conn, int(matching_login['user_id']))
+                    conn.execute(
+                        'UPDATE users SET email=? WHERE id=?',
+                        (replacement_email, matching_login['user_id']),
+                    )
+                    login_client_id = int(matching_login['client_id'] or 0)
+                    if login_client_id:
+                        conn.execute(
+                            "UPDATE clients SET email='' WHERE id=? AND lower(COALESCE(email,''))=?",
+                            (login_client_id, release_email),
+                        )
+                        conn.execute(
+                            "UPDATE business_invites SET invited_email='', invite_error=? WHERE client_id=? AND lower(COALESCE(invited_email,''))=?",
+                            (f'Invite/business email released by administrator on {now_iso()} so the address can be reused.', login_client_id, release_email),
+                        )
+                        prior_notes = (matching_login['billing_notes'] or '').strip()
+                        release_note = f'Business login email {release_email} released by administrator on {now_iso()} for reuse.'
+                        combined_notes = f'{prior_notes}\n{release_note}'.strip() if prior_notes else release_note
+                        conn.execute(
+                            'UPDATE clients SET billing_notes=? WHERE id=?',
+                            (combined_notes, login_client_id),
+                        )
+                        log_client_profile_history(
+                            conn,
+                            client_id=login_client_id,
+                            action='updated',
+                            changed_by_user_id=user['id'],
+                            detail=release_note,
+                        )
+                        log_account_activity(
+                            conn,
+                            client_id=login_client_id,
+                            account_type='business_login',
+                            account_email=release_email,
+                            account_name=(matching_login['full_name'] or '').strip(),
+                            created_by_user_id=user['id'],
+                            status='email_released',
+                            detail=f'Business login email released for reuse. Preserved login moved to {replacement_email}.',
+                        )
+                        processed_client_ids.add(login_client_id)
+                    released_login_note = f'Existing business login preserved under placeholder address {replacement_email}.'
                 for row in matching_prospects:
                     client_id = int(row['client_id'])
                     if client_id in processed_client_ids:
                         continue
                     processed_client_ids.add(client_id)
-                    existing_login = conn.execute(
-                        'SELECT id FROM users WHERE role="client" AND client_id=? LIMIT 1',
-                        (client_id,),
-                    ).fetchone()
-                    accepted_login = conn.execute(
-                        'SELECT 1 FROM business_invites WHERE client_id=? AND accepted_user_id IS NOT NULL LIMIT 1',
-                        (client_id,),
-                    ).fetchone()
-                    if existing_login or accepted_login:
-                        blocked_businesses.append(row['business_name'] or f'Business #{client_id}')
-                        continue
                     conn.execute(
                         "UPDATE clients SET email='' WHERE id=? AND lower(COALESCE(email,''))=?",
                         (client_id, release_email),
@@ -15502,15 +15559,14 @@ def client_users():
                     )
                     released_businesses.append(row['business_name'] or f'Business #{client_id}')
                 conn.commit()
-                if released_businesses and blocked_businesses:
-                    flash(
-                        f"Released {release_email} from: {', '.join(released_businesses)}. Could not release from active logins: {', '.join(blocked_businesses)}.",
-                        'success',
-                    )
+                if released_businesses and released_login_note:
+                    flash(f"Released {release_email} from: {', '.join(released_businesses)}. {released_login_note}", 'success')
                 elif released_businesses:
                     flash(f"Released {release_email} so you can reuse it for a new invite.", 'success')
+                elif released_login_note:
+                    flash(f"Released {release_email} so you can reuse it for a new invite. {released_login_note}", 'success')
                 else:
-                    flash(f"Could not release {release_email} because it already belongs to an active business login.", 'error')
+                    flash(f"Could not release {release_email}.", 'error')
                 return redirect(url_for('client_users'))
             if action == 'send_invite':
                 client_id = request.form.get('client_id', type=int)

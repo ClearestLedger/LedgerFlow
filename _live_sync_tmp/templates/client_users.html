@@ -70,8 +70,8 @@
     </form>
     </details>
     <details class='compact-details users-console-panel' style='margin-top:12px'>
-      <summary><span>Release Blocked Invite Email</span></summary>
-      <div class='small' style='margin:12px 0'>Use this only when an unused prospect invite email was typed wrong or needs to be reused. Active business logins are protected and will not be changed here.</div>
+      <summary><span>Release Business Email For Reuse</span></summary>
+      <div class='small' style='margin:12px 0'>Use this when an invite email was typed wrong or when you explicitly want to reuse an old business email. If the email belongs to an existing business login, LedgerFlow will preserve that login under a private placeholder address so the original email can be reused safely.</div>
       <form method='post' class='form-grid'>
       <input type='hidden' name='action' value='release_invite_email'>
       <div><label>Blocked Invite Email</label><input name='release_email' type='email' required></div>
