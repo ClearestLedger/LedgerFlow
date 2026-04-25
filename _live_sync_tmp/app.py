@@ -42,6 +42,8 @@ APP_SUBTITLE = 'Profit and job control for growing service businesses'
 BRAND_TAGLINE = 'See the job, control the numbers, and know the profit.'
 BRAND_LOGO_FILENAME = 'ledgerflow-logo.png'
 BRAND_MARK_FILENAME = 'ledgerflow-mark.png'
+TRIAL_WELCOME_VIDEO_FILENAME = 'marketing/trial-welcome-preview.mp4'
+TRIAL_WELCOME_POSTER_FILENAME = 'marketing/trial-welcome-preview-poster.png'
 TERMS_VERSION = '2026-04-22.1'
 PRIVACY_VERSION = '2026-04-22.1'
 DISCLAIMER_VERSION = '2026-04-22.1'
@@ -1842,6 +1844,16 @@ TRANSLATIONS.update({
     'Choose subscription now': {'es': 'Elige la suscripcion ahora', 'pt': 'Escolha a assinatura agora'},
     'Upgrade later': {'es': 'Mejora despues', 'pt': 'Faca upgrade depois'},
     'Welcome Tutorial Preview': {'es': 'Vista previa del tutorial de bienvenida', 'pt': 'Previa do tutorial de boas-vindas'},
+    'Watch the welcome preview first, then continue into the complimentary trial when you are ready.': {
+        'es': 'Mira primero la vista previa de bienvenida y luego continua con la prueba gratuita cuando estes listo.',
+        'pt': 'Assista primeiro a previa de boas-vindas e depois continue para o teste gratuito quando estiver pronto.',
+    },
+    'Existing Login Found': {'es': 'Inicio de sesion existente encontrado', 'pt': 'Login existente encontrado'},
+    'This business email is already active': {'es': 'Este correo de empresa ya esta activo', 'pt': 'Este email empresarial ja esta ativo'},
+    'Use Sign In to continue, or choose Forgot Password to reset access for {email}.': {
+        'es': 'Usa Iniciar sesion para continuar, o elige Olvide mi contraseña para restablecer el acceso de {email}.',
+        'pt': 'Use Entrar para continuar ou escolha Esqueci minha senha para redefinir o acesso de {email}.',
+    },
     'Drop your marketing or welcome video here later': {'es': 'Coloca aqui tu video de marketing o bienvenida mas tarde', 'pt': 'Coloque aqui seu video de marketing ou boas-vindas depois'},
     'This top section is reserved for the welcome/tutorial video that introduces the workspace, explains the 7-day complimentary period, and shows the first steps clearly.': {
         'es': 'Esta seccion superior esta reservada para el video de bienvenida/tutorial que presenta el workspace, explica el periodo de 7 dias y muestra claramente los primeros pasos.',
@@ -3082,6 +3094,40 @@ def email_tracking_pixel_url(tracking_token: str) -> str:
     if not tracking_token:
         return ''
     return public_app_url(f'/email/open/{tracking_token}.gif')
+
+
+def trial_welcome_video_page_url() -> str:
+    return static_asset_url(TRIAL_WELCOME_VIDEO_FILENAME)
+
+
+def trial_welcome_video_poster_url() -> str:
+    return static_asset_url(TRIAL_WELCOME_POSTER_FILENAME)
+
+
+def trial_welcome_video_absolute_url() -> str:
+    return static_asset_absolute_url(TRIAL_WELCOME_VIDEO_FILENAME)
+
+
+def trial_welcome_video_poster_absolute_url() -> str:
+    return static_asset_absolute_url(TRIAL_WELCOME_POSTER_FILENAME)
+
+
+def trial_welcome_email_preview_html(target_link: str) -> str:
+    poster_url = html.escape(trial_welcome_video_poster_absolute_url())
+    video_url = html.escape(trial_welcome_video_absolute_url())
+    safe_link = html.escape(target_link or '')
+    return (
+        f"<div style='margin-top:20px;padding:18px 20px;border:1px solid #d7dce7;border-radius:18px;background:#ffffff'>"
+        f"<div style='color:#141b2d;font-size:14px;font-weight:800'>Welcome tutorial preview</div>"
+        f"<a href='{safe_link}' style='display:block;margin-top:12px;text-decoration:none'>"
+        f"<img src='{poster_url}' alt='LedgerFlow welcome tutorial preview' style='display:block;width:100%;height:auto;border-radius:16px;border:1px solid #d8e1ee;box-shadow:0 12px 24px rgba(20,27,45,.08)'>"
+        f"</a>"
+        f"<div style='margin-top:12px'>"
+        f"<a href='{safe_link}' style='display:inline-block;padding:11px 16px;border-radius:999px;background:#1f5db8;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800'>Watch the welcome preview</a>"
+        f"</div>"
+        f"<div style='margin-top:10px;color:#5b687d;font-size:13px;line-height:1.7'>Open the private trial page to watch the welcome walkthrough and continue the setup. The hosted preview video is also available here: <span style='color:#1f5db8;word-break:break-all'>{video_url}</span></div>"
+        f"</div>"
+    )
 
 
 def prospect_visual_card_html(business_category: str, business_name: str) -> str:
@@ -4619,13 +4665,7 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
     trial_summary_html = (
         prospect_visual_card_html(business_category, business_name) +
         trial_offer_value_stack_html(business_category=business_category, trial_days=trial_days, stronger=False) +
-        f"<div style='margin-top:20px;padding:18px 20px;border:1px solid #d7dce7;border-radius:18px;background:#ffffff'>"
-        f"<div style='color:#141b2d;font-size:14px;font-weight:800'>Welcome tutorial preview</div>"
-        f"<div style='margin-top:12px;display:flex;align-items:center;justify-content:center;min-height:160px;border-radius:16px;border:1px dashed #c9d2e0;background:linear-gradient(180deg,#f7f9fc,#eef2f6);color:#425067;font-size:14px;font-weight:700;text-align:center;padding:18px'>"
-        f"Video-ready trial introduction<br>Open the trial page to watch the welcome walkthrough"
-        f"</div>"
-        f"<div style='margin-top:10px;color:#5b687d;font-size:13px;line-height:1.7'>Email clients do not reliably play embedded video, so this preview block takes the business directly into the full trial page where the welcome tutorial and setup guidance live together.</div>"
-        f"</div>"
+        trial_welcome_email_preview_html(click_link)
     )
     body = "\n".join([
         greeting,
@@ -4705,6 +4745,7 @@ def send_trial_followup_email(
     stronger_sections_html = (
         prospect_visual_card_html(business_category, business_name) +
         trial_offer_value_stack_html(business_category=business_category, trial_days=trial_days, stronger=True) +
+        trial_welcome_email_preview_html(click_link) +
         f"<div style='margin-top:18px;padding:18px 20px;border:1px solid #dbe3ef;border-radius:18px;background:#ffffff'>"
         f"<div style='color:#141b2d;font-size:14px;font-weight:800;margin-bottom:12px'>Still deciding?</div>"
         f"<div style='color:#4a576d;font-size:14px;line-height:1.7'>Open the private trial page and you will see the pricing clearly, the guided setup path, and the exact LedgerFlow workspace your business would be stepping into. Nothing is charged today.</div>"
@@ -16213,6 +16254,7 @@ def assistant_respond():
 def business_invite(token):
     if session.get('user_id') or session.get('worker_id'):
         session.clear()
+    existing_account_email = ''
     with get_conn() as conn:
         invite = conn.execute(
             '''SELECT bi.*, c.business_name, c.contact_name, c.email client_email, c.record_status, c.service_level,
@@ -16249,6 +16291,7 @@ def business_invite(token):
             elif not email:
                 flash(translate_text('Email is required.', invite_language), 'error')
             elif existing:
+                existing_account_email = email
                 flash(translate_text('That email already has an account. Sign in instead, or use Forgot Password if needed.', invite_language), 'error')
             elif len(password) < 8:
                 flash(translate_text('Password must be at least 8 characters.', invite_language), 'error')
@@ -16440,13 +16483,25 @@ def business_invite(token):
                 else:
                     flash(translate_text('Business login created. Sign in below.', invite_language), 'success')
                 return redirect(url_for('dashboard'))
+        if invite['status'] in ('pending', 'sent', 'failed') and not existing_account_email:
+            candidate_email = (request.form.get('email', '') or invite['invited_email'] or '').strip().lower()
+            if candidate_email:
+                existing_row = conn.execute(
+                    'SELECT email FROM users WHERE lower(email)=? ORDER BY id DESC LIMIT 1',
+                    (candidate_email,),
+                ).fetchone()
+                if existing_row:
+                    existing_account_email = (existing_row['email'] or '').strip().lower()
     trial_offer_days = int(invite['trial_days'] or invite['trial_offer_days'] or 0)
     return render_template(
         'business_invite.html',
         invite=invite,
+        existing_account_email=existing_account_email,
         is_trial_invite=normalize_invite_kind(invite['invite_kind']) == 'prospect_trial' and trial_offer_days > 0,
         trial_offer_days=trial_offer_days or default_trial_offer_days(),
         subscription_tiers=subscription_tier_view_data(),
+        trial_video_url=trial_welcome_video_page_url(),
+        trial_video_poster_url=trial_welcome_video_poster_url(),
         invite_kind_label=invite_kind_label(invite['invite_kind']),
     )
 

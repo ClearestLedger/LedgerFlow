@@ -490,6 +490,8 @@ linear-gradient(180deg,#f4f8ff 0%,#f8fbff 52%,#f6fafc 100%)}
 .trial-landing-grid{display:grid;grid-template-columns:1.12fr .88fr;gap:18px;align-items:start}
 .trial-video-card,.trial-claim-card{overflow:hidden}
 .trial-video-frame{min-height:240px}
+.trial-video-player-shell{border-radius:20px;overflow:hidden;border:1px solid #d4dfef;background:linear-gradient(180deg,#0f203e,#20385f);box-shadow:0 18px 34px rgba(17,33,66,.18)}
+.trial-video-player{display:block;width:100%;height:auto;min-height:240px;background:#0b1325}
 .trial-journey-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .trial-journey-step{padding:16px;border-radius:18px;border:1px solid rgba(116,130,155,.18);background:linear-gradient(180deg,#FFFFFF 0%,#F4F7FA 100%);box-shadow:0 12px 24px rgba(34,37,43,.08);display:flex;flex-direction:column;gap:8px}
 .trial-journey-step strong{color:var(--primary-dark);font-size:15px;line-height:1.3}
@@ -499,6 +501,8 @@ linear-gradient(180deg,#f4f8ff 0%,#f8fbff 52%,#f6fafc 100%)}
 .trial-pricing-option summary{padding:16px 18px}
 .trial-pricing-summary{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
 .trial-pricing-body{padding:0 18px 18px}
+.trial-existing-account-card{padding:18px;border-radius:22px;border:1px solid rgba(102,122,153,.24);background:linear-gradient(180deg,#ffffff,#f5f8fc);box-shadow:0 16px 28px rgba(34,37,43,.08)}
+.trial-existing-account-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 .trial-note-callout{display:flex;flex-direction:column;gap:8px;padding:16px 18px;border-radius:18px;border:1px solid rgba(116,130,155,.24);background:linear-gradient(180deg,#FFFFFF 0%,#EFF3F8 100%)}
 .trial-note-callout strong{color:var(--primary-dark);font-size:15px}
 .trial-note-callout span{color:var(--ink-soft);font-size:13px;line-height:1.7}

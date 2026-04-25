@@ -385,3 +385,8 @@
   - this safely frees an email from unused prospect records or from an existing business login so it can be reused for a new invite
   - when the email belongs to a current business login, LedgerFlow preserves the old login under a private placeholder address instead of deleting the account
   - verified locally that blocked prospect emails are released from the prospect/invite rows and that active client-login emails are moved to a placeholder while the original address becomes reusable
+- Trial invite video and recovery-path fix completed on 2026-04-25:
+  - the free-trial invite email now uses the approved welcome-video poster preview plus a direct `Watch the welcome preview` CTA instead of the old placeholder video block
+  - the public trial invite page now embeds the draft welcome video directly so new businesses can watch the preview before claiming the trial
+  - when an invite email already belongs to a business login, the invite page now stops showing the create-login form and instead gives direct `Sign In` and `Forgot Password` actions
+  - this keeps reused invite emails and already-existing business accounts from landing on a dead-end create-password screen during rollout

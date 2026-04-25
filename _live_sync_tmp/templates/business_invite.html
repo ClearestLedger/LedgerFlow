@@ -55,8 +55,12 @@
           <h3>{{ tr('Welcome Tutorial Preview') }}</h3>
           <span class='badge'>Canva Ready</span>
         </div>
-        <div class='welcome-video-frame trial-video-frame'>{{ tr('Drop your marketing or welcome video here later') }}</div>
-        <div class='small' style='margin-top:12px'>{{ tr('This top section is reserved for the welcome/tutorial video that introduces the workspace, explains the 7-day complimentary period, and shows the first steps clearly.') }}</div>
+        <div class='trial-video-player-shell'>
+          <video class='trial-video-player' controls preload='metadata' playsinline poster='{{ trial_video_poster_url }}'>
+            <source src='{{ trial_video_url }}' type='video/mp4'>
+          </video>
+        </div>
+        <div class='small' style='margin-top:12px'>{{ tr('Watch the welcome preview first, then continue into the complimentary trial when you are ready.') }}</div>
       </section>
 
       <section class='card section-frame'>
@@ -162,7 +166,17 @@
         {% endif %}
       {% endwith %}
 
-      {% if invite.status in ['pending','sent','failed'] %}
+      {% if invite.status in ['pending','sent','failed'] and existing_account_email %}
+      <div class='trial-existing-account-card'>
+        <div class='badge'>{{ tr('Existing Login Found') }}</div>
+        <div class='page-title' style='font-size:1.35rem;margin-top:12px'>{{ tr('This business email is already active') }}</div>
+        <div class='page-subtitle' style='margin-top:8px'>{{ tr('Use Sign In to continue, or choose Forgot Password to reset access for {email}.', email=existing_account_email) }}</div>
+        <div class='trial-existing-account-actions'>
+          <a class='btn btn-secondary' href='{{ url_for("login") }}'>{{ tr('Sign In') }}</a>
+          <a class='btn btn-secondary' href='{{ url_for("forgot_password") }}'>{{ tr('Forgot Password') }}</a>
+        </div>
+      </div>
+      {% elif invite.status in ['pending','sent','failed'] %}
       <form method='post' class='form-grid'>
         <div><label>{{ tr('Full Name') }}</label><input name='full_name' value='{{ request.form.get("full_name", invite.invited_name or "") }}' required></div>
         <div><label>{{ tr('Email') }}</label><input name='email' value='{{ request.form.get("email", invite.invited_email or "") }}' required></div>
@@ -230,7 +244,17 @@
           </div>
         {% endif %}
       {% endwith %}
-      {% if invite.status in ['pending','sent','failed'] %}
+      {% if invite.status in ['pending','sent','failed'] and existing_account_email %}
+      <div class='trial-existing-account-card'>
+        <div class='badge'>{{ tr('Existing Login Found') }}</div>
+        <h2 style='margin:12px 0 8px'>{{ tr('This business email is already active') }}</h2>
+        <p class='small'>{{ tr('Use Sign In to continue, or choose Forgot Password to reset access for {email}.', email=existing_account_email) }}</p>
+        <div class='trial-existing-account-actions' style='margin-top:14px'>
+          <a class='btn btn-secondary' href='{{ url_for("login") }}'>{{ tr('Sign In') }}</a>
+          <a class='btn btn-secondary' href='{{ url_for("forgot_password") }}'>{{ tr('Forgot Password') }}</a>
+        </div>
+      </div>
+      {% elif invite.status in ['pending','sent','failed'] %}
       <form method='post' class='form-grid'>
         <div><label>{{ tr('Full Name') }}</label><input name='full_name' value='{{ request.form.get("full_name", invite.invited_name or "") }}' required></div>
         <div><label>{{ tr('Email') }}</label><input name='email' value='{{ request.form.get("email", invite.invited_email or "") }}' required></div>
