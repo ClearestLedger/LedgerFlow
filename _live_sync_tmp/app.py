@@ -15431,6 +15431,87 @@ def client_users():
                     conn.commit()
                     flash(f'Trial invite email failed: {friendly_error[:180]}', 'error')
                 return redirect(url_for('client_users'))
+            if action == 'release_invite_email':
+                release_email_raw = request.form.get('release_email', '').strip()
+                release_email = normalize_email_address(release_email_raw)
+                if not release_email:
+                    flash('Enter the blocked invite email you want to release first.', 'error')
+                    return redirect(url_for('client_users'))
+                matching_prospects = conn.execute(
+                    '''SELECT
+                           c.id AS client_id,
+                           c.business_name,
+                           c.email AS client_email,
+                           c.billing_notes,
+                           bi.id AS invite_id,
+                           bi.invited_email,
+                           bi.accepted_user_id
+                       FROM clients c
+                       LEFT JOIN business_invites bi ON bi.client_id = c.id
+                       WHERE COALESCE(c.record_status,'active')='prospect'
+                         AND (
+                           lower(COALESCE(c.email,''))=?
+                           OR lower(COALESCE(bi.invited_email,''))=?
+                         )
+                       ORDER BY c.id DESC, bi.id DESC''',
+                    (release_email, release_email),
+                ).fetchall()
+                if not matching_prospects:
+                    flash('That email is not currently blocking a prospect invite on this live list.', 'error')
+                    return redirect(url_for('client_users'))
+                released_businesses = []
+                blocked_businesses = []
+                processed_client_ids = set()
+                for row in matching_prospects:
+                    client_id = int(row['client_id'])
+                    if client_id in processed_client_ids:
+                        continue
+                    processed_client_ids.add(client_id)
+                    existing_login = conn.execute(
+                        'SELECT id FROM users WHERE role="client" AND client_id=? LIMIT 1',
+                        (client_id,),
+                    ).fetchone()
+                    accepted_login = conn.execute(
+                        'SELECT 1 FROM business_invites WHERE client_id=? AND accepted_user_id IS NOT NULL LIMIT 1',
+                        (client_id,),
+                    ).fetchone()
+                    if existing_login or accepted_login:
+                        blocked_businesses.append(row['business_name'] or f'Business #{client_id}')
+                        continue
+                    conn.execute(
+                        "UPDATE clients SET email='' WHERE id=? AND lower(COALESCE(email,''))=?",
+                        (client_id, release_email),
+                    )
+                    conn.execute(
+                        "UPDATE business_invites SET invited_email='', invite_error=? WHERE client_id=? AND lower(COALESCE(invited_email,''))=?",
+                        (f'Invite email released by administrator on {now_iso()} so the address can be reused.', client_id, release_email),
+                    )
+                    prior_notes = (row['billing_notes'] or '').strip()
+                    release_note = f'Invite email {release_email} released by administrator on {now_iso()} for reuse.'
+                    combined_notes = f'{prior_notes}\n{release_note}'.strip() if prior_notes else release_note
+                    conn.execute(
+                        'UPDATE clients SET billing_notes=? WHERE id=?',
+                        (combined_notes, client_id),
+                    )
+                    log_client_profile_history(
+                        conn,
+                        client_id=client_id,
+                        action='updated',
+                        changed_by_user_id=user['id'],
+                        detail=release_note,
+                    )
+                    released_businesses.append(row['business_name'] or f'Business #{client_id}')
+                conn.commit()
+                if released_businesses and blocked_businesses:
+                    flash(
+                        f"Released {release_email} from: {', '.join(released_businesses)}. Could not release from active logins: {', '.join(blocked_businesses)}.",
+                        'success',
+                    )
+                elif released_businesses:
+                    flash(f"Released {release_email} so you can reuse it for a new invite.", 'success')
+                else:
+                    flash(f"Could not release {release_email} because it already belongs to an active business login.", 'error')
+                return redirect(url_for('client_users'))
             if action == 'send_invite':
                 client_id = request.form.get('client_id', type=int)
                 invite_name = request.form.get('full_name', '').strip()

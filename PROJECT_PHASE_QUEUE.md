@@ -380,3 +380,8 @@
   - `1.1-invideo-veo_31_fast_preview (1).mp4` is the short teaser / email-thumbnail support asset
   - email strategy is to use a poster image with play icon and CTA, not raw embedded MP4
   - placement, CTA copy, and improvement notes are documented in the video placement plan pack for later implementation
+- Invite email reuse utility completed on 2026-04-25:
+  - added an admin-side `Release Blocked Invite Email` action inside `Business Users`
+  - this safely frees an email from unused prospect records so it can be reused for a new invite
+  - active business logins remain protected and cannot be cleared through this utility
+  - verified locally that a blocked prospect email is released from both the prospect record and invite row while active login emails remain untouched
