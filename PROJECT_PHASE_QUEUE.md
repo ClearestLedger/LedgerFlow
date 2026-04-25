@@ -398,3 +398,12 @@
   - upgraded the founder marketing card copy to the approved origin-story language about real small-business pressure, too many moving parts, and not enough financial clarity
   - added the calmer supporting line about bringing jobs, billing, and clearer numbers into one place
   - kept this as a copy-only refinement with no invite-flow logic changes
+- Trial invite email optimization completed on 2026-04-25:
+  - tightened the first-touch trial email so LedgerFlow is defined faster, the CTA is simpler, and the first contact reads more like a conversion email than a brochure
+  - removed the pricing-table block from the first invite email while keeping deeper pricing detail available for later follow-up and on-page conversion
+  - switched the email preview image to the cleaner dashboard frame so the product is clearer at first glance
+  - simplified the feature tags to `No Card Required`, `Guided Setup`, and `Clearer Numbers`
+- Trial video language-readiness prep completed on 2026-04-25:
+  - added backend support for localized welcome-video variants in English, Portuguese, and Spanish with automatic fallback to English until other files are added
+  - the trial invite page is now ready to auto-select the correct hosted video version by language as soon as the `pt` and `es` files are dropped in
+  - added light language-chip support on the trial page that only appears when more than one hosted video language is actually available

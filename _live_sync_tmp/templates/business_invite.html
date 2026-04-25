@@ -60,6 +60,13 @@
             <source src='{{ trial_video_url }}' type='video/mp4'>
           </video>
         </div>
+        {% if trial_video_variants|length > 1 %}
+        <div class='summary-strip' style='margin-top:12px'>
+          {% for variant in trial_video_variants %}
+          <span class='summary-pill {% if variant.code == trial_video_language %}is-active{% endif %}'>{{ variant.label }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
         <div class='small' style='margin-top:12px'>{{ tr('Watch the welcome preview first, then continue into the complimentary trial when you are ready.') }}</div>
       </section>
 

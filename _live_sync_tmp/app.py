@@ -45,6 +45,23 @@ BRAND_MARK_FILENAME = 'ledgerflow-mark.png'
 FOUNDER_MARKETING_FILENAME = 'marketing/founder-marketing.png'
 TRIAL_WELCOME_VIDEO_FILENAME = 'marketing/trial-welcome-preview.mp4'
 TRIAL_WELCOME_POSTER_FILENAME = 'marketing/trial-welcome-preview-poster.png'
+TRIAL_WELCOME_VIDEO_VARIANTS = {
+    'en': {
+        'video': TRIAL_WELCOME_VIDEO_FILENAME,
+        'poster': TRIAL_WELCOME_POSTER_FILENAME,
+        'label': 'English',
+    },
+    'pt': {
+        'video': 'marketing/trial-welcome-preview-pt.mp4',
+        'poster': 'marketing/trial-welcome-preview-poster-pt.png',
+        'label': 'Portuguese',
+    },
+    'es': {
+        'video': 'marketing/trial-welcome-preview-es.mp4',
+        'poster': 'marketing/trial-welcome-preview-poster-es.png',
+        'label': 'Spanish',
+    },
+}
 TERMS_VERSION = '2026-04-22.1'
 PRIVACY_VERSION = '2026-04-22.1'
 DISCLAIMER_VERSION = '2026-04-22.1'
@@ -3097,25 +3114,73 @@ def email_tracking_pixel_url(tracking_token: str) -> str:
     return public_app_url(f'/email/open/{tracking_token}.gif')
 
 
-def trial_welcome_video_page_url() -> str:
-    return static_asset_url(TRIAL_WELCOME_VIDEO_FILENAME)
+def static_asset_exists(filename: str) -> bool:
+    try:
+        return (BASE_DIR / 'static' / filename).exists()
+    except Exception:
+        return False
 
 
-def trial_welcome_video_poster_url() -> str:
-    return static_asset_url(TRIAL_WELCOME_POSTER_FILENAME)
+def trial_welcome_video_selection(language: str = 'en') -> tuple[dict, list[dict]]:
+    normalized = normalize_language(language)
+    available = []
+    english_variant = TRIAL_WELCOME_VIDEO_VARIANTS['en']
+    english_poster = english_variant['poster'] if static_asset_exists(english_variant['poster']) else TRIAL_WELCOME_POSTER_FILENAME
+    for code, config in TRIAL_WELCOME_VIDEO_VARIANTS.items():
+        if not static_asset_exists(config['video']):
+            continue
+        poster_filename = config['poster'] if static_asset_exists(config['poster']) else english_poster
+        available.append({
+            'code': code,
+            'label': config['label'],
+            'video_filename': config['video'],
+            'poster_filename': poster_filename,
+            'video_url': static_asset_url(config['video']),
+            'poster_url': static_asset_url(poster_filename),
+            'video_absolute_url': static_asset_absolute_url(config['video']),
+            'poster_absolute_url': static_asset_absolute_url(poster_filename),
+        })
+    if not available:
+        fallback_poster = TRIAL_WELCOME_POSTER_FILENAME
+        fallback = {
+            'code': 'en',
+            'label': 'English',
+            'video_filename': TRIAL_WELCOME_VIDEO_FILENAME,
+            'poster_filename': fallback_poster,
+            'video_url': static_asset_url(TRIAL_WELCOME_VIDEO_FILENAME),
+            'poster_url': static_asset_url(fallback_poster),
+            'video_absolute_url': static_asset_absolute_url(TRIAL_WELCOME_VIDEO_FILENAME),
+            'poster_absolute_url': static_asset_absolute_url(fallback_poster),
+        }
+        return fallback, [fallback]
+    selected = next((variant for variant in available if variant['code'] == normalized), None)
+    if not selected:
+        selected = next((variant for variant in available if variant['code'] == 'en'), available[0])
+    return selected, available
 
 
-def trial_welcome_video_absolute_url() -> str:
-    return static_asset_absolute_url(TRIAL_WELCOME_VIDEO_FILENAME)
+def trial_welcome_video_page_url(language: str = 'en') -> str:
+    selected, _ = trial_welcome_video_selection(language)
+    return selected['video_url']
 
 
-def trial_welcome_video_poster_absolute_url() -> str:
-    return static_asset_absolute_url(TRIAL_WELCOME_POSTER_FILENAME)
+def trial_welcome_video_poster_url(language: str = 'en') -> str:
+    selected, _ = trial_welcome_video_selection(language)
+    return selected['poster_url']
 
 
-def trial_welcome_email_preview_html(target_link: str) -> str:
-    poster_url = html.escape(trial_welcome_video_poster_absolute_url())
-    video_url = html.escape(trial_welcome_video_absolute_url())
+def trial_welcome_video_absolute_url(language: str = 'en') -> str:
+    selected, _ = trial_welcome_video_selection(language)
+    return selected['video_absolute_url']
+
+
+def trial_welcome_video_poster_absolute_url(language: str = 'en') -> str:
+    selected, _ = trial_welcome_video_selection(language)
+    return selected['poster_absolute_url']
+
+
+def trial_welcome_email_preview_html(target_link: str, language: str = 'en') -> str:
+    poster_url = html.escape(trial_welcome_video_poster_absolute_url(language))
     safe_link = html.escape(target_link or '')
     return (
         f"<div style='margin-top:20px;padding:18px 20px;border:1px solid #d7dce7;border-radius:18px;background:#ffffff'>"
@@ -3124,9 +3189,9 @@ def trial_welcome_email_preview_html(target_link: str) -> str:
         f"<img src='{poster_url}' alt='LedgerFlow welcome tutorial preview' style='display:block;width:100%;height:auto;border-radius:16px;border:1px solid #d8e1ee;box-shadow:0 12px 24px rgba(20,27,45,.08)'>"
         f"</a>"
         f"<div style='margin-top:12px'>"
-        f"<a href='{safe_link}' style='display:inline-block;padding:11px 16px;border-radius:999px;background:#1f5db8;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800'>Watch the welcome preview</a>"
+        f"<a href='{safe_link}' style='display:inline-block;padding:11px 16px;border-radius:999px;background:#1f5db8;color:#ffffff;text-decoration:none;font-size:13px;font-weight:800'>See how LedgerFlow works</a>"
         f"</div>"
-        f"<div style='margin-top:10px;color:#5b687d;font-size:13px;line-height:1.7'>Open the private trial page to watch the welcome walkthrough and continue the setup. The hosted preview video is also available here: <span style='color:#1f5db8;word-break:break-all'>{video_url}</span></div>"
+        f"<div style='margin-top:10px;color:#5b687d;font-size:13px;line-height:1.7'>Open the private trial page to watch the welcome walkthrough and continue the setup.</div>"
         f"</div>"
     )
 
@@ -3138,7 +3203,7 @@ def prospect_visual_card_html(business_category: str, business_name: str) -> str
     business_label = html.escape((business_name or 'Your business').strip() or 'Your business')
     return (
         f"<div style='margin-top:22px;padding:18px;border:1px solid #dbe3ef;border-radius:22px;background:#ffffff'>"
-        f"<img src='{image_url}' alt='{alt_text}' style='display:block;width:100%;height:auto;border-radius:16px'>"
+        f"<img src='{image_url}' alt='{alt_text}' style='display:block;width:100%;max-width:520px;height:auto;border-radius:16px;margin:0 auto'>"
         f"<div style='margin-top:14px;color:#151a2c;font-size:18px;line-height:1.35;font-weight:800'>LedgerFlow was born from real small-business pressure: too many moving parts, too much chasing, and not enough financial clarity.</div>"
         f"<div style='margin-top:8px;color:#61718a;font-size:13px;line-height:1.7'>It was created to bring jobs, billing, and clearer numbers into one calm place while {business_label} is invited in as a <strong style='color:#1d2336'>{category_label}</strong> business.</div>"
         f"</div>"
@@ -3185,20 +3250,22 @@ def trial_offer_value_stack_html(*, business_category: str, trial_days: int, str
         'No open signal was recorded after 3 days, so this follow-up is designed to show the value faster. '
         'That can happen when a first email gets buried in an inbox tab, Promotions, or Spam, but SMTP cannot confirm the exact folder.'
         if stronger else
-        'Review the subscription options below, create your secure login, and complete setup when you are ready. Billing begins only after the complimentary trial window ends.'
+        'Create your secure login, open the guided trial, and see how LedgerFlow can organize work before you decide.'
     )
-    return (
+    html_blocks = [
         f"<div style='margin-top:22px;padding:18px 20px;border:1px solid #d7dce7;border-radius:18px;background:#f7f1e7'>"
         f"<div style='color:#141b2d;font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase'>Complimentary Trial Offer</div>"
         f"<div style='margin-top:8px;color:#141b2d;font-size:24px;line-height:1.25;font-weight:800'>{trial_days}-day free guided trial</div>"
         f"<div style='margin-top:10px;color:#48546a;font-size:14px;line-height:1.7'>{html.escape(intro_copy)}</div>"
-        f"</div>"
+        f"</div>",
         f"<div style='margin-top:18px;padding:18px 20px;border:1px solid #dbe3ef;border-radius:18px;background:#ffffff'>"
         f"<div style='color:#141b2d;font-size:14px;font-weight:800;margin-bottom:12px'>{html.escape(intro_label)}</div>"
         f"<ul style='margin:0;padding-left:18px'>{points_html}</ul>"
-        f"</div>"
-        f"{trial_subscription_preview_html()}"
-    )
+        f"</div>",
+    ]
+    if stronger:
+        html_blocks.append(trial_subscription_preview_html())
+    return ''.join(html_blocks)
 
 
 def trial_date_window(started_at: str, trial_days: int) -> tuple[str, str]:
@@ -4647,7 +4714,7 @@ def send_invite_email(to_email: str, to_name: str, business_name: str, invite_li
     return {'subject': subject, 'body_text': body, 'body_html': html, 'email_type': 'business_invite'}
 
 
-def send_trial_invite_email(to_email: str, to_name: str, business_name: str, invite_link: str, trial_days: int = 0, *, business_category: str = '', tracking_token: str = ''):
+def send_trial_invite_email(to_email: str, to_name: str, business_name: str, invite_link: str, trial_days: int = 0, *, business_category: str = '', tracking_token: str = '', preferred_language: str = 'en'):
     cfg = smtp_config()
     sender_email = cfg['sender_email']
     smtp_username = cfg['smtp_username']
@@ -4665,19 +4732,19 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
     trial_summary_html = (
         prospect_visual_card_html(business_category, business_name) +
         trial_offer_value_stack_html(business_category=business_category, trial_days=trial_days, stronger=False) +
-        trial_welcome_email_preview_html(click_link)
+        trial_welcome_email_preview_html(click_link, preferred_language)
     )
     body = "\n".join([
         greeting,
         "",
-        f"You've been invited to try LedgerFlow with a {trial_days}-day complimentary business trial for {business_name}.",
-        f"Business category: {category_label}.",
+        "LedgerFlow helps growing businesses organize jobs, billing, and clearer numbers in one place.",
+        f"You've been invited to start a {trial_days}-day complimentary trial for {business_name}.",
         "",
-        "Use the secure link below to review the subscription options, create your business login, and open the full trial experience:",
+        "Use the secure link below to create your login and open the guided trial experience:",
         invite_link,
         "",
         "No payment method is required to begin the complimentary trial.",
-        "You'll choose the subscription that fits your business now, and you can add billing later before the complimentary trial window ends.",
+        "Explore the workspace first and decide later.",
         "",
         "If you were not expecting this invitation, you can ignore this email.",
         "",
@@ -4686,28 +4753,28 @@ def send_trial_invite_email(to_email: str, to_name: str, business_name: str, inv
     email_html = render_marketing_email(
         eyebrow='Complimentary Trial Invite',
         title=f'Start your {trial_days}-day LedgerFlow trial',
-        intro=f'Explore LedgerFlow for {business_name}, review the subscription options, and claim guided setup with a private client trial.',
+        intro='LedgerFlow helps growing businesses organize jobs, billing, and clearer numbers in one place.',
         greeting=greeting,
         body_lines=[
-            f'You have a {trial_days}-day complimentary window to explore the LedgerFlow business portal before monthly billing begins.',
-            'Use the secure button below to review the offer, create your login, and open the full trial experience.',
+            f'You have a {trial_days}-day complimentary window to explore LedgerFlow for {business_name}.',
+            'Use the secure button below to create your login and open the guided trial experience.',
             'No card is required to begin the complimentary trial.',
-            'Your administrator remains directly involved, so the rollout feels white-glove from the first step.',
+            'See the workspace first and decide later.',
         ],
-        cta_label=f'Open {trial_days}-Day Trial Experience',
+        cta_label='Start Free Trial',
         cta_link=click_link,
         detail_rows=[
             ('Business', business_name),
-            ('Category', category_label),
             ('Trial Offer', f'{trial_days} complimentary days'),
             ('Invite Email', to_email),
         ],
-        feature_tags=['7-Day Trial', 'Subscription Options', 'Guided Setup', 'Video Walkthrough Space'],
+        feature_tags=['No Card Required', 'Guided Setup', 'Clearer Numbers'],
         support_note='If you were not expecting this invitation, you can ignore this email.',
         extra_sections_html=trial_summary_html,
         tracking_pixel_url=tracking_pixel_url,
+        brand_name_override='LedgerFlow',
     )
-    subject = f"Start your {trial_days}-day LedgerFlow trial for {business_name}"
+    subject = f"Start your {trial_days}-day LedgerFlow trial"
     send_rich_email(
         cfg,
         subject=subject,
@@ -4727,6 +4794,7 @@ def send_trial_followup_email(
     trial_days: int = 0,
     business_category: str = '',
     tracking_token: str = '',
+    preferred_language: str = 'en',
 ):
     cfg = smtp_config()
     sender_email = cfg['sender_email']
@@ -4745,7 +4813,7 @@ def send_trial_followup_email(
     stronger_sections_html = (
         prospect_visual_card_html(business_category, business_name) +
         trial_offer_value_stack_html(business_category=business_category, trial_days=trial_days, stronger=True) +
-        trial_welcome_email_preview_html(click_link) +
+        trial_welcome_email_preview_html(click_link, preferred_language) +
         f"<div style='margin-top:18px;padding:18px 20px;border:1px solid #dbe3ef;border-radius:18px;background:#ffffff'>"
         f"<div style='color:#141b2d;font-size:14px;font-weight:800;margin-bottom:12px'>Still deciding?</div>"
         f"<div style='color:#4a576d;font-size:14px;line-height:1.7'>Open the private trial page and you will see the pricing clearly, the guided setup path, and the exact LedgerFlow workspace your business would be stepping into. Nothing is charged today.</div>"
@@ -5400,9 +5468,10 @@ def smtp_email_ready() -> bool:
     return bool(cfg['sender_email'] and cfg['smtp_username'] and cfg['smtp_password'])
 
 
-def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: str, body_lines: list[str], cta_label: str = '', cta_link: str = '', detail_rows: list[tuple[str, str]] | None = None, feature_tags: list[str] | None = None, support_note: str = '', extra_sections_html: str = '', tracking_pixel_url: str = '') -> str:
+def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: str, body_lines: list[str], cta_label: str = '', cta_link: str = '', detail_rows: list[tuple[str, str]] | None = None, feature_tags: list[str] | None = None, support_note: str = '', extra_sections_html: str = '', tracking_pixel_url: str = '', brand_name_override: str = '') -> str:
     detail_rows = detail_rows or []
     feature_tags = feature_tags or []
+    display_brand_name = (brand_name_override or APP_NAME or '').strip() or APP_NAME
     eyebrow_text = html.escape(eyebrow or '')
     title_text = html.escape(title or '')
     intro_text = html.escape(intro or '')
@@ -5437,7 +5506,7 @@ def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: st
     logo_url = html.escape(static_asset_absolute_url(BRAND_LOGO_FILENAME))
     logo_block = (
         f"<div style='display:inline-block;padding:14px 18px;border-radius:22px;background:linear-gradient(180deg,#ffffff,#f3f5f7);border:1px solid #d7e1ee;box-shadow:0 12px 30px rgba(21,26,44,.08)'>"
-        f"<img src='{logo_url}' alt='{html.escape(APP_NAME)}' style='display:block;width:280px;max-width:100%;height:auto'>"
+        f"<img src='{logo_url}' alt='{html.escape(display_brand_name)}' style='display:block;width:280px;max-width:100%;height:auto'>"
         f"</div>"
     )
     details_block = (
@@ -5489,7 +5558,7 @@ def render_marketing_email(*, eyebrow: str, title: str, intro: str, greeting: st
                 {extra_sections_html}
                 {support_html}
                 <div style="margin-top:26px;padding-top:18px;border-top:1px solid #e5edf7;color:#6b7d94;font-size:12px;line-height:1.7">
-                  <strong style="display:block;color:#193452;font-size:13px;letter-spacing:.08em">{html.escape(APP_NAME.upper())}</strong>
+                  <strong style="display:block;color:#193452;font-size:13px;letter-spacing:.08em">{html.escape(display_brand_name.upper())}</strong>
                   {html.escape(BRAND_TAGLINE)}
                 </div>
               </td>
@@ -6301,6 +6370,7 @@ def process_due_prospect_followups(triggered_by_user_id: int | None = None) -> d
                     trial_days=int(row['effective_trial_days'] or default_trial_offer_days()),
                     business_category=row['business_category'] or '',
                     tracking_token=tracking_token,
+                    preferred_language=row['preferred_language'] or 'en',
                 )
                 conn.execute(
                     'UPDATE business_invites SET followup_sent_at=?, followup_status="sent", followup_error="" WHERE id=?',
@@ -15447,6 +15517,7 @@ def client_users():
                         trial_days=trial_days,
                         business_category=business_category,
                         tracking_token=tracking_token,
+                        preferred_language=preferred_language,
                     )
                     conn.execute('UPDATE business_invites SET status="sent", invite_error="" WHERE id=?', (invite_id,))
                     log_email_delivery(
@@ -15722,6 +15793,7 @@ def client_users():
                             trial_days=int(inv['trial_days'] or 0),
                             business_category=inv['business_category'] or '',
                             tracking_token=tracking_token,
+                            preferred_language=inv['preferred_language'] or 'en',
                         )
                     else:
                         invite_link = build_invite_link(inv['token'])
@@ -16493,6 +16565,7 @@ def business_invite(token):
                 if existing_row:
                     existing_account_email = (existing_row['email'] or '').strip().lower()
     trial_offer_days = int(invite['trial_days'] or invite['trial_offer_days'] or 0)
+    trial_video_selection_row, trial_video_variants = trial_welcome_video_selection(invite_language)
     return render_template(
         'business_invite.html',
         invite=invite,
@@ -16500,8 +16573,10 @@ def business_invite(token):
         is_trial_invite=normalize_invite_kind(invite['invite_kind']) == 'prospect_trial' and trial_offer_days > 0,
         trial_offer_days=trial_offer_days or default_trial_offer_days(),
         subscription_tiers=subscription_tier_view_data(),
-        trial_video_url=trial_welcome_video_page_url(),
-        trial_video_poster_url=trial_welcome_video_poster_url(),
+        trial_video_url=trial_video_selection_row['video_url'],
+        trial_video_poster_url=trial_video_selection_row['poster_url'],
+        trial_video_language=trial_video_selection_row['code'],
+        trial_video_variants=trial_video_variants,
         invite_kind_label=invite_kind_label(invite['invite_kind']),
     )
 
