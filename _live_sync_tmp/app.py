@@ -3139,8 +3139,8 @@ def prospect_visual_card_html(business_category: str, business_name: str) -> str
     return (
         f"<div style='margin-top:22px;padding:18px;border:1px solid #dbe3ef;border-radius:22px;background:#ffffff'>"
         f"<img src='{image_url}' alt='{alt_text}' style='display:block;width:100%;height:auto;border-radius:16px'>"
-        f"<div style='margin-top:14px;color:#151a2c;font-size:18px;line-height:1.35;font-weight:800'>LedgerFlow was shaped by real small-business pressure to bring jobs, billing, and clearer numbers into one place.</div>"
-        f"<div style='margin-top:8px;color:#61718a;font-size:13px;line-height:1.7'>{business_label} is currently being invited as a <strong style='color:#1d2336'>{category_label}</strong> business through a founder-led rollout focused on calmer operations and stronger financial visibility.</div>"
+        f"<div style='margin-top:14px;color:#151a2c;font-size:18px;line-height:1.35;font-weight:800'>LedgerFlow was born from real small-business pressure: too many moving parts, too much chasing, and not enough financial clarity.</div>"
+        f"<div style='margin-top:8px;color:#61718a;font-size:13px;line-height:1.7'>It was created to bring jobs, billing, and clearer numbers into one calm place while {business_label} is invited in as a <strong style='color:#1d2336'>{category_label}</strong> business.</div>"
         f"</div>"
     )
 

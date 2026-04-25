@@ -394,3 +394,7 @@
   - replaced the stock service-category prospect image in the trial invite marketing card with the founder marketing image
   - updated the founder-card copy to position LedgerFlow as being shaped by real small-business pressure instead of generic category stock marketing
   - kept the business-category rollout context and the rest of the safe invite flow unchanged
+- Founder-origin copy refinement completed on 2026-04-25:
+  - upgraded the founder marketing card copy to the approved origin-story language about real small-business pressure, too many moving parts, and not enough financial clarity
+  - added the calmer supporting line about bringing jobs, billing, and clearer numbers into one place
+  - kept this as a copy-only refinement with no invite-flow logic changes
