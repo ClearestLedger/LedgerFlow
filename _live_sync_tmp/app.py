@@ -12482,6 +12482,7 @@ def cpa_dashboard():
     pending_worker_requests = []
     pending_worker_requests_all = []
     selected_payment_methods = []
+    selected_stripe_events = []
     if selected_id:
         with get_conn() as conn:
             selected_business = conn.execute('SELECT * FROM clients WHERE id=?', (selected_id,)).fetchone()
@@ -12499,11 +12500,19 @@ def cpa_dashboard():
                    ORDER BY is_default DESC, is_backup DESC, updated_at DESC, id DESC''',
                 (selected_id,)
             ).fetchall()
+            selected_stripe_events = conn.execute(
+                '''SELECT *
+                   FROM stripe_webhook_events
+                   WHERE client_id=?
+                   ORDER BY received_at DESC, event_id DESC
+                   LIMIT 8''',
+                (selected_id,)
+            ).fetchall()
         messenger_rows = chat_messages(selected_id)
         participants = chat_participants(selected_id)
         latest_review = latest_review_request(selected_id)
     selected_business_payments = business_payment_summary(selected_id) if selected_id else {'rows': [], 'amount_due': 0.0, 'paid_total': 0.0, 'pending_count': 0, 'paid_count': 0, 'cancelled_count': 0}
-    return render_template('cpa_dashboard.html', businesses=businesses, totals=cpa_dashboard_summary(user), review_alerts=pending_review_alerts(), selected_client_id=selected_id, selected_business=selected_business, messenger_rows=messenger_rows, participants=participants, latest_review=latest_review, pending_worker_requests=pending_worker_requests, pending_worker_requests_all=pending_worker_requests_all, business_login_counts=per_business_login_counts(visible_client_ids(user)), account_activity_rows=recent_account_activity(visible_client_ids(user), limit=25), chat_unread_count=unread_message_count(selected_id, user['id']) if selected_id else 0, chat_recipients=available_recipients(selected_id, user) if selected_id else [], selected_recipient_id=default_recipient_id(selected_id, user) if selected_id else None, latest_incoming_message=latest_incoming_message(selected_id, user['id']) if selected_id else None, selected_business_payments=selected_business_payments, selected_payment_methods=selected_payment_methods, selected_payment_method_summary=payment_method_summary(selected_payment_methods), payment_statuses=business_payment_statuses(), payment_type_options=payment_type_options(), collection_method_options=collection_method_options(), collection_method_labels=collection_method_label_map(), payment_method_type_options=payment_method_type_options(), payment_method_status_options=payment_method_status_options(), payment_method_type_labels=payment_method_type_label_map(), payment_method_status_labels=payment_method_status_label_map(), subscription_status_options=subscription_status_options(), subscription_status_labels=subscription_status_label_map(), service_level_options=service_level_options(), service_level_labels=service_level_label_map(), suggested_payment_amounts=suggested_payment_amounts_map(), all_payment_items=all_business_payment_items(), payment_csrf_token=payment_csrf_token())
+    return render_template('cpa_dashboard.html', businesses=businesses, totals=cpa_dashboard_summary(user), review_alerts=pending_review_alerts(), selected_client_id=selected_id, selected_business=selected_business, messenger_rows=messenger_rows, participants=participants, latest_review=latest_review, pending_worker_requests=pending_worker_requests, pending_worker_requests_all=pending_worker_requests_all, business_login_counts=per_business_login_counts(visible_client_ids(user)), account_activity_rows=recent_account_activity(visible_client_ids(user), limit=25), chat_unread_count=unread_message_count(selected_id, user['id']) if selected_id else 0, chat_recipients=available_recipients(selected_id, user) if selected_id else [], selected_recipient_id=default_recipient_id(selected_id, user) if selected_id else None, latest_incoming_message=latest_incoming_message(selected_id, user['id']) if selected_id else None, selected_business_payments=selected_business_payments, selected_payment_methods=selected_payment_methods, selected_payment_method_summary=payment_method_summary(selected_payment_methods), selected_stripe_events=selected_stripe_events, payment_statuses=business_payment_statuses(), payment_type_options=payment_type_options(), collection_method_options=collection_method_options(), collection_method_labels=collection_method_label_map(), payment_method_type_options=payment_method_type_options(), payment_method_status_options=payment_method_status_options(), payment_method_type_labels=payment_method_type_label_map(), payment_method_status_labels=payment_method_status_label_map(), subscription_status_options=subscription_status_options(), subscription_status_labels=subscription_status_label_map(), service_level_options=service_level_options(), service_level_labels=service_level_label_map(), suggested_payment_amounts=suggested_payment_amounts_map(), all_payment_items=all_business_payment_items(), payment_csrf_token=payment_csrf_token())
 
 
 

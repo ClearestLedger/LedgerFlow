@@ -166,6 +166,48 @@
     <div class='card stat-card premium-stat'><h3>Next Billing</h3><div class='metric'>{{ selected_business.subscription_next_billing_date or 'Not scheduled' }}</div></div>
     <div class='card stat-card premium-stat premium-stat-accent'><h3>Default Method</h3><div class='metric'>{{ selected_payment_method_summary.default_label or 'Not on file' }}<br><span class='small'>{{ (selected_payment_method_summary.default_status or 'missing')|replace('_',' ')|title }}</span></div></div>
   </div>
+  <div class='card' style='margin-bottom:14px;box-shadow:none;border:1px solid #D8E7F3;background:#F8FBFF'>
+    <div class='card-head'>
+      <h3>Stripe Subscription Confirmation</h3>
+      <span class='badge'>{% if selected_business.stripe_subscription_id %}Payment Confirmed{% elif selected_business.stripe_checkout_session_id %}Checkout Started{% else %}Not Connected{% endif %}</span>
+    </div>
+    <div class='summary-strip' style='margin:10px 0'>
+      <span class='summary-pill'>Customer: {{ selected_business.stripe_customer_id or 'not connected yet' }}</span>
+      <span class='summary-pill'>Subscription: {{ selected_business.stripe_subscription_id or 'not active yet' }}</span>
+      <span class='summary-pill'>Stripe status: {{ selected_business.stripe_subscription_status or selected_business.subscription_status or 'inactive' }}</span>
+      <span class='summary-pill'>Current period end: {{ selected_business.stripe_current_period_end or 'not received yet' }}</span>
+    </div>
+    <div class='small'>
+      {% if selected_business.stripe_subscription_id %}
+        Stripe checkout is connected for this business. LedgerFlow received the Stripe customer/subscription reference through checkout or webhook sync.
+      {% elif selected_business.stripe_checkout_session_id %}
+        Checkout was started, but the subscription reference has not reached LedgerFlow yet. Check the Stripe webhook delivery if this stays unchanged.
+      {% else %}
+        No Stripe-hosted subscription checkout has been recorded for this business yet.
+      {% endif %}
+    </div>
+    <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=selected_business.id) }}'>Open Business Billing Center</a>
+      {% if selected_business.stripe_last_event_id %}<span class='summary-pill'>Last Stripe event: {{ selected_business.stripe_last_event_id }}</span>{% endif %}
+    </div>
+    {% if selected_stripe_events %}
+    <details class='compact-details' style='margin-top:12px'>
+      <summary>Recent Stripe Webhook Events ({{ selected_stripe_events|length }})</summary>
+      <table class='table' style='margin-top:12px'>
+        <tr><th>Received</th><th>Event</th><th>Status</th><th>Object</th><th>Error</th></tr>
+        {% for event in selected_stripe_events %}
+        <tr>
+          <td>{{ event.received_at or '&mdash;' }}</td>
+          <td>{{ event.event_type or '&mdash;' }}</td>
+          <td style='text-transform:capitalize'>{{ event.status or 'received' }}</td>
+          <td>{{ event.object_id or '&mdash;' }}</td>
+          <td>{{ event.error_message or '&mdash;' }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </details>
+    {% endif %}
+  </div>
   <details class='compact-details'>
     <summary>Subscription Settings</summary>
     <form method='post' class='form-grid' style='margin-top:12px'>
