@@ -1,245 +1,259 @@
 {% extends 'base.html' %}
 {% block body %}
 {% set is_trial_workspace = (client.trial_offer_days or 0) > 0 %}
+{% set graph = dashboard_graphics %}
+{% set owner_alert_count = (owner_snapshot.losing_jobs|length) + (owner_snapshot.missing_pricing_jobs|length) + (owner_snapshot.open_customer_invoice_count or 0) %}
+<style>
+  .owner-command-hero{position:relative;overflow:hidden;border:1px solid #D7E6F3;background:linear-gradient(126deg,#14324A 0%,#1F5D8C 42%,#2E8B57 78%,#F2B84B 130%);color:#fff;box-shadow:0 26px 70px rgba(20,50,74,.22)}
+  .owner-command-hero:before{content:'';position:absolute;left:-120px;top:-140px;width:340px;height:340px;border-radius:999px;background:rgba(255,255,255,.14)}
+  .owner-command-hero:after{content:'';position:absolute;right:-120px;bottom:-140px;width:360px;height:360px;border-radius:999px;background:rgba(255,255,255,.12)}
+  .owner-command-content{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(340px,.95fr);gap:20px;align-items:stretch}
+  .owner-command-kicker{font-size:.74rem;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.74);font-weight:900}
+  .owner-command-title{font-size:clamp(2rem,4.8vw,4.2rem);line-height:.98;letter-spacing:-.07em;margin:8px 0 12px;font-weight:900;text-wrap:balance}
+  .owner-command-subtitle{max-width:680px;color:rgba(255,255,255,.82);font-size:1rem;line-height:1.7}
+  .owner-signal-card{margin-top:16px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.13);border-radius:22px;padding:16px;backdrop-filter:blur(10px)}
+  .owner-signal-card strong{display:block;font-size:1.2rem;margin-bottom:5px}
+  .owner-command-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .owner-command-actions .btn{background:#fff;color:#14324A;border-color:#fff}
+  .owner-command-actions .btn.btn-secondary{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.34)}
+  .owner-command-panel{background:rgba(255,255,255,.92);color:#14324A;border:1px solid rgba(255,255,255,.7);border-radius:28px;padding:16px;box-shadow:0 28px 55px rgba(8,28,44,.18)}
+  .owner-money-pulse{width:100%;height:156px;display:block}
+  .owner-pulse-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;color:#546A7B;font-size:.88rem}
+  .owner-dot{display:inline-flex;gap:7px;align-items:center}
+  .owner-dot:before{content:'';width:10px;height:10px;border-radius:999px;background:#1F5D8C}
+  .owner-dot.owner-profit:before{background:#2E8B57}
+  .owner-command-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+  .owner-command-kpi{background:rgba(255,255,255,.94);border:1px solid #DDE8F0;border-radius:20px;padding:15px;box-shadow:0 14px 34px rgba(20,50,74,.06)}
+  .owner-command-kpi h3{margin:0;color:#546A7B;font-size:.82rem;text-transform:uppercase;letter-spacing:.08em}
+  .owner-command-kpi .metric{font-size:1.65rem;color:#14324A;font-weight:900;margin-top:6px}
+  .owner-command-kpi.owner-hot{border-color:#F2B8A2;background:linear-gradient(180deg,#FFF8F4,#fff)}
+  .owner-graphics-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:16px;margin-top:18px;align-items:stretch}
+  .owner-graphic-card{background:#fff;border:1px solid #DDE8F0;border-radius:24px;padding:16px;box-shadow:0 18px 42px rgba(20,50,74,.07)}
+  .owner-bars{height:132px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;align-items:end;margin-top:12px;padding-top:14px;border-top:1px solid #E8F0F6}
+  .owner-bar-cell{display:flex;flex-direction:column;align-items:center;gap:7px}
+  .owner-bar-pair{height:98px;display:flex;gap:4px;align-items:end}
+  .owner-bar{width:18px;min-height:5px;border-radius:999px 999px 5px 5px;background:linear-gradient(180deg,#1F5D8C,#5FA8D3)}
+  .owner-bar.profit{background:linear-gradient(180deg,#7EC8A5,#2E8B57)}
+  .owner-bar-label{font-size:.75rem;color:#6B7D8D}
+  .owner-margin-card{display:grid;grid-template-columns:138px minmax(0,1fr);gap:16px;align-items:center}
+  .owner-margin-ring{width:138px;height:138px;border-radius:999px;display:grid;place-items:center;background:conic-gradient(#2E8B57 0 {{ graph.profit_ring_degrees or 0 }}deg,#F2B84B {{ graph.profit_ring_degrees or 0 }}deg 300deg,#E5EEF5 300deg 360deg)}
+  .owner-margin-inner{width:82px;height:82px;border-radius:999px;background:#fff;display:grid;place-items:center;text-align:center;color:#14324A;font-weight:900;box-shadow:0 9px 20px rgba(20,50,74,.12)}
+  .owner-cost-list{display:grid;gap:8px}
+  .owner-cost-row{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #EDF2F6;padding-bottom:7px;font-size:.9rem}
+  .owner-cost-key{display:inline-flex;gap:7px;align-items:center}
+  .owner-cost-key:before{content:'';width:10px;height:10px;border-radius:999px;background:#D9E4EC}
+  .owner-cost-key.labor:before{background:#1F5D8C}.owner-cost-key.materials:before{background:#5FA8D3}.owner-cost-key.gas:before{background:#98C1D9}
+  .owner-work-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+  .owner-fold{border:1px solid #DDE8F0;border-radius:22px;background:linear-gradient(180deg,#FFFFFF,#F8FBFF);box-shadow:0 14px 34px rgba(20,50,74,.06);overflow:hidden}
+  .owner-fold summary{cursor:pointer;list-style:none;padding:16px 18px;font-weight:900;color:#14324A;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .owner-fold summary::-webkit-details-marker{display:none}
+  .owner-fold summary span{font-size:.85rem;color:#6B7D8D;font-weight:800}
+  .owner-fold-body{padding:0 18px 18px}
+  .owner-quick-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+  .owner-quick-card{display:block;text-decoration:none;border:1px solid #DDE8F0;border-radius:20px;padding:16px;background:#fff;box-shadow:0 12px 28px rgba(20,50,74,.05);transition:transform .18s ease,box-shadow .18s ease}
+  .owner-quick-card:hover{transform:translateY(-2px);box-shadow:0 20px 38px rgba(20,50,74,.10)}
+  .owner-quick-card strong{display:block;color:#14324A;font-size:1rem;margin-bottom:5px}
+  .owner-quick-card span{color:#6B7D8D;font-size:.88rem}
+  .owner-quick-card.primary{background:linear-gradient(135deg,#14324A,#1F5D8C);border-color:transparent}
+  .owner-quick-card.primary strong,.owner-quick-card.primary span{color:#fff}
+  @media (max-width:980px){.owner-command-content,.owner-graphics-grid,.owner-work-tabs,.owner-quick-grid,.owner-command-kpis{grid-template-columns:1fr}.owner-margin-card{grid-template-columns:1fr}.owner-margin-ring{margin:auto}}
+</style>
 
-<div class='hero-surface welcome-center-hero owner-view-hero'>
-  <div class='summary-strip owner-action-strip'>
-    <span class='summary-pill summary-pill-active'>{{ tr('Owner View') }}</span>
-    <a class='summary-pill summary-pill-link' href='{{ url_for("ops_overview", client_id=client_id) }}'>
-      <strong>{{ tr('Jobs & Profit') }}</strong>
-      <small>{{ owner_snapshot.today_jobs|length }} {{ tr('Jobs') }}</small>
-    </a>
-    <a class='summary-pill summary-pill-link' href='{{ url_for("summary", client_id=client_id) }}'>
-      <strong>{{ tr('Finance first') }}</strong>
-      <small>${{ '%.2f'|format(summary.operating_profit or 0) }} {{ tr('Operating Profit') }}</small>
-    </a>
-    <a class='summary-pill summary-pill-link' href='{{ url_for("ops_jobs", client_id=client_id) }}#jobProfitForm'>
-      <strong>{{ tr('Profit per job visibility') }}</strong>
-      <small>
-        {% if owner_snapshot.missing_pricing_jobs %}
-          {{ owner_snapshot.missing_pricing_jobs|length }} {{ tr('Jobs missing pricing') }}
+<section class='card owner-command-hero'>
+  <div class='owner-command-content'>
+    <div>
+      <div class='owner-command-kicker'>{{ tr('Owner Profit Command Center') }}</div>
+      <div class='owner-command-title'>{{ tr('Did we make money today?') }}</div>
+      <div class='owner-command-subtitle'>{{ tr('LedgerFlow starts with the answer owners care about most: revenue, profit, jobs needing attention, and the next move to protect the business.') }}</div>
+      <div class='owner-signal-card'>
+        <div class='small-label' style='color:rgba(255,255,255,.72)'>{{ tr('Owner Signal') }}</div>
+        {% if owner_snapshot.losing_jobs %}
+          <strong>{{ owner_snapshot.losing_jobs|length }} {{ tr('job needs profit review now.') }}</strong>
+          <div>{{ tr('Open the job, check price, labor, materials, and protect the margin before more work is added.') }}</div>
+        {% elif owner_snapshot.missing_pricing_jobs %}
+          <strong>{{ owner_snapshot.missing_pricing_jobs|length }} {{ tr('job needs pricing before profit is clear.') }}</strong>
+          <div>{{ tr('Complete price and costs so LedgerFlow can show true profit instead of guessing.') }}</div>
+        {% elif (summary.gross_income or 0) > 0 %}
+          <strong>{{ tr('The money picture is readable.') }}</strong>
+          <div>{{ tr('Revenue, expenses, and profit are organized enough for the owner to make decisions faster.') }}</div>
         {% else %}
-          {{ owner_snapshot.top_profit_jobs|length }} {{ tr('Highest profit jobs') }}
+          <strong>{{ tr('Add the first income or job price to activate the profit view.') }}</strong>
+          <div>{{ tr('Once money records are saved, this page becomes a live owner cockpit.') }}</div>
         {% endif %}
-      </small>
-    </a>
+      </div>
+      <div class='owner-command-actions'>
+        <a class='btn' href='{{ url_for("ops_jobs", client_id=client_id) }}#jobProfitForm'>{{ tr('Fix Profit Visibility') }}</a>
+        <a class='btn btn-secondary' href='{{ url_for("reports", client_id=client_id) }}'>{{ tr('Open Live Reports') }}</a>
+        <a class='btn btn-secondary' href='#owner-work-areas'>{{ tr('Open Work Areas') }}</a>
+      </div>
+    </div>
+    <div class='owner-command-panel'>
+      <div class='card-head'>
+        <h3>{{ tr('Money Pulse') }}</h3>
+        <span class='badge'>{{ tr('Live') }}</span>
+      </div>
+      <svg class='owner-money-pulse' viewBox='0 0 340 150' role='img' aria-label='Owner revenue and profit pulse'>
+        <defs>
+          <linearGradient id='ownerRevenueGlow' x1='0' y1='0' x2='0' y2='1'>
+            <stop offset='0%' stop-color='#1F5D8C' stop-opacity='.18'/>
+            <stop offset='100%' stop-color='#1F5D8C' stop-opacity='0'/>
+          </linearGradient>
+        </defs>
+        <line x1='0' y1='132' x2='340' y2='132' stroke='#DDE8F0' stroke-width='1'/>
+        <line x1='0' y1='92' x2='340' y2='92' stroke='#EEF4F8' stroke-width='1'/>
+        <line x1='0' y1='52' x2='340' y2='52' stroke='#EEF4F8' stroke-width='1'/>
+        {% if graph.revenue_points %}
+        <polyline points='0,132 {{ graph.revenue_points }} 340,132' fill='url(#ownerRevenueGlow)' stroke='none'/>
+        <polyline points='{{ graph.revenue_points }}' fill='none' stroke='#1F5D8C' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/>
+        <polyline points='{{ graph.profit_points }}' fill='none' stroke='#2E8B57' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/>
+        {% endif %}
+      </svg>
+      <div class='owner-pulse-legend'>
+        <span class='owner-dot'>{{ tr('Revenue') }}</span>
+        <span class='owner-dot owner-profit'>{{ tr('Profit') }}</span>
+        <span>{{ tr('Peak') }}: ${{ '%.2f'|format(graph.max_value or 0) }}</span>
+      </div>
+    </div>
   </div>
-  <div class='toolbar hero-toolbar' style='margin-top:14px'>
+</section>
+
+<div class='owner-command-kpis'>
+  <div class='owner-command-kpi'><h3>{{ tr('Today') }}</h3><div class='metric'>{{ owner_snapshot.today_jobs|length }}</div><div class='small'>{{ tr('Jobs') }}</div></div>
+  <div class='owner-command-kpi'><h3>{{ tr('Weekly revenue') }}</h3><div class='metric'>${{ '%.2f'|format(owner_snapshot.weekly_revenue or 0) }}</div><div class='small'>{{ tr('Price / Revenue') }}</div></div>
+  <div class='owner-command-kpi'><h3>{{ tr('Weekly profit') }}</h3><div class='metric'>${{ '%.2f'|format(owner_snapshot.weekly_profit or 0) }}</div><div class='small'>{{ tr('Net Profit') }}</div></div>
+  <div class='owner-command-kpi owner-hot'><h3>{{ tr('Needs attention') }}</h3><div class='metric'>{{ owner_alert_count }}</div><div class='small'>{{ tr('Profit, pricing, or invoices') }}</div></div>
+</div>
+
+<div class='owner-graphics-grid'>
+  <section class='owner-graphic-card'>
+    <div class='card-head'><h3>{{ tr('Six-month revenue and profit') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("reports", client_id=client_id) }}'>{{ tr('Full Report') }}</a></div>
+    <div class='owner-bars'>
+      {% for month in graph.trend %}
+      <div class='owner-bar-cell'>
+        <div class='owner-bar-pair'>
+          <div class='owner-bar' title='{{ month.label }} revenue' style='height:{{ month.bar_height or 0 }}%'></div>
+          <div class='owner-bar profit' title='{{ month.label }} profit' style='height:{{ month.profit_bar_height or 0 }}%'></div>
+        </div>
+        <div class='owner-bar-label'>{{ month.label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  <section class='owner-graphic-card owner-margin-card'>
+    <div class='owner-margin-ring'>
+      <div class='owner-margin-inner'>
+        <div>
+          <div>{{ '%.1f'|format(graph.profit_margin or 0) }}%</div>
+          <div class='small'>{{ tr('Margin') }}</div>
+        </div>
+      </div>
+    </div>
     <div>
-      <div class='page-kicker'>{{ tr('Owner View') }}</div>
-      <div class='page-title'>{{ client.business_name }}</div>
-      <div class='page-subtitle'>{{ tr('Most owners buy clarity on money first. Scheduling, dispatch, and team tools stay important, but profit visibility must be instant.') }}</div>
-    </div>
-    <div class='stack-actions'>
-      <a class='btn btn-secondary' href='{{ url_for("ops_jobs", client_id=client_id) }}'>{{ tr('Open Jobs Board') }}</a>
-      <a class='btn btn-secondary' href='{{ url_for("summary", client_id=client_id) }}'>{{ tr('Open Finance Summary') }}</a>
-      <a class='btn btn-secondary' href='{{ url_for("reports", client_id=client_id) }}'>{{ tr('Report Center') }}</a>
-    </div>
-  </div>
-  {% if owner_snapshot.missing_pricing_jobs or not owner_snapshot.top_profit_jobs %}
-  <div class='action-banner owner-profit-banner' style='margin-top:14px'>
-    <div>
-      <div class='small-label'>{{ tr('Profit per job visibility') }}</div>
-      <strong>{{ tr('Complete the money side of each job so the owner view can show real profit.') }}</strong>
-      <div class='small'>{{ tr('Service price, labor, material cost, and profit should be visible immediately.') }}</div>
-    </div>
-    <a class='btn' href='{{ url_for("ops_jobs", client_id=client_id) }}#jobProfitForm'>{{ tr('Open Jobs Board') }}</a>
-  </div>
-  {% endif %}
-</div>
-
-<div class='grid cards-4 owner-kpi-grid' style='margin-top:16px'>
-  <div class='card stat-card premium-stat premium-stat-accent'>
-    <h3>{{ tr('Today') }}</h3>
-    <div class='metric big'>{{ owner_snapshot.today_jobs|length }}</div>
-    <div class='small'>{{ tr('Jobs') }}</div>
-  </div>
-  <div class='card stat-card premium-stat'>
-    <h3>{{ tr('Weekly revenue') }}</h3>
-    <div class='metric big'>${{ '%.2f'|format(owner_snapshot.weekly_revenue or 0) }}</div>
-    <div class='small'>{{ tr('Price / Revenue') }}</div>
-  </div>
-  <div class='card stat-card premium-stat'>
-    <h3>{{ tr('Weekly profit') }}</h3>
-    <div class='metric big'>${{ '%.2f'|format(owner_snapshot.weekly_profit or 0) }}</div>
-    <div class='small'>{{ tr('Net Profit') }}</div>
-  </div>
-  <div class='card stat-card premium-stat {% if owner_snapshot.losing_jobs %}profit-danger-card{% endif %}'>
-    <h3>{{ tr('Jobs losing money') }}</h3>
-    <div class='metric big'>{{ owner_snapshot.losing_jobs|length }}</div>
-    <div class='small'>{{ tr('Today needs your attention') }}</div>
-  </div>
-  <div class='card stat-card premium-stat'>
-    <h3>{{ tr('Open customer invoices') }}</h3>
-    <div class='metric big'>{{ owner_snapshot.open_customer_invoice_count }}</div>
-    <div class='small'>${{ '%.2f'|format(owner_snapshot.open_customer_invoice_balance or 0) }}</div>
-  </div>
-  <div class='card stat-card premium-stat'>
-    <h3>{{ tr('Open estimates') }}</h3>
-    <div class='metric big'>{{ owner_snapshot.open_estimate_count }}</div>
-    <div class='small'>{{ tr('Estimate first, invoice second') }}</div>
-  </div>
-  <div class='card stat-card premium-stat'>
-    <h3>{{ tr('Jobs missing pricing') }}</h3>
-    <div class='metric big'>{{ owner_snapshot.missing_pricing_jobs|length }}</div>
-    <div class='small'>{{ tr('Price not set yet') }}</div>
-  </div>
-  <div class='card stat-card premium-stat'>
-    <h3>{{ tr('Completed') }}</h3>
-    <div class='metric big'>{{ owner_snapshot.completed_this_week }}</div>
-    <div class='small'>{{ tr('This week') }}</div>
-  </div>
-</div>
-
-<div class='grid cards-2' style='margin-top:18px;align-items:start'>
-  <section class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('Client Actions') }}</h3><span class='badge'>{{ tr('Owner snapshot') }}</span></div>
-    <div class='small' style='margin-bottom:12px'>{{ tr('Jobs, invoices, and reports should work together from one owner view.') }}</div>
-    <div class='welcome-link-grid'>
-      <a class='welcome-link-card' href='{{ url_for("ops_jobs", client_id=client_id) }}'>
-        <strong>{{ tr('Create Job') }}</strong>
-        <span>{{ tr('Price / Revenue') }}</span>
-      </a>
-      {% if premium_sales_access_enabled(client) %}
-      <a class='welcome-link-card' href='{{ url_for("customer_sales", client_id=client_id) }}'>
-        <strong>{{ tr('Add Client') }}</strong>
-        <span>{{ tr('Saved Clients') }}</span>
-      </a>
-      <a class='welcome-link-card' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'>
-        <strong>{{ tr('Create Estimate') }}</strong>
-        <span>{{ tr('Hosted estimate page') }}</span>
-      </a>
-      {% else %}
-      <a class='welcome-link-card' href='{{ url_for("business_payments_page", client_id=client_id) }}'>
-        <strong>{{ tr('Upgrade to Premium') }}</strong>
-        <span>{{ tr('Premium Sales Tools') }}</span>
-      </a>
-      {% endif %}
-      <a class='welcome-link-card' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'>
-        <strong>{{ tr('Create Invoice') }}</strong>
-        <span>{{ tr('Open customer invoices') }}</span>
-      </a>
-      <a class='welcome-link-card' href='{{ url_for("reports", client_id=client_id) }}'>
-        <strong>{{ tr('Report Center') }}</strong>
-        <span>{{ tr('Review reports and profit trends') }}</span>
-      </a>
-    </div>
-  </section>
-
-  <section class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('Financial Snapshot') }}</h3><span class='badge'>{{ tr('Finance first') }}</span></div>
-    <div class='finance-focus-grid'>
-      <div class='finance-focus-item'>
-        <div class='finance-focus-head'><strong>{{ tr('Income') }}</strong><span>${{ '%.2f'|format(summary.gross_income or 0) }}</span></div>
-        <div class='small'>{{ tr('Saved income records') }}</div>
-      </div>
-      <div class='finance-focus-item'>
-        <div class='finance-focus-head'><strong>{{ tr('Operating Profit') }}</strong><span>${{ '%.2f'|format(summary.operating_profit or 0) }}</span></div>
-        <div class='small'>{{ tr('Current operating profit view') }}</div>
-      </div>
-      <div class='finance-focus-item'>
-        <div class='finance-focus-head'><strong>{{ tr('Materials Cost') }}</strong><span>${{ '%.2f'|format(summary.materials_total or 0) }}</span></div>
-        <div class='small'>{{ tr('Materials') }}</div>
-      </div>
-      <div class='finance-focus-item'>
-        <div class='finance-focus-head'><strong>{{ tr('Labor Cost') }}</strong><span>${{ '%.2f'|format(summary.worker_total or 0) }}</span></div>
-        <div class='small'>{{ tr('W-2 and payroll context') }}</div>
-      </div>
-    </div>
-    <div class='summary-strip' style='margin-top:14px'>
-      <span class='summary-pill'>{{ tr('Estimated Operating Profit') }}: ${{ '%.2f'|format(summary.operating_profit or 0) }}</span>
-      <span class='summary-pill'>{{ tr('Total Est.') }}: ${{ '%.2f'|format(summary.federal_plus_se_estimate or 0) }}</span>
-      <span class='summary-pill'>{{ tr('Mileage Deduction') }}: ${{ '%.2f'|format(summary.mileage_deduction or 0) }}</span>
-    </div>
-  </section>
-</div>
-
-<div class='grid cards-3' style='margin-top:18px;align-items:start'>
-  <section class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('Today needs your attention') }}</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("ops_jobs", client_id=client_id) }}'>{{ tr('Open Jobs Board') }}</a></div>
-    {% if owner_snapshot.today_jobs %}
-    <div class='ops-card-list'>
-      {% for job in owner_snapshot.today_jobs[:6] %}
-      <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
-        <div class='ops-list-top'>
-          <strong>{{ job.title }}</strong>
-          <span class='badge ops-status ops-status-{{ job.status }}'>{{ job.status|replace('_',' ')|title }}</span>
-        </div>
-        <div class='small'>{{ job.customer_name or tr('Customer') }}{% if job.assigned_worker_names %} &middot; {{ job.assigned_worker_names }}{% endif %}</div>
-        <div class='small'>${{ '%.2f'|format(job.revenue_amount or 0) }} / ${{ '%.2f'|format(job.net_profit_amount or 0) }} {{ tr('Net Profit') }}</div>
-      </a>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class='empty-state'><strong>{{ tr('No jobs scheduled today.') }}</strong><span>{{ tr('Create Job') }}</span></div>
-    {% endif %}
-  </section>
-
-  <section class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('Losing money right now') }}</h3><span class='badge'>{{ owner_snapshot.losing_jobs|length }}</span></div>
-    {% if owner_snapshot.losing_jobs %}
-    <div class='ops-card-list'>
-      {% for job in owner_snapshot.losing_jobs %}
-      <a class='ops-list-card profit-danger-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
-        <div class='ops-list-top'>
-          <strong>{{ job.title }}</strong>
-          <span class='badge'>${{ '%.2f'|format(job.net_profit_amount or 0) }}</span>
-        </div>
-        <div class='small'>{{ tr('Price / Revenue') }}: ${{ '%.2f'|format(job.revenue_amount or 0) }}</div>
-        <div class='small'>{{ tr('Materials Cost') }}: ${{ '%.2f'|format(job.materials_cost_amount or 0) }} &middot; {{ tr('Labor Cost') }}: ${{ '%.2f'|format(job.labor_cost_amount or 0) }}</div>
-      </a>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class='empty-state'><strong>{{ tr('No money issue flagged') }}</strong><span>{{ tr('Profit control starts with every active job carrying price and cost visibility.') }}</span></div>
-    {% endif %}
-  </section>
-
-  <section class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('Jobs missing pricing') }}</h3><span class='badge'>{{ owner_snapshot.missing_pricing_jobs|length }}</span></div>
-    {% if owner_snapshot.missing_pricing_jobs %}
-    <div class='ops-card-list'>
-      {% for job in owner_snapshot.missing_pricing_jobs %}
-      <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
-        <div class='ops-list-top'>
-          <strong>{{ job.title }}</strong>
-          <span class='badge'>{{ tr('Price not set yet') }}</span>
-        </div>
-        <div class='small'>{{ job.customer_name or tr('Customer') }}</div>
-        <div class='small'>{{ tr('Complete the money side of each job so the owner view can show real profit.') }}</div>
-      </a>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class='empty-state'><strong>{{ tr('Every active job has a price.') }}</strong><span>{{ tr('Service price, labor, material cost, and profit should be visible immediately.') }}</span></div>
-    {% endif %}
-  </section>
-</div>
-
-<div class='grid cards-2' style='margin-top:18px;align-items:start'>
-  <section class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('Highest profit jobs') }}</h3><span class='badge'>{{ tr('Weekly profit') }}</span></div>
-    <div class='scroll-x'>
-      <table class='table'>
-        <tr><th>{{ tr('Job') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Price / Revenue') }}</th><th>{{ tr('Other Costs') }}</th><th>{{ tr('Net Profit') }}</th><th>{{ tr('Profit Margin') }}</th></tr>
-        {% for job in owner_snapshot.top_profit_jobs %}
-        <tr>
-          <td><a href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>{{ job.title }}</a></td>
-          <td>{{ job.customer_name or '-' }}</td>
-          <td>${{ '%.2f'|format(job.revenue_amount or 0) }}</td>
-          <td>${{ '%.2f'|format(job.total_cost_amount or 0) }}</td>
-          <td>${{ '%.2f'|format(job.net_profit_amount or 0) }}</td>
-          <td>{{ '%.1f'|format(job.profit_margin_percent or 0) }}%</td>
-        </tr>
-        {% else %}
-        <tr><td colspan='6' class='small'>{{ tr('Complete the money side of each job so the owner view can show real profit.') }}</td></tr>
+      <div class='card-head'><h3>{{ tr('Cost pressure') }}</h3><span class='badge'>{{ tr('Expense mix') }}</span></div>
+      <div class='owner-cost-list'>
+        {% for item in graph.expense_mix %}
+        <div class='owner-cost-row'><span class='owner-cost-key {{ item.tone }}'>{{ tr(item.label) }}</span><span>${{ '%.2f'|format(item.amount or 0) }} &middot; {{ '%.1f'|format(item.percent or 0) }}%</span></div>
         {% endfor %}
-      </table>
+      </div>
     </div>
   </section>
+</div>
 
-  <section class='card section-frame'>
-    <div class='card-head'><h3>{{ tr('Finance Controls') }}</h3><span class='badge'>{{ tr('Finance first') }}</span></div>
+<div class='owner-quick-grid'>
+  <a class='owner-quick-card primary' href='{{ url_for("ops_jobs", client_id=client_id) }}'><strong>{{ tr('Jobs & Profit') }}</strong><span>{{ tr('Create, price, and protect every job.') }}</span></a>
+  <a class='owner-quick-card' href='{{ url_for("invoices", client_id=client_id) }}#customerInvoiceForm'><strong>{{ tr('Create Invoice') }}</strong><span>{{ tr('Send billing without hunting for tools.') }}</span></a>
+  <a class='owner-quick-card' href='{{ url_for("reports", client_id=client_id) }}'><strong>{{ tr('Live Reports') }}</strong><span>{{ tr('Open the finance graphics and report tables.') }}</span></a>
+  {% if premium_sales_access_enabled(client) %}
+  <a class='owner-quick-card' href='{{ url_for("customer_sales", client_id=client_id) }}'><strong>{{ tr('Clients') }}</strong><span>{{ tr('Saved clients, revenue, and profit per client.') }}</span></a>
+  <a class='owner-quick-card' href='{{ url_for("estimates", client_id=client_id) }}#estimateForm'><strong>{{ tr('Create Estimate') }}</strong><span>{{ tr('Estimate first, invoice second.') }}</span></a>
+  {% else %}
+  <a class='owner-quick-card' href='{{ url_for("business_payments_page", client_id=client_id) }}'><strong>{{ tr('Premium Sales Tools') }}</strong><span>{{ tr('Unlock clients, estimates, and sales workspace.') }}</span></a>
+  {% endif %}
+  <a class='owner-quick-card' href='{{ url_for("summary", client_id=client_id) }}'><strong>{{ tr('Finance Summary') }}</strong><span>{{ tr('Income, expenses, mileage, and tax-readiness.') }}</span></a>
+</div>
+
+<div class='toolbar hero-toolbar' style='margin-top:18px;margin-bottom:0'>
+  <div>
+    <div class='page-kicker'>{{ tr('Folded Work Areas') }}</div>
+    <div class='page-subtitle'>{{ tr('Detailed actions stay available below, but the owner view keeps the money answer first.') }}</div>
+  </div>
+</div>
+
+<div id='owner-work-areas' class='owner-work-tabs'>
+  <details class='owner-fold' {% if owner_snapshot.today_jobs or owner_snapshot.losing_jobs or owner_snapshot.missing_pricing_jobs %}open{% endif %}>
+    <summary>{{ tr('What needs attention') }} <span>{{ owner_alert_count }}</span></summary>
+    <div class='owner-fold-body'>
+      {% if owner_snapshot.today_jobs %}
+      <div class='ops-card-list'>
+        {% for job in owner_snapshot.today_jobs[:4] %}
+        <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+          <div class='ops-list-top'><strong>{{ job.title }}</strong><span class='badge ops-status ops-status-{{ job.status }}'>{{ job.status|replace('_',' ')|title }}</span></div>
+          <div class='small'>{{ job.customer_name or tr('Customer') }}{% if job.assigned_worker_names %} &middot; {{ job.assigned_worker_names }}{% endif %}</div>
+          <div class='small'>${{ '%.2f'|format(job.revenue_amount or 0) }} / ${{ '%.2f'|format(job.net_profit_amount or 0) }} {{ tr('Net Profit') }}</div>
+        </a>
+        {% endfor %}
+      </div>
+      {% elif owner_snapshot.losing_jobs %}
+      <div class='ops-card-list'>
+        {% for job in owner_snapshot.losing_jobs[:4] %}
+        <a class='ops-list-card profit-danger-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'><strong>{{ job.title }}</strong><div class='small'>{{ tr('Net Profit') }}: ${{ '%.2f'|format(job.net_profit_amount or 0) }}</div></a>
+        {% endfor %}
+      </div>
+      {% elif owner_snapshot.missing_pricing_jobs %}
+      <div class='ops-card-list'>
+        {% for job in owner_snapshot.missing_pricing_jobs[:4] %}
+        <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'><strong>{{ job.title }}</strong><div class='small'>{{ tr('Price not set yet') }}</div></a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class='empty-state'><strong>{{ tr('No urgent owner issue flagged.') }}</strong><span>{{ tr('The workspace will surface money and job issues here as records are added.') }}</span></div>
+      {% endif %}
+    </div>
+  </details>
+
+  <details class='owner-fold'>
+    <summary>{{ tr('Financial snapshot') }} <span>${{ '%.2f'|format(summary.operating_profit or 0) }}</span></summary>
+    <div class='owner-fold-body'>
+      <div class='finance-focus-grid'>
+        <div class='finance-focus-item'><div class='finance-focus-head'><strong>{{ tr('Income') }}</strong><span>${{ '%.2f'|format(summary.gross_income or 0) }}</span></div><div class='small'>{{ tr('Saved income records') }}</div></div>
+        <div class='finance-focus-item'><div class='finance-focus-head'><strong>{{ tr('Operating Profit') }}</strong><span>${{ '%.2f'|format(summary.operating_profit or 0) }}</span></div><div class='small'>{{ tr('Current operating profit view') }}</div></div>
+        <div class='finance-focus-item'><div class='finance-focus-head'><strong>{{ tr('Materials Cost') }}</strong><span>${{ '%.2f'|format(summary.materials_total or 0) }}</span></div><div class='small'>{{ tr('Materials') }}</div></div>
+        <div class='finance-focus-item'><div class='finance-focus-head'><strong>{{ tr('Labor Cost') }}</strong><span>${{ '%.2f'|format(summary.worker_total or 0) }}</span></div><div class='small'>{{ tr('W-2 and payroll context') }}</div></div>
+      </div>
+      <div class='summary-strip' style='margin-top:14px'>
+        <span class='summary-pill'>{{ tr('Total Est.') }}: ${{ '%.2f'|format(summary.federal_plus_se_estimate or 0) }}</span>
+        <span class='summary-pill'>{{ tr('Mileage Deduction') }}: ${{ '%.2f'|format(summary.mileage_deduction or 0) }}</span>
+      </div>
+    </div>
+  </details>
+
+  <details class='owner-fold'>
+    <summary>{{ tr('Detailed job profit') }} <span>{{ owner_snapshot.top_profit_jobs|length }}</span></summary>
+    <div class='owner-fold-body'>
+      <div class='scroll-x'>
+        <table class='table'>
+          <tr><th>{{ tr('Job') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Revenue') }}</th><th>{{ tr('Cost') }}</th><th>{{ tr('Profit') }}</th><th>{{ tr('Margin') }}</th></tr>
+          {% for job in owner_snapshot.top_profit_jobs %}
+          <tr>
+            <td><a href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>{{ job.title }}</a></td>
+            <td>{{ job.customer_name or '-' }}</td>
+            <td>${{ '%.2f'|format(job.revenue_amount or 0) }}</td>
+            <td>${{ '%.2f'|format(job.total_cost_amount or 0) }}</td>
+            <td>${{ '%.2f'|format(job.net_profit_amount or 0) }}</td>
+            <td>{{ '%.1f'|format(job.profit_margin_percent or 0) }}%</td>
+          </tr>
+          {% else %}
+          <tr><td colspan='6' class='small'>{{ tr('Complete the money side of each job so the owner view can show real profit.') }}</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </div>
+  </details>
+</div>
+
+<details class='owner-fold' style='margin-top:18px'>
+  <summary>{{ tr('More owner controls') }} <span>{{ tr('Folded') }}</span></summary>
+  <div class='owner-fold-body'>
     <div class='stack-actions'>
       <a class='btn btn-secondary btn-sm' href='{{ url_for("summary", client_id=client_id) }}'>{{ tr('Summary Center') }}</a>
       <a class='btn btn-secondary btn-sm' href='{{ url_for("reports", client_id=client_id) }}'>{{ tr('Report Center') }}</a>
@@ -251,6 +265,6 @@
     {% if current_user.role != 'admin' and is_trial_workspace %}
     <div class='small' style='margin-top:12px'>{{ tr('Your trial workspace is open.') }} {{ tr('Start here with the overview and tutorial, then use Continue Trial Setup when you are ready to save the business profile and selected subscription. Billing is still optional during the complimentary period.') }}</div>
     {% endif %}
-  </section>
-</div>
+  </div>
+</details>
 {% endblock %}

@@ -8611,6 +8611,25 @@ def report_graphics_snapshot(client_id: int, summary: dict, start_date: str | No
     }
 
 
+def empty_report_graphics_snapshot() -> dict:
+    return {
+        'trend': [],
+        'revenue_points': '',
+        'profit_points': '',
+        'max_value': 1,
+        'profit_margin': 0,
+        'profit_ring_degrees': 0,
+        'expense_gradient': '#D9E4EC 0 100%',
+        'expense_mix': [
+            {'label': 'Labor', 'amount': 0, 'percent': 0, 'tone': 'labor'},
+            {'label': 'Materials', 'amount': 0, 'percent': 0, 'tone': 'materials'},
+            {'label': 'Gas', 'amount': 0, 'percent': 0, 'tone': 'gas'},
+            {'label': 'Other', 'amount': 0, 'percent': 100, 'tone': 'other'},
+        ],
+        'kpis': [],
+    }
+
+
 def worker_year_totals(worker_id: int, year: int):
     with get_conn() as conn:
         payments = conn.execute('SELECT * FROM worker_payments WHERE worker_id=? AND substr(payment_date,1,4)=? ORDER BY payment_date, id', (worker_id, str(year))).fetchall()
@@ -14267,6 +14286,11 @@ def dashboard():
             (client_id,),
         )
         owner_snapshot = ops_owner_snapshot(conn, client_id)
+    summary_data = client_summary(client_id)
+    try:
+        dashboard_graphics = report_graphics_snapshot(client_id, summary_data)
+    except Exception:
+        dashboard_graphics = empty_report_graphics_snapshot()
     admin_fee_summary = business_payment_summary(client_id)
     open_admin_fee_rows = [row for row in admin_fee_summary['rows'] if (row['status'] or 'pending') in {'pending', 'processing'}]
     return render_template(
@@ -14275,7 +14299,8 @@ def dashboard():
         client_id=client_id,
         workers=worker_rows,
         invoices=invoice_rows,
-        summary=client_summary(client_id),
+        summary=summary_data,
+        dashboard_graphics=dashboard_graphics,
         payment_method_summary=payment_method_summary(payment_methods),
         subscription_status_labels=subscription_status_label_map(),
         admin_fee_summary=admin_fee_summary,
@@ -19340,17 +19365,7 @@ def reports():
             graphics_snapshot = report_graphics_snapshot(client_id, summary_data, start_date or None, end_date or None)
         except Exception as exc:
             report_warnings.append(str(exc))
-            graphics_snapshot = {
-                'trend': [],
-                'revenue_points': '',
-                'profit_points': '',
-                'max_value': 1,
-                'profit_margin': 0,
-                'profit_ring_degrees': 0,
-                'expense_gradient': '#D9E4EC 0 100%',
-                'expense_mix': [],
-                'kpis': [],
-            }
+            graphics_snapshot = empty_report_graphics_snapshot()
 
         context = {
             'client': client,
