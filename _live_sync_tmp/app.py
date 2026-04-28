@@ -8479,6 +8479,126 @@ def empty_client_summary():
     }
 
 
+def month_shift(value: date, months: int) -> date:
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    return date(year, month, 1)
+
+
+def report_graphics_snapshot(client_id: int, summary: dict, start_date: str | None = None, end_date: str | None = None) -> dict:
+    end_value = parse_date(end_date) or date.today()
+    end_month = date(end_value.year, end_value.month, 1)
+    month_starts = [month_shift(end_month, offset) for offset in range(-5, 1)]
+    first_month = month_starts[0].isoformat()
+    last_month_end = month_shift(end_month, 1).isoformat()
+    monthly = {
+        month.strftime('%Y-%m'): {
+            'key': month.strftime('%Y-%m'),
+            'label': month.strftime('%b'),
+            'revenue': 0.0,
+            'expenses': 0.0,
+            'profit': 0.0,
+            'bar_height': 0,
+        }
+        for month in month_starts
+    }
+
+    def add_monthly_amount(rows, target='revenue'):
+        for row in rows:
+            key = row['m'] or ''
+            if key in monthly:
+                monthly[key][target] += float(row['v'] or 0)
+
+    with get_conn() as conn:
+        add_monthly_amount(conn.execute(
+            '''SELECT substr(invoice_date,1,7) m, COALESCE(SUM(paid_amount),0) v
+               FROM invoices
+               WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate'
+                 AND invoice_date>=? AND invoice_date<?
+               GROUP BY substr(invoice_date,1,7)''',
+            (client_id, first_month, last_month_end),
+        ).fetchall(), target='revenue')
+        for table, column in [('gas_entries', 'week_start'), ('materials', 'material_date')]:
+            add_monthly_amount(conn.execute(
+                f'''SELECT substr({column},1,7) m, COALESCE(SUM(amount),0) v
+                    FROM {table}
+                    WHERE client_id=? AND {column}>=? AND {column}<?
+                    GROUP BY substr({column},1,7)''',
+                (client_id, first_month, last_month_end),
+            ).fetchall(), target='expenses')
+        add_monthly_amount(conn.execute(
+            '''SELECT substr(wp.payment_date,1,7) m, COALESCE(SUM(wp.amount),0) v
+               FROM worker_payments wp
+               JOIN workers w ON w.id=wp.worker_id
+               WHERE w.client_id=? AND wp.payment_date>=? AND wp.payment_date<?
+               GROUP BY substr(wp.payment_date,1,7)''',
+            (client_id, first_month, last_month_end),
+        ).fetchall(), target='expenses')
+
+    trend = list(monthly.values())
+    max_value = max([item['revenue'] for item in trend] + [item['profit'] for item in trend] + [1.0])
+    svg_width = 340
+    chart_top = 14
+    chart_bottom = 132
+    chart_span = chart_bottom - chart_top
+    point_gap = svg_width / max(len(trend) - 1, 1)
+    revenue_points = []
+    profit_points = []
+    for index, item in enumerate(trend):
+        item['profit'] = max(item['revenue'] - item['expenses'], 0)
+        item['bar_height'] = int(round((item['revenue'] / max_value) * 100)) if max_value else 0
+        item['profit_bar_height'] = int(round((item['profit'] / max_value) * 100)) if max_value else 0
+        x = round(index * point_gap, 2)
+        revenue_y = round(chart_bottom - ((item['revenue'] / max_value) * chart_span), 2)
+        profit_y = round(chart_bottom - ((item['profit'] / max_value) * chart_span), 2)
+        revenue_points.append(f'{x},{revenue_y}')
+        profit_points.append(f'{x},{profit_y}')
+
+    gross_income = float(summary.get('gross_income') or 0)
+    operating_profit = float(summary.get('operating_profit') or 0)
+    total_expenses = float(summary.get('total_expenses') or 0)
+    gas_total = float(summary.get('gas_total') or 0)
+    materials_total = float(summary.get('materials_total') or 0)
+    worker_total = float(summary.get('worker_total') or 0)
+    adjusted_profit = float(summary.get('adjusted_profit') or 0)
+    margin = (operating_profit / gross_income * 100) if gross_income else 0
+    expense_base = max(total_expenses, 1.0)
+    labor_pct = worker_total / expense_base * 100
+    materials_pct = materials_total / expense_base * 100
+    gas_pct = gas_total / expense_base * 100
+    other_pct = max(0.0, 100 - labor_pct - materials_pct - gas_pct)
+    labor_end = labor_pct
+    materials_end = labor_end + materials_pct
+    gas_end = materials_end + gas_pct
+    return {
+        'trend': trend,
+        'revenue_points': ' '.join(revenue_points),
+        'profit_points': ' '.join(profit_points),
+        'max_value': max_value,
+        'profit_margin': round(margin, 1),
+        'profit_ring_degrees': round(min(max(margin, 0), 100) * 3.6, 2),
+        'expense_gradient': (
+            f"#1F5D8C 0 {labor_end:.2f}%, "
+            f"#5FA8D3 {labor_end:.2f}% {materials_end:.2f}%, "
+            f"#98C1D9 {materials_end:.2f}% {gas_end:.2f}%, "
+            f"#D9E4EC {gas_end:.2f}% 100%"
+        ),
+        'expense_mix': [
+            {'label': 'Labor', 'amount': worker_total, 'percent': round(labor_pct, 1), 'tone': 'labor'},
+            {'label': 'Materials', 'amount': materials_total, 'percent': round(materials_pct, 1), 'tone': 'materials'},
+            {'label': 'Gas', 'amount': gas_total, 'percent': round(gas_pct, 1), 'tone': 'gas'},
+            {'label': 'Other', 'amount': max(total_expenses - worker_total - materials_total - gas_total, 0), 'percent': round(other_pct, 1), 'tone': 'other'},
+        ],
+        'kpis': [
+            {'label': 'Gross Income', 'value': gross_income, 'detail': 'Money in'},
+            {'label': 'Operating Profit', 'value': operating_profit, 'detail': 'After labor/material/gas'},
+            {'label': 'Adjusted Profit', 'value': adjusted_profit, 'detail': 'After mileage deduction'},
+            {'label': 'Estimated Tax', 'value': float(summary.get('federal_plus_se_estimate') or 0), 'detail': 'Federal + SE estimate'},
+        ],
+    }
+
+
 def worker_year_totals(worker_id: int, year: int):
     with get_conn() as conn:
         payments = conn.execute('SELECT * FROM worker_payments WHERE worker_id=? AND substr(payment_date,1,4)=? ORDER BY payment_date, id', (worker_id, str(year))).fetchall()
@@ -19203,6 +19323,23 @@ def reports():
                 'SELECT * FROM clients ORDER BY business_name',
             )
 
+        summary_data = safe_client_summary()
+        try:
+            graphics_snapshot = report_graphics_snapshot(client_id, summary_data, start_date or None, end_date or None)
+        except Exception as exc:
+            report_warnings.append(str(exc))
+            graphics_snapshot = {
+                'trend': [],
+                'revenue_points': '',
+                'profit_points': '',
+                'max_value': 1,
+                'profit_margin': 0,
+                'profit_ring_degrees': 0,
+                'expense_gradient': '#D9E4EC 0 100%',
+                'expense_mix': [],
+                'kpis': [],
+            }
+
         context = {
             'client': client,
             'workers': workers,
@@ -19214,7 +19351,8 @@ def reports():
             'end_date': end_date,
             'worker_id': worker_id,
             'invoice_id': invoice_id,
-            'summary': safe_client_summary(),
+            'summary': summary_data,
+            'report_graphics': graphics_snapshot,
         }
 
         if report_type == 'workers':

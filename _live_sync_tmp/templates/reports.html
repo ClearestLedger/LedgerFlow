@@ -1,5 +1,38 @@
 {% extends 'base.html' %}
 {% block body %}
+<style>
+  .report-visual-hero{position:relative;overflow:hidden;border:1px solid #D8E7F3;background:linear-gradient(135deg,#F8FBFF 0%,#EDF6FB 48%,#F7FAF7 100%);box-shadow:0 18px 45px rgba(31,93,140,.08)}
+  .report-visual-hero:before{content:'';position:absolute;inset:-120px auto auto -80px;width:280px;height:280px;border-radius:999px;background:rgba(95,168,211,.18)}
+  .report-visual-hero:after{content:'';position:absolute;right:-90px;bottom:-110px;width:320px;height:320px;border-radius:999px;background:rgba(31,93,140,.10)}
+  .report-visual-content{position:relative;z-index:1}
+  .report-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+  .report-kpi{background:rgba(255,255,255,.78);border:1px solid rgba(216,231,243,.9);border-radius:18px;padding:14px;backdrop-filter:blur(8px)}
+  .report-kpi strong{display:block;font-size:1.35rem;color:#16384F;margin-top:4px}
+  .report-chart-wrap{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,.65fr);gap:16px;margin-top:16px;align-items:stretch}
+  .report-chart-card{background:#fff;border:1px solid #DDE8F0;border-radius:20px;padding:16px;box-shadow:0 14px 35px rgba(28,55,78,.06)}
+  .report-line-chart{width:100%;height:170px;display:block}
+  .report-chart-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+  .legend-dot{display:inline-flex;align-items:center;gap:6px;font-size:.86rem;color:#546A7B}
+  .legend-dot:before{content:'';width:10px;height:10px;border-radius:999px;background:#1F5D8C}
+  .legend-dot.profit:before{background:#5FA8D3}
+  .report-bars{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:end;height:140px;margin-top:10px;padding-top:14px;border-top:1px solid #E6ECF2}
+  .report-bar-cell{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+  .report-bar-stack{height:92px;width:100%;display:flex;align-items:end;justify-content:center;gap:3px}
+  .report-bar{width:18px;min-height:4px;border-radius:999px 999px 4px 4px;background:linear-gradient(180deg,#1F5D8C,#5FA8D3)}
+  .report-bar.profit{background:linear-gradient(180deg,#7EC8A5,#2E8B57)}
+  .report-bar-label{font-size:.75rem;color:#6B7D8D}
+  .report-donut-row{display:grid;grid-template-columns:132px 1fr;gap:16px;align-items:center}
+  .report-donut{width:132px;height:132px;border-radius:999px;display:grid;place-items:center;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04)}
+  .report-donut-inner{width:76px;height:76px;border-radius:999px;background:#fff;display:grid;place-items:center;text-align:center;color:#16384F;font-weight:800;box-shadow:0 8px 18px rgba(31,93,140,.10)}
+  .expense-mix-list{display:grid;gap:8px}
+  .expense-mix-item{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #EDF2F6;padding-bottom:7px;font-size:.9rem}
+  .mix-key{display:inline-flex;align-items:center;gap:7px}
+  .mix-key:before{content:'';width:10px;height:10px;border-radius:999px;background:#D9E4EC}
+  .mix-key.labor:before{background:#1F5D8C}
+  .mix-key.materials:before{background:#5FA8D3}
+  .mix-key.gas:before{background:#98C1D9}
+  @media (max-width:900px){.report-kpi-grid,.report-chart-wrap{grid-template-columns:1fr}.report-donut-row{grid-template-columns:1fr}.report-donut{margin:auto}.report-kpi-grid{gap:10px}}
+</style>
 {% set report_labels = {
   'summary': tr('Summary'),
   'workers': tr('Workers'),
@@ -31,6 +64,95 @@
   </form>
   <button onclick='window.print()' class='btn btn-dark' type='button'>{{ tr('Print Current Report') }}</button>
 </div>
+
+{% set graph = report_graphics %}
+<div class='card report-visual-hero' style='margin-bottom:16px'>
+  <div class='report-visual-content'>
+    <div class='card-head'>
+      <div>
+        <div class='page-kicker'>{{ tr('Live Financial Graphics') }}</div>
+        <h3 style='margin:4px 0 0'>{{ tr('Finance Graphic Snapshot') }}</h3>
+        <div class='small'>{{ tr('Visual report built from current income, labor, materials, gas, mileage, and tax-readiness records.') }}</div>
+      </div>
+      <span class='badge'>{{ tr('Owner-ready') }}</span>
+    </div>
+    <div class='report-kpi-grid'>
+      {% for item in graph.kpis %}
+      <div class='report-kpi'>
+        <div class='small-label'>{{ tr(item.label) }}</div>
+        <strong>${{ '%.2f'|format(item.value or 0) }}</strong>
+        <div class='small'>{{ tr(item.detail) }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class='report-chart-wrap'>
+      <div class='report-chart-card'>
+        <div class='card-head'>
+          <h3>{{ tr('Revenue + Profit Trend') }}</h3>
+          <div class='small'>{{ tr('Last six months') }}</div>
+        </div>
+        <svg class='report-line-chart' viewBox='0 0 340 150' role='img' aria-label='Revenue and profit trend'>
+          <defs>
+            <linearGradient id='revenueFill' x1='0' y1='0' x2='0' y2='1'>
+              <stop offset='0%' stop-color='#1F5D8C' stop-opacity='.16'/>
+              <stop offset='100%' stop-color='#1F5D8C' stop-opacity='0'/>
+            </linearGradient>
+          </defs>
+          <line x1='0' y1='132' x2='340' y2='132' stroke='#DDE8F0' stroke-width='1'/>
+          <line x1='0' y1='92' x2='340' y2='92' stroke='#EEF4F8' stroke-width='1'/>
+          <line x1='0' y1='52' x2='340' y2='52' stroke='#EEF4F8' stroke-width='1'/>
+          {% if graph.revenue_points %}
+          <polyline points='0,132 {{ graph.revenue_points }} 340,132' fill='url(#revenueFill)' stroke='none'/>
+          <polyline points='{{ graph.revenue_points }}' fill='none' stroke='#1F5D8C' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/>
+          <polyline points='{{ graph.profit_points }}' fill='none' stroke='#2E8B57' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'/>
+          {% endif %}
+        </svg>
+        <div class='report-chart-legend'>
+          <span class='legend-dot'>{{ tr('Revenue') }}</span>
+          <span class='legend-dot profit'>{{ tr('Profit') }}</span>
+          <span class='small'>{{ tr('Peak value') }}: ${{ '%.2f'|format(graph.max_value or 0) }}</span>
+        </div>
+        <div class='report-bars'>
+          {% for month in graph.trend %}
+          <div class='report-bar-cell'>
+            <div class='report-bar-stack'>
+              <div class='report-bar' title='{{ month.label }} revenue' style='height:{{ month.bar_height or 0 }}%'></div>
+              <div class='report-bar profit' title='{{ month.label }} profit' style='height:{{ month.profit_bar_height or 0 }}%'></div>
+            </div>
+            <div class='report-bar-label'>{{ month.label }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class='report-chart-card'>
+        <div class='card-head'>
+          <h3>{{ tr('Expense Mix') }}</h3>
+          <div class='small'>{{ tr('Cost pressure') }}</div>
+        </div>
+        <div class='report-donut-row'>
+          <div class='report-donut' style='background:conic-gradient({{ graph.expense_gradient }})'>
+            <div class='report-donut-inner'>
+              <div>
+                <div>{{ '%.1f'|format(graph.profit_margin or 0) }}%</div>
+                <div class='small'>{{ tr('Margin') }}</div>
+              </div>
+            </div>
+          </div>
+          <div class='expense-mix-list'>
+            {% for item in graph.expense_mix %}
+            <div class='expense-mix-item'>
+              <span class='mix-key {{ item.tone }}'>{{ tr(item.label) }}</span>
+              <span>${{ '%.2f'|format(item.amount or 0) }} · {{ '%.1f'|format(item.percent or 0) }}%</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div class='small' style='margin-top:12px'>{{ tr('This visual is meant to help owners quickly see where the money is going before opening the detailed tables below.') }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class='grid cards-2'>
   <div class='card'><h3>{{ tr('Tax Summary') }}</h3><div class='metric'>{{ tr('Gross Income') }}: ${{ '%.2f'|format(summary.gross_income) }}<br>{{ tr('Gas') }}: ${{ '%.2f'|format(summary.gas_total) }}<br>{{ tr('Materials') }}: ${{ '%.2f'|format(summary.materials_total) }}<br>{{ tr('Workers') }}: ${{ '%.2f'|format(summary.worker_total) }}<br>{{ tr('Mileage Deduction') }}: ${{ '%.2f'|format(summary.mileage_deduction) }}<br>{{ tr('Expenses') }}: ${{ '%.2f'|format(summary.total_expenses) }}<br>{{ tr('Operating Profit') }}: ${{ '%.2f'|format(summary.operating_profit) }}<br>{{ tr('Adjusted Profit') }}: ${{ '%.2f'|format(summary.adjusted_profit) }}<br>{{ tr('SE Tax') }}: ${{ '%.2f'|format(summary.self_employment_tax_estimate) }}<br>{{ tr('Total Est.') }}: ${{ '%.2f'|format(summary.federal_plus_se_estimate) }}</div></div>
   <div class='card'><h3>{{ tr('Forms by Worker') }}</h3><table class='table'><tr><th>{{ tr('Worker') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Links') }}</th></tr>{% for w in workers %}<tr><td>{{ w.name }}</td><td>{{ w.worker_type }}</td><td><a href='{{ url_for("w4", worker_id=w.id) }}' target='_blank'>{{ tr('W-4') }}</a> &middot; <a href='{{ url_for("w2", worker_id=w.id) }}' target='_blank'>{{ tr('W-2') }}</a> &middot; <a href='{{ url_for("form_1099", worker_id=w.id) }}' target='_blank'>{{ tr('1099') }}</a></td></tr>{% endfor %}</table></div>
