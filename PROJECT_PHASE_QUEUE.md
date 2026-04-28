@@ -407,3 +407,7 @@
   - added backend support for localized welcome-video variants in English, Portuguese, and Spanish with automatic fallback to English until other files are added
   - the trial invite page is now ready to auto-select the correct hosted video version by language as soon as the `pt` and `es` files are dropped in
   - added light language-chip support on the trial page that only appears when more than one hosted video language is actually available
+- Batch 2 business 3 checkpoint recorded on 2026-04-28:
+  - `Rafa` completed the Business 3 live checklist successfully
+  - Batch 2 has now reached its planned limit of two added businesses after the Batch 1 pass
+  - do not add another real business until Batch 2 has its observation window and the rollout gate is intentionally advanced
