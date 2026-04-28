@@ -51,10 +51,72 @@
     </div>
     <div class='invite-metrics admin-scale-metrics'>
       <span class='status-chip processing'>Login Alerts {{ totals.new_login_notifications }}</span>
-      <span class='status-chip sent'>Payments {{ all_payment_items|length }}</span>
+      <span class='status-chip sent'>Admin Fees {{ all_payment_items|length }}</span>
+      <span class='status-chip success'>Active Subs {{ subscription_snapshot.active_count }}</span>
       <span class='status-chip pending'>Workspaces {{ businesses|length }}</span>
     </div>
   </div>
+<div class='card' style='margin-top:16px'>
+  <div class='card-head'>
+    <h3>Subscription Revenue Snapshot</h3>
+    <span class='badge'>Private Admin Pricing</span>
+  </div>
+  <div class='summary-strip' style='margin-bottom:12px'>
+    <span class='summary-pill'>Active subscriptions: {{ subscription_snapshot.active_count }}</span>
+    <span class='summary-pill'>Monthly total: ${{ '%.2f'|format(subscription_snapshot.monthly_total or 0) }}</span>
+    <span class='summary-pill'>Current pricing is for private admin-client rollout only</span>
+  </div>
+  <div class='small' style='margin-bottom:12px'>
+    Use this for your administrator-managed client launch. Public LedgerFlow Business and future CPA/bookkeeper pricing should be reviewed separately before those launches.
+  </div>
+  <div class='grid cards-2' style='gap:12px'>
+    <div>
+      <h4 style='margin:0 0 8px'>By Subscription Tier</h4>
+      {% if subscription_snapshot.by_plan %}
+      <table class='table'>
+        <tr><th>Tier</th><th>Active</th><th>Monthly Total</th></tr>
+        {% for item in subscription_snapshot.by_plan %}
+        <tr><td>{{ item.label }}</td><td>{{ item.count }}</td><td>${{ '%.2f'|format(item.monthly_total or 0) }}</td></tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <div class='small'>No active subscriptions yet.</div>
+      {% endif %}
+    </div>
+    <div>
+      <h4 style='margin:0 0 8px'>By Business Category</h4>
+      {% if subscription_snapshot.by_business_category %}
+      <table class='table'>
+        <tr><th>Category</th><th>Active</th><th>Monthly Total</th></tr>
+        {% for item in subscription_snapshot.by_business_category %}
+        <tr><td>{{ item.label }}</td><td>{{ item.count }}</td><td>${{ '%.2f'|format(item.monthly_total or 0) }}</td></tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <div class='small'>No active business categories yet.</div>
+      {% endif %}
+    </div>
+  </div>
+  {% if subscription_snapshot.active_rows %}
+  <details class='compact-details' style='margin-top:12px'>
+    <summary><span>Open Active Subscription Detail</span></summary>
+    <table class='table' style='margin-top:12px'>
+      <tr><th>Business</th><th>Category</th><th>Tier</th><th>Status</th><th>Paying</th><th>Next Billing</th><th>Stripe</th></tr>
+      {% for row in subscription_snapshot.active_rows %}
+      <tr>
+        <td><strong>{{ row.business_name }}</strong></td>
+        <td>{{ row.business_category }}</td>
+        <td>{{ row.plan_label }}</td>
+        <td style='text-transform:capitalize'>{{ row.status|replace('_',' ') }}</td>
+        <td>${{ '%.2f'|format(row.amount or 0) }}/{{ row.interval|replace('monthly','mo') }}</td>
+        <td>{{ row.next_billing or 'Not scheduled' }}</td>
+        <td>{% if row.stripe_subscription_id %}Connected{% else %}Needs sync{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </details>
+  {% endif %}
+</div>
 <div class='grid cards-2'>
   <div class='card'>
     <details class='compact-details admin-scale-panel' data-admin-scale-details>
@@ -188,6 +250,14 @@
     </div>
     <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'>
       <a class='btn btn-secondary btn-sm' href='{{ url_for("business_payments_page", client_id=selected_business.id) }}'>Open Business Billing Center</a>
+      {% if selected_business.stripe_checkout_session_id and not selected_business.stripe_subscription_id %}
+      <form method='post' action='{{ url_for("sync_stripe_subscription_confirmation") }}' style='display:inline-flex'>
+        <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
+        <input type='hidden' name='client_id' value='{{ selected_business.id }}'>
+        <input type='hidden' name='return_to' value='cpa_dashboard'>
+        <button type='submit' class='btn btn-secondary btn-sm'>Sync Stripe Confirmation</button>
+      </form>
+      {% endif %}
       {% if selected_business.stripe_last_event_id %}<span class='summary-pill'>Last Stripe event: {{ selected_business.stripe_last_event_id }}</span>{% endif %}
     </div>
     {% if selected_stripe_events %}

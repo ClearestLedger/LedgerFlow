@@ -22,7 +22,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from functools import wraps, lru_cache
-from urllib.parse import urlparse, urlencode
+from urllib.parse import urlparse, urlencode, quote
 from urllib import request as urlrequest, error as urlerror
 
 from geopy.distance import geodesic
@@ -2783,6 +2783,33 @@ def stripe_api_post(path: str, data: dict) -> dict:
         raise StripeBillingError(f'Could not reach Stripe: {exc.reason}') from exc
 
 
+def stripe_api_get(path: str, data: dict | None = None) -> dict:
+    secret = stripe_secret_key()
+    if not secret:
+        raise StripeBillingError('Stripe is not configured yet. Add STRIPE_SECRET_KEY in Render before syncing subscriptions.')
+    query = f"?{urlencode(data or {})}" if data else ''
+    req = urlrequest.Request(
+        f"https://api.stripe.com/v1/{path.lstrip('/')}{query}",
+        method='GET',
+    )
+    token = base64.b64encode(f'{secret}:'.encode('utf-8')).decode('ascii')
+    req.add_header('Authorization', f'Basic {token}')
+    req.add_header('Stripe-Version', '2024-06-20')
+    try:
+        with urlrequest.urlopen(req, timeout=20) as resp:
+            return json.loads(resp.read().decode('utf-8') or '{}')
+    except urlerror.HTTPError as exc:
+        body = exc.read().decode('utf-8', errors='replace')
+        try:
+            payload = json.loads(body)
+            message = payload.get('error', {}).get('message') or body
+        except Exception:
+            message = body or str(exc)
+        raise StripeBillingError(f'Stripe error: {message}') from exc
+    except urlerror.URLError as exc:
+        raise StripeBillingError(f'Could not reach Stripe: {exc.reason}') from exc
+
+
 def stripe_timestamp_to_date(value) -> str:
     try:
         timestamp = int(value or 0)
@@ -2958,6 +2985,57 @@ def stripe_sync_subscription_fields(conn: sqlite3.Connection, *, client_id: int,
         status='stripe_subscription_synced',
         detail=f"Stripe subscription sync updated status to {local_status}.",
     )
+
+
+def stripe_sync_checkout_session(conn: sqlite3.Connection, *, client_id: int, checkout_session_id: str, actor=None, event_id: str = '') -> dict:
+    session_id = (checkout_session_id or '').strip()
+    if not session_id.startswith('cs_'):
+        raise StripeBillingError('Stripe checkout session is missing or invalid.')
+    session_payload = stripe_api_get(f"/checkout/sessions/{quote(session_id, safe='')}")
+    if (session_payload.get('object') or '') != 'checkout.session':
+        raise StripeBillingError('Stripe did not return a checkout session.')
+    resolved_client_id = stripe_extract_client_id(conn, session_payload)
+    if resolved_client_id and int(resolved_client_id) != int(client_id):
+        raise StripeBillingError('Stripe checkout session belongs to a different business.')
+    customer_id = (session_payload.get('customer') or '').strip()
+    subscription_id = (session_payload.get('subscription') or '').strip()
+    subscription_payload = {}
+    if subscription_id:
+        subscription_payload = stripe_api_get(f"/subscriptions/{quote(subscription_id, safe='')}")
+    stripe_status = (subscription_payload.get('status') or '').strip()
+    if not stripe_status and (session_payload.get('payment_status') == 'paid' or session_payload.get('status') == 'complete'):
+        stripe_status = 'active'
+    sync_event_id = event_id or f"checkout_sync:{session_id}"
+    stripe_sync_subscription_fields(
+        conn,
+        client_id=client_id,
+        customer_id=customer_id,
+        subscription_id=subscription_id,
+        checkout_session_id=session_id,
+        price_id=stripe_subscription_price_id(subscription_payload),
+        stripe_status=stripe_status,
+        current_period_end=subscription_payload.get('current_period_end') or '',
+        event_id=sync_event_id,
+        actor=actor,
+    )
+    now_value = datetime.now().isoformat(timespec='seconds')
+    conn.execute(
+        '''INSERT OR IGNORE INTO stripe_webhook_events (event_id, event_type, object_id, client_id, status, received_at, processed_at)
+           VALUES (?,?,?,?,?,?,?)''',
+        (sync_event_id, 'checkout.session.synced', session_id, client_id, 'processed', now_value, now_value),
+    )
+    conn.execute(
+        '''UPDATE stripe_webhook_events
+           SET client_id=?, status='processed', processed_at=?, error_message=''
+           WHERE event_id=?''',
+        (client_id, now_value, sync_event_id),
+    )
+    return {
+        'customer_id': customer_id,
+        'subscription_id': subscription_id,
+        'stripe_status': stripe_status,
+        'current_period_end': subscription_payload.get('current_period_end') or '',
+    }
 
 
 def verify_stripe_webhook_signature(payload: bytes, signature_header: str, webhook_secret: str) -> bool:
@@ -3770,6 +3848,53 @@ def subscription_status_options():
 
 def subscription_status_label_map():
     return dict(subscription_status_options())
+
+
+def admin_subscription_snapshot(businesses) -> dict:
+    service_labels = service_level_label_map()
+    active_statuses = {'active', 'past_due'}
+    by_plan = {}
+    by_business_category = {}
+    active_rows = []
+    active_count = 0
+    monthly_total = 0.0
+    for row in businesses or []:
+        status = normalize_subscription_status(row['subscription_status'] or '')
+        if status not in active_statuses:
+            continue
+        amount = float(row['subscription_amount'] or 0)
+        interval = (row['subscription_interval'] or 'monthly').strip().lower()
+        monthly_amount = amount / 12 if interval in {'annual', 'annually', 'year', 'yearly'} else amount
+        plan_key = normalize_service_level(row['service_level'] or default_service_level())
+        plan_label = service_labels.get(plan_key, plan_key.replace('_', ' ').title())
+        category = (row['business_category'] or row['business_type'] or 'Uncategorized').strip() or 'Uncategorized'
+        active_count += 1
+        monthly_total += monthly_amount
+        by_plan.setdefault(plan_label, {'label': plan_label, 'count': 0, 'monthly_total': 0.0})
+        by_plan[plan_label]['count'] += 1
+        by_plan[plan_label]['monthly_total'] += monthly_amount
+        by_business_category.setdefault(category, {'label': category, 'count': 0, 'monthly_total': 0.0})
+        by_business_category[category]['count'] += 1
+        by_business_category[category]['monthly_total'] += monthly_amount
+        active_rows.append({
+            'business_name': row['business_name'],
+            'business_category': category,
+            'plan_label': plan_label,
+            'amount': amount,
+            'monthly_amount': monthly_amount,
+            'interval': interval or 'monthly',
+            'status': status,
+            'stripe_subscription_id': row['stripe_subscription_id'] or '',
+            'next_billing': row['subscription_next_billing_date'] or '',
+        })
+    active_rows.sort(key=lambda item: (item['plan_label'], item['business_name'] or ''))
+    return {
+        'active_count': active_count,
+        'monthly_total': monthly_total,
+        'by_plan': sorted(by_plan.values(), key=lambda item: (-item['monthly_total'], item['label'])),
+        'by_business_category': sorted(by_business_category.values(), key=lambda item: (-item['monthly_total'], item['label'])),
+        'active_rows': active_rows,
+    }
 
 
 def default_subscription_status() -> str:
@@ -12512,7 +12637,8 @@ def cpa_dashboard():
         participants = chat_participants(selected_id)
         latest_review = latest_review_request(selected_id)
     selected_business_payments = business_payment_summary(selected_id) if selected_id else {'rows': [], 'amount_due': 0.0, 'paid_total': 0.0, 'pending_count': 0, 'paid_count': 0, 'cancelled_count': 0}
-    return render_template('cpa_dashboard.html', businesses=businesses, totals=cpa_dashboard_summary(user), review_alerts=pending_review_alerts(), selected_client_id=selected_id, selected_business=selected_business, messenger_rows=messenger_rows, participants=participants, latest_review=latest_review, pending_worker_requests=pending_worker_requests, pending_worker_requests_all=pending_worker_requests_all, business_login_counts=per_business_login_counts(visible_client_ids(user)), account_activity_rows=recent_account_activity(visible_client_ids(user), limit=25), chat_unread_count=unread_message_count(selected_id, user['id']) if selected_id else 0, chat_recipients=available_recipients(selected_id, user) if selected_id else [], selected_recipient_id=default_recipient_id(selected_id, user) if selected_id else None, latest_incoming_message=latest_incoming_message(selected_id, user['id']) if selected_id else None, selected_business_payments=selected_business_payments, selected_payment_methods=selected_payment_methods, selected_payment_method_summary=payment_method_summary(selected_payment_methods), selected_stripe_events=selected_stripe_events, payment_statuses=business_payment_statuses(), payment_type_options=payment_type_options(), collection_method_options=collection_method_options(), collection_method_labels=collection_method_label_map(), payment_method_type_options=payment_method_type_options(), payment_method_status_options=payment_method_status_options(), payment_method_type_labels=payment_method_type_label_map(), payment_method_status_labels=payment_method_status_label_map(), subscription_status_options=subscription_status_options(), subscription_status_labels=subscription_status_label_map(), service_level_options=service_level_options(), service_level_labels=service_level_label_map(), suggested_payment_amounts=suggested_payment_amounts_map(), all_payment_items=all_business_payment_items(), payment_csrf_token=payment_csrf_token())
+    subscription_snapshot = admin_subscription_snapshot(businesses)
+    return render_template('cpa_dashboard.html', businesses=businesses, totals=cpa_dashboard_summary(user), review_alerts=pending_review_alerts(), selected_client_id=selected_id, selected_business=selected_business, messenger_rows=messenger_rows, participants=participants, latest_review=latest_review, pending_worker_requests=pending_worker_requests, pending_worker_requests_all=pending_worker_requests_all, business_login_counts=per_business_login_counts(visible_client_ids(user)), account_activity_rows=recent_account_activity(visible_client_ids(user), limit=25), chat_unread_count=unread_message_count(selected_id, user['id']) if selected_id else 0, chat_recipients=available_recipients(selected_id, user) if selected_id else [], selected_recipient_id=default_recipient_id(selected_id, user) if selected_id else None, latest_incoming_message=latest_incoming_message(selected_id, user['id']) if selected_id else None, selected_business_payments=selected_business_payments, selected_payment_methods=selected_payment_methods, selected_payment_method_summary=payment_method_summary(selected_payment_methods), selected_stripe_events=selected_stripe_events, payment_statuses=business_payment_statuses(), payment_type_options=payment_type_options(), collection_method_options=collection_method_options(), collection_method_labels=collection_method_label_map(), payment_method_type_options=payment_method_type_options(), payment_method_status_options=payment_method_status_options(), payment_method_type_labels=payment_method_type_label_map(), payment_method_status_labels=payment_method_status_label_map(), subscription_status_options=subscription_status_options(), subscription_status_labels=subscription_status_label_map(), service_level_options=service_level_options(), service_level_labels=service_level_label_map(), suggested_payment_amounts=suggested_payment_amounts_map(), all_payment_items=all_business_payment_items(), subscription_snapshot=subscription_snapshot, payment_csrf_token=payment_csrf_token())
 
 
 
@@ -13707,8 +13833,24 @@ def business_payments_page():
                     flash('Payment method not found.', 'error')
                 return redirect(url_for('business_payments_page', client_id=client_id))
     checkout_outcome = request.args.get('stripe_checkout', '').strip().lower()
+    checkout_session_id = request.args.get('session_id', '').strip()
     if checkout_outcome == 'success':
-        flash('Stripe checkout completed. Subscription status will update as soon as Stripe confirms the payment webhook.', 'success')
+        if checkout_session_id:
+            try:
+                with get_conn() as conn:
+                    stripe_sync_checkout_session(
+                        conn,
+                        client_id=client_id,
+                        checkout_session_id=checkout_session_id,
+                        actor=user,
+                        event_id=f"checkout_return:{checkout_session_id}",
+                    )
+                    conn.commit()
+                flash('Stripe checkout completed and LedgerFlow synced the subscription confirmation.', 'success')
+            except Exception as exc:
+                flash(f'Stripe checkout completed, but LedgerFlow could not sync the subscription confirmation yet: {str(exc)[:180]}', 'error')
+        else:
+            flash('Stripe checkout completed. Subscription status will update as soon as Stripe confirms the payment webhook.', 'success')
     elif checkout_outcome == 'cancel':
         flash('Stripe checkout was cancelled. No subscription payment was completed.', 'error')
     summary = business_payment_summary(client_id)
@@ -13845,6 +13987,40 @@ def open_stripe_customer_portal():
         )
         conn.commit()
     return redirect(portal_url)
+
+
+@app.route('/business-payments/stripe-sync', methods=['POST'])
+@login_required
+def sync_stripe_subscription_confirmation():
+    user = current_user()
+    client_id = selected_client_id(user, 'post')
+    if not valid_payment_csrf(request.form.get('csrf_token', '')):
+        flash('Your session expired. Refresh the page and try again.', 'error')
+        return redirect(url_for('business_payments_page', client_id=client_id))
+    return_to_admin = user['role'] == 'admin' and request.form.get('return_to') == 'cpa_dashboard'
+    redirect_target = url_for('cpa_dashboard', client_id=client_id) if return_to_admin else url_for('business_payments_page', client_id=client_id)
+    with get_conn() as conn:
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        if not client or not allowed_client(user, client_id):
+            abort(403)
+        session_id = (client['stripe_checkout_session_id'] or '').strip()
+        if not session_id:
+            flash('No Stripe checkout session is saved for this business yet. Start Stripe Checkout first.', 'error')
+            return redirect(redirect_target)
+        try:
+            stripe_sync_checkout_session(
+                conn,
+                client_id=client_id,
+                checkout_session_id=session_id,
+                actor=user,
+                event_id=f"manual_checkout_sync:{session_id}",
+            )
+            conn.commit()
+            flash('Stripe subscription confirmation synced into LedgerFlow.', 'success')
+        except Exception as exc:
+            conn.rollback()
+            flash(f'Could not sync Stripe subscription confirmation yet: {str(exc)[:180]}', 'error')
+    return redirect(redirect_target)
 
 
 @app.route('/stripe/webhook', methods=['POST'])
