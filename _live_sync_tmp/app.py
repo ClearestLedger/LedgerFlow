@@ -4071,6 +4071,19 @@ def valid_payment_csrf(submitted_token: str) -> bool:
     return bool(submitted_token and expected_token and secrets.compare_digest(submitted_token, expected_token))
 
 
+def dashboard_csrf_token() -> str:
+    token = session.get('dashboard_csrf_token')
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session['dashboard_csrf_token'] = token
+    return token
+
+
+def valid_dashboard_csrf(submitted_token: str) -> bool:
+    expected_token = session.get('dashboard_csrf_token') or ''
+    return bool(submitted_token and expected_token and secrets.compare_digest(submitted_token, expected_token))
+
+
 def normalize_payment_link(value: str) -> str | None:
     value = (value or '').strip()
     if not value:
@@ -6941,6 +6954,9 @@ def init_db():
                 stripe_subscription_status TEXT DEFAULT '',
                 stripe_current_period_end TEXT DEFAULT '',
                 stripe_last_event_id TEXT DEFAULT '',
+                monthly_revenue_goal REAL NOT NULL DEFAULT 0,
+                annual_revenue_goal REAL NOT NULL DEFAULT 0,
+                revenue_goal_updated_at TEXT DEFAULT '',
                 onboarding_status TEXT DEFAULT 'completed',
                 onboarding_started_at TEXT DEFAULT '',
                 onboarding_completed_at TEXT DEFAULT '',
@@ -7615,6 +7631,9 @@ def init_db():
         ensure_column(conn, 'clients', 'stripe_subscription_status', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'stripe_current_period_end', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'stripe_last_event_id', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'monthly_revenue_goal', 'REAL NOT NULL DEFAULT 0')
+        ensure_column(conn, 'clients', 'annual_revenue_goal', 'REAL NOT NULL DEFAULT 0')
+        ensure_column(conn, 'clients', 'revenue_goal_updated_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'onboarding_status', "TEXT DEFAULT 'completed'")
         ensure_column(conn, 'clients', 'onboarding_started_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'onboarding_completed_at', "TEXT DEFAULT ''")
@@ -8627,6 +8646,70 @@ def empty_report_graphics_snapshot() -> dict:
             {'label': 'Other', 'amount': 0, 'percent': 100, 'tone': 'other'},
         ],
         'kpis': [],
+    }
+
+
+def owner_goal_snapshot(client_id: int, client) -> dict:
+    today = date.today()
+    month_start = date(today.year, today.month, 1)
+    next_month = month_shift(month_start, 1)
+    year_start = date(today.year, 1, 1)
+    next_year = date(today.year + 1, 1, 1)
+    monthly_goal = float(row_value(client, 'monthly_revenue_goal', 0) or 0)
+    annual_goal = float(row_value(client, 'annual_revenue_goal', 0) or 0)
+    try:
+        with get_conn() as conn:
+            monthly_revenue = float(conn.execute(
+                '''SELECT COALESCE(SUM(paid_amount),0) v
+                   FROM invoices
+                   WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate'
+                     AND invoice_date>=? AND invoice_date<?''',
+                (client_id, month_start.isoformat(), next_month.isoformat()),
+            ).fetchone()['v'] or 0)
+            annual_revenue = float(conn.execute(
+                '''SELECT COALESCE(SUM(paid_amount),0) v
+                   FROM invoices
+                   WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate'
+                     AND invoice_date>=? AND invoice_date<?''',
+                (client_id, year_start.isoformat(), next_year.isoformat()),
+            ).fetchone()['v'] or 0)
+    except Exception:
+        monthly_revenue = 0.0
+        annual_revenue = 0.0
+
+    def progress(current: float, goal: float) -> dict:
+        percent = (current / goal * 100) if goal else 0.0
+        return {
+            'goal': round(goal, 2),
+            'current': round(current, 2),
+            'remaining': round(max(goal - current, 0), 2),
+            'percent': round(percent, 1),
+            'bar_percent': round(min(max(percent, 0), 100), 1),
+            'is_set': goal > 0,
+            'is_complete': goal > 0 and current >= goal,
+        }
+
+    monthly = progress(monthly_revenue, monthly_goal)
+    annual = progress(annual_revenue, annual_goal)
+    if not monthly['is_set'] and not annual['is_set']:
+        message = 'Set this month\'s revenue goal and turn the owner view into a daily scoreboard.'
+    elif monthly['is_complete']:
+        message = 'Monthly goal reached. Keep protecting profit while you decide whether to raise the target.'
+    elif monthly['is_set'] and monthly['current'] <= 0:
+        message = 'Add your current job or invoice to start moving the monthly goal bar.'
+    elif monthly['is_set']:
+        message = f"You are {monthly['percent']:.1f}% toward this month's goal."
+    elif annual['is_set']:
+        message = f"You are {annual['percent']:.1f}% toward this year's goal."
+    else:
+        message = 'Set a goal to make progress visible.'
+    return {
+        'monthly': monthly,
+        'annual': annual,
+        'month_label': today.strftime('%B %Y'),
+        'year_label': str(today.year),
+        'message': message,
+        'updated_at': row_value(client, 'revenue_goal_updated_at', '') or '',
     }
 
 
@@ -14257,11 +14340,59 @@ def stripe_webhook():
     return jsonify({'received': True})
 
 
-@app.route('/dashboard')
+@app.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def dashboard():
     user = current_user()
-    client_id = selected_client_id(user, 'get')
+    client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    if request.method == 'POST':
+        action = request.form.get('action', '').strip().lower()
+        if action == 'update_owner_goal':
+            if not valid_dashboard_csrf(request.form.get('csrf_token', '')):
+                flash('Your session expired. Refresh the page and try again.', 'error')
+                return redirect(url_for('dashboard', client_id=client_id))
+            errors = []
+
+            def clean_goal(field_name: str, label: str) -> float:
+                raw = (request.form.get(field_name) or '').strip().replace(',', '')
+                if not raw:
+                    return 0.0
+                try:
+                    value = float(raw)
+                except ValueError:
+                    errors.append(f'{label} must be a valid number.')
+                    return 0.0
+                if value < 0:
+                    errors.append(f'{label} cannot be negative.')
+                    return 0.0
+                return min(value, 999999999.0)
+
+            monthly_goal = clean_goal('monthly_revenue_goal', 'Monthly revenue goal')
+            annual_goal = clean_goal('annual_revenue_goal', 'Annual revenue goal')
+            with get_conn() as conn:
+                client_check = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
+                if not client_check or not allowed_client(user, client_id):
+                    abort(403)
+                if errors:
+                    for error in errors:
+                        flash(error, 'error')
+                    return redirect(url_for('dashboard', client_id=client_id))
+                conn.execute(
+                    '''UPDATE clients
+                       SET monthly_revenue_goal=?, annual_revenue_goal=?, revenue_goal_updated_at=?, updated_at=?, updated_by_user_id=?
+                       WHERE id=?''',
+                    (
+                        monthly_goal,
+                        annual_goal,
+                        datetime.now().isoformat(timespec='seconds'),
+                        datetime.now().isoformat(timespec='seconds'),
+                        user['id'],
+                        client_id,
+                    ),
+                )
+                conn.commit()
+            flash('Owner revenue goal updated.', 'success')
+            return redirect(url_for('dashboard', client_id=client_id))
     with get_conn() as conn:
         workspace_warning = prepare_ops_workspace(conn, client_id)
         client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
@@ -14301,6 +14432,8 @@ def dashboard():
         invoices=invoice_rows,
         summary=summary_data,
         dashboard_graphics=dashboard_graphics,
+        owner_goal=owner_goal_snapshot(client_id, client),
+        dashboard_csrf_token=dashboard_csrf_token(),
         payment_method_summary=payment_method_summary(payment_methods),
         subscription_status_labels=subscription_status_label_map(),
         admin_fee_summary=admin_fee_summary,
