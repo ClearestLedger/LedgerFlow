@@ -218,9 +218,9 @@
 <div class='card hero-surface' style='margin-top:16px'>
   <div class='card-head'><h3>Billing Setup Center &middot; {{ selected_business.business_name }}</h3><span class='badge'>Subscription + Method On File</span></div>
   <div class='summary-strip' style='margin-bottom:12px'>
-    <span class='summary-pill'>Recurring subscription settings</span>
-    <span class='summary-pill'>Default + backup method on file</span>
-    <span class='summary-pill'>One-time fees managed separately below</span>
+    <a class='summary-pill' style='text-decoration:none' href='#billing-subscription-settings' onclick="document.getElementById('billing-subscription-settings').open=true">Open subscription settings</a>
+    <a class='summary-pill' style='text-decoration:none' href='#billing-payment-methods' onclick="document.getElementById('billing-payment-methods').open=true">Open default + backup method</a>
+    <a class='summary-pill' style='text-decoration:none' href='#administrator-extra-fees'>Open one-time admin fees</a>
   </div>
   <div class='grid cards-4' style='margin-bottom:12px'>
     <div class='card stat-card premium-stat'><h3>Status</h3><div class='metric'>{{ subscription_status_labels.get(selected_business.subscription_status or 'inactive', 'Inactive') }}</div></div>
@@ -278,7 +278,7 @@
     </details>
     {% endif %}
   </div>
-  <details class='compact-details'>
+  <details class='compact-details' id='billing-subscription-settings'>
     <summary>Subscription Settings</summary>
     <form method='post' class='form-grid' style='margin-top:12px'>
       <input type='hidden' name='action' value='update_subscription_profile'>
@@ -297,7 +297,7 @@
     </form>
   </details>
 
-  <details class='compact-details' style='margin-top:14px'>
+  <details class='compact-details' id='billing-payment-methods' style='margin-top:14px'>
     <summary>Payment Methods On File{% if selected_payment_methods %} ({{ selected_payment_methods|length }}){% endif %}</summary>
     <div class='small' style='margin:12px 0'>Keep one clear default method and one optional backup. Enter safe setup details only.</div>
     <form method='post' class='form-grid payment-method-form card' style='margin-bottom:12px;box-shadow:none;border:1px solid #E6ECF2'>
@@ -362,7 +362,7 @@
 {% endif %}
 
 {% if selected_business %}
-<div class='card section-frame' style='margin-top:16px'>
+<div class='card section-frame' id='administrator-extra-fees' style='margin-top:16px'>
   <div class='card-head'><h3>Administrator Extra Fees &middot; {{ selected_business.business_name }}</h3><span class='badge'>Billing Foundation</span></div>
   <div class='card' style='margin-bottom:14px;box-shadow:none;border:1px solid #E6ECF2'>
     <div class='small-label'>ADMINISTRATOR EXTRA FEES</div>
