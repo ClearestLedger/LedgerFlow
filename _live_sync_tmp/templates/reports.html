@@ -45,6 +45,12 @@
   .report-prime-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
   .report-prime-actions .btn{background:#fff;color:#17384F;border-color:#fff}
   .report-prime-actions .btn.btn-secondary{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.35)}
+  .report-filter-fold{margin-bottom:16px;border:1px solid #DDE8F0;background:linear-gradient(180deg,#fff,#F8FBFF);box-shadow:0 12px 30px rgba(28,55,78,.05)}
+  .report-filter-fold summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;font-weight:900;color:#16384F}
+  .report-filter-fold summary::-webkit-details-marker{display:none}
+  .report-filter-summary{display:flex;gap:8px;flex-wrap:wrap;align-items:center;color:#546A7B;font-weight:800;font-size:.88rem}
+  .report-filter-body{padding:0 18px 18px}
+  .report-filter-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
   @media (max-width:900px){.report-kpi-grid,.report-chart-wrap{grid-template-columns:1fr}.report-donut-row{grid-template-columns:1fr}.report-donut{margin:auto}.report-kpi-grid{gap:10px}}
   @media (max-width:900px){.report-prime-strip{background:linear-gradient(145deg,#17384F,#1F5D8C)}.report-prime-content,.report-prime-cards{grid-template-columns:1fr}.report-prime-panel{color:#16384F}}
 </style>
@@ -58,6 +64,8 @@
   'mileage': tr('Mileage')
 } %}
 {% set graph = report_graphics %}
+{% set selected_worker = (workers|selectattr('id','equalto',worker_id)|list|first) if worker_id else none %}
+{% set selected_invoice = (invoices|selectattr('id','equalto',invoice_id)|list|first) if invoice_id else none %}
 <div class='card report-prime-strip'>
   <div class='report-prime-content'>
     <div>
@@ -94,28 +102,44 @@
     </div>
   </div>
 </div>
-<div class='toolbar' id='report-filters'>
-  <form method='get' class='inline-form report-filters'>
-    {% if current_user.role=='admin' %}
-      <label>{{ tr('Business') }}</label>
-      <select name='client_id'>{% for c in all_clients %}<option value='{{ c.id }}' {% if c.id==client_id %}selected{% endif %}>{{ c.business_name }}</option>{% endfor %}</select>
-    {% endif %}
-    <label>{{ tr('Report') }}</label>
-    <select name='report_type'>
-      {% for opt in ['summary','workers','payments','invoices','gas','materials','mileage'] %}
-        <option value='{{ opt }}' {% if report_type==opt %}selected{% endif %}>{{ report_labels.get(opt, opt.title()) }}</option>
-      {% endfor %}
-    </select>
-    <label>{{ tr('From') }}</label><input type='date' name='start_date' value='{{ start_date }}'>
-    <label>{{ tr('To') }}</label><input type='date' name='end_date' value='{{ end_date }}'>
-    <label>{{ tr('Worker') }}</label>
-    <select name='worker_id'><option value=''>{{ tr('All') }}</option>{% for w in workers %}<option value='{{ w.id }}' {% if worker_id==w.id %}selected{% endif %}>{{ w.name }}</option>{% endfor %}</select>
-    <label>{{ tr('Invoices') }}</label>
-    <select name='invoice_id'><option value=''>{{ tr('All') }}</option>{% for i in invoices %}<option value='{{ i.id }}' {% if invoice_id==i.id %}selected{% endif %}>#{{ i.job_number }} &middot; {{ i.client_name }}</option>{% endfor %}</select>
-    <button type='submit'>{{ tr('Run Report') }}</button>
-  </form>
-  <button onclick='window.print()' class='btn btn-dark' type='button'>{{ tr('Print Current Report') }}</button>
-</div>
+<details class='card report-filter-fold' id='report-filters'>
+  <summary>
+    <span>{{ tr('Report Filters') }}</span>
+    <span class='report-filter-summary'>
+      <span>{{ report_labels.get(report_type, report_type.title()) }}</span>
+      <span>&middot;</span>
+      <span>{{ start_date or tr('Any start') }} {{ tr('to') }} {{ end_date or tr('Today') }}</span>
+      <span>&middot;</span>
+      <span>{{ selected_worker.name if selected_worker else tr('All workers') }}</span>
+      {% if selected_invoice %}<span>&middot; #{{ selected_invoice.job_number }} {{ selected_invoice.client_name }}</span>{% endif %}
+    </span>
+  </summary>
+  <div class='report-filter-body'>
+    <form method='get' class='inline-form report-filters'>
+      {% if current_user.role=='admin' %}
+        <label>{{ tr('Business') }}</label>
+        <select name='client_id'>{% for c in all_clients %}<option value='{{ c.id }}' {% if c.id==client_id %}selected{% endif %}>{{ c.business_name }}</option>{% endfor %}</select>
+      {% endif %}
+      <label>{{ tr('Report') }}</label>
+      <select name='report_type'>
+        {% for opt in ['summary','workers','payments','invoices','gas','materials','mileage'] %}
+          <option value='{{ opt }}' {% if report_type==opt %}selected{% endif %}>{{ report_labels.get(opt, opt.title()) }}</option>
+        {% endfor %}
+      </select>
+      <label>{{ tr('From') }}</label><input type='date' name='start_date' value='{{ start_date }}'>
+      <label>{{ tr('To') }}</label><input type='date' name='end_date' value='{{ end_date }}'>
+      <label>{{ tr('Worker') }}</label>
+      <select name='worker_id'><option value=''>{{ tr('All') }}</option>{% for w in workers %}<option value='{{ w.id }}' {% if worker_id==w.id %}selected{% endif %}>{{ w.name }}</option>{% endfor %}</select>
+      <label>{{ tr('Invoices') }}</label>
+      <select name='invoice_id'><option value=''>{{ tr('All') }}</option>{% for i in invoices %}<option value='{{ i.id }}' {% if invoice_id==i.id %}selected{% endif %}>#{{ i.job_number }} &middot; {{ i.client_name }}</option>{% endfor %}</select>
+      <button type='submit'>{{ tr('Run Report') }}</button>
+    </form>
+    <div class='report-filter-actions'>
+      <button onclick='window.print()' class='btn btn-secondary' type='button'>{{ tr('Print Current Report') }}</button>
+      <a class='btn btn-secondary' href='#live-finance-graphics'>{{ tr('Back to Graphics') }}</a>
+    </div>
+  </div>
+</details>
 
 <div class='card report-visual-hero' id='live-finance-graphics' style='margin-bottom:16px'>
   <div class='report-visual-content'>
