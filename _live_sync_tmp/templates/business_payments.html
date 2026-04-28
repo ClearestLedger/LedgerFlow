@@ -80,6 +80,43 @@
   <div class='tier-rollout-note' style='margin-bottom:14px'>
     {{ tr('This live portal is billed as a private administrator-managed client service. Your selected plan and method on file are active now, while fully automated self-checkout and premium banking tools continue through final rollout.') }}
   </div>
+  <div class='card section-frame' style='margin-bottom:14px;box-shadow:none;border:1px solid #DDE8F0;background:#F8FAFC'>
+    <div class='card-head'>
+      <h3>Secure Subscription Checkout</h3>
+      <span class='badge'>{% if stripe_config.configured %}{% if stripe_config.test_mode %}Stripe Test Mode{% else %}Stripe Ready{% endif %}{% else %}Setup Needed{% endif %}</span>
+    </div>
+    <div class='small'>
+      Use hosted Stripe Checkout to collect the monthly LedgerFlow subscription. LedgerFlow does not collect full card numbers here; Stripe handles the secure payment page and sends payouts through the connected Stripe account.
+    </div>
+    <div class='summary-strip' style='margin-top:10px'>
+      <span class='summary-pill'>Customer: {{ client.stripe_customer_id or 'not connected yet' }}</span>
+      <span class='summary-pill'>Subscription: {{ client.stripe_subscription_id or 'not active yet' }}</span>
+      <span class='summary-pill'>Stripe status: {{ client.stripe_subscription_status or client.subscription_status or 'inactive' }}</span>
+    </div>
+    <div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:12px'>
+      {% if stripe_config.configured %}
+      <form method='post' action='{{ url_for("start_stripe_subscription_checkout") }}'>
+        <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
+        <input type='hidden' name='client_id' value='{{ client_id }}'>
+        <button type='submit' class='btn btn-secondary'>Open Secure Stripe Checkout</button>
+      </form>
+      {% if client.stripe_customer_id %}
+      <form method='post' action='{{ url_for("open_stripe_customer_portal") }}'>
+        <input type='hidden' name='csrf_token' value='{{ payment_csrf_token }}'>
+        <input type='hidden' name='client_id' value='{{ client_id }}'>
+        <button type='submit' class='btn btn-secondary'>Open Stripe Customer Portal</button>
+      </form>
+      {% endif %}
+      {% else %}
+      <button type='button' class='btn btn-secondary' disabled>Stripe checkout not connected yet</button>
+      {% if current_user.role == 'admin' %}
+      <div class='small' style='align-self:center'>Missing: {{ stripe_config.missing|join(', ') }}</div>
+      {% else %}
+      <div class='small' style='align-self:center'>The administrator is still connecting secure subscription checkout.</div>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
   {% if access_level_override_active(client) %}
   <div class='card section-frame' style='margin-bottom:14px;box-shadow:none'>
     <div class='small'><strong>{{ tr('Administrator access override active') }}:</strong> {{ tr('This business is billed on') }} <strong>{{ billed_tier.label if billed_tier else effective_service_level_label(client) }}</strong>, {{ tr('but the workspace is intentionally unlocked at') }} <strong>{{ effective_service_level_label(client) }}</strong>. {{ tr('This lets your administrator grant broader tools without changing the subscription price being paid.') }}</div>

@@ -411,3 +411,43 @@
   - `Rafa` completed the Business 3 live checklist successfully
   - Batch 2 has now reached its planned limit of two added businesses after the Batch 1 pass
   - do not add another real business until Batch 2 has its observation window and the rollout gate is intentionally advanced
+- Banking launch decision recorded on 2026-04-28:
+  - first business launch should not include live bank connection, raw bank data storage, custom ACH, or direct-deposit money movement
+  - near-term finance scope stays focused on bookkeeping records, manual income/expense entry, payroll records, profit visibility, and future statement/CSV import preparation
+  - actual direct deposit and bank/card handling should remain with external providers until a later LedgerFlow 2 / advanced bookkeeping phase has provider review, legal wording, consent, audit logs, and support procedures
+- Track 2 delegated-access strategy recorded on 2026-04-28:
+  - LedgerFlow Business should support a middle access layer between full owner access and restricted worker access
+  - owner should invite managers, office staff, bookkeepers, payroll leads, estimators, or crew managers through role presets plus custom permission toggles
+  - sensitive payroll, tax ID, direct-deposit notes, full financial reports, exports, delete/archive actions, billing controls, and user-permission controls must stay off unless explicitly granted
+  - role enforcement must be server-side with audit logs, not just UI hiding
+- Track 2 delegated-access architecture pack completed on 2026-04-28:
+  - created `TRACK2_DELEGATED_ACCESS_ARCHITECTURE` as a sidecar planning pack with no live app changes
+  - documented the owner / manager-staff-bookkeeper / worker access layers
+  - defined role presets, sensitive permission toggles, default-deny server-side enforcement, owner invite flow, audit events, implementation phases, and QA release gates
+  - this prepares the future LedgerFlow Business permission build while Batch 2 remains protected during observation
+- Track 2 launch separation plan completed on 2026-04-28:
+  - created `TRACK2_LAUNCH_SEPARATION_PLAN` as a sidecar planning pack with no live app changes
+  - documented why LedgerFlow Business should separate from the admin-managed rollout before owner-only SaaS permissions, onboarding, billing/trial conversion, and public marketing are pushed broadly
+  - defined recommended Render/GitHub separation, environment boundaries, data/permission boundaries, cutover phases, and launch-gate checklist
+  - decision remains: do not execute the actual split until Batch 2 observation is clean and the current Track 1 baseline is backed up
+- Track 2 onboarding and trial-conversion plan completed on 2026-04-28:
+  - created `TRACK2_ONBOARDING_TRIAL_CONVERSION_PLAN` as a sidecar planning pack with no live app changes
+  - defined the future first-touch free-trial flow, trial welcome experience, save-and-continue setup, education/video rules, implementation phases, and QA/conversion gates
+  - decision: first launch should use optional videos and strong in-app guidance, but videos must not block launch
+  - decision: onboarding should minimize required fields, delay heavy setup/pricing overload, and get the owner quickly to first useful action
+- Future admin business-list UX correction noted on 2026-04-28:
+  - on administrator `/clients`, `New Business Profile` should stay accessible from the left menu or top business action area but open as a focused full-page workspace instead of feeling squeezed into the current split layout
+  - the business list should be cleaner and more compact, likely showing business names/status summaries first instead of long full-detail cards in one continuous scroll
+  - selecting a business should open that business into a focused full-page detail/manage view so the administrator is not forced to scan a crowded right-side list
+  - this should be handled in a later admin UX polish phase, not during the current Batch 2 observation unless it becomes a stop-level issue
+- Track 2 workspace legs architecture pack completed on 2026-04-28:
+  - created `TRACK2_WORKSPACE_LEGS_ARCHITECTURE` as a sidecar planning pack with no live app changes
+  - documented the future business workspace structure: Owner View, Clients & Sales, Jobs & Profit, Estimates & Invoices, Workers & Time, Payroll & Payments, Reports & Finance, and Settings & Help
+  - defined menu/submenu rules, focused full-page form patterns, compact list-to-detail behavior, mobile app-style rules, implementation phases, and QA gates
+  - this supports the long-term goal of reducing crowded pages while keeping every business function organized inside its correct product leg
+- Subscription payment activation phase implemented on 2026-04-28:
+  - added Stripe-hosted subscription checkout support behind environment variables so no full card numbers are collected inside LedgerFlow
+  - added Stripe customer portal launch support, webhook signature verification, Stripe customer/subscription/session database fields, webhook event tracking, and subscription status sync
+  - Billing Center now shows a Secure Subscription Checkout panel that is safely disabled until Stripe secret key and price IDs are configured
+  - local verification passed for missing-config safety, fake configured hosted checkout redirect, and webhook-driven subscription activation
+  - this is separate from bank connection/direct deposit and is required for real subscription collection before broader business launch

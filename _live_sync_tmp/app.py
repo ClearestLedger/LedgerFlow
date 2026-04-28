@@ -12,6 +12,7 @@ import shutil
 import tempfile
 import zipfile
 import unicodedata
+import hmac
 from email.message import EmailMessage
 from email.utils import parseaddr
 from cryptography.fernet import Fernet
@@ -2696,6 +2697,285 @@ def subscription_tier_view_data():
 
 def subscription_tier_view_map():
     return {item['key']: item for item in subscription_tier_view_data()}
+
+
+class StripeBillingError(RuntimeError):
+    pass
+
+
+def env_truthy(name: str, default: str = '0') -> bool:
+    return (os.environ.get(name, default) or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def stripe_secret_key() -> str:
+    return (os.environ.get('STRIPE_SECRET_KEY') or '').strip()
+
+
+def stripe_webhook_secret() -> str:
+    return (os.environ.get('STRIPE_WEBHOOK_SECRET') or '').strip()
+
+
+def stripe_price_env_keys(service_level: str) -> list[str]:
+    normalized = normalize_service_level(service_level)
+    return {
+        'self_service': ['STRIPE_PRICE_SELF_SERVICE', 'STRIPE_PRICE_ESSENTIAL', 'STRIPE_PRICE_ESSENTIAL_MONTHLY'],
+        'assisted_service': ['STRIPE_PRICE_ASSISTED_SERVICE', 'STRIPE_PRICE_GROWTH', 'STRIPE_PRICE_GROWTH_MONTHLY'],
+        'premium_principal': ['STRIPE_PRICE_PREMIUM_PRINCIPAL', 'STRIPE_PRICE_PREMIUM', 'STRIPE_PRICE_PREMIUM_MONTHLY'],
+    }.get(normalized, [])
+
+
+def stripe_price_id_for_service_level(service_level: str) -> str:
+    for key in stripe_price_env_keys(service_level):
+        value = (os.environ.get(key) or '').strip()
+        if value:
+            return value
+    return ''
+
+
+def stripe_billing_config_status(service_level: str) -> dict:
+    normalized = normalize_service_level(service_level)
+    missing = []
+    if not stripe_secret_key():
+        missing.append('STRIPE_SECRET_KEY')
+    price_id = stripe_price_id_for_service_level(normalized)
+    if not price_id:
+        missing.append(' or '.join(stripe_price_env_keys(normalized)) or 'STRIPE_PRICE_*')
+    return {
+        'configured': not missing,
+        'missing': missing,
+        'price_id': price_id,
+        'webhook_configured': bool(stripe_webhook_secret()),
+        'test_mode': stripe_secret_key().startswith('sk_test_'),
+        'allow_promotion_codes': env_truthy('STRIPE_ALLOW_PROMOTION_CODES', '0'),
+    }
+
+
+def stripe_checkout_return_url(client_id: int, outcome: str) -> str:
+    return public_app_url(url_for('business_payments_page', client_id=client_id, stripe_checkout=outcome))
+
+
+def stripe_api_post(path: str, data: dict) -> dict:
+    secret = stripe_secret_key()
+    if not secret:
+        raise StripeBillingError('Stripe is not configured yet. Add STRIPE_SECRET_KEY in Render before charging subscriptions.')
+    encoded = urlencode(data).encode('utf-8')
+    req = urlrequest.Request(
+        f"https://api.stripe.com/v1/{path.lstrip('/')}",
+        data=encoded,
+        method='POST',
+    )
+    token = base64.b64encode(f'{secret}:'.encode('utf-8')).decode('ascii')
+    req.add_header('Authorization', f'Basic {token}')
+    req.add_header('Content-Type', 'application/x-www-form-urlencoded')
+    req.add_header('Stripe-Version', '2024-06-20')
+    try:
+        with urlrequest.urlopen(req, timeout=20) as resp:
+            return json.loads(resp.read().decode('utf-8') or '{}')
+    except urlerror.HTTPError as exc:
+        body = exc.read().decode('utf-8', errors='replace')
+        try:
+            payload = json.loads(body)
+            message = payload.get('error', {}).get('message') or body
+        except Exception:
+            message = body or str(exc)
+        raise StripeBillingError(f'Stripe error: {message}') from exc
+    except urlerror.URLError as exc:
+        raise StripeBillingError(f'Could not reach Stripe: {exc.reason}') from exc
+
+
+def stripe_timestamp_to_date(value) -> str:
+    try:
+        timestamp = int(value or 0)
+    except (TypeError, ValueError):
+        return ''
+    if timestamp <= 0:
+        return ''
+    return datetime.utcfromtimestamp(timestamp).date().isoformat()
+
+
+def stripe_subscription_price_id(subscription_obj: dict) -> str:
+    try:
+        items = subscription_obj.get('items', {}).get('data', [])
+        if not items:
+            return ''
+        return (items[0].get('price', {}) or {}).get('id', '') or ''
+    except Exception:
+        return ''
+
+
+def stripe_trial_end_timestamp(client_row) -> int | None:
+    if not client_row:
+        return None
+    if int(row_value(client_row, 'trial_offer_days', 0) or 0) <= 0:
+        return None
+    raw_value = (row_value(client_row, 'trial_ends_at', '') or '').strip()
+    if not raw_value:
+        return None
+    try:
+        trial_end = datetime.fromisoformat(raw_value.replace('Z', '+00:00'))
+    except ValueError:
+        try:
+            trial_end = datetime.fromisoformat(raw_value[:10])
+        except ValueError:
+            return None
+    if trial_end <= datetime.now(trial_end.tzinfo):
+        return None
+    return int(trial_end.timestamp())
+
+
+def stripe_subscription_status_to_local(status: str) -> str:
+    normalized = (status or '').strip().lower()
+    if normalized in {'active', 'trialing'}:
+        return 'active'
+    if normalized in {'past_due', 'unpaid'}:
+        return 'past_due'
+    if normalized == 'paused':
+        return 'paused'
+    if normalized in {'canceled', 'incomplete_expired'}:
+        return 'canceled'
+    return 'inactive'
+
+
+def stripe_extract_client_id(conn: sqlite3.Connection, obj: dict) -> int | None:
+    metadata = obj.get('metadata') or {}
+    candidates = [
+        metadata.get('client_id'),
+        obj.get('client_reference_id'),
+    ]
+    for value in candidates:
+        try:
+            client_id = int(value)
+        except (TypeError, ValueError):
+            continue
+        if conn.execute('SELECT 1 FROM clients WHERE id=?', (client_id,)).fetchone():
+            return client_id
+    subscription_id = (obj.get('subscription') or '') if obj.get('object') != 'subscription' else (obj.get('id') or '')
+    customer_id = (obj.get('customer') or '') if isinstance(obj, dict) else ''
+    if subscription_id:
+        row = conn.execute('SELECT id FROM clients WHERE stripe_subscription_id=?', (subscription_id,)).fetchone()
+        if row:
+            return int(row['id'])
+    if customer_id:
+        row = conn.execute('SELECT id FROM clients WHERE stripe_customer_id=?', (customer_id,)).fetchone()
+        if row:
+            return int(row['id'])
+    return None
+
+
+def stripe_sync_subscription_fields(conn: sqlite3.Connection, *, client_id: int, customer_id: str = '', subscription_id: str = '', price_id: str = '', stripe_status: str = '', current_period_end='', checkout_session_id: str = '', event_id: str = '', actor=None):
+    client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+    if not client:
+        return
+    local_status = stripe_subscription_status_to_local(stripe_status) if stripe_status else (client['subscription_status'] or 'inactive')
+    next_billing = stripe_timestamp_to_date(current_period_end) or client['subscription_next_billing_date'] or ''
+    started_at = client['subscription_started_at'] or (datetime.now().isoformat(timespec='seconds') if local_status == 'active' else '')
+    canceled_at = datetime.now().isoformat(timespec='seconds') if local_status == 'canceled' and not client['subscription_canceled_at'] else ('' if local_status != 'canceled' else client['subscription_canceled_at'])
+    paused_at = datetime.now().isoformat(timespec='seconds') if local_status == 'paused' and not client['subscription_paused_at'] else ('' if local_status != 'paused' else client['subscription_paused_at'])
+    conn.execute(
+        '''UPDATE clients
+           SET stripe_customer_id=COALESCE(NULLIF(?, ''), stripe_customer_id),
+               stripe_subscription_id=COALESCE(NULLIF(?, ''), stripe_subscription_id),
+               stripe_checkout_session_id=COALESCE(NULLIF(?, ''), stripe_checkout_session_id),
+               stripe_price_id=COALESCE(NULLIF(?, ''), stripe_price_id),
+               stripe_subscription_status=COALESCE(NULLIF(?, ''), stripe_subscription_status),
+               stripe_current_period_end=COALESCE(NULLIF(?, ''), stripe_current_period_end),
+               stripe_last_event_id=COALESCE(NULLIF(?, ''), stripe_last_event_id),
+               subscription_status=?,
+               subscription_autopay_enabled=?,
+               subscription_next_billing_date=?,
+               subscription_started_at=?,
+               subscription_canceled_at=?,
+               subscription_paused_at=?,
+               default_payment_method_label=?,
+               default_payment_method_status=?,
+               updated_at=?,
+               updated_by_user_id=COALESCE(?, updated_by_user_id)
+           WHERE id=?''',
+        (
+            customer_id,
+            subscription_id,
+            checkout_session_id,
+            price_id,
+            stripe_status,
+            next_billing,
+            event_id,
+            local_status,
+            1 if local_status in {'active', 'past_due'} else int(client['subscription_autopay_enabled'] or 0),
+            next_billing,
+            started_at,
+            canceled_at,
+            paused_at,
+            'Stripe hosted subscription' if local_status in {'active', 'past_due'} else client['default_payment_method_label'],
+            'on_file' if local_status in {'active', 'past_due'} else client['default_payment_method_status'],
+            datetime.now().isoformat(timespec='seconds'),
+            row_value(actor, 'id', None),
+            client_id,
+        ),
+    )
+    if local_status in {'active', 'past_due'}:
+        existing = conn.execute(
+            "SELECT id FROM business_payment_methods WHERE client_id=? AND processor_reference LIKE ?",
+            (client_id, f'%{subscription_id or customer_id}%'),
+        ).fetchone()
+        if not existing:
+            conn.execute('UPDATE business_payment_methods SET is_default=0 WHERE client_id=?', (client_id,))
+            conn.execute(
+                '''INSERT INTO business_payment_methods
+                   (client_id, method_type, label, status, is_default, holder_name, brand_name, processor_reference, details_note, created_by_user_id, updated_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)''',
+                (
+                    client_id,
+                    'other',
+                    'Stripe hosted subscription',
+                    'active',
+                    1,
+                    client['business_name'] or '',
+                    'Stripe',
+                    ' / '.join([value for value in [customer_id, subscription_id] if value]),
+                    'Created automatically from Stripe hosted subscription checkout.',
+                    row_value(actor, 'id', None),
+                    datetime.now().isoformat(timespec='seconds'),
+                ),
+            )
+    elif subscription_id or customer_id:
+        conn.execute(
+            '''UPDATE business_payment_methods
+               SET status='inactive', updated_at=?
+               WHERE client_id=? AND label='Stripe hosted subscription'
+                 AND (processor_reference LIKE ? OR processor_reference LIKE ?)''',
+            (
+                datetime.now().isoformat(timespec='seconds'),
+                client_id,
+                f'%{subscription_id}%' if subscription_id else '__no_subscription_match__',
+                f'%{customer_id}%' if customer_id else '__no_customer_match__',
+            ),
+        )
+    sync_client_payment_method_summary(conn, client_id)
+    log_billing_activity(
+        conn,
+        client_id=client_id,
+        actor=actor,
+        status='stripe_subscription_synced',
+        detail=f"Stripe subscription sync updated status to {local_status}.",
+    )
+
+
+def verify_stripe_webhook_signature(payload: bytes, signature_header: str, webhook_secret: str) -> bool:
+    if not payload or not signature_header or not webhook_secret:
+        return False
+    parts = {}
+    for item in signature_header.split(','):
+        if '=' not in item:
+            continue
+        key, value = item.split('=', 1)
+        parts.setdefault(key, []).append(value)
+    timestamp = (parts.get('t') or [''])[0]
+    signatures = parts.get('v1') or []
+    if not timestamp or not signatures:
+        return False
+    signed_payload = f'{timestamp}.'.encode('utf-8') + payload
+    expected = hmac.new(webhook_secret.encode('utf-8'), signed_payload, hashlib.sha256).hexdigest()
+    return any(hmac.compare_digest(expected, signature) for signature in signatures)
 
 
 def service_level_options():
@@ -6517,6 +6797,13 @@ def init_db():
                 subscription_started_at TEXT DEFAULT '',
                 subscription_canceled_at TEXT DEFAULT '',
                 subscription_paused_at TEXT DEFAULT '',
+                stripe_customer_id TEXT DEFAULT '',
+                stripe_subscription_id TEXT DEFAULT '',
+                stripe_checkout_session_id TEXT DEFAULT '',
+                stripe_price_id TEXT DEFAULT '',
+                stripe_subscription_status TEXT DEFAULT '',
+                stripe_current_period_end TEXT DEFAULT '',
+                stripe_last_event_id TEXT DEFAULT '',
                 onboarding_status TEXT DEFAULT 'completed',
                 onboarding_started_at TEXT DEFAULT '',
                 onboarding_completed_at TEXT DEFAULT '',
@@ -6813,6 +7100,16 @@ def init_db():
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(client_id) REFERENCES clients(id),
                 FOREIGN KEY(created_by_user_id) REFERENCES users(id)
+            );
+            CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+                event_id TEXT PRIMARY KEY,
+                event_type TEXT DEFAULT '',
+                object_id TEXT DEFAULT '',
+                client_id INTEGER,
+                status TEXT DEFAULT 'received',
+                error_message TEXT DEFAULT '',
+                received_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                processed_at TEXT DEFAULT ''
             );
             CREATE TABLE IF NOT EXISTS worker_policy_notices (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -7174,6 +7471,13 @@ def init_db():
         ensure_column(conn, 'clients', 'subscription_started_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'subscription_canceled_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'subscription_paused_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'stripe_customer_id', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'stripe_subscription_id', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'stripe_checkout_session_id', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'stripe_price_id', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'stripe_subscription_status', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'stripe_current_period_end', "TEXT DEFAULT ''")
+        ensure_column(conn, 'clients', 'stripe_last_event_id', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'onboarding_status', "TEXT DEFAULT 'completed'")
         ensure_column(conn, 'clients', 'onboarding_started_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'clients', 'onboarding_completed_at', "TEXT DEFAULT ''")
@@ -13375,6 +13679,11 @@ def business_payments_page():
                 else:
                     flash('Payment method not found.', 'error')
                 return redirect(url_for('business_payments_page', client_id=client_id))
+    checkout_outcome = request.args.get('stripe_checkout', '').strip().lower()
+    if checkout_outcome == 'success':
+        flash('Stripe checkout completed. Subscription status will update as soon as Stripe confirms the payment webhook.', 'success')
+    elif checkout_outcome == 'cancel':
+        flash('Stripe checkout was cancelled. No subscription payment was completed.', 'error')
     summary = business_payment_summary(client_id)
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
@@ -13386,7 +13695,212 @@ def business_payments_page():
             (client_id,)
         ).fetchall()
     open_admin_fee_rows = [row for row in summary['rows'] if (row['status'] or 'pending') in {'pending', 'processing'}]
-    return render_template('business_payments.html', client=client, client_id=client_id, payment_rows=summary['rows'], payment_summary=summary, open_admin_fee_rows=open_admin_fee_rows, payment_methods=payment_methods, payment_method_summary=payment_method_summary(payment_methods), open_fee_guidance=open_fee_guidance(open_admin_fee_rows), fee_collection_guidance=fee_collection_guidance, collection_method_labels=collection_method_label_map(), payment_method_type_options=payment_method_type_options(), payment_method_status_options=payment_method_status_options(), payment_method_type_labels=payment_method_type_label_map(), payment_method_status_labels=payment_method_status_label_map(), subscription_status_labels=subscription_status_label_map(), payment_csrf_token=payment_csrf_token())
+    stripe_config = stripe_billing_config_status(client['service_level'] or default_service_level()) if client else stripe_billing_config_status(default_service_level())
+    return render_template('business_payments.html', client=client, client_id=client_id, payment_rows=summary['rows'], payment_summary=summary, open_admin_fee_rows=open_admin_fee_rows, payment_methods=payment_methods, payment_method_summary=payment_method_summary(payment_methods), open_fee_guidance=open_fee_guidance(open_admin_fee_rows), fee_collection_guidance=fee_collection_guidance, collection_method_labels=collection_method_label_map(), payment_method_type_options=payment_method_type_options(), payment_method_status_options=payment_method_status_options(), payment_method_type_labels=payment_method_type_label_map(), payment_method_status_labels=payment_method_status_label_map(), subscription_status_labels=subscription_status_label_map(), payment_csrf_token=payment_csrf_token(), stripe_config=stripe_config)
+
+
+@app.route('/business-payments/stripe-checkout', methods=['POST'])
+@login_required
+def start_stripe_subscription_checkout():
+    user = current_user()
+    client_id = selected_client_id(user, 'post')
+    if not valid_payment_csrf(request.form.get('csrf_token', '')):
+        flash('Your session expired. Refresh the page and try again.', 'error')
+        return redirect(url_for('business_payments_page', client_id=client_id))
+    with get_conn() as conn:
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        if not client or not allowed_client(user, client_id):
+            abort(403)
+        billed_level = normalize_service_level(client['service_level'] or default_service_level())
+        stripe_config = stripe_billing_config_status(billed_level)
+        if not stripe_config['configured']:
+            flash('Stripe subscription billing is not configured yet. Add the Stripe secret key and price ID in Render before charging cards.', 'error')
+            return redirect(url_for('business_payments_page', client_id=client_id))
+        success_url = public_app_url(f"/business-payments?client_id={client_id}&stripe_checkout=success&session_id={{CHECKOUT_SESSION_ID}}")
+        cancel_url = stripe_checkout_return_url(client_id, 'cancel')
+        metadata = {
+            'client_id': str(client_id),
+            'business_name': (client['business_name'] or '')[:120],
+            'service_level': billed_level,
+            'ledgerflow_plan_code': service_level_plan_code(billed_level),
+        }
+        data = {
+            'mode': 'subscription',
+            'line_items[0][price]': stripe_config['price_id'],
+            'line_items[0][quantity]': '1',
+            'success_url': success_url,
+            'cancel_url': cancel_url,
+            'client_reference_id': str(client_id),
+            'metadata[client_id]': metadata['client_id'],
+            'metadata[business_name]': metadata['business_name'],
+            'metadata[service_level]': metadata['service_level'],
+            'metadata[ledgerflow_plan_code]': metadata['ledgerflow_plan_code'],
+            'subscription_data[metadata][client_id]': metadata['client_id'],
+            'subscription_data[metadata][business_name]': metadata['business_name'],
+            'subscription_data[metadata][service_level]': metadata['service_level'],
+            'subscription_data[metadata][ledgerflow_plan_code]': metadata['ledgerflow_plan_code'],
+        }
+        if client['stripe_customer_id']:
+            data['customer'] = client['stripe_customer_id']
+        elif client['email']:
+            data['customer_email'] = client['email']
+        trial_end = stripe_trial_end_timestamp(client)
+        if trial_end:
+            data['subscription_data[trial_end]'] = str(trial_end)
+        if stripe_config.get('allow_promotion_codes'):
+            data['allow_promotion_codes'] = 'true'
+    try:
+        session_payload = stripe_api_post('/checkout/sessions', data)
+    except StripeBillingError as exc:
+        flash(str(exc), 'error')
+        return redirect(url_for('business_payments_page', client_id=client_id))
+    checkout_url = (session_payload.get('url') or '').strip()
+    session_id = (session_payload.get('id') or '').strip()
+    if not checkout_url:
+        flash('Stripe did not return a checkout page. Try again or review Stripe configuration.', 'error')
+        return redirect(url_for('business_payments_page', client_id=client_id))
+    with get_conn() as conn:
+        conn.execute(
+            '''UPDATE clients
+               SET stripe_checkout_session_id=?, stripe_price_id=?, updated_at=?, updated_by_user_id=?
+               WHERE id=?''',
+            (session_id, stripe_config['price_id'], datetime.now().isoformat(timespec='seconds'), user['id'], client_id),
+        )
+        log_billing_activity(
+            conn,
+            client_id=client_id,
+            actor=user,
+            status='stripe_checkout_started',
+            detail=f"Stripe hosted checkout started for {service_level_label_map().get(billed_level, billed_level)} subscription.",
+        )
+        conn.commit()
+    return redirect(checkout_url)
+
+
+@app.route('/business-payments/stripe-portal', methods=['POST'])
+@login_required
+def open_stripe_customer_portal():
+    user = current_user()
+    client_id = selected_client_id(user, 'post')
+    if not valid_payment_csrf(request.form.get('csrf_token', '')):
+        flash('Your session expired. Refresh the page and try again.', 'error')
+        return redirect(url_for('business_payments_page', client_id=client_id))
+    if not stripe_secret_key():
+        flash('Stripe customer portal is not configured yet.', 'error')
+        return redirect(url_for('business_payments_page', client_id=client_id))
+    with get_conn() as conn:
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        if not client or not allowed_client(user, client_id):
+            abort(403)
+        customer_id = (client['stripe_customer_id'] or '').strip()
+        if not customer_id:
+            flash('No Stripe customer is connected yet. Start hosted checkout first.', 'error')
+            return redirect(url_for('business_payments_page', client_id=client_id))
+    try:
+        portal_payload = stripe_api_post('/billing_portal/sessions', {
+            'customer': customer_id,
+            'return_url': stripe_checkout_return_url(client_id, 'portal_return'),
+        })
+    except StripeBillingError as exc:
+        flash(str(exc), 'error')
+        return redirect(url_for('business_payments_page', client_id=client_id))
+    portal_url = (portal_payload.get('url') or '').strip()
+    if not portal_url:
+        flash('Stripe did not return a customer portal page. Review Stripe portal configuration.', 'error')
+        return redirect(url_for('business_payments_page', client_id=client_id))
+    with get_conn() as conn:
+        log_billing_activity(
+            conn,
+            client_id=client_id,
+            actor=user,
+            status='stripe_customer_portal_opened',
+            detail='Stripe customer portal opened for subscription billing management.',
+        )
+        conn.commit()
+    return redirect(portal_url)
+
+
+@app.route('/stripe/webhook', methods=['POST'])
+def stripe_webhook():
+    webhook_secret = stripe_webhook_secret()
+    if not webhook_secret:
+        return jsonify({'error': 'Stripe webhook is not configured'}), 400
+    payload = request.get_data(cache=False)
+    signature_header = request.headers.get('Stripe-Signature', '')
+    if not verify_stripe_webhook_signature(payload, signature_header, webhook_secret):
+        return jsonify({'error': 'Invalid Stripe signature'}), 400
+    try:
+        event = json.loads(payload.decode('utf-8') or '{}')
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Invalid JSON'}), 400
+    event_id = (event.get('id') or '').strip()
+    event_type = (event.get('type') or '').strip()
+    obj = ((event.get('data') or {}).get('object') or {})
+    if not event_id or not event_type or not isinstance(obj, dict):
+        return jsonify({'error': 'Invalid Stripe event'}), 400
+    object_id = (obj.get('id') or '').strip()
+    with get_conn() as conn:
+        existing = conn.execute('SELECT status FROM stripe_webhook_events WHERE event_id=?', (event_id,)).fetchone()
+        if existing and existing['status'] == 'processed':
+            return jsonify({'received': True, 'duplicate': True})
+        conn.execute(
+            '''INSERT OR IGNORE INTO stripe_webhook_events (event_id, event_type, object_id, status, received_at)
+               VALUES (?,?,?,?,?)''',
+            (event_id, event_type, object_id, 'received', datetime.now().isoformat(timespec='seconds')),
+        )
+        try:
+            client_id = stripe_extract_client_id(conn, obj)
+            if event_type == 'checkout.session.completed':
+                if client_id:
+                    stripe_sync_subscription_fields(
+                        conn,
+                        client_id=client_id,
+                        customer_id=obj.get('customer') or '',
+                        subscription_id=obj.get('subscription') or '',
+                        checkout_session_id=obj.get('id') or '',
+                        stripe_status='active',
+                        event_id=event_id,
+                    )
+            elif event_type in {'customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'}:
+                if client_id:
+                    stripe_sync_subscription_fields(
+                        conn,
+                        client_id=client_id,
+                        customer_id=obj.get('customer') or '',
+                        subscription_id=obj.get('id') or '',
+                        price_id=stripe_subscription_price_id(obj),
+                        stripe_status=obj.get('status') or '',
+                        current_period_end=obj.get('current_period_end') or '',
+                        event_id=event_id,
+                    )
+            elif event_type in {'invoice.payment_succeeded', 'invoice.payment_failed'}:
+                if client_id:
+                    stripe_sync_subscription_fields(
+                        conn,
+                        client_id=client_id,
+                        customer_id=obj.get('customer') or '',
+                        subscription_id=obj.get('subscription') or '',
+                        stripe_status='active' if event_type == 'invoice.payment_succeeded' else 'past_due',
+                        current_period_end=obj.get('period_end') or '',
+                        event_id=event_id,
+                    )
+            conn.execute(
+                '''UPDATE stripe_webhook_events
+                   SET client_id=?, status=?, processed_at=?, error_message=''
+                   WHERE event_id=?''',
+                (client_id, 'processed', datetime.now().isoformat(timespec='seconds'), event_id),
+            )
+            conn.commit()
+        except Exception as exc:
+            conn.execute(
+                '''UPDATE stripe_webhook_events
+                   SET status='failed', processed_at=?, error_message=?
+                   WHERE event_id=?''',
+                (datetime.now().isoformat(timespec='seconds'), str(exc)[:500], event_id),
+            )
+            conn.commit()
+            return jsonify({'error': 'Webhook processing failed'}), 500
+    return jsonify({'received': True})
 
 
 @app.route('/dashboard')
