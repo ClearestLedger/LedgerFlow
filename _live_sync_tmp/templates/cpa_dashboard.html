@@ -1,9 +1,73 @@
 {% extends 'base.html' %}
 {% block body %}
+<style>
+  .admin-revenue-hero{position:relative;overflow:hidden;border:1px solid #D8E7F3;background:linear-gradient(125deg,#F8FBFF 0%,#EDF6FB 44%,#F7FAF7 100%);box-shadow:0 20px 52px rgba(31,93,140,.10);margin:16px 0}
+  .admin-revenue-hero:before{content:'';position:absolute;left:-90px;top:-110px;width:270px;height:270px;border-radius:999px;background:rgba(95,168,211,.20)}
+  .admin-revenue-hero:after{content:'';position:absolute;right:-100px;bottom:-120px;width:330px;height:330px;border-radius:999px;background:rgba(31,93,140,.10)}
+  .admin-revenue-content{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(300px,.95fr);gap:18px;align-items:stretch}
+  .admin-revenue-title{font-size:clamp(1.7rem,3vw,2.6rem);line-height:1.05;margin:6px 0 10px;color:#16384F;font-weight:800}
+  .admin-revenue-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+  .admin-revenue-kpi{background:rgba(255,255,255,.82);border:1px solid #DDE8F0;border-radius:18px;padding:13px}
+  .admin-revenue-kpi strong{display:block;font-size:1.35rem;color:#16384F;margin-top:4px}
+  .admin-revenue-panel{background:#fff;border:1px solid #DDE8F0;border-radius:22px;padding:16px;box-shadow:0 16px 38px rgba(28,55,78,.07)}
+  .admin-health-row{display:grid;grid-template-columns:126px minmax(0,1fr);gap:16px;align-items:center}
+  .admin-health-ring{width:126px;height:126px;border-radius:999px;display:grid;place-items:center;background:conic-gradient(#2E8B57 0 {{ subscription_snapshot.connected_degrees or 0 }}deg,#E5EEF5 {{ subscription_snapshot.connected_degrees or 0 }}deg 360deg)}
+  .admin-health-inner{width:76px;height:76px;border-radius:999px;background:#fff;display:grid;place-items:center;text-align:center;color:#16384F;font-weight:800;box-shadow:0 8px 18px rgba(31,93,140,.10)}
+  .admin-plan-bars{display:grid;gap:9px}
+  .admin-plan-row{display:grid;grid-template-columns:minmax(96px,.6fr) minmax(0,1fr) auto;gap:10px;align-items:center;font-size:.9rem}
+  .admin-plan-track{height:12px;border-radius:999px;background:#E8F0F6;overflow:hidden}
+  .admin-plan-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#1F5D8C,#5FA8D3)}
+  @media (max-width:900px){.admin-revenue-content,.admin-revenue-kpis,.admin-health-row{grid-template-columns:1fr}.admin-health-ring{margin:auto}}
+</style>
 
 <div class='welcome-panel welcome-panel-large'>
   <div class='welcome-kicker'>Welcome Administrator</div>
   <div class='welcome-inline'>{{ ((current_user.full_name or 'Danielle').split()[0]|title) if current_user and current_user.full_name else 'Danielle' }}</div>
+</div>
+
+<div class='card admin-revenue-hero'>
+  <div class='admin-revenue-content'>
+    <div>
+      <div class='page-kicker'>Administrator Revenue Command</div>
+      <div class='admin-revenue-title'>Private client revenue at a glance.</div>
+      <div class='small'>Track your administrator-managed subscriptions, Stripe connection health, and current monthly recurring revenue before opening the detailed billing tables.</div>
+      <div class='admin-revenue-kpis'>
+        <div class='admin-revenue-kpi'><span class='small-label'>Monthly Recurring Revenue</span><strong>${{ '%.2f'|format(subscription_snapshot.monthly_total or 0) }}</strong><div class='small'>Private admin pricing</div></div>
+        <div class='admin-revenue-kpi'><span class='small-label'>Active Subscriptions</span><strong>{{ subscription_snapshot.active_count }}</strong><div class='small'>Currently active / past due</div></div>
+        <div class='admin-revenue-kpi'><span class='small-label'>Average Per Business</span><strong>${{ '%.2f'|format(subscription_snapshot.average_monthly or 0) }}</strong><div class='small'>Monthly average</div></div>
+      </div>
+    </div>
+    <div class='admin-revenue-panel'>
+      <div class='card-head'><h3>Stripe + Tier Health</h3><span class='badge'>Live Admin View</span></div>
+      <div class='admin-health-row'>
+        <div class='admin-health-ring'>
+          <div class='admin-health-inner'>
+            <div>
+              <div>{{ '%.1f'|format(subscription_snapshot.connected_percent or 0) }}%</div>
+              <div class='small'>Connected</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class='summary-strip' style='margin-bottom:12px'>
+            <span class='summary-pill'>Connected: {{ subscription_snapshot.connected_count }}</span>
+            <span class='summary-pill'>Needs sync: {{ subscription_snapshot.needs_sync_count }}</span>
+          </div>
+          <div class='admin-plan-bars'>
+            {% for item in subscription_snapshot.by_plan %}
+            <div class='admin-plan-row'>
+              <strong>{{ item.label }}</strong>
+              <div class='admin-plan-track'><div class='admin-plan-fill' style='width:{% if subscription_snapshot.monthly_total %}{{ ((item.monthly_total or 0) / subscription_snapshot.monthly_total * 100)|round(1) }}{% else %}0{% endif %}%'></div></div>
+              <span>${{ '%.2f'|format(item.monthly_total or 0) }}</span>
+            </div>
+            {% else %}
+            <div class='small'>No active subscription revenue yet.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 

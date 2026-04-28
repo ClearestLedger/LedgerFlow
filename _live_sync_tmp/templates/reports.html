@@ -31,7 +31,22 @@
   .mix-key.labor:before{background:#1F5D8C}
   .mix-key.materials:before{background:#5FA8D3}
   .mix-key.gas:before{background:#98C1D9}
+  .report-prime-strip{position:relative;overflow:hidden;border:1px solid #CFE2F0;background:linear-gradient(120deg,#17384F 0%,#1F5D8C 52%,#EAF4F8 52%,#F8FBFF 100%);color:#fff;box-shadow:0 22px 55px rgba(23,56,79,.16);margin-bottom:16px}
+  .report-prime-strip:after{content:'';position:absolute;right:18%;top:-70px;width:210px;height:210px;border-radius:999px;background:rgba(255,255,255,.14)}
+  .report-prime-content{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr);gap:18px;align-items:center}
+  .report-prime-kicker{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;opacity:.78}
+  .report-prime-title{font-size:clamp(1.8rem,4vw,3rem);line-height:1;margin:8px 0 10px;font-weight:800}
+  .report-prime-subtitle{max-width:620px;color:rgba(255,255,255,.82)}
+  .report-prime-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
+  .report-prime-card{border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.13);border-radius:16px;padding:12px;backdrop-filter:blur(10px)}
+  .report-prime-card strong{display:block;font-size:1.2rem;margin-top:4px}
+  .report-prime-panel{background:rgba(255,255,255,.88);border:1px solid rgba(216,231,243,.9);border-radius:22px;padding:14px;color:#16384F;box-shadow:0 20px 45px rgba(23,56,79,.14)}
+  .report-prime-mini-chart{width:100%;height:120px;display:block}
+  .report-prime-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .report-prime-actions .btn{background:#fff;color:#17384F;border-color:#fff}
+  .report-prime-actions .btn.btn-secondary{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.35)}
   @media (max-width:900px){.report-kpi-grid,.report-chart-wrap{grid-template-columns:1fr}.report-donut-row{grid-template-columns:1fr}.report-donut{margin:auto}.report-kpi-grid{gap:10px}}
+  @media (max-width:900px){.report-prime-strip{background:linear-gradient(145deg,#17384F,#1F5D8C)}.report-prime-content,.report-prime-cards{grid-template-columns:1fr}.report-prime-panel{color:#16384F}}
 </style>
 {% set report_labels = {
   'summary': tr('Summary'),
@@ -42,7 +57,44 @@
   'materials': tr('Materials'),
   'mileage': tr('Mileage')
 } %}
-<div class='toolbar'>
+{% set graph = report_graphics %}
+<div class='card report-prime-strip'>
+  <div class='report-prime-content'>
+    <div>
+      <div class='report-prime-kicker'>{{ tr('Report Center') }} &middot; {{ tr('Finance first') }}</div>
+      <div class='report-prime-title'>{{ tr('See the money before the tables.') }}</div>
+      <div class='report-prime-subtitle'>{{ tr('LedgerFlow turns the current business records into a fast owner view: revenue, profit, expenses, margin, and tax-readiness at the top of the page.') }}</div>
+      <div class='report-prime-cards'>
+        <div class='report-prime-card'><span>{{ tr('Gross Income') }}</span><strong>${{ '%.2f'|format(summary.gross_income or 0) }}</strong></div>
+        <div class='report-prime-card'><span>{{ tr('Operating Profit') }}</span><strong>${{ '%.2f'|format(summary.operating_profit or 0) }}</strong></div>
+        <div class='report-prime-card'><span>{{ tr('Margin') }}</span><strong>{{ '%.1f'|format(graph.profit_margin or 0) }}%</strong></div>
+      </div>
+      <div class='report-prime-actions'>
+        <a class='btn' href='#live-finance-graphics'>{{ tr('Open live graphics') }}</a>
+        <a class='btn btn-secondary' href='#report-filters'>{{ tr('Change report filters') }}</a>
+      </div>
+    </div>
+    <div class='report-prime-panel'>
+      <div class='card-head'>
+        <h3>{{ tr('Revenue / Profit Pulse') }}</h3>
+        <span class='badge'>{{ tr('Live') }}</span>
+      </div>
+      <svg class='report-prime-mini-chart' viewBox='0 0 340 150' role='img' aria-label='Revenue and profit pulse'>
+        <line x1='0' y1='132' x2='340' y2='132' stroke='#DDE8F0' stroke-width='1'/>
+        <line x1='0' y1='92' x2='340' y2='92' stroke='#EEF4F8' stroke-width='1'/>
+        {% if graph.revenue_points %}
+        <polyline points='{{ graph.revenue_points }}' fill='none' stroke='#1F5D8C' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/>
+        <polyline points='{{ graph.profit_points }}' fill='none' stroke='#2E8B57' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/>
+        {% endif %}
+      </svg>
+      <div class='report-chart-legend'>
+        <span class='legend-dot'>{{ tr('Revenue') }}</span>
+        <span class='legend-dot profit'>{{ tr('Profit') }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class='toolbar' id='report-filters'>
   <form method='get' class='inline-form report-filters'>
     {% if current_user.role=='admin' %}
       <label>{{ tr('Business') }}</label>
@@ -65,8 +117,7 @@
   <button onclick='window.print()' class='btn btn-dark' type='button'>{{ tr('Print Current Report') }}</button>
 </div>
 
-{% set graph = report_graphics %}
-<div class='card report-visual-hero' style='margin-bottom:16px'>
+<div class='card report-visual-hero' id='live-finance-graphics' style='margin-bottom:16px'>
   <div class='report-visual-content'>
     <div class='card-head'>
       <div>
@@ -142,7 +193,7 @@
             {% for item in graph.expense_mix %}
             <div class='expense-mix-item'>
               <span class='mix-key {{ item.tone }}'>{{ tr(item.label) }}</span>
-              <span>${{ '%.2f'|format(item.amount or 0) }} · {{ '%.1f'|format(item.percent or 0) }}%</span>
+              <span>${{ '%.2f'|format(item.amount or 0) }} &middot; {{ '%.1f'|format(item.percent or 0) }}%</span>
             </div>
             {% endfor %}
           </div>

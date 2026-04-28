@@ -3857,6 +3857,8 @@ def admin_subscription_snapshot(businesses) -> dict:
     by_business_category = {}
     active_rows = []
     active_count = 0
+    connected_count = 0
+    needs_sync_count = 0
     monthly_total = 0.0
     for row in businesses or []:
         status = normalize_subscription_status(row['subscription_status'] or '')
@@ -3869,6 +3871,10 @@ def admin_subscription_snapshot(businesses) -> dict:
         plan_label = service_labels.get(plan_key, plan_key.replace('_', ' ').title())
         category = (row['business_category'] or row['business_type'] or 'Uncategorized').strip() or 'Uncategorized'
         active_count += 1
+        if row['stripe_subscription_id']:
+            connected_count += 1
+        else:
+            needs_sync_count += 1
         monthly_total += monthly_amount
         by_plan.setdefault(plan_label, {'label': plan_label, 'count': 0, 'monthly_total': 0.0})
         by_plan[plan_label]['count'] += 1
@@ -3888,8 +3894,14 @@ def admin_subscription_snapshot(businesses) -> dict:
             'next_billing': row['subscription_next_billing_date'] or '',
         })
     active_rows.sort(key=lambda item: (item['plan_label'], item['business_name'] or ''))
+    connected_percent = (connected_count / active_count * 100) if active_count else 0.0
     return {
         'active_count': active_count,
+        'connected_count': connected_count,
+        'needs_sync_count': needs_sync_count,
+        'connected_percent': round(connected_percent, 1),
+        'connected_degrees': round(connected_percent * 3.6, 2),
+        'average_monthly': round(monthly_total / active_count, 2) if active_count else 0.0,
         'monthly_total': monthly_total,
         'by_plan': sorted(by_plan.values(), key=lambda item: (-item['monthly_total'], item['label'])),
         'by_business_category': sorted(by_business_category.values(), key=lambda item: (-item['monthly_total'], item['label'])),
