@@ -8,6 +8,7 @@
   </div>
   <div class='stack-actions'>
     <a class='btn btn-secondary' href='{{ url_for("ops_availability", client_id=client_id) }}'>Availability</a>
+    <a class='btn btn-secondary' href='{{ url_for("worker_payments", client_id=client_id, worker_id=selected_worker.id) if selected_worker else url_for("worker_payments", client_id=client_id) }}'>Worker Payments</a>
     <a class='btn btn-secondary' href='{{ url_for("workers", client_id=client_id, worker_id=selected_worker.id) if selected_worker else url_for("workers", client_id=client_id) }}'>Legacy HR Records</a>
   </div>
 </div>
@@ -114,6 +115,7 @@
     <div class='card-head' style='margin-top:18px'>
       <h3>Payroll & Tax Snapshot</h3>
       <div class='stack-actions'>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("worker_payments", client_id=client_id, worker_id=selected_worker.id) }}'>Record Pay</a>
         <a class='btn btn-secondary btn-sm' href='{{ url_for("workers", client_id=client_id, worker_id=selected_worker.id) }}'>Legacy HR Records</a>
         <a class='btn btn-secondary btn-sm' href='{{ url_for("w4", worker_id=selected_worker.id) }}' target='_blank'>Printable W-4</a>
         <a class='btn btn-secondary btn-sm' href='{{ url_for("w2", worker_id=selected_worker.id) }}' target='_blank'>W-2</a>

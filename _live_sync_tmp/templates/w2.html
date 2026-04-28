@@ -2,7 +2,11 @@
 {% block body %}
 <div class='report'>
   <div class='toolbar'>
-    <a href='{{ url_for("payroll_tax", client_id=worker.client_id, year=year, view="final_w2") }}' class='btn btn-secondary'>Back to </a>
+    {% if current_user.role == 'admin' %}
+      <a href='{{ url_for("payroll_tax", client_id=worker.client_id, year=year, view="final_w2") }}' class='btn btn-secondary'>Back to Payroll Tax</a>
+    {% else %}
+      <a href='{{ url_for("ops_team", client_id=worker.client_id, worker_id=worker.id) }}' class='btn btn-secondary'>Back to Team</a>
+    {% endif %}
     <button onclick='window.print()' class='btn btn-dark' type='button'>Print</button>
   </div>
   <h2>Final Form W-2 · {{ year }}</h2>

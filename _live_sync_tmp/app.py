@@ -8336,6 +8336,24 @@ def client_summary(client_id: int, start_date: str | None = None, end_date: str 
     }
 
 
+def empty_client_summary():
+    return {
+        'gross_income': 0.0,
+        'gas_total': 0.0,
+        'materials_total': 0.0,
+        'worker_total': 0.0,
+        'mileage_miles': 0.0,
+        'mileage_deduction': 0.0,
+        'total_expenses': 0.0,
+        'operating_profit': 0.0,
+        'adjusted_profit': 0.0,
+        'taxable_profit': 0.0,
+        'self_employment_tax_estimate': 0.0,
+        'federal_plus_se_estimate': 0.0,
+        'invoice_count': 0,
+    }
+
+
 def worker_year_totals(worker_id: int, year: int):
     with get_conn() as conn:
         payments = conn.execute('SELECT * FROM worker_payments WHERE worker_id=? AND substr(payment_date,1,4)=? ORDER BY payment_date, id', (worker_id, str(year))).fetchall()
@@ -18755,8 +18773,12 @@ def save_worker_w4(worker_id):
 def worker_payments():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
+    selected_worker_id = request.values.get('worker_id', type=int)
     with get_conn() as conn:
         workers = conn.execute('SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name', (client_id,)).fetchall()
+        worker_ids = {int(row['id']) for row in workers}
+        if selected_worker_id not in worker_ids:
+            selected_worker_id = None
         if request.method == 'POST':
             action = request.form.get('action', 'add').strip().lower()
             if action == 'add':
@@ -18780,6 +18802,7 @@ def worker_payments():
                         (worker_id, payment_date, amount, payment_method, payment_status, reference_number, note)
                     )
                     conn.commit()
+                    selected_worker_id = worker_id
                     flash('Worker payment saved.', 'success')
             elif action == 'update':
                 payment_id = request.form.get('payment_id', type=int)
@@ -18805,11 +18828,21 @@ def worker_payments():
                         )
                     )
                     conn.commit()
+                    selected_worker_id = int(row['worker_id'])
                     flash('Worker payment updated.', 'success')
-            return redirect(url_for('worker_payments', client_id=client_id))
-        rows = conn.execute('SELECT wp.*, w.name worker_name, w.worker_type FROM worker_payments wp JOIN workers w ON w.id=wp.worker_id WHERE w.client_id=? ORDER BY payment_date DESC, wp.id DESC', (client_id,)).fetchall()
+            redirect_args = {'client_id': client_id}
+            if selected_worker_id:
+                redirect_args['worker_id'] = selected_worker_id
+            return redirect(url_for('worker_payments', **redirect_args))
+        query = 'SELECT wp.*, w.name worker_name, w.worker_type FROM worker_payments wp JOIN workers w ON w.id=wp.worker_id WHERE w.client_id=?'
+        params = [client_id]
+        if selected_worker_id:
+            query += ' AND w.id=?'
+            params.append(selected_worker_id)
+        query += ' ORDER BY payment_date DESC, wp.id DESC'
+        rows = conn.execute(query, tuple(params)).fetchall()
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
-    return render_template('worker_payments.html', payments=rows, workers=workers, client=client, client_id=client_id, today=date.today().isoformat(), worker_payment_methods=worker_payment_method_options(), worker_payment_statuses=worker_payment_status_options(), worker_payment_method_labels=worker_payment_method_label_map(), worker_payment_status_labels=worker_payment_status_label_map())
+    return render_template('worker_payments.html', payments=rows, workers=workers, client=client, client_id=client_id, selected_worker_id=selected_worker_id, today=date.today().isoformat(), worker_payment_methods=worker_payment_method_options(), worker_payment_statuses=worker_payment_status_options(), worker_payment_method_labels=worker_payment_method_label_map(), worker_payment_status_labels=worker_payment_status_label_map())
 
 
 @app.route('/gas', methods=['GET', 'POST'])
@@ -18945,24 +18978,58 @@ def reports():
     invoice_id = request.args.get('invoice_id', type=int)
 
     with get_conn() as conn:
+        report_warnings = []
+
+        def safe_fetchall(query, params=(), fallback_query=None, fallback_params=None):
+            try:
+                return conn.execute(query, tuple(params)).fetchall()
+            except sqlite3.Error as exc:
+                report_warnings.append(str(exc))
+                if fallback_query:
+                    try:
+                        return conn.execute(fallback_query, tuple(fallback_params if fallback_params is not None else params)).fetchall()
+                    except sqlite3.Error as fallback_exc:
+                        report_warnings.append(str(fallback_exc))
+                return []
+
+        def safe_client_summary():
+            try:
+                return client_summary(client_id, start_date or None, end_date or None)
+            except sqlite3.Error as exc:
+                report_warnings.append(str(exc))
+                return empty_client_summary()
+
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
-        workers = conn.execute('SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name', (client_id,)).fetchall()
-        invoices = conn.execute(
+        workers = safe_fetchall(
+            'SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name',
+            (client_id,),
+            'SELECT * FROM workers WHERE client_id=? ORDER BY name',
+        )
+        invoices = safe_fetchall(
             "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate' ORDER BY job_number DESC, id DESC",
             (client_id,),
-        ).fetchall()
+            'SELECT * FROM invoices WHERE client_id=? ORDER BY id DESC',
+        )
+        all_clients = []
+        if user['role'] == 'admin':
+            all_clients = safe_fetchall(
+                "SELECT * FROM clients WHERE COALESCE(record_status,'active')='active' ORDER BY business_name",
+                (),
+                'SELECT * FROM clients ORDER BY business_name',
+            )
 
         context = {
             'client': client,
             'workers': workers,
             'invoices': invoices,
+            'all_clients': all_clients,
             'client_id': client_id,
             'report_type': report_type,
             'start_date': start_date,
             'end_date': end_date,
             'worker_id': worker_id,
             'invoice_id': invoice_id,
-            'summary': client_summary(client_id, start_date or None, end_date or None),
+            'summary': safe_client_summary(),
         }
 
         if report_type == 'workers':
@@ -18972,7 +19039,7 @@ def reports():
                 query += ' AND id=?'
                 params.append(worker_id)
             query += ' ORDER BY name'
-            context['rows'] = conn.execute(query, tuple(params)).fetchall()
+            context['rows'] = safe_fetchall(query, tuple(params))
         elif report_type == 'payments':
             query = 'SELECT wp.*, w.name worker_name, w.worker_type FROM worker_payments wp JOIN workers w ON w.id=wp.worker_id WHERE w.client_id=?'
             params = [client_id]
@@ -18984,7 +19051,7 @@ def reports():
                 query += ' AND ' + ' AND '.join(clauses)
                 params += more
             query += ' ORDER BY wp.payment_date DESC'
-            context['rows'] = conn.execute(query, tuple(params)).fetchall()
+            context['rows'] = safe_fetchall(query, tuple(params))
         elif report_type == 'invoices':
             query = "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'income_record')<>'estimate'"
             params = [client_id]
@@ -18996,7 +19063,13 @@ def reports():
                 query += ' AND ' + ' AND '.join(clauses)
                 params += more
             query += ' ORDER BY invoice_date DESC, id DESC'
-            context['rows'] = conn.execute(query, tuple(params)).fetchall()
+            fallback_query = 'SELECT * FROM invoices WHERE client_id=?'
+            fallback_params = [client_id]
+            if invoice_id:
+                fallback_query += ' AND id=?'
+                fallback_params.append(invoice_id)
+            fallback_query += ' ORDER BY id DESC'
+            context['rows'] = safe_fetchall(query, tuple(params), fallback_query, tuple(fallback_params))
         elif report_type == 'gas':
             query = 'SELECT * FROM gas_entries WHERE client_id=?'
             params = [client_id]
@@ -19005,7 +19078,7 @@ def reports():
                 query += ' AND ' + ' AND '.join(clauses)
                 params += more
             query += ' ORDER BY week_start DESC'
-            context['rows'] = conn.execute(query, tuple(params)).fetchall()
+            context['rows'] = safe_fetchall(query, tuple(params))
         elif report_type == 'materials':
             query = 'SELECT * FROM materials WHERE client_id=?'
             params = [client_id]
@@ -19014,7 +19087,7 @@ def reports():
                 query += ' AND ' + ' AND '.join(clauses)
                 params += more
             query += ' ORDER BY material_date DESC'
-            context['rows'] = conn.execute(query, tuple(params)).fetchall()
+            context['rows'] = safe_fetchall(query, tuple(params))
         elif report_type == 'mileage':
             query = 'SELECT * FROM mileage_entries WHERE client_id=?'
             params = [client_id]
@@ -19023,10 +19096,12 @@ def reports():
                 query += ' AND ' + ' AND '.join(clauses)
                 params += more
             query += ' ORDER BY trip_date DESC'
-            context['rows'] = conn.execute(query, tuple(params)).fetchall()
+            context['rows'] = safe_fetchall(query, tuple(params))
         else:
             context['rows'] = []
 
+    if report_warnings:
+        flash('Some report records could not be loaded yet, so LedgerFlow is showing the available report data instead of stopping the page.', 'error')
     return render_template('reports.html', **context)
 
 
