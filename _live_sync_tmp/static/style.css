@@ -1055,3 +1055,60 @@ body.messenger-open .messenger-drawer{transform:translateX(0);opacity:1;pointer-
   .benefits-layout,.benefits-resource-grid,.welcome-video-grid,.welcome-link-grid,.finance-focus-grid{grid-template-columns:1fr}
 }
 
+/* Launch polish: prevent tab/chip rows from overlapping on mid-size screens and translated labels. */
+.summary-strip,
+.invite-metrics,
+.admin-scale-metrics,
+.stack-actions,
+.report-filter-summary,
+.report-prime-actions,
+.owner-command-actions,
+.owner-pulse-legend,
+.report-chart-legend,
+.report-filter-actions{
+  min-width:0;
+  flex-wrap:wrap;
+}
+.summary-pill,
+.status-chip,
+.mode-chip,
+.mobile-workspace-action,
+.workspace-link,
+.app-nav-link,
+.owner-quick-card,
+.welcome-link-card,
+.report-filter-summary span{
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+  word-break:normal;
+}
+.summary-pill,
+.status-chip{
+  white-space:normal;
+}
+.report-filter-fold summary,
+.owner-fold summary,
+.compact-details summary,
+.business-directory-item summary{
+  min-width:0;
+  flex-wrap:wrap;
+}
+.report-filter-summary{
+  flex:1 1 320px;
+  justify-content:flex-end;
+}
+.owner-command-kpis,
+.owner-quick-grid,
+.owner-work-tabs,
+.report-kpi-grid,
+.admin-revenue-kpis{
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr)) !important;
+}
+@media (max-width:900px){
+  .report-filter-summary{
+    flex-basis:100%;
+    justify-content:flex-start;
+  }
+}
+
