@@ -14974,7 +14974,8 @@ def ops_team():
         workspace_warning = prepare_ops_workspace(conn, client_id)
         client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
         workers = [dict(row) for row in ops_worker_rows(conn, client_id)]
-        selected_worker_id = selected_worker_id or (workers[0]['id'] if workers else None)
+        if selected_worker_id and not any(row['id'] == selected_worker_id for row in workers):
+            selected_worker_id = None
         selected_worker = next((row for row in workers if row['id'] == selected_worker_id), None)
         worker_jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, worker_id=selected_worker_id)] if selected_worker_id else []
         worker_availability = [row for row in ops_availability_rows(conn, client_id, date.today().isoformat(), (date.today() + timedelta(days=21)).isoformat()) if row['worker_id'] == selected_worker_id]

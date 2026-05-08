@@ -36,44 +36,89 @@
   </div>
 
   <div class='card'>
-    <div class='card-head'><h3>{% if selected_worker %}Update Team Member{% else %}Add Team Member{% endif %}</h3><span class='badge'>Ops Profile</span></div>
-    <details class='compact-details'>
-      <summary>{% if selected_worker %}{{ tr('Update Team Member') }}{% else %}{{ tr('Add Team Member') }}{% endif %}</summary>
+    <div class='card-head'>
+      <h3>Add Team Member</h3>
+      <div class='stack-actions'>
+        <span class='badge'>Ops Profile</span>
+        {% if selected_worker %}<a class='btn btn-secondary btn-sm' href='{{ url_for("ops_team", client_id=client_id) }}'>New Team Member</a>{% endif %}
+      </div>
+    </div>
+    <details class='compact-details' open>
+      <summary>{{ tr('Add Team Member') }}</summary>
       <form method='post' class='form-grid' style='margin-top:12px'>
       {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-      <input type='hidden' name='action' value='{% if selected_worker %}update_worker{% else %}create_worker{% endif %}'>
-      {% if selected_worker %}<input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>{% endif %}
-      <div><label>Name</label><input name='name' required value='{{ selected_worker.name if selected_worker else "" }}'></div>
-      <div><label>Classification</label><select name='worker_type'><option value='1099' {% if not selected_worker or selected_worker.worker_type == '1099' %}selected{% endif %}>1099</option><option value='W-2' {% if selected_worker and selected_worker.worker_type == 'W-2' %}selected{% endif %}>W-2</option></select></div>
-      <div><label>Operational Role</label><input name='worker_role' value='{{ selected_worker.worker_role if selected_worker else "" }}' placeholder='Crew Lead, Painter, Dispatcher'></div>
-      <div><label>Phone</label><input name='phone' value='{{ selected_worker.phone if selected_worker else "" }}'></div>
-      <div><label>Email</label><input name='email' value='{{ selected_worker.email if selected_worker else "" }}'></div>
-      <div><label>Language</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if selected_worker and selected_worker.preferred_language == option.code %}selected{% elif not selected_worker and option.code == 'en' %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
-      <div><label>Status</label><select name='status'><option value='active' {% if not selected_worker or selected_worker.status == 'active' %}selected{% endif %}>Active</option><option value='inactive' {% if selected_worker and selected_worker.status == 'inactive' %}selected{% endif %}>Inactive</option><option value='terminated' {% if selected_worker and selected_worker.status == 'terminated' %}selected{% endif %}>Terminated</option></select></div>
-      <div><label>Payroll Frequency</label><select name='payroll_frequency'><option value='weekly' {% if not selected_worker or selected_worker.payroll_frequency == 'weekly' %}selected{% endif %}>Weekly</option><option value='biweekly' {% if selected_worker and selected_worker.payroll_frequency == 'biweekly' %}selected{% endif %}>Biweekly</option><option value='semimonthly' {% if selected_worker and selected_worker.payroll_frequency == 'semimonthly' %}selected{% endif %}>Semimonthly</option><option value='monthly' {% if selected_worker and selected_worker.payroll_frequency == 'monthly' %}selected{% endif %}>Monthly</option></select></div>
-      <div><label>Hire Date</label><input name='hire_date' type='date' value='{{ selected_worker.hire_date if selected_worker else today_iso }}'></div>
-      <div><label>SSN / Tax ID</label><input name='ssn' value='{{ selected_worker.ssn if selected_worker else "" }}'></div>
-      <div><label>Crew / Group</label><input name='crew_label' value='{{ selected_worker.crew_label if selected_worker else "" }}' placeholder='Crew A, East Route'></div>
-      <div><label>Skill Tags</label><input name='skill_tags' value='{{ selected_worker.skill_tags if selected_worker else "" }}' placeholder='deep clean, ladder work, trim'></div>
-      <div><label>Team Member Payment Preference</label><select name='payout_preference' class='worker-payout-select'>{% for value, label in worker_payout_preferences %}<option value='{{ value }}' {% if selected_worker and (selected_worker.payout_preference or 'paper_check') == value %}selected{% elif not selected_worker and value == 'paper_check' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-      <div class='worker-payout-field payout-zelle'><label>Zelle Email / Phone</label><input name='zelle_contact' value='{{ selected_worker.zelle_contact if selected_worker else "" }}' placeholder='teammember@email.com or phone'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Bank Name</label><input name='deposit_bank_name' value='{{ selected_worker.deposit_bank_name if selected_worker else "" }}' placeholder='Chase Business Checking'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Account Holder Name</label><input name='deposit_account_holder_name' value='{{ selected_worker.deposit_account_holder_name if selected_worker else "" }}' placeholder='Team member legal name'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Account Type</label><select name='deposit_account_type'><option value='checking' {% if not selected_worker or (selected_worker.deposit_account_type or 'checking') == 'checking' %}selected{% endif %}>Checking</option><option value='savings' {% if selected_worker and selected_worker.deposit_account_type == 'savings' %}selected{% endif %}>Savings</option></select></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Routing Number</label><input name='deposit_routing_number' inputmode='numeric' maxlength='9' placeholder='{% if selected_worker and selected_worker.deposit_account_last4 %}Leave blank to keep current{% else %}9 digits{% endif %}'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Account Number</label><input name='deposit_account_number' inputmode='numeric' placeholder='{% if selected_worker and selected_worker.deposit_account_last4 %}Leave blank to keep current{% else %}Enter account number{% endif %}'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Confirm Account Number</label><input name='confirm_deposit_account_number' inputmode='numeric' placeholder='{% if selected_worker and selected_worker.deposit_account_last4 %}Re-enter only if changing{% else %}Re-enter account number{% endif %}'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Last 4 Digits</label><input name='deposit_account_last4' value='{{ selected_worker.deposit_account_last4 if selected_worker else "" }}' inputmode='numeric' maxlength='4' placeholder='6789'></div>
-      <div style='grid-column:1/-1'><label>Address</label><input name='address' value='{{ selected_worker.address if selected_worker else "" }}'></div>
-      <div style='grid-column:1/-1'><label>Pay Notes</label><textarea name='pay_notes'>{{ selected_worker.pay_notes if selected_worker else "" }}</textarea></div>
-      <div style='grid-column:1/-1'><label>Availability Baseline</label><textarea name='availability_baseline'>{{ selected_worker.availability_baseline if selected_worker else "" }}</textarea></div>
-      <div><button type='submit'>{% if selected_worker %}Save Team Member{% else %}Add Team Member{% endif %}</button></div>
+      <input type='hidden' name='action' value='create_worker'>
+      <div><label>Name</label><input name='name' required></div>
+      <div><label>Classification</label><select name='worker_type'><option value='1099' selected>1099</option><option value='W-2'>W-2</option></select></div>
+      <div><label>Operational Role</label><input name='worker_role' placeholder='Crew Lead, Painter, Dispatcher'></div>
+      <div><label>Phone</label><input name='phone'></div>
+      <div><label>Email</label><input name='email'></div>
+      <div><label>Language</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if option.code == 'en' %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
+      <div><label>Status</label><select name='status'><option value='active' selected>Active</option><option value='inactive'>Inactive</option><option value='terminated'>Terminated</option></select></div>
+      <div><label>Payroll Frequency</label><select name='payroll_frequency'><option value='weekly' selected>Weekly</option><option value='biweekly'>Biweekly</option><option value='semimonthly'>Semimonthly</option><option value='monthly'>Monthly</option></select></div>
+      <div><label>Hire Date</label><input name='hire_date' type='date' value='{{ today_iso }}'></div>
+      <div><label>SSN / Tax ID</label><input name='ssn'></div>
+      <div><label>Crew / Group</label><input name='crew_label' placeholder='Crew A, East Route'></div>
+      <div><label>Skill Tags</label><input name='skill_tags' placeholder='deep clean, ladder work, trim'></div>
+      <div><label>Team Member Payment Preference</label><select name='payout_preference' class='worker-payout-select'>{% for value, label in worker_payout_preferences %}<option value='{{ value }}' {% if value == 'paper_check' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class='worker-payout-field payout-zelle'><label>Zelle Email / Phone</label><input name='zelle_contact' placeholder='teammember@email.com or phone'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Bank Name</label><input name='deposit_bank_name' placeholder='Chase Business Checking'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Holder Name</label><input name='deposit_account_holder_name' placeholder='Team member legal name'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Type</label><select name='deposit_account_type'><option value='checking' selected>Checking</option><option value='savings'>Savings</option></select></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Routing Number</label><input name='deposit_routing_number' inputmode='numeric' maxlength='9' placeholder='9 digits'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Number</label><input name='deposit_account_number' inputmode='numeric' placeholder='Enter account number'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Confirm Account Number</label><input name='confirm_deposit_account_number' inputmode='numeric' placeholder='Re-enter account number'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Last 4 Digits</label><input name='deposit_account_last4' inputmode='numeric' maxlength='4' placeholder='6789'></div>
+      <div style='grid-column:1/-1'><label>Address</label><input name='address'></div>
+      <div style='grid-column:1/-1'><label>Pay Notes</label><textarea name='pay_notes'></textarea></div>
+      <div style='grid-column:1/-1'><label>Availability Baseline</label><textarea name='availability_baseline'></textarea></div>
+      <div><button type='submit'>Add Team Member</button></div>
       </form>
     </details>
   </div>
 </div>
 
 {% if selected_worker %}
+<div class='card' style='margin-top:18px'>
+  <div class='card-head'>
+    <h3>Update Team Member</h3>
+    <span class='badge'>{{ selected_worker.name }}</span>
+  </div>
+  <details class='compact-details' open>
+    <summary>{{ tr('Update Team Member') }}</summary>
+    <form method='post' class='form-grid' style='margin-top:12px'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <input type='hidden' name='action' value='update_worker'>
+      <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
+      <div><label>Name</label><input name='name' required value='{{ selected_worker.name }}'></div>
+      <div><label>Classification</label><select name='worker_type'><option value='1099' {% if selected_worker.worker_type == '1099' %}selected{% endif %}>1099</option><option value='W-2' {% if selected_worker.worker_type == 'W-2' %}selected{% endif %}>W-2</option></select></div>
+      <div><label>Operational Role</label><input name='worker_role' value='{{ selected_worker.worker_role if selected_worker.worker_role is defined else "" }}' placeholder='Crew Lead, Painter, Dispatcher'></div>
+      <div><label>Phone</label><input name='phone' value='{{ selected_worker.phone or "" }}'></div>
+      <div><label>Email</label><input name='email' value='{{ selected_worker.email or "" }}'></div>
+      <div><label>Language</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if selected_worker.preferred_language == option.code %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
+      <div><label>Status</label><select name='status'><option value='active' {% if selected_worker.status == 'active' %}selected{% endif %}>Active</option><option value='inactive' {% if selected_worker.status == 'inactive' %}selected{% endif %}>Inactive</option><option value='terminated' {% if selected_worker.status == 'terminated' %}selected{% endif %}>Terminated</option></select></div>
+      <div><label>Payroll Frequency</label><select name='payroll_frequency'><option value='weekly' {% if selected_worker.payroll_frequency == 'weekly' %}selected{% endif %}>Weekly</option><option value='biweekly' {% if selected_worker.payroll_frequency == 'biweekly' %}selected{% endif %}>Biweekly</option><option value='semimonthly' {% if selected_worker.payroll_frequency == 'semimonthly' %}selected{% endif %}>Semimonthly</option><option value='monthly' {% if selected_worker.payroll_frequency == 'monthly' %}selected{% endif %}>Monthly</option></select></div>
+      <div><label>Hire Date</label><input name='hire_date' type='date' value='{{ selected_worker.hire_date or today_iso }}'></div>
+      <div><label>SSN / Tax ID</label><input name='ssn' value='{{ selected_worker.ssn or "" }}'></div>
+      <div><label>Crew / Group</label><input name='crew_label' value='{{ selected_worker.crew_label or "" }}' placeholder='Crew A, East Route'></div>
+      <div><label>Skill Tags</label><input name='skill_tags' value='{{ selected_worker.skill_tags or "" }}' placeholder='deep clean, ladder work, trim'></div>
+      <div><label>Team Member Payment Preference</label><select name='payout_preference' class='worker-payout-select'>{% for value, label in worker_payout_preferences %}<option value='{{ value }}' {% if (selected_worker.payout_preference or 'paper_check') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class='worker-payout-field payout-zelle'><label>Zelle Email / Phone</label><input name='zelle_contact' value='{{ selected_worker.zelle_contact or "" }}' placeholder='teammember@email.com or phone'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Bank Name</label><input name='deposit_bank_name' value='{{ selected_worker.deposit_bank_name or "" }}' placeholder='Chase Business Checking'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Holder Name</label><input name='deposit_account_holder_name' value='{{ selected_worker.deposit_account_holder_name or "" }}' placeholder='Team member legal name'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Type</label><select name='deposit_account_type'><option value='checking' {% if (selected_worker.deposit_account_type or 'checking') == 'checking' %}selected{% endif %}>Checking</option><option value='savings' {% if selected_worker.deposit_account_type == 'savings' %}selected{% endif %}>Savings</option></select></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Routing Number</label><input name='deposit_routing_number' inputmode='numeric' maxlength='9' placeholder='{% if selected_worker.deposit_account_last4 %}Leave blank to keep current{% else %}9 digits{% endif %}'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Number</label><input name='deposit_account_number' inputmode='numeric' placeholder='{% if selected_worker.deposit_account_last4 %}Leave blank to keep current{% else %}Enter account number{% endif %}'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Confirm Account Number</label><input name='confirm_deposit_account_number' inputmode='numeric' placeholder='{% if selected_worker.deposit_account_last4 %}Re-enter only if changing{% else %}Re-enter account number{% endif %}'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Last 4 Digits</label><input name='deposit_account_last4' value='{{ selected_worker.deposit_account_last4 or "" }}' inputmode='numeric' maxlength='4' placeholder='6789'></div>
+      <div style='grid-column:1/-1'><label>Address</label><input name='address' value='{{ selected_worker.address or "" }}'></div>
+      <div style='grid-column:1/-1'><label>Pay Notes</label><textarea name='pay_notes'>{{ selected_worker.pay_notes or "" }}</textarea></div>
+      <div style='grid-column:1/-1'><label>Availability Baseline</label><textarea name='availability_baseline'>{{ selected_worker.availability_baseline or "" }}</textarea></div>
+      <div><button type='submit'>Save Team Member</button></div>
+    </form>
+  </details>
+</div>
+
 <div class='grid cards-2' style='margin-top:18px'>
   <div class='card'>
     <div class='card-head'><h3>Workload Snapshot</h3><span class='badge'>{{ worker_jobs|length }} jobs</span></div>
