@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Team & Workers</div>
+    <div class='page-title'>{{ selected_worker.name }}</div>
+    <div class='page-subtitle'>Full-screen team information view for worker profile updates, payroll context, availability, and restricted portal management.</div>
+  </div>
+  <div class='stack-actions'>
+    <a class='btn btn-secondary' href='{{ url_for("ops_team", client_id=client_id) }}'>Back to Team</a>
+    <a class='btn btn-secondary' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Team Member</a>
+    <a class='btn btn-secondary' href='{{ url_for("worker_payments", client_id=client_id, worker_id=selected_worker.id) }}'>Worker Payments</a>
+  </div>
+</div>
+
+<div class='team-subnav'>
+  <a class='team-subnav-link' href='{{ url_for("ops_team", client_id=client_id) }}'>Team Directory</a>
+  <a class='team-subnav-link' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Team Member</a>
+  <a class='team-subnav-link active' href='{{ url_for("ops_team_member", client_id=client_id, worker_id=selected_worker.id) }}'>Team Information</a>
+</div>
+
+<div class='team-detail-stack'>
+  <div class='team-info-grid'>
+    <div class='team-info-card'>
+      <div class='small-label'>Status</div>
+      <strong>{{ (selected_worker.status or 'active')|replace('_', ' ')|title }}</strong>
+      <span>{{ selected_worker.worker_type or '1099' }} · {{ selected_worker.ops_role or selected_worker.role_classification or 'Crew Member' }}</span>
+    </div>
+    <div class='team-info-card'>
+      <div class='small-label'>Crew</div>
+      <strong>{{ selected_worker.crew_label or 'Not grouped yet' }}</strong>
+      <span>{{ selected_worker.skill_tags or 'No skill tags saved yet' }}</span>
+    </div>
+    <div class='team-info-card'>
+      <div class='small-label'>Portal</div>
+      <strong>{{ 'Enabled' if selected_worker.portal_access_enabled else 'Disabled' }}</strong>
+      <span>{{ selected_worker.email or 'No portal email on file yet' }}</span>
+    </div>
+    <div class='team-info-card'>
+      <div class='small-label'>Workload</div>
+      <strong>{{ worker_jobs|length }} jobs linked</strong>
+      <span>Upcoming {{ selected_worker.upcoming_assignments or 0 }} · Active {{ selected_worker.active_assignments or 0 }}</span>
+    </div>
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Edit Team Member</h3><span class='badge'>Folded Setup</span></div>
+    <details class='compact-details'>
+      <summary>{{ tr('Update Team Member') }}</summary>
+      <form method='post' class='form-grid' style='margin-top:12px'>
+        {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <input type='hidden' name='action' value='update_worker'>
+        <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
+        {% with worker=selected_worker, submit_label='Save Team Member' %}
+          {% include '_ops_worker_profile_fields.html' %}
+        {% endwith %}
+      </form>
+    </details>
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Team Information</h3><span class='badge'>Full Screen</span></div>
+    <details class='compact-details' open>
+      <summary>Open Team Information</summary>
+      <div class='team-info-grid' style='margin-top:14px'>
+        <div class='team-info-card'>
+          <div class='small-label'>Phone</div>
+          <strong>{{ selected_worker.phone or 'Not saved yet' }}</strong>
+          <span>Preferred language: {{ selected_worker.preferred_language or 'en' }}</span>
+        </div>
+        <div class='team-info-card'>
+          <div class='small-label'>Hire Date</div>
+          <strong>{{ selected_worker.hire_date or 'Not set yet' }}</strong>
+          <span>Payroll frequency: {{ (selected_worker.payroll_frequency or 'weekly')|replace('_', ' ')|title }}</span>
+        </div>
+        <div class='team-info-card'>
+          <div class='small-label'>Address</div>
+          <strong>{{ selected_worker.address or 'No address saved yet' }}</strong>
+          <span>Tax ID / SSN: {{ selected_worker.ssn or 'Not set yet' }}</span>
+        </div>
+        <div class='team-info-card'>
+          <div class='small-label'>Payment Method</div>
+          <strong>{{ (selected_worker.payout_preference or 'paper_check')|replace('_', ' ')|title }}</strong>
+          <span>{% if selected_worker.deposit_bank_name %}{{ selected_worker.deposit_bank_name }}{% if selected_worker.deposit_account_last4 %} · ending in {{ selected_worker.deposit_account_last4 }}{% endif %}{% elif selected_worker.zelle_contact %}{{ selected_worker.zelle_contact }}{% else %}Not configured yet{% endif %}</span>
+        </div>
+      </div>
+      <div class='team-callout' style='margin-top:14px'>
+        <p><strong>Availability baseline:</strong> {{ selected_worker.availability_baseline or 'No baseline notes saved yet.' }}</p>
+        {% if selected_worker.pay_notes %}<p style='margin-top:10px'><strong>Pay notes:</strong> {{ selected_worker.pay_notes }}</p>{% endif %}
+      </div>
+    </details>
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Workload & Availability</h3><span class='badge'>{{ worker_jobs|length }} jobs</span></div>
+    <details class='compact-details'>
+      <summary>Open Workload & Availability</summary>
+      <div class='grid cards-2' style='margin-top:14px'>
+        <div>
+          {% if worker_jobs %}
+          <div class='ops-card-list'>
+            {% for job in worker_jobs[:12] %}
+            <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+              <div class='ops-list-top'>
+                <strong>{{ job.title }}</strong>
+                <span class='badge ops-status ops-status-{{ job.status }}'>{{ job.status|replace('_', ' ')|title }}</span>
+              </div>
+              <div class='small'>{{ job.scheduled_start[:10] if job.scheduled_start else 'Unscheduled' }}{% if job.scheduled_start|length > 10 %} · {{ job.scheduled_start[11:16] }}{% endif %}</div>
+              {% if job.service_address %}<div class='small'>{{ job.service_address }}</div>{% endif %}
+            </a>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class='empty-state'><strong>No jobs assigned yet.</strong><span>This worker will show up here as soon as dispatch starts assigning work.</span></div>
+          {% endif %}
+        </div>
+        <div>
+          <div class='card-head' style='margin:0 0 12px 0'><h3>Upcoming Availability</h3><a class='btn btn-secondary btn-sm' href='{{ url_for("ops_availability", client_id=client_id, worker_id=selected_worker.id) }}'>Manage</a></div>
+          {% if worker_availability %}
+          <table class='table'>
+            <tr><th>Date</th><th>Status</th><th>Window</th><th>Note</th></tr>
+            {% for row in worker_availability %}
+            <tr>
+              <td>{{ row.available_date }}</td>
+              <td>{{ row.availability_status|replace('_', ' ')|title }}</td>
+              <td>{{ row.start_time or 'All day' }}{% if row.end_time %} - {{ row.end_time }}{% endif %}</td>
+              <td>{{ row.note or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+          {% else %}
+          <div class='small'>No manager-entered availability blocks are saved for this worker yet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Portal & Payroll</h3><span class='badge'>Restricted Portal</span></div>
+    <details class='compact-details'>
+      <summary>Open Portal & Payroll</summary>
+      <div class='ops-timeline' style='margin-top:14px'>
+        <div class='ops-timeline-item'>
+          <div class='ops-timeline-title'>Portal Access</div>
+          <div class='small'>{{ 'Enabled' if selected_worker.portal_access_enabled else 'Disabled' }}</div>
+        </div>
+        <div class='ops-timeline-item'>
+          <div class='ops-timeline-title'>Payment Method</div>
+          <div class='small'>{{ (selected_worker.payout_preference or 'paper_check')|replace('_', ' ')|title }}</div>
+        </div>
+        <div class='ops-timeline-item'>
+          <div class='ops-timeline-title'>Approval Status</div>
+          <div class='small'>{{ (selected_worker.portal_approval_status or 'approved')|replace('_', ' ')|title }}</div>
+        </div>
+      </div>
+
+      <form method='post' class='form-grid' style='margin-top:14px'>
+        {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <input type='hidden' name='action' value='update_worker_portal'>
+        <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
+        <div><label>Portal Email</label><input name='portal_email' type='email' value='{{ selected_worker.email or "" }}' placeholder='teammember@email.com'></div>
+        <div><label>Portal Password</label><input name='portal_password' type='password' placeholder='Set a password or leave blank for setup email'></div>
+        <div>
+          <label>Portal Access</label>
+          <label style='display:flex;gap:8px;align-items:center;margin-top:8px'><input type='checkbox' name='portal_access_enabled' value='1' {% if selected_worker.portal_access_enabled %}checked{% endif %}> Enabled</label>
+        </div>
+        <div><label>Login Page</label><div class='small' style='padding-top:10px'><a href='{{ worker_login_url }}' target='_blank'>Open Team Member Login Page</a></div></div>
+        <div style='grid-column:1/-1'>
+          <div class='small'>Managers can update the restricted worker portal here without leaving the full-screen team information view.</div>
+        </div>
+        <div><button type='submit'>Save Team Member Login</button></div>
+      </form>
+    </details>
+  </div>
+
+  <div class='card'>
+    <div class='card-head'>
+      <h3>W-4 & Forms</h3>
+      <div class='stack-actions'>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("w4", worker_id=selected_worker.id) }}' target='_blank'>Printable W-4</a>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("w2", worker_id=selected_worker.id) }}' target='_blank'>W-2</a>
+        {% if selected_worker.worker_type != 'W-2' %}<a class='btn btn-secondary btn-sm' href='{{ url_for("form_1099", worker_id=selected_worker.id) }}' target='_blank'>1099</a>{% endif %}
+      </div>
+    </div>
+    <details class='compact-details'>
+      <summary>Open W-4 Answers</summary>
+      <form method='post' action='{{ url_for("save_worker_w4", worker_id=selected_worker.id) }}' class='form-grid' style='margin-top:12px'>
+        <input type='hidden' name='next_view' value='ops_team_member'>
+        <div><label>1(a) Employee name</label><input value='{{ selected_worker.name }}' readonly></div>
+        <div><label>1(b) SSN</label><input value='{{ selected_worker.ssn or "" }}' readonly></div>
+        <div><label>1(c) Filing Status</label><select name='filing_status'><option value='single' {% if answers and answers.filing_status == 'single' %}selected{% endif %}>Single or Married filing separately</option><option value='married' {% if answers and answers.filing_status == 'married' %}selected{% endif %}>Married filing jointly or Qualifying surviving spouse</option><option value='head' {% if answers and answers.filing_status == 'head' %}selected{% endif %}>Head of household</option></select></div>
+        <div><label>Step 2 Multiple Jobs or Spouse Works</label><select name='multiple_jobs'><option value=''>No</option><option value='1' {% if answers and answers.multiple_jobs %}selected{% endif %}>Yes</option></select></div>
+        <div><label>Step 3 Qualifying children under 17</label><input name='qualifying_children' type='number' step='0.01' value='{{ answers.qualifying_children if answers else "" }}'></div>
+        <div><label>Step 3 Other dependents</label><input name='other_dependents' type='number' step='0.01' value='{{ answers.other_dependents if answers else "" }}'></div>
+        <div><label>Step 4(a) Other income</label><input name='other_income' type='number' step='0.01' value='{{ answers.other_income if answers else "" }}'></div>
+        <div><label>Step 4(b) Deductions</label><input name='deductions' type='number' step='0.01' value='{{ answers.deductions if answers else "" }}'></div>
+        <div><label>Step 4(c) Extra withholding</label><input name='extra_withholding' type='number' step='0.01' value='{{ answers.extra_withholding if answers else "" }}'></div>
+        <div><label>Signature Name</label><input name='signature_name' value='{{ answers.signature_name if answers else selected_worker.name }}'></div>
+        <div><label>Signed Date</label><input name='signed_date' type='date' value='{{ answers.signed_date if answers else today_iso }}'></div>
+        <div style='grid-column:1/-1'><button type='submit'>Save W-4 Answers</button></div>
+      </form>
+    </details>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('form').forEach(function (form) {
+    var select = form.querySelector('.worker-payout-select');
+    if (!select) return;
+    function updatePayoutFields() {
+      var value = select.value;
+      form.querySelectorAll('.worker-payout-field').forEach(function (field) {
+        var show = field.classList.contains('payout-' + value);
+        field.style.display = show ? '' : 'none';
+      });
+    }
+    select.addEventListener('change', updatePayoutFields);
+    updatePayoutFields();
+  });
+});
+</script>
+{% endblock %}
