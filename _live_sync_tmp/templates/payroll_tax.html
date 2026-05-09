@@ -14,6 +14,7 @@
 
 <div class='card hero-surface' style='margin-bottom:16px'>
   <div style='display:flex;gap:10px;flex-wrap:wrap'>
+    <a class='btn btn-secondary' href='{{ url_for("payroll_summary", client_id=client_id, year=year, month=quarter_months[0]) }}'>Monthly Payroll Summary</a>
     <a class='btn {{ "btn-secondary" if view!="quarter" else "" }}' href='{{ url_for("payroll_tax", client_id=client_id, year=year, quarter=quarter, view="quarter") }}'>941 Quarter Builder</a>
     <a class='btn {{ "btn-secondary" if view!="final_w2" else "" }}' href='{{ url_for("payroll_tax", client_id=client_id, year=year, quarter=quarter, view="final_w2") }}'>Generate Final W-2</a>
   </div>

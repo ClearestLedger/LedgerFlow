@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Business Setup</div>
+    <div class='page-title'>Add New Business Profile</div>
+    <div class='page-subtitle'>Create a full LedgerFlow business profile first, then return to the directory to open payroll, billing, or workspace supervision.</div>
+  </div>
+  <div style='display:flex;gap:10px;flex-wrap:wrap'>
+    <a class='btn btn-secondary' href='{{ url_for("clients") }}'>Choose Business</a>
+    <a class='btn btn-secondary' href='{{ url_for("cpa_dashboard") }}'>Back to Administrator Dashboard</a>
+  </div>
+</div>
+
+<div class='card section-frame'>
+  <div class='card-head'>
+    <div>
+      <h3>Create Business Profile</h3>
+      <div class='small'>New business records are saved with profile history, payroll contact details, and EFTPS references from the start.</div>
+    </div>
+  </div>
+  <form method='post' action='{{ url_for("clients") }}' class='form-grid'>
+    <div><label>{{ tr('Business Name') }}</label><input name='business_name' required></div>
+    <div><label>{{ tr('Kind of Business') }}</label><select name='business_category'><option value=''>{{ tr('Select one (optional)') }}</option>{% for option in business_categories %}<option value='{{ option }}'>{{ tr(option) }}</option>{% endfor %}</select></div>
+    <div><label>{{ tr('Business Structure') }}</label><select name='business_type' required>{% for option in business_structures %}<option value='{{ option }}'>{{ tr(option) }}</option>{% endfor %}</select></div>
+    <div><label>{{ tr('Preferred Language') }}</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if option.code == 'en' %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
+    <div><label>{{ tr('EIN') }}</label><input name='ein'></div>
+    <div><label>{{ tr('Business Address') }}</label><input name='address'></div>
+    <div style='grid-column:1 / -1'><label>{{ tr('Specialty / Short Description') }}</label><input name='business_specialty' placeholder='{{ tr("Optional short description like house cleaning or interior painting") }}'></div>
+    <div style='grid-column:1 / -1'><label>{{ tr('Additional Owners / Owner Contacts') }}</label><textarea name='owner_contacts' rows='3' placeholder='{{ tr("Add one owner per line or include name, role, phone, and email.") }}'></textarea></div>
+    <div class='small' style='grid-column:1 / -1'>{{ tr('Add one owner per line or include name, role, phone, and email.') }}</div>
+    <div style='grid-column:1 / -1'><label>{{ tr('Job Scope / Service Scope') }}</label><textarea name='job_scope_summary' rows='4' placeholder='{{ tr("Example: exterior wash and wax, ceramic coating, interior detailing") }}'></textarea></div>
+    <div class='small' style='grid-column:1 / -1'>{{ tr('Add one job scope per line so estimates, schedules, and future job templates can reuse the wording.') }}</div>
+
+    <div><label>{{ tr('Service Level / Pricing Tier') }}</label><select name='service_level'>{% for value, label in service_level_options %}<option value='{{ value }}'>{{ tr(label) }}</option>{% endfor %}</select></div>
+    <div><label>{{ tr('Access Level Granted') }}</label><select name='access_service_level'>{% for value, label in service_level_access_options %}<option value='{{ value }}'>{{ tr(label) }}</option>{% endfor %}</select></div>
+    <div style='grid-column:1 / -1'><label>Access Override Note</label><input name='access_override_note' placeholder='Optional note for internal override reason'></div>
+    <div><label>Primary Contact Person</label><input name='contact_name'></div>
+    <div><label>Phone Number</label><input name='phone'></div>
+    <div><label>Email</label><input name='email'></div>
+    <div><label>State Tax ID</label><input name='state_tax_id'></div>
+
+    <div style='grid-column:1 / -1;margin-top:8px'><strong>Subscription Billing Foundation</strong><div class='small'>Structural only in this phase. This stores plan and payment-method status for future recurring billing, but it does not charge automatically yet.</div></div>
+    <div><label>Subscription Plan / Tier Code</label><input name='subscription_plan_code' placeholder='self-service-monthly'></div>
+    <div><label>Subscription Status</label><select name='subscription_status'>{% for value, label in subscription_status_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+    <div><label>Monthly Subscription Amount</label><input name='subscription_amount' type='number' step='0.01' min='0'></div>
+    <div><label>Next Billing Date</label><input name='subscription_next_billing_date' type='date'></div>
+    <div><label><input type='checkbox' name='subscription_autopay_enabled' value='1'> Autopay enrollment recorded</label></div>
+    <div><label>Default Payment Method Label</label><input name='default_payment_method_label' placeholder='Visa ending in 4242'></div>
+    <div><label>Payment Method Status</label><select name='default_payment_method_status'><option value='missing'>Missing</option><option value='on_file'>On File</option><option value='needs_update'>Needs Update</option></select></div>
+    <div><label>Backup Payment Method Label</label><input name='backup_payment_method_label' placeholder='Optional backup method'></div>
+    <div style='grid-column:1 / -1'><label>Billing Notes</label><input name='billing_notes' placeholder='Internal subscription billing note'></div>
+
+    <div><label>EFTPS Enrollment Status</label><select name='eftps_status'>{% for option in eftps_statuses %}<option value='{{ option }}'>{{ option }}</option>{% endfor %}</select></div>
+    <div><label>EFTPS Login Reference</label><input name='eftps_login_reference' placeholder='Reference only'></div>
+    <div><label>Filing Type</label><select name='filing_type'>{% for option in filing_types %}<option value='{{ option }}'>{{ option }}</option>{% endfor %}</select></div>
+    <div></div>
+
+    <div class='small' style='grid-column:1 / -1;padding:12px 14px;border:1px solid #dfe7ef;border-radius:16px;background:#f8fafc'>
+      <strong>{{ tr('Managed in Billing Center') }}</strong>
+      <div style='margin-top:4px'>{{ tr('Billing Center keeps method labels, last four digits, and hosted billing references. Full card and bank-account numbers are no longer stored in this business profile.') }}</div>
+    </div>
+
+    <div><label>Payroll Contact Name</label><input name='payroll_contact_name'></div>
+    <div><label>Payroll Contact Phone</label><input name='payroll_contact_phone'></div>
+    <div><label>Payroll Contact Email</label><input name='payroll_contact_email'></div>
+    <div class='business-form-actions' style='grid-column:1 / -1'>
+      <button class='btn' type='submit'>Create Business Profile</button>
+      <span class='small'>Save the profile first, then use Choose Business to open the new workspace.</span>
+    </div>
+  </form>
+</div>
+{% endblock %}

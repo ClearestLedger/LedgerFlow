@@ -147,10 +147,13 @@
     </div>
     <nav class='app-nav'>
       {% if current_user.role=='admin' %}
-      <details class='app-nav-group nav-fold nav-tone-admin' {% if request.endpoint in ["cpa_dashboard","clients","client_users","email_settings","ai_guide_settings","admin_calendar","admin_tasks"] %}open{% endif %}>
+      <details class='app-nav-group nav-fold nav-tone-admin' {% if request.endpoint in ["cpa_dashboard","clients","clients_new","payroll_summary","client_users","email_settings","ai_guide_settings","admin_calendar","admin_tasks"] %}open{% endif %}>
         <summary class='app-nav-group-label'>{{ tr('Administrator') }}</summary>
         <a class='app-nav-link {% if request.endpoint=="cpa_dashboard" %}active{% endif %}' href='{{ url_for("cpa_dashboard") }}'>{{ tr('Administrator Dashboard') }}</a>
         <a class='app-nav-link {% if request.endpoint=="clients" %}active{% endif %}' href='{{ url_for("clients") }}'>{{ tr('Businesses') }}</a>
+        <a class='app-nav-link nav-sub-link {% if request.endpoint=="clients" %}active{% endif %}' href='{{ url_for("clients") }}'>{{ tr('Choose Business') }}</a>
+        <a class='app-nav-link nav-sub-link {% if request.endpoint=="clients_new" %}active{% endif %}' href='{{ url_for("clients_new") }}'>{{ tr('Add New Business Profile') }}</a>
+        <a class='app-nav-link {% if request.endpoint=="payroll_summary" %}active{% endif %}' href='{{ url_for("payroll_summary") }}'>{{ tr('Payroll Summary') }}</a>
         <a class='app-nav-link {% if request.endpoint=="client_users" %}active{% endif %}' href='{{ url_for("client_users") }}'>{{ tr('Business Users') }}</a>
         <a class='app-nav-link {% if request.endpoint=="email_settings" %}active{% endif %}' href='{{ url_for("email_settings") }}'>{{ tr('Email Settings') }}</a>
         {% if ai_guide_visible %}

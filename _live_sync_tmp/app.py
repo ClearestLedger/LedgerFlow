@@ -3367,7 +3367,10 @@ def quick_search_catalog(user=None, worker=None, active_client=None, current_mod
     if user['role'] == 'admin' and current_mode == 'cpa':
         entries.extend([
             quick_search_entry('Administrator Dashboard', url_for('cpa_dashboard'), current_language, description='See administrator alerts, business activity, and platform controls.', category='Administrator', aliases=('admin', 'dashboard', 'overview', 'painel do administrador')),
-            quick_search_entry('Businesses', url_for('clients'), current_language, description='Open the business directory and supervision controls.', category='Administrator', aliases=('companies', 'business list', 'empresas', 'clientes negocio')),
+            quick_search_entry('Businesses', url_for('clients'), current_language, description='Open the full business directory and choose one business to supervise.', category='Administrator', aliases=('companies', 'business list', 'empresas', 'clientes negocio')),
+            quick_search_entry('Choose Business', url_for('clients'), current_language, description='Open the full-page business chooser and directory.', category='Administrator', aliases=('open business', 'business directory', 'choose workspace', 'selecionar empresa')),
+            quick_search_entry('Add New Business Profile', url_for('clients_new'), current_language, description='Create a new business profile from the administrator workspace.', category='Administrator', aliases=('new business', 'create business', 'add business', 'novo negocio', 'nueva empresa')),
+            quick_search_entry('Payroll Summary', url_for('payroll_summary'), current_language, description='Review monthly payroll totals, EFTPS liability, and federal payment links.', category='Administrator', aliases=('payroll', 'eftps', 'payroll tax', '941', 'federal payroll taxes')),
             quick_search_entry('Business Users', url_for('client_users'), current_language, description='Review invites, prospect trials, and business login activity.', category='Administrator', aliases=('invites', 'prospects', 'users', 'logins', 'usuarios empresariais')),
             quick_search_entry('Email Settings', url_for('email_settings'), current_language, description='Manage SMTP configuration and outbound email behavior.', category='Administrator', aliases=('smtp', 'mail', 'email', 'correo', 'e-mail')),
             quick_search_entry('Calendar', url_for('admin_calendar'), current_language, description='Review the administrator calendar and planning visibility.', category='Administrator', aliases=('calendar', 'agenda', 'calendario')),
@@ -8835,6 +8838,143 @@ def payroll_tax_summary(client_id: int, year: int, quarter: int):
         month_deposits = money(sum(float(d['amount'] or 0) for d in deposits if int(d['tax_month']) == month))
         monthly_rows.append({'month': month, 'liability': monthly_liability[month], 'deposits': month_deposits, 'difference': money(monthly_liability[month] - month_deposits)})
     return {'totals': totals, 'details': included_details, 'excluded_1099': excluded_1099, 'deposits': deposits, 'monthly_rows': monthly_rows, 'tax_rules': tax_rules, 'year': year, 'quarter': quarter}
+
+
+def payroll_monthly_summary(client_id: int, year: int):
+    tax_rules = current_tax_rules(year)
+    with get_conn() as conn:
+        workers = conn.execute(
+            'SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name',
+            (client_id,),
+        ).fetchall()
+        deposits = conn.execute(
+            'SELECT * FROM payroll_tax_deposits WHERE client_id=? AND tax_year=? ORDER BY tax_month, deposit_date, id',
+            (client_id, year),
+        ).fetchall()
+
+    month_rows_by_number: dict[int, dict] = {
+        month: {
+            'month': month,
+            'label': date(year, month, 1).strftime('%B'),
+            'quarter': ((month - 1) // 3) + 1,
+            'gross_wages': 0.0,
+            'net_pay': 0.0,
+            'federal_withholding': 0.0,
+            'employee_social_security': 0.0,
+            'employer_social_security': 0.0,
+            'employee_medicare': 0.0,
+            'employer_medicare': 0.0,
+            'additional_medicare_tax': 0.0,
+            'eftps_liability': 0.0,
+            'deposits': 0.0,
+            'balance_due': 0.0,
+            'overpayment': 0.0,
+            'payment_count': 0,
+            'worker_ids': set(),
+            'deposit_entries': [],
+        }
+        for month in range(1, 13)
+    }
+    annual_totals = {
+        'gross_wages': 0.0,
+        'net_pay': 0.0,
+        'federal_withholding': 0.0,
+        'employee_social_security': 0.0,
+        'employer_social_security': 0.0,
+        'employee_medicare': 0.0,
+        'employer_medicare': 0.0,
+        'additional_medicare_tax': 0.0,
+        'eftps_liability': 0.0,
+        'deposits': 0.0,
+        'balance_due': 0.0,
+        'overpayment': 0.0,
+        'payment_count': 0,
+        'active_month_count': 0,
+        'active_worker_count': 0,
+    }
+    active_worker_ids: set[int] = set()
+
+    for worker in workers:
+        with get_conn() as conn:
+            all_year = conn.execute(
+                'SELECT * FROM worker_payments WHERE worker_id=? AND substr(payment_date,1,4)=? ORDER BY payment_date, id',
+                (worker['id'], str(year)),
+            ).fetchall()
+        rollup = compute_worker_payment_rollup(worker, all_year, tax_rules)
+        for detail in rollup['details']:
+            pay_date = parse_date(detail['payment_date'])
+            if not pay_date or pay_date.year != year or worker['worker_type'] != 'W-2':
+                continue
+            month_row = month_rows_by_number.get(pay_date.month)
+            if not month_row:
+                continue
+            month_row['gross_wages'] = money(month_row['gross_wages'] + detail['gross'])
+            month_row['net_pay'] = money(month_row['net_pay'] + detail['net_check'])
+            month_row['federal_withholding'] = money(month_row['federal_withholding'] + detail['federal_withholding'])
+            month_row['employee_social_security'] = money(month_row['employee_social_security'] + detail['employee_social_security'])
+            month_row['employer_social_security'] = money(month_row['employer_social_security'] + detail['employer_social_security'])
+            month_row['employee_medicare'] = money(month_row['employee_medicare'] + detail['employee_medicare'])
+            month_row['employer_medicare'] = money(month_row['employer_medicare'] + detail['employer_medicare'])
+            month_row['additional_medicare_tax'] = money(month_row['additional_medicare_tax'] + detail['additional_medicare_tax'])
+            month_row['eftps_liability'] = money(
+                month_row['eftps_liability']
+                + detail['federal_withholding']
+                + detail['employee_social_security']
+                + detail['employer_social_security']
+                + detail['employee_medicare']
+                + detail['employer_medicare']
+                + detail['additional_medicare_tax']
+            )
+            month_row['payment_count'] += 1
+            month_row['worker_ids'].add(int(worker['id']))
+            active_worker_ids.add(int(worker['id']))
+
+    for deposit in deposits:
+        try:
+            tax_month = int(deposit['tax_month'] or 0)
+        except (TypeError, ValueError):
+            tax_month = 0
+        month_row = month_rows_by_number.get(tax_month)
+        if not month_row:
+            continue
+        month_row['deposits'] = money(month_row['deposits'] + float(deposit['amount'] or 0))
+        month_row['deposit_entries'].append(deposit)
+
+    month_rows = []
+    for month in range(1, 13):
+        row = month_rows_by_number[month]
+        row['worker_count'] = len(row.pop('worker_ids'))
+        difference = money(row['eftps_liability'] - row['deposits'])
+        row['balance_due'] = difference if difference > 0 else 0.0
+        row['overpayment'] = abs(difference) if difference < 0 else 0.0
+        if row['payment_count'] or row['deposits'] or row['eftps_liability']:
+            annual_totals['active_month_count'] += 1
+        for key in (
+            'gross_wages',
+            'net_pay',
+            'federal_withholding',
+            'employee_social_security',
+            'employer_social_security',
+            'employee_medicare',
+            'employer_medicare',
+            'additional_medicare_tax',
+            'eftps_liability',
+            'deposits',
+            'balance_due',
+            'overpayment',
+        ):
+            annual_totals[key] = money(annual_totals[key] + row[key])
+        annual_totals['payment_count'] += row['payment_count']
+        month_rows.append(row)
+
+    annual_totals['active_worker_count'] = len(active_worker_ids)
+    return {
+        'year': year,
+        'month_rows': month_rows,
+        'annual_totals': annual_totals,
+        'w2_worker_count': len([worker for worker in workers if worker['worker_type'] == 'W-2']),
+        'deposits': deposits,
+    }
 
 
 def cpa_dashboard_summary(user):
@@ -16347,6 +16487,20 @@ def clients():
     )
 
 
+@app.route('/clients/new')
+@admin_required
+def clients_new():
+    return render_template(
+        'clients_new.html',
+        business_structures=business_structures(),
+        business_categories=business_categories(),
+        service_level_options=service_level_options(),
+        filing_types=filing_types(),
+        eftps_statuses=eftps_statuses(),
+        subscription_status_options=subscription_status_options(),
+    )
+
+
 @app.route('/client-logins', methods=['GET', 'POST'])
 @admin_required
 def client_users():
@@ -19708,6 +19862,31 @@ def payroll_tax():
         w2_workers = conn.execute('SELECT * FROM workers WHERE client_id=? AND worker_type="W-2" ORDER BY name', (client_id,)).fetchall()
     summary = payroll_tax_summary(client_id, year, quarter)
     return render_template('payroll_tax.html', client=client, client_id=client_id, payroll_tax=summary, year=year, quarter=quarter, quarter_months=quarter_months(quarter), view=view, w2_workers=w2_workers, today=date.today().isoformat(), eftps_url=eftps_payment_url())
+
+
+@app.route('/payroll-summary')
+@admin_required
+def payroll_summary():
+    user = current_user()
+    client_id = selected_client_id(user, 'get')
+    year = request.args.get('year', type=int) or date.today().year
+    selected_month = request.args.get('month', type=int) or date.today().month
+    if selected_month < 1 or selected_month > 12:
+        selected_month = date.today().month
+    with get_conn() as conn:
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+    summary = payroll_monthly_summary(client_id, year)
+    selected_month_row = next((row for row in summary['month_rows'] if row['month'] == selected_month), summary['month_rows'][selected_month - 1])
+    return render_template(
+        'payroll_summary.html',
+        client=client,
+        client_id=client_id,
+        payroll_summary=summary,
+        year=year,
+        selected_month=selected_month,
+        selected_month_row=selected_month_row,
+        eftps_url=eftps_payment_url(),
+    )
 
 
 @app.route('/submit-for-cpa-review', methods=['POST'])

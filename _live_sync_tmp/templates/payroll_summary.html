@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Payroll Summary</div>
+    <div class='page-title'>{{ client.business_name }}</div>
+    <div class='page-subtitle'>Monthly payroll totals, EFTPS liability, and administrator payment shortcuts in one view.</div>
+  </div>
+  <div style='display:flex;gap:10px;flex-wrap:wrap'>
+    <a class='btn' href='{{ eftps_url }}' target='_blank' rel='noopener'>Open EFTPS</a>
+    <a class='btn btn-secondary' href='{{ url_for("payroll_tax", client_id=client_id, year=year, quarter=selected_month_row.quarter) }}'>Open Payroll Tax Center</a>
+    <a class='btn btn-secondary' href='{{ url_for("clients") }}'>Choose Business</a>
+  </div>
+</div>
+
+<div class='card hero-surface' style='margin-bottom:16px'>
+  <form method='get' class='form-grid'>
+    <input type='hidden' name='client_id' value='{{ client_id }}'>
+    <div><label>Year</label><input name='year' type='number' value='{{ year }}'></div>
+    <div><label>Focus Month</label><select name='month'>{% for row in payroll_summary.month_rows %}<option value='{{ row.month }}' {% if row.month == selected_month %}selected{% endif %}>{{ row.label }}</option>{% endfor %}</select></div>
+    <div><button type='submit'>Load Payroll Summary</button></div>
+  </form>
+  <div class='summary-strip' style='margin-top:14px'>
+    <span class='summary-pill'>W-2 workers: {{ payroll_summary.w2_worker_count }}</span>
+    <span class='summary-pill'>Months with payroll: {{ payroll_summary.annual_totals.active_month_count }}</span>
+    <span class='summary-pill'>Annual EFTPS liability: ${{ '%.2f'|format(payroll_summary.annual_totals.eftps_liability or 0) }}</span>
+    <span class='summary-pill'>Annual remaining balance: ${{ '%.2f'|format(payroll_summary.annual_totals.balance_due or 0) }}</span>
+  </div>
+</div>
+
+<div class='card section-frame' style='margin-bottom:16px;border:1px solid #bfdbfe;background:#eff6ff'>
+  <div class='card-head'><h3>{{ selected_month_row.label }} {{ year }} EFTPS Snapshot</h3><span class='badge'>Monthly View</span></div>
+  <div class='small' style='margin-bottom:10px'>This page shows the payroll tax liability recorded from W-2 payroll for the selected month. Review the actual IRS deposit schedule before submitting payment.</div>
+  <div class='grid cards-4'>
+    <div class='card metric'><div class='metric-label'>Gross Wages</div><div class='metric-value'>${{ '%.2f'|format(selected_month_row.gross_wages or 0) }}</div></div>
+    <div class='card metric'><div class='metric-label'>Net Pay</div><div class='metric-value'>${{ '%.2f'|format(selected_month_row.net_pay or 0) }}</div></div>
+    <div class='card metric'><div class='metric-label'>Monthly EFTPS Liability</div><div class='metric-value'>${{ '%.2f'|format(selected_month_row.eftps_liability or 0) }}</div></div>
+    <div class='card metric'><div class='metric-label'>Remaining EFTPS Payment</div><div class='metric-value'>${{ '%.2f'|format(selected_month_row.balance_due or 0) }}</div></div>
+  </div>
+  <div class='summary-strip' style='margin-top:14px'>
+    <span class='summary-pill'>Deposits recorded: ${{ '%.2f'|format(selected_month_row.deposits or 0) }}</span>
+    <span class='summary-pill'>Payments processed: {{ selected_month_row.payment_count }}</span>
+    <span class='summary-pill'>Workers paid: {{ selected_month_row.worker_count }}</span>
+    {% if selected_month_row.overpayment %}
+    <span class='summary-pill'>Overpayment: ${{ '%.2f'|format(selected_month_row.overpayment or 0) }}</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class='grid cards-2' style='margin-bottom:16px'>
+  <div class='card'>
+    <div class='card-head'><h3>{{ selected_month_row.label }} Payroll Breakdown</h3><span class='badge'>Payroll Components</span></div>
+    <table class='table'>
+      <tr><th>Line Item</th><th>Amount</th></tr>
+      <tr><td>Federal withholding</td><td>${{ '%.2f'|format(selected_month_row.federal_withholding or 0) }}</td></tr>
+      <tr><td>Employee Social Security</td><td>${{ '%.2f'|format(selected_month_row.employee_social_security or 0) }}</td></tr>
+      <tr><td>Employer Social Security</td><td>${{ '%.2f'|format(selected_month_row.employer_social_security or 0) }}</td></tr>
+      <tr><td>Employee Medicare</td><td>${{ '%.2f'|format(selected_month_row.employee_medicare or 0) }}</td></tr>
+      <tr><td>Employer Medicare</td><td>${{ '%.2f'|format(selected_month_row.employer_medicare or 0) }}</td></tr>
+      <tr><td>Additional Medicare</td><td>${{ '%.2f'|format(selected_month_row.additional_medicare_tax or 0) }}</td></tr>
+      <tr><td><strong>Total monthly EFTPS liability</strong></td><td><strong>${{ '%.2f'|format(selected_month_row.eftps_liability or 0) }}</strong></td></tr>
+    </table>
+  </div>
+  <div class='card'>
+    <div class='card-head'><h3>EFTPS Payment Link</h3><span class='badge'>Official IRS Site</span></div>
+    <div class='small' style='margin-bottom:10px'>Use the official EFTPS portal in a new tab. LedgerFlow does not send the payment for you.</div>
+    <div style='display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px'>
+      <a class='btn' href='{{ eftps_url }}' target='_blank' rel='noopener'>Go To EFTPS</a>
+      <a class='btn btn-secondary' href='{{ url_for("payroll_tax", client_id=client_id, year=year, quarter=selected_month_row.quarter) }}'>Open Quarter Builder</a>
+    </div>
+    <div class='small'>Enrollment status: <strong>{{ client.eftps_status or 'Not Enrolled' }}</strong>{% if client.eftps_login_reference %} &middot; Login reference: {{ client.eftps_login_reference }}{% endif %}</div>
+    <div class='small' style='margin-top:10px'>Payroll contact: <strong>{{ client.payroll_contact_name or client.contact_name or 'Not set' }}</strong>{% if client.payroll_contact_email %} &middot; {{ client.payroll_contact_email }}{% endif %}{% if client.payroll_contact_phone %} &middot; {{ client.payroll_contact_phone }}{% endif %}</div>
+  </div>
+</div>
+
+<div class='card' style='margin-bottom:16px'>
+  <div class='card-head'><h3>Monthly Payroll &amp; EFTPS Summary</h3><span class='badge'>{{ year }}</span></div>
+  <table class='table'>
+    <tr><th>Month</th><th>Gross Wages</th><th>Federal Withheld</th><th>EFTPS Liability</th><th>Deposits</th><th>Remaining Balance</th><th>Quarter</th></tr>
+    {% for row in payroll_summary.month_rows %}
+    <tr {% if row.month == selected_month %}style='background:#f8fbff'{% endif %}>
+      <td><strong>{{ row.label }}</strong></td>
+      <td>${{ '%.2f'|format(row.gross_wages or 0) }}</td>
+      <td>${{ '%.2f'|format(row.federal_withholding or 0) }}</td>
+      <td>${{ '%.2f'|format(row.eftps_liability or 0) }}</td>
+      <td>${{ '%.2f'|format(row.deposits or 0) }}</td>
+      <td>${{ '%.2f'|format(row.balance_due or 0) }}</td>
+      <td><a class='btn btn-secondary btn-sm' href='{{ url_for("payroll_tax", client_id=client_id, year=year, quarter=row.quarter) }}'>Q{{ row.quarter }}</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class='card'>
+  <div class='card-head'><h3>{{ selected_month_row.label }} Deposit Ledger</h3><span class='badge'>Saved Deposits</span></div>
+  <table class='table'>
+    <tr><th>Date</th><th>Amount</th><th>Method</th><th>Confirmation</th><th>Note</th></tr>
+    {% for row in selected_month_row.deposit_entries %}
+    <tr>
+      <td>{{ row.deposit_date or '&mdash;' }}</td>
+      <td>${{ '%.2f'|format(row.amount or 0) }}</td>
+      <td>{{ row.payment_method or 'EFTPS' }}</td>
+      <td>{{ row.confirmation_number or '&mdash;' }}</td>
+      <td>{{ row.note or '&mdash;' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan='5'>No deposits saved for {{ selected_month_row.label }} {{ year }}.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
