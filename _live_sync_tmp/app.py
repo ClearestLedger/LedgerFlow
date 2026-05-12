@@ -13612,6 +13612,7 @@ def automatic_invoice_reminders(conn: sqlite3.Connection, *, client_id: int, cre
                 body_html=email_result['body_html'],
                 status='sent',
                 created_by_user_id=created_by_user_id,
+                conn=conn,
             )
             sent_count += 1
         except Exception as exc:
@@ -13624,6 +13625,7 @@ def automatic_invoice_reminders(conn: sqlite3.Connection, *, client_id: int, cre
                 status='failed',
                 error_message=str(exc)[:500],
                 created_by_user_id=created_by_user_id,
+                conn=conn,
             )
     return sent_count
 
