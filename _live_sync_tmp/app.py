@@ -9197,6 +9197,49 @@ def worker_payments_summary(worker_id: int):
     }
 
 
+def worker_gross_pay_snapshot(conn: sqlite3.Connection, worker_id: int, year: int | None = None) -> dict:
+    target_year = int(year or date.today().year)
+    current_month_key = date.today().strftime('%Y-%m') if target_year == date.today().year else f'{target_year}-01'
+    payment_rows = conn.execute(
+        '''SELECT payment_date, amount
+           FROM worker_payments
+           WHERE worker_id=? AND substr(payment_date,1,4)=?
+           ORDER BY payment_date DESC, id DESC''',
+        (worker_id, str(target_year)),
+    ).fetchall()
+    month_totals: dict[str, float] = {}
+    month_counts: dict[str, int] = {}
+    ytd_total = 0.0
+    for row in payment_rows:
+        payment_date = (row['payment_date'] or '').strip()
+        month_key = payment_date[:7] if len(payment_date) >= 7 else ''
+        amount = float(row['amount'] or 0)
+        ytd_total += amount
+        if month_key:
+            month_totals[month_key] = money(month_totals.get(month_key, 0.0) + amount)
+            month_counts[month_key] = month_counts.get(month_key, 0) + 1
+    monthly_rows = []
+    for month_key in sorted(month_totals.keys(), reverse=True):
+        try:
+            label = datetime.strptime(month_key, '%Y-%m').strftime('%B %Y')
+        except ValueError:
+            label = month_key
+        monthly_rows.append({
+            'month_key': month_key,
+            'month_label': label,
+            'gross_total': month_totals[month_key],
+            'payment_count': month_counts.get(month_key, 0),
+        })
+    return {
+        'year': target_year,
+        'year_label': str(target_year),
+        'year_to_date_total': money(ytd_total),
+        'current_month_total': money(month_totals.get(current_month_key, 0.0)),
+        'monthly_rows': monthly_rows,
+        'has_payments': bool(payment_rows),
+    }
+
+
 def worker_payment_stub_context(worker, payment):
     if not worker or not payment:
         return None
@@ -15109,6 +15152,7 @@ def ops_team_context(conn: sqlite3.Connection, client_id: int, selected_worker_i
     worker_jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, worker_id=selected_worker_id)] if selected_worker_id else []
     worker_availability = [row for row in ops_availability_rows(conn, client_id, date.today().isoformat(), (date.today() + timedelta(days=21)).isoformat()) if row['worker_id'] == selected_worker_id]
     answers = conn.execute('SELECT * FROM w4_answers WHERE worker_id=?', (selected_worker_id,)).fetchone() if selected_worker_id else None
+    worker_pay_snapshot = worker_gross_pay_snapshot(conn, selected_worker_id) if selected_worker_id else {'year': date.today().year, 'year_label': str(date.today().year), 'year_to_date_total': 0.0, 'current_month_total': 0.0, 'monthly_rows': [], 'has_payments': False}
     return {
         'client': client,
         'client_id': client_id,
@@ -15116,6 +15160,7 @@ def ops_team_context(conn: sqlite3.Connection, client_id: int, selected_worker_i
         'selected_worker': selected_worker,
         'worker_jobs': worker_jobs,
         'worker_availability': worker_availability,
+        'worker_pay_snapshot': worker_pay_snapshot,
         'worker_login_url': url_for('worker_login'),
         'today_iso': date.today().isoformat(),
         'ops_workspace_warning': workspace_warning,

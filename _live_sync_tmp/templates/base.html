@@ -165,7 +165,7 @@
       {% endif %}
 
       {% if active_client and current_user.role != 'admin' %}
-      <details class='app-nav-group nav-fold nav-tone-workspace' {% if request.endpoint in ["welcome_center","dashboard","ops_jobs","customer_sales","estimates","invoices","reports","business_payments_page"] %}open{% endif %}>
+      <details class='app-nav-group nav-fold nav-tone-workspace' {% if request.endpoint in ["welcome_center","dashboard","ops_jobs","customer_sales","estimates","invoices","mileage","reports","business_payments_page"] %}open{% endif %}>
         <summary class='app-nav-group-label'>{{ tr('Business Workspace') }}</summary>
         <a class='app-nav-link {% if request.endpoint=="welcome_center" %}active{% endif %}' href='{{ url_for("welcome_center", client_id=active_client.id) }}'>{{ tr('Welcome Center') }}</a>
         <a class='app-nav-link {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Owner View') }}</a>
@@ -175,6 +175,7 @@
         <a class='app-nav-link {% if request.endpoint=="estimates" %}active{% endif %}' href='{{ url_for("estimates", client_id=active_client.id) }}'>{{ tr('Estimates') }}</a>
         {% endif %}
         <a class='app-nav-link {% if request.endpoint=="invoices" %}active{% endif %}' href='{{ url_for("invoices", client_id=active_client.id) }}'>{{ tr('Invoices & Income') }}</a>
+        <a class='app-nav-link {% if request.endpoint=="mileage" %}active{% endif %}' href='{{ url_for("mileage", client_id=active_client.id) }}'>{{ tr('Miles') }}</a>
         <a class='app-nav-link {% if request.endpoint=="reports" %}active{% endif %}' href='{{ url_for("reports", client_id=active_client.id) }}'>{{ tr('Reports') }}</a>
         <a class='app-nav-link {% if request.endpoint=="business_payments_page" %}active{% endif %}' href='{{ url_for("business_payments_page", client_id=active_client.id) }}'>{{ tr('Billing') }}</a>
       </details>
@@ -252,13 +253,14 @@
           <a class='workspace-link {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Owner View') }}</a>
           <a class='workspace-link {% if request.endpoint=="ops_jobs" %}active{% endif %}' href='{{ url_for("ops_jobs", client_id=active_client.id) }}'>{{ tr('Jobs') }}</a>
         </details>
-        <details class='workspace-group nav-fold nav-tone-finance' {% if request.endpoint in ["customer_sales","estimates","invoices","reports","business_payments_page"] %}open{% endif %}>
+        <details class='workspace-group nav-fold nav-tone-finance' {% if request.endpoint in ["customer_sales","estimates","invoices","mileage","reports","business_payments_page"] %}open{% endif %}>
           <summary class='workspace-group-label'>{{ tr('Financial Core') }}</summary>
           {% if sales_workspace_access_enabled(active_client) %}
           <a class='workspace-link {% if request.endpoint=="customer_sales" %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>{{ tr('Clients & Sales') }}</a>
           <a class='workspace-link {% if request.endpoint=="estimates" %}active{% endif %}' href='{{ url_for("estimates", client_id=active_client.id) }}'>{{ tr('Estimates') }}</a>
           {% endif %}
           <a class='workspace-link {% if request.endpoint=="invoices" %}active{% endif %}' href='{{ url_for("invoices", client_id=active_client.id) }}'>{{ tr('Invoices & Income') }}</a>
+          <a class='workspace-link {% if request.endpoint=="mileage" %}active{% endif %}' href='{{ url_for("mileage", client_id=active_client.id) }}'>{{ tr('Miles') }}</a>
           <a class='workspace-link {% if request.endpoint=="reports" %}active{% endif %}' href='{{ url_for("reports", client_id=active_client.id) }}'>{{ tr('Reports') }}</a>
           <a class='workspace-link {% if request.endpoint=="business_payments_page" %}active{% endif %}' href='{{ url_for("business_payments_page", client_id=active_client.id) }}'>{{ tr('Billing') }}</a>
         </details>
@@ -342,6 +344,10 @@
     <span>{{ tr('Sales') }}</span>
   </a>
   {% endif %}
+  <a class='{% if request.endpoint=="mileage" %}active{% endif %}' href='{{ url_for("mileage", client_id=active_client.id) }}'>
+    <strong>{{ tr('Miles') }}</strong>
+    <span>{{ tr('Mileage') }}</span>
+  </a>
   <a class='{% if request.endpoint in ["ops_schedule","admin_calendar"] %}active{% endif %}' href='{{ url_for("ops_schedule", client_id=active_client.id) }}'>
     <strong>{{ tr('Schedule') }}</strong>
     <span>{{ tr('Calendar') }}</span>

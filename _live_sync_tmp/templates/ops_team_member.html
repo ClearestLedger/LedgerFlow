@@ -24,7 +24,7 @@
     <div class='team-info-card'>
       <div class='small-label'>Status</div>
       <strong>{{ (selected_worker.status or 'active')|replace('_', ' ')|title }}</strong>
-      <span>{{ selected_worker.worker_type or '1099' }} · {{ selected_worker.ops_role or selected_worker.role_classification or 'Crew Member' }}</span>
+      <span>{{ selected_worker.worker_type or '1099' }} | {{ selected_worker.ops_role or selected_worker.role_classification or 'Crew Member' }}</span>
     </div>
     <div class='team-info-card'>
       <div class='small-label'>Crew</div>
@@ -39,7 +39,12 @@
     <div class='team-info-card'>
       <div class='small-label'>Workload</div>
       <strong>{{ worker_jobs|length }} jobs linked</strong>
-      <span>Upcoming {{ selected_worker.upcoming_assignments or 0 }} · Active {{ selected_worker.active_assignments or 0 }}</span>
+      <span>Upcoming {{ selected_worker.upcoming_assignments or 0 }} | Active {{ selected_worker.active_assignments or 0 }}</span>
+    </div>
+    <div class='team-info-card'>
+      <div class='small-label'>Gross Pay</div>
+      <strong>${{ '%.2f'|format(worker_pay_snapshot.year_to_date_total or 0) }}</strong>
+      <span>{{ worker_pay_snapshot.year_label }} YTD | This month ${{ '%.2f'|format(worker_pay_snapshot.current_month_total or 0) }}</span>
     </div>
   </div>
 
@@ -81,7 +86,7 @@
         <div class='team-info-card'>
           <div class='small-label'>Payment Method</div>
           <strong>{{ (selected_worker.payout_preference or 'paper_check')|replace('_', ' ')|title }}</strong>
-          <span>{% if selected_worker.deposit_bank_name %}{{ selected_worker.deposit_bank_name }}{% if selected_worker.deposit_account_last4 %} · ending in {{ selected_worker.deposit_account_last4 }}{% endif %}{% elif selected_worker.zelle_contact %}{{ selected_worker.zelle_contact }}{% else %}Not configured yet{% endif %}</span>
+          <span>{% if selected_worker.deposit_bank_name %}{{ selected_worker.deposit_bank_name }}{% if selected_worker.deposit_account_last4 %} | ending in {{ selected_worker.deposit_account_last4 }}{% endif %}{% elif selected_worker.zelle_contact %}{{ selected_worker.zelle_contact }}{% else %}Not configured yet{% endif %}</span>
         </div>
       </div>
       <div class='team-callout' style='margin-top:14px'>
@@ -92,24 +97,75 @@
   </div>
 
   <div class='card'>
+    <div class='card-head'><h3>Gross Pay Summary</h3><span class='badge'>{{ worker_pay_snapshot.year_label }}</span></div>
+    <details class='compact-details' open>
+      <summary>Open Gross Pay Summary</summary>
+      <div class='team-info-grid' style='margin-top:14px'>
+        <div class='team-info-card'>
+          <div class='small-label'>Year-to-Date Gross Pay</div>
+          <strong>${{ '%.2f'|format(worker_pay_snapshot.year_to_date_total or 0) }}</strong>
+          <span>Recorded payout total for {{ worker_pay_snapshot.year_label }}</span>
+        </div>
+        <div class='team-info-card'>
+          <div class='small-label'>Current Month Gross Pay</div>
+          <strong>${{ '%.2f'|format(worker_pay_snapshot.current_month_total or 0) }}</strong>
+          <span>Latest month-to-date gross pay snapshot</span>
+        </div>
+        <div class='team-info-card'>
+          <div class='small-label'>Months With Payroll</div>
+          <strong>{{ worker_pay_snapshot.monthly_rows|length }}</strong>
+          <span>{{ 'Payroll history is building.' if worker_pay_snapshot.has_payments else 'No payroll entries saved yet.' }}</span>
+        </div>
+        <div class='team-info-card'>
+          <div class='small-label'>Payroll Ledger</div>
+          <strong><a href='{{ url_for("worker_payments", client_id=client_id, worker_id=selected_worker.id) }}'>Open Worker Payments</a></strong>
+          <span>Review or edit the saved payout ledger for this team member.</span>
+        </div>
+      </div>
+      {% if worker_pay_snapshot.monthly_rows %}
+      <details class='compact-details' style='margin-top:14px'>
+        <summary>Open Monthly Gross Pay</summary>
+        <div class='scroll-x' style='margin-top:12px'>
+          <table class='table'>
+            <tr><th>Month</th><th>Gross Pay</th><th>Payments</th></tr>
+            {% for row in worker_pay_snapshot.monthly_rows %}
+            <tr>
+              <td>{{ row.month_label }}</td>
+              <td>${{ '%.2f'|format(row.gross_total or 0) }}</td>
+              <td>{{ row.payment_count }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+      </details>
+      {% else %}
+      <div class='empty-state' style='margin-top:14px'><strong>No payroll recorded yet.</strong><span>Save payouts for this team member and the year-to-date and monthly gross pay view will fill in automatically.</span></div>
+      {% endif %}
+    </details>
+  </div>
+
+  <div class='card'>
     <div class='card-head'><h3>Workload & Availability</h3><span class='badge'>{{ worker_jobs|length }} jobs</span></div>
     <details class='compact-details'>
       <summary>Open Workload & Availability</summary>
       <div class='grid cards-2' style='margin-top:14px'>
         <div>
           {% if worker_jobs %}
-          <div class='ops-card-list'>
-            {% for job in worker_jobs[:12] %}
-            <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
-              <div class='ops-list-top'>
-                <strong>{{ job.title }}</strong>
-                <span class='badge ops-status ops-status-{{ job.status }}'>{{ job.status|replace('_', ' ')|title }}</span>
-              </div>
-              <div class='small'>{{ job.scheduled_start[:10] if job.scheduled_start else 'Unscheduled' }}{% if job.scheduled_start|length > 10 %} · {{ job.scheduled_start[11:16] }}{% endif %}</div>
-              {% if job.service_address %}<div class='small'>{{ job.service_address }}</div>{% endif %}
-            </a>
-            {% endfor %}
-          </div>
+          <details class='compact-details'>
+            <summary>Open Assigned Jobs</summary>
+            <div class='ops-card-list' style='margin-top:12px'>
+              {% for job in worker_jobs[:12] %}
+              <a class='ops-list-card' href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id) }}'>
+                <div class='ops-list-top'>
+                  <strong>{{ job.title }}</strong>
+                  <span class='badge ops-status ops-status-{{ job.status }}'>{{ job.status|replace('_', ' ')|title }}</span>
+                </div>
+                <div class='small'>{{ job.scheduled_start[:10] if job.scheduled_start else 'Unscheduled' }}{% if job.scheduled_start|length > 10 %} | {{ job.scheduled_start[11:16] }}{% endif %}</div>
+                {% if job.service_address %}<div class='small'>{{ job.service_address }}</div>{% endif %}
+              </a>
+              {% endfor %}
+            </div>
+          </details>
           {% else %}
           <div class='empty-state'><strong>No jobs assigned yet.</strong><span>This worker will show up here as soon as dispatch starts assigning work.</span></div>
           {% endif %}
@@ -124,7 +180,7 @@
               <td>{{ row.available_date }}</td>
               <td>{{ row.availability_status|replace('_', ' ')|title }}</td>
               <td>{{ row.start_time or 'All day' }}{% if row.end_time %} - {{ row.end_time }}{% endif %}</td>
-              <td>{{ row.note or '—' }}</td>
+              <td>{{ row.note or '-' }}</td>
             </tr>
             {% endfor %}
           </table>
