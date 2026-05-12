@@ -13483,6 +13483,17 @@ def invoice_status_after_edit(existing_row, total_amount: Decimal) -> str:
     return 'draft'
 
 
+def estimate_status_after_edit(existing_row) -> str:
+    current_status = normalize_estimate_status(existing_row['invoice_status'] or '', default='draft')
+    if current_status in {'approved', 'declined', 'converted'}:
+        return current_status
+    if current_status == 'viewed':
+        return 'viewed'
+    if current_status in {'sent', 'expired'} or (existing_row['sent_at'] or '').strip():
+        return 'sent'
+    return 'draft'
+
+
 def parse_invoice_line_items(form) -> tuple[list[dict], list[str]]:
     descriptions = form.getlist('line_description')
     quantities = form.getlist('line_quantity')
@@ -18905,6 +18916,7 @@ def estimates():
     today_iso = date.today().isoformat()
     default_valid_until = (date.today() + timedelta(days=14)).isoformat()
     prefill_contact_id = request.values.get('customer_contact_id', type=int)
+    edit_estimate_id = request.values.get('edit_estimate_id', type=int)
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
@@ -18920,10 +18932,26 @@ def estimates():
         ).fetchall()
         customer_contact_lookup = {row['id']: row for row in customer_contact_rows}
         prefill_contact = customer_contact_lookup.get(prefill_contact_id)
+        editing_estimate = conn.execute(
+            "SELECT * FROM invoices WHERE id=? AND client_id=? AND COALESCE(record_kind,'')='estimate'",
+            (edit_estimate_id, client_id),
+        ).fetchone() if edit_estimate_id else None
+        editing_estimate_id = int(editing_estimate['id']) if editing_estimate else None
+        editing_estimate_line_items = invoice_line_items_for_ids(conn, [editing_estimate_id]).get(editing_estimate_id, []) if editing_estimate_id else []
+        if editing_estimate and not prefill_contact:
+            prefill_contact = customer_contact_lookup.get(editing_estimate['customer_contact_id'])
         if request.method == 'POST':
             action = request.form.get('action', 'create_estimate').strip()
-            if action == 'create_estimate':
+            if action in {'create_estimate', 'update_estimate'}:
                 errors: list[str] = []
+                estimate_id = request.form.get('estimate_id', type=int) if action == 'update_estimate' else None
+                existing_estimate = conn.execute(
+                    "SELECT * FROM invoices WHERE id=? AND client_id=? AND COALESCE(record_kind,'')='estimate'",
+                    (estimate_id, client_id),
+                ).fetchone() if estimate_id else None
+                if action == 'update_estimate' and not existing_estimate:
+                    flash('Estimate not found.', 'error')
+                    return redirect(url_for('estimates', client_id=client_id))
                 selected_contact = customer_contact_lookup.get(request.form.get('customer_contact_id', type=int))
                 selected_contact_id = selected_contact['id'] if selected_contact else None
                 customer_name = request.form.get('client_name', '').strip()
@@ -18959,11 +18987,10 @@ def estimates():
                 if errors:
                     for error in errors:
                         flash(error, 'error')
-                    return redirect(url_for('estimates', client_id=client_id))
-                next_job = conn.execute('SELECT COALESCE(MAX(job_number),0)+1 n FROM invoices WHERE client_id=?', (client_id,)).fetchone()['n']
-                token = generate_invoice_public_token()
-                while conn.execute('SELECT 1 FROM invoices WHERE public_invoice_token=? LIMIT 1', (token,)).fetchone():
-                    token = generate_invoice_public_token()
+                    redirect_args = {'client_id': client_id}
+                    if estimate_id:
+                        redirect_args['edit_estimate_id'] = estimate_id
+                    return redirect(url_for('estimates', **redirect_args))
                 saved_contact_id = upsert_customer_contact(
                     conn,
                     client_id=client_id,
@@ -18975,47 +19002,81 @@ def estimates():
                     created_by_user_id=user['id'],
                 )
                 customer_contact_id = selected_contact_id or saved_contact_id
-                cursor = conn.execute(
-                    '''INSERT INTO invoices (
-                        client_id, customer_contact_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
-                        invoice_total_amount, paid_amount, invoice_date, due_date, estimate_expiration_date, invoice_status,
-                        public_invoice_token, public_payment_link, sent_at, last_reminder_at, reminder_count,
-                        customer_viewed_at, customer_paid_at, approved_at, declined_at, converted_invoice_id,
-                        payment_note, notes, income_category, sales_tax_amount, sales_tax_paid
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                    (
-                        client_id,
-                        customer_contact_id,
-                        next_job,
-                        'estimate',
-                        estimate_title,
-                        customer_name,
-                        recipient_email,
-                        client_address,
-                        float(total_amount),
-                        0,
-                        invoice_date,
-                        '',
-                        valid_until,
-                        'draft',
-                        token,
-                        '',
-                        '',
-                        '',
-                        0,
-                        '',
-                        '',
-                        '',
-                        '',
-                        None,
-                        '',
-                        notes,
-                        'service_income',
-                        float(sales_tax_amount or Decimal('0.00')),
-                        0,
+                if action == 'create_estimate':
+                    next_job = conn.execute('SELECT COALESCE(MAX(job_number),0)+1 n FROM invoices WHERE client_id=?', (client_id,)).fetchone()['n']
+                    token = generate_invoice_public_token()
+                    while conn.execute('SELECT 1 FROM invoices WHERE public_invoice_token=? LIMIT 1', (token,)).fetchone():
+                        token = generate_invoice_public_token()
+                    cursor = conn.execute(
+                        '''INSERT INTO invoices (
+                            client_id, customer_contact_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
+                            invoice_total_amount, paid_amount, invoice_date, due_date, estimate_expiration_date, invoice_status,
+                            public_invoice_token, public_payment_link, sent_at, last_reminder_at, reminder_count,
+                            customer_viewed_at, customer_paid_at, approved_at, declined_at, converted_invoice_id,
+                            payment_note, notes, income_category, sales_tax_amount, sales_tax_paid
+                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        (
+                            client_id,
+                            customer_contact_id,
+                            next_job,
+                            'estimate',
+                            estimate_title,
+                            customer_name,
+                            recipient_email,
+                            client_address,
+                            float(total_amount),
+                            0,
+                            invoice_date,
+                            '',
+                            valid_until,
+                            'draft',
+                            token,
+                            '',
+                            '',
+                            '',
+                            0,
+                            '',
+                            '',
+                            '',
+                            '',
+                            None,
+                            '',
+                            notes,
+                            'service_income',
+                            float(sales_tax_amount or Decimal('0.00')),
+                            0,
+                        )
                     )
-                )
-                estimate_id = cursor.lastrowid
+                    estimate_id = cursor.lastrowid
+                else:
+                    next_job = existing_estimate['job_number'] or existing_estimate['id']
+                    token = ensure_invoice_public_token(conn, existing_estimate['id'])
+                    refreshed_status = estimate_status_after_edit(existing_estimate)
+                    conn.execute(
+                        '''UPDATE invoices
+                           SET customer_contact_id=?, invoice_title=?, client_name=?, recipient_email=?, client_address=?,
+                               invoice_total_amount=?, invoice_date=?, estimate_expiration_date=?, invoice_status=?,
+                               public_invoice_token=?, notes=?, sales_tax_amount=?
+                           WHERE id=? AND client_id=?''',
+                        (
+                            customer_contact_id,
+                            estimate_title,
+                            customer_name,
+                            recipient_email,
+                            client_address,
+                            float(total_amount),
+                            invoice_date,
+                            valid_until,
+                            refreshed_status,
+                            token,
+                            notes,
+                            float(sales_tax_amount or Decimal('0.00')),
+                            existing_estimate['id'],
+                            client_id,
+                        )
+                    )
+                    conn.execute('DELETE FROM invoice_line_items WHERE invoice_id=?', (existing_estimate['id'],))
+                    estimate_id = existing_estimate['id']
                 for item in items:
                     conn.execute(
                         '''INSERT INTO invoice_line_items (invoice_id, sort_order, description, quantity, unit_price, line_total)
@@ -19031,6 +19092,11 @@ def estimates():
                     )
                 if request.form.get('send_now'):
                     try:
+                        sent_status = 'expired' if valid_until and valid_until < today_iso else 'sent'
+                        if action == 'update_estimate' and existing_estimate:
+                            preserved_status = estimate_status_after_edit(existing_estimate)
+                            if preserved_status in {'approved', 'declined', 'converted', 'viewed'}:
+                                sent_status = preserved_status
                         email_result = send_customer_estimate_email(
                             to_email=recipient_email,
                             to_name=customer_name,
@@ -19043,7 +19109,7 @@ def estimates():
                         )
                         conn.execute(
                             'UPDATE invoices SET invoice_status=?, sent_at=? WHERE id=?',
-                            ('expired' if valid_until and valid_until < today_iso else 'sent', now_iso(), estimate_id),
+                            (sent_status, now_iso(), estimate_id),
                         )
                         log_email_delivery(
                             client_id=client_id,
@@ -19057,7 +19123,7 @@ def estimates():
                             created_by_user_id=user['id'],
                             conn=conn,
                         )
-                        flash('Estimate saved and sent.', 'success')
+                        flash('Estimate saved and sent.' if action == 'create_estimate' else 'Estimate updated and sent.', 'success')
                     except Exception as exc:
                         log_email_delivery(
                             client_id=client_id,
@@ -19070,10 +19136,24 @@ def estimates():
                             created_by_user_id=user['id'],
                             conn=conn,
                         )
-                        flash(f'Estimate saved, but sending failed: {exc}', 'error')
+                        flash(f'Estimate saved, but sending failed: {exc}' if action == 'create_estimate' else f'Estimate updated, but sending failed: {exc}', 'error')
                 else:
-                    flash('Estimate saved.', 'success')
+                    flash('Estimate saved.' if action == 'create_estimate' else 'Estimate updated.', 'success')
                 conn.commit()
+                return redirect(url_for('estimates', client_id=client_id))
+            if action == 'delete_estimate':
+                estimate_id = request.form.get('estimate_id', type=int)
+                row = conn.execute(
+                    "SELECT * FROM invoices WHERE id=? AND client_id=? AND COALESCE(record_kind,'')='estimate'",
+                    (estimate_id, client_id),
+                ).fetchone()
+                if not row:
+                    flash('Estimate not found.', 'error')
+                    return redirect(url_for('estimates', client_id=client_id))
+                conn.execute('DELETE FROM invoice_line_items WHERE invoice_id=?', (estimate_id,))
+                conn.execute('DELETE FROM invoices WHERE id=? AND client_id=?', (estimate_id, client_id))
+                conn.commit()
+                flash('Estimate deleted.', 'success')
                 return redirect(url_for('estimates', client_id=client_id))
             if action == 'send_estimate':
                 estimate_id = request.form.get('estimate_id', type=int)
@@ -19171,6 +19251,34 @@ def estimates():
             estimate_rows.append(row_dict)
             estimate_public_links[row['id']] = public_estimate_url(token)
         conn.commit()
+    estimate_form_source = dict(prefill_contact) if prefill_contact else {}
+    if editing_estimate:
+        estimate_form_source.update({
+            'customer_contact_id': editing_estimate['customer_contact_id'],
+            'invoice_title': editing_estimate['invoice_title'] or '',
+            'client_name': editing_estimate['client_name'] or '',
+            'recipient_email': editing_estimate['recipient_email'] or '',
+            'client_address': editing_estimate['client_address'] or '',
+            'invoice_date': editing_estimate['invoice_date'] or today_iso,
+            'estimate_expiration_date': editing_estimate['estimate_expiration_date'] or default_valid_until,
+            'sales_tax_amount': f'{float(editing_estimate["sales_tax_amount"] or 0):.2f}',
+            'notes': editing_estimate['notes'] or '',
+            'customer_phone': (prefill_contact['customer_phone'] if prefill_contact else ''),
+        })
+    else:
+        estimate_form_source = {
+            'customer_contact_id': prefill_contact['id'] if prefill_contact else None,
+            'invoice_title': '',
+            'client_name': prefill_contact['customer_name'] if prefill_contact else '',
+            'recipient_email': prefill_contact['customer_email'] if prefill_contact else '',
+            'client_address': prefill_contact['customer_address'] if prefill_contact else '',
+            'invoice_date': today_iso,
+            'estimate_expiration_date': default_valid_until,
+            'sales_tax_amount': '0.00',
+            'notes': prefill_contact['customer_notes'] if prefill_contact else '',
+            'customer_phone': prefill_contact['customer_phone'] if prefill_contact else '',
+        }
+    estimate_form_items = invoice_form_seed_rows(editing_estimate_line_items)
     return render_template(
         'estimates.html',
         client=client,
@@ -19184,6 +19292,9 @@ def estimates():
         estimate_status_labels=estimate_status_label_map(),
         today=today_iso,
         default_valid_until=default_valid_until,
+        editing_estimate=dict(editing_estimate) if editing_estimate else None,
+        estimate_form_source=estimate_form_source,
+        estimate_form_items=estimate_form_items,
     )
 
 

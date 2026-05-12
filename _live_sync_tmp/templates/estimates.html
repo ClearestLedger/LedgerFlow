@@ -80,30 +80,31 @@
 
 <div class='card section-frame estimate-composer-wide sales-doc-panel-wide' id='estimateComposer'>
   <details class='compact-details' id='estimateComposerDetails'>
-    <summary>{{ tr('Create Estimate') }}</summary>
+    <summary>{{ tr('Edit Estimate') if editing_estimate else tr('Create Estimate') }}</summary>
     <div class='small' style='margin:12px 0'>{{ tr('Build the scope, email the hosted estimate link right away, and let the customer approve or decline it from a clean page.') }}</div>
     <form method='post' class='form-grid' id='estimateForm'>
-      <input type='hidden' name='action' value='create_estimate'>
+      <input type='hidden' name='action' value='{{ "update_estimate" if editing_estimate else "create_estimate" }}'>
+      {% if editing_estimate %}<input type='hidden' name='estimate_id' value='{{ editing_estimate.id }}'>{% endif %}
       {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-      <div><label>{{ tr('Saved Client') }}</label><select id='estimate_contact_select' name='customer_contact_id'><option value=''>{{ tr('Choose saved client (optional)') }}</option>{% for row in customer_contacts %}<option value='{{ row.id }}' {% if prefill_contact_id and row.id == prefill_contact_id %}selected{% endif %} data-name='{{ row.customer_name|e }}' data-email='{{ row.customer_email|e }}' data-phone='{{ row.customer_phone|e }}' data-address='{{ row.customer_address|e }}' data-notes='{{ row.customer_notes|e }}'>{{ row.customer_name }}{% if row.customer_email %} &middot; {{ row.customer_email }}{% endif %}</option>{% endfor %}</select></div>
-      <div><label>{{ tr('Estimate Title') }}</label><input name='invoice_title' value='{{ tr("Project Estimate") }}'></div>
-      <div><label>{{ tr('Customer Name') }}</label><input id='estimate_client_name' name='client_name' value='{{ prefill_contact.customer_name if prefill_contact else "" }}' required></div>
-      <div><label>{{ tr('Recipient Email') }}</label><input id='estimate_recipient_email' name='recipient_email' type='email' value='{{ prefill_contact.customer_email if prefill_contact else "" }}' required></div>
-      <div><label>{{ tr('Customer Phone') }}</label><input id='estimate_customer_phone' name='customer_phone' value='{{ prefill_contact.customer_phone if prefill_contact else "" }}'></div>
-      <div><label>{{ tr('Customer Address') }}</label><input id='estimate_client_address' name='client_address' value='{{ prefill_contact.customer_address if prefill_contact else "" }}'></div>
-      <div><label>{{ tr('Estimate Date') }}</label><input name='invoice_date' type='date' value='{{ today }}'></div>
-      <div><label>{{ tr('Valid Until') }}</label><input name='estimate_expiration_date' type='date' value='{{ default_valid_until }}'></div>
-      <div><label>{{ tr('Sales Tax') }}</label><input id='estimate_sales_tax' name='sales_tax_amount' type='number' step='0.01' min='0' value='0.00'></div>
+      <div><label>{{ tr('Saved Client') }}</label><select id='estimate_contact_select' name='customer_contact_id'><option value=''>{{ tr('Choose saved client (optional)') }}</option>{% for row in customer_contacts %}<option value='{{ row.id }}' {% if estimate_form_source.customer_contact_id and row.id == estimate_form_source.customer_contact_id %}selected{% endif %} data-name='{{ row.customer_name|e }}' data-email='{{ row.customer_email|e }}' data-phone='{{ row.customer_phone|e }}' data-address='{{ row.customer_address|e }}' data-notes='{{ row.customer_notes|e }}'>{{ row.customer_name }}{% if row.customer_email %} &middot; {{ row.customer_email }}{% endif %}</option>{% endfor %}</select></div>
+      <div><label>{{ tr('Estimate Title') }}</label><input name='invoice_title' value='{{ estimate_form_source.invoice_title or tr("Project Estimate") }}'></div>
+      <div><label>{{ tr('Customer Name') }}</label><input id='estimate_client_name' name='client_name' value='{{ estimate_form_source.client_name or "" }}' required></div>
+      <div><label>{{ tr('Recipient Email') }}</label><input id='estimate_recipient_email' name='recipient_email' type='email' value='{{ estimate_form_source.recipient_email or "" }}' required></div>
+      <div><label>{{ tr('Customer Phone') }}</label><input id='estimate_customer_phone' name='customer_phone' value='{{ estimate_form_source.customer_phone or "" }}'></div>
+      <div><label>{{ tr('Customer Address') }}</label><input id='estimate_client_address' name='client_address' value='{{ estimate_form_source.client_address or "" }}'></div>
+      <div><label>{{ tr('Estimate Date') }}</label><input name='invoice_date' type='date' value='{{ estimate_form_source.invoice_date or today }}'></div>
+      <div><label>{{ tr('Valid Until') }}</label><input name='estimate_expiration_date' type='date' value='{{ estimate_form_source.estimate_expiration_date or default_valid_until }}'></div>
+      <div><label>{{ tr('Sales Tax') }}</label><input id='estimate_sales_tax' name='sales_tax_amount' type='number' step='0.01' min='0' value='{{ estimate_form_source.sales_tax_amount or "0.00" }}'></div>
       <div style='grid-column:1/-1'>
         <label>{{ tr('Line Items') }}</label>
         <div class='scroll-x'>
           <table class='table' id='estimateLineItemsTable'>
             <tr><th>{{ tr('Description') }}</th><th>{{ tr('Qty') }}</th><th>{{ tr('Unit Price') }}</th><th>{{ tr('Line Total') }}</th></tr>
-            {% for idx in range(4) %}
+            {% for item in estimate_form_items %}
             <tr>
-              <td><input name='line_description' placeholder='{{ tr("Service, visit, scope item, or phase") }}'></td>
-              <td><input name='line_quantity' type='number' min='0.01' step='0.01' value='{% if idx == 0 %}1{% endif %}'></td>
-              <td><input name='line_unit_price' type='number' min='0' step='0.01'></td>
+              <td><input name='line_description' placeholder='{{ tr("Service, visit, scope item, or phase") }}' value='{{ item.description }}'></td>
+              <td><input name='line_quantity' type='number' min='0.01' step='0.01' value='{{ item.quantity }}'></td>
+              <td><input name='line_unit_price' type='number' min='0' step='0.01' value='{{ item.unit_price }}'></td>
               <td><input class='estimate-line-total' type='text' readonly value='$0.00'></td>
             </tr>
             {% endfor %}
@@ -112,9 +113,14 @@
       </div>
       <div><label>{{ tr('Subtotal') }}</label><input id='estimate_subtotal' type='text' readonly value='$0.00'></div>
       <div><label>{{ tr('Total Estimate') }}</label><input id='estimate_total' type='text' readonly value='$0.00'></div>
-      <div style='grid-column:1/-1'><label>{{ tr('Notes') }}</label><textarea id='estimate_notes' name='notes' placeholder='{{ tr("Scope note, exclusions, or customer-facing context") }}'>{{ prefill_contact.customer_notes if prefill_contact else "" }}</textarea></div>
-      <div style='grid-column:1/-1'><label><input type='checkbox' name='send_now' value='1' checked> {{ tr('Send hosted estimate link immediately after saving') }}</label></div>
-      <div><button type='submit'>{{ tr('Save Estimate') }}</button></div>
+      <div style='grid-column:1/-1'><label>{{ tr('Notes') }}</label><textarea id='estimate_notes' name='notes' placeholder='{{ tr("Scope note, exclusions, or customer-facing context") }}'>{{ estimate_form_source.notes or "" }}</textarea></div>
+      <div style='grid-column:1/-1'><label><input type='checkbox' name='send_now' value='1' {% if not editing_estimate %}checked{% endif %}> {{ tr('Send hosted estimate link immediately after saving') }}</label></div>
+      <div style='display:flex;gap:8px;flex-wrap:wrap'>
+        <button type='submit'>{{ tr('Update Estimate') if editing_estimate else tr('Save Estimate') }}</button>
+        {% if editing_estimate %}
+        <a class='btn btn-secondary' href='{{ url_for("estimates", client_id=client_id) }}#estimateComposerDetails'>{{ tr('Cancel Edit') }}</a>
+        {% endif %}
+      </div>
     </form>
   </details>
 </div>
@@ -146,12 +152,14 @@
           </td>
           <td>
             <div style='display:flex;gap:8px;flex-wrap:wrap'>
+              <a class='btn btn-secondary btn-sm' href='{{ url_for("estimates", client_id=client_id, edit_estimate_id=row.id) }}#estimateComposerDetails'>{{ tr('Edit') }}</a>
               <a class='btn btn-secondary btn-sm' href='{{ estimate_public_links.get(row.id) }}' target='_blank'>{{ tr('Open Hosted') }}</a>
               <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.id) }}' target='_blank'>{{ tr('Print') }}</a>
               {% if row.invoice_status not in ['converted', 'approved', 'declined', 'expired'] %}
               <form method='post' style='display:inline'>
                 <input type='hidden' name='action' value='send_estimate'>
                 <input type='hidden' name='estimate_id' value='{{ row.id }}'>
+                {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
                 <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Send Estimate') }}</button>
               </form>
               {% endif %}
@@ -159,12 +167,19 @@
               <form method='post' style='display:inline'>
                 <input type='hidden' name='action' value='convert_estimate_to_invoice'>
                 <input type='hidden' name='estimate_id' value='{{ row.id }}'>
+                {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
                 <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Convert to Invoice') }}</button>
               </form>
               {% endif %}
               {% if row.converted_invoice_id %}
               <a class='btn btn-secondary btn-sm' href='{{ url_for("invoice_print", invoice_id=row.converted_invoice_id) }}' target='_blank'>{{ tr('Open Invoice') }}</a>
               {% endif %}
+              <form method='post' style='display:inline' onsubmit='return confirm("Delete this estimate? This cannot be undone.");'>
+                <input type='hidden' name='action' value='delete_estimate'>
+                <input type='hidden' name='estimate_id' value='{{ row.id }}'>
+                {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+                <button class='btn btn-secondary btn-sm' type='submit'>{{ tr('Delete') }}</button>
+              </form>
             </div>
           </td>
         </tr>
