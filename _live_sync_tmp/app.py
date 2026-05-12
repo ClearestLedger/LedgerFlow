@@ -13438,6 +13438,51 @@ def invoice_line_items_for_ids(conn: sqlite3.Connection, invoice_ids) -> dict[in
     return grouped
 
 
+def invoice_form_seed_rows(line_items, minimum_rows: int = 4) -> list[dict]:
+    seeded: list[dict] = []
+    for row in line_items or []:
+        quantity = row['quantity'] if isinstance(row, dict) else row['quantity']
+        unit_price = row['unit_price'] if isinstance(row, dict) else row['unit_price']
+        try:
+            quantity_float = float(quantity or 0)
+            quantity_value = str(int(quantity_float)) if quantity_float.is_integer() else f'{quantity_float:g}'
+        except Exception:
+            quantity_value = str(quantity or '').strip()
+        try:
+            unit_price_value = f'{float(unit_price or 0):.2f}'
+        except Exception:
+            unit_price_value = str(unit_price or '').strip()
+        seeded.append({
+            'description': (row['description'] if isinstance(row, dict) else row['description']) or '',
+            'quantity': quantity_value,
+            'unit_price': unit_price_value,
+        })
+    if not seeded:
+        seeded.append({'description': '', 'quantity': '1', 'unit_price': ''})
+    while len(seeded) < minimum_rows:
+        seeded.append({'description': '', 'quantity': '', 'unit_price': ''})
+    if seeded and not seeded[0]['quantity']:
+        seeded[0]['quantity'] = '1'
+    return seeded
+
+
+def invoice_status_after_edit(existing_row, total_amount: Decimal) -> str:
+    paid_amount = money(existing_row['paid_amount'] or 0)
+    current_status = normalize_invoice_status(existing_row['invoice_status'] or '', default='draft')
+    total_value = float(total_amount or 0)
+    if total_value > 0 and paid_amount >= total_value:
+        return 'paid'
+    if paid_amount > 0:
+        return 'partial'
+    if current_status == 'viewed':
+        return 'viewed'
+    if current_status in {'sent', 'overdue', 'partial'} or (existing_row['sent_at'] or '').strip():
+        return 'sent'
+    if current_status == 'cancelled':
+        return 'cancelled'
+    return 'draft'
+
+
 def parse_invoice_line_items(form) -> tuple[list[dict], list[str]]:
     descriptions = form.getlist('line_description')
     quantities = form.getlist('line_quantity')
@@ -18221,6 +18266,7 @@ def invoices():
     today_iso = date.today().isoformat()
     default_due_date = (date.today() + timedelta(days=14)).isoformat()
     prefill_contact_id = request.values.get('customer_contact_id', type=int)
+    edit_invoice_id = request.values.get('edit_invoice_id', type=int)
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
@@ -18235,9 +18281,19 @@ def invoices():
         ).fetchall() if sales_workspace_enabled else []
         customer_contact_lookup = {row['id']: row for row in customer_contact_rows}
         prefill_contact = customer_contact_lookup.get(prefill_contact_id) if sales_workspace_enabled else None
+        editing_invoice = conn.execute(
+            '''SELECT *
+               FROM invoices
+               WHERE id=? AND client_id=? AND COALESCE(record_kind,'income_record')='customer_invoice' ''',
+            (edit_invoice_id, client_id),
+        ).fetchone() if sales_workspace_enabled and edit_invoice_id else None
+        editing_invoice_id = int(editing_invoice['id']) if editing_invoice else None
+        editing_invoice_line_items = invoice_line_items_for_ids(conn, [editing_invoice_id]).get(editing_invoice_id, []) if editing_invoice_id else []
+        if editing_invoice and not prefill_contact:
+            prefill_contact = customer_contact_lookup.get(editing_invoice['customer_contact_id'])
         if request.method == 'POST':
             action = request.form.get('action', 'add_invoice').strip()
-            if action in {'create_customer_invoice', 'send_customer_invoice', 'send_customer_invoice_reminder', 'mark_customer_invoice_paid', 'send_customer_receipt'} and not sales_workspace_enabled:
+            if action in {'create_customer_invoice', 'update_customer_invoice', 'delete_customer_invoice', 'send_customer_invoice', 'send_customer_invoice_reminder', 'mark_customer_invoice_paid', 'send_customer_receipt'} and not sales_workspace_enabled:
                 return premium_sales_redirect(client_id)
             if action == 'add_mileage':
                 start_point = request.form.get('start_point', '').strip()
@@ -18262,8 +18318,18 @@ def invoices():
                 conn.commit()
                 flash('Invoice mileage entry saved.', 'success')
                 return redirect(url_for('invoices', client_id=client_id))
-            if action == 'create_customer_invoice':
+            if action in {'create_customer_invoice', 'update_customer_invoice'}:
                 errors: list[str] = []
+                invoice_id = request.form.get('invoice_id', type=int) if action == 'update_customer_invoice' else None
+                existing_invoice = conn.execute(
+                    '''SELECT *
+                       FROM invoices
+                       WHERE id=? AND client_id=? AND COALESCE(record_kind,'income_record')='customer_invoice' ''',
+                    (invoice_id, client_id),
+                ).fetchone() if invoice_id else None
+                if action == 'update_customer_invoice' and not existing_invoice:
+                    flash('Customer invoice not found.', 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
                 selected_contact = customer_contact_lookup.get(request.form.get('customer_contact_id', type=int))
                 selected_contact_id = selected_contact['id'] if selected_contact else None
                 customer_name = request.form.get('client_name', '').strip()
@@ -18302,11 +18368,10 @@ def invoices():
                 if errors:
                     for error in errors:
                         flash(error, 'error')
-                    return redirect(url_for('invoices', client_id=client_id))
-                next_job = conn.execute('SELECT COALESCE(MAX(job_number),0)+1 n FROM invoices WHERE client_id=?', (client_id,)).fetchone()['n']
-                token = generate_invoice_public_token()
-                while conn.execute('SELECT 1 FROM invoices WHERE public_invoice_token=? LIMIT 1', (token,)).fetchone():
-                    token = generate_invoice_public_token()
+                    redirect_args = {'client_id': client_id}
+                    if invoice_id:
+                        redirect_args['edit_invoice_id'] = invoice_id
+                    return redirect(url_for('invoices', **redirect_args))
                 saved_contact_id = upsert_customer_contact(
                     conn,
                     client_id=client_id,
@@ -18318,35 +18383,70 @@ def invoices():
                     created_by_user_id=user['id'],
                 )
                 customer_contact_id = selected_contact_id or saved_contact_id
-                cursor = conn.execute(
-                    '''INSERT INTO invoices (
-                        client_id, customer_contact_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
-                        invoice_total_amount, paid_amount, invoice_date, due_date, invoice_status, public_invoice_token,
-                        public_payment_link, notes, income_category, sales_tax_amount, sales_tax_paid
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                    (
-                        client_id,
-                        customer_contact_id,
-                        next_job,
-                        'customer_invoice',
-                        invoice_title,
-                        customer_name,
-                        recipient_email,
-                        client_address,
-                        float(total_amount),
-                        0,
-                        invoice_date,
-                        due_date,
-                        'draft',
-                        token,
-                        payment_link or '',
-                        notes,
-                        'service_income',
-                        float(sales_tax_amount or Decimal('0.00')),
-                        0,
+                if action == 'create_customer_invoice':
+                    next_job = conn.execute('SELECT COALESCE(MAX(job_number),0)+1 n FROM invoices WHERE client_id=?', (client_id,)).fetchone()['n']
+                    token = generate_invoice_public_token()
+                    while conn.execute('SELECT 1 FROM invoices WHERE public_invoice_token=? LIMIT 1', (token,)).fetchone():
+                        token = generate_invoice_public_token()
+                    cursor = conn.execute(
+                        '''INSERT INTO invoices (
+                            client_id, customer_contact_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
+                            invoice_total_amount, paid_amount, invoice_date, due_date, invoice_status, public_invoice_token,
+                            public_payment_link, notes, income_category, sales_tax_amount, sales_tax_paid
+                        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        (
+                            client_id,
+                            customer_contact_id,
+                            next_job,
+                            'customer_invoice',
+                            invoice_title,
+                            customer_name,
+                            recipient_email,
+                            client_address,
+                            float(total_amount),
+                            0,
+                            invoice_date,
+                            due_date,
+                            'draft',
+                            token,
+                            payment_link or '',
+                            notes,
+                            'service_income',
+                            float(sales_tax_amount or Decimal('0.00')),
+                            0,
+                        )
                     )
-                )
-                invoice_id = cursor.lastrowid
+                    invoice_id = cursor.lastrowid
+                else:
+                    next_job = existing_invoice['job_number'] or existing_invoice['id']
+                    token = ensure_invoice_public_token(conn, existing_invoice['id'])
+                    refreshed_status = invoice_status_after_edit(existing_invoice, total_amount)
+                    conn.execute(
+                        '''UPDATE invoices
+                           SET customer_contact_id=?, invoice_title=?, client_name=?, recipient_email=?, client_address=?,
+                               invoice_total_amount=?, invoice_date=?, due_date=?, invoice_status=?, public_invoice_token=?,
+                               public_payment_link=?, notes=?, sales_tax_amount=?
+                           WHERE id=? AND client_id=?''',
+                        (
+                            customer_contact_id,
+                            invoice_title,
+                            customer_name,
+                            recipient_email,
+                            client_address,
+                            float(total_amount),
+                            invoice_date,
+                            due_date,
+                            refreshed_status,
+                            token,
+                            payment_link or '',
+                            notes,
+                            float(sales_tax_amount or Decimal('0.00')),
+                            existing_invoice['id'],
+                            client_id,
+                        )
+                    )
+                    conn.execute('DELETE FROM invoice_line_items WHERE invoice_id=?', (existing_invoice['id'],))
+                    invoice_id = existing_invoice['id']
                 for item in items:
                     conn.execute(
                         '''INSERT INTO invoice_line_items (invoice_id, sort_order, description, quantity, unit_price, line_total)
@@ -18391,7 +18491,7 @@ def invoices():
                             created_by_user_id=user['id'],
                             conn=conn,
                         )
-                        flash('Customer invoice saved and sent.', 'success')
+                        flash('Customer invoice saved and sent.' if action == 'create_customer_invoice' else 'Customer invoice updated and sent.', 'success')
                     except Exception as exc:
                         log_email_delivery(
                             client_id=client_id,
@@ -18404,10 +18504,42 @@ def invoices():
                             created_by_user_id=user['id'],
                             conn=conn,
                         )
-                        flash(f'Customer invoice saved, but sending failed: {exc}', 'error')
+                        flash(f'Customer invoice saved, but sending failed: {exc}' if action == 'create_customer_invoice' else f'Customer invoice updated, but sending failed: {exc}', 'error')
                 else:
-                    flash('Customer invoice saved.', 'success')
+                    flash('Customer invoice saved.' if action == 'create_customer_invoice' else 'Customer invoice updated.', 'success')
                 conn.commit()
+                return redirect(url_for('invoices', client_id=client_id))
+            if action == 'delete_customer_invoice':
+                invoice_id = request.form.get('invoice_id', type=int)
+                row = conn.execute(
+                    '''SELECT *
+                       FROM invoices
+                       WHERE id=? AND client_id=? AND COALESCE(record_kind,'income_record')='customer_invoice' ''',
+                    (invoice_id, client_id),
+                ).fetchone()
+                if not row:
+                    flash('Customer invoice not found.', 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
+                conn.execute(
+                    '''UPDATE invoices
+                       SET converted_invoice_id=NULL,
+                           invoice_status=CASE
+                               WHEN COALESCE(record_kind,'')='estimate' AND COALESCE(invoice_status,'')='converted'
+                               THEN CASE
+                                   WHEN COALESCE(approved_at,'')<>'' THEN 'approved'
+                                   WHEN COALESCE(declined_at,'')<>'' THEN 'declined'
+                                   ELSE 'draft'
+                               END
+                               ELSE invoice_status
+                           END
+                       WHERE converted_invoice_id=?''',
+                    (invoice_id,),
+                )
+                conn.execute('DELETE FROM invoice_line_items WHERE invoice_id=?', (invoice_id,))
+                conn.execute('DELETE FROM invoice_mileage_entries WHERE invoice_id=? AND client_id=?', (invoice_id, client_id))
+                conn.execute('DELETE FROM invoices WHERE id=? AND client_id=?', (invoice_id, client_id))
+                conn.commit()
+                flash('Customer invoice deleted.', 'success')
                 return redirect(url_for('invoices', client_id=client_id))
             if action == 'send_customer_invoice':
                 invoice_id = request.form.get('invoice_id', type=int)
@@ -18703,6 +18835,36 @@ def invoices():
             if current_status in estimate_status_counts:
                 estimate_status_counts[current_status] += 1
         conn.commit()
+    invoice_form_source = dict(prefill_contact) if prefill_contact else {}
+    if editing_invoice:
+        invoice_form_source.update({
+            'customer_contact_id': editing_invoice['customer_contact_id'],
+            'invoice_title': editing_invoice['invoice_title'] or '',
+            'client_name': editing_invoice['client_name'] or '',
+            'recipient_email': editing_invoice['recipient_email'] or '',
+            'client_address': editing_invoice['client_address'] or '',
+            'invoice_date': editing_invoice['invoice_date'] or today_iso,
+            'due_date': editing_invoice['due_date'] or default_due_date,
+            'public_payment_link': editing_invoice['public_payment_link'] or '',
+            'sales_tax_amount': f'{float(editing_invoice["sales_tax_amount"] or 0):.2f}',
+            'notes': editing_invoice['notes'] or '',
+            'customer_phone': (prefill_contact['customer_phone'] if prefill_contact else ''),
+        })
+    else:
+        invoice_form_source = {
+            'customer_contact_id': prefill_contact['id'] if prefill_contact else None,
+            'invoice_title': '',
+            'client_name': prefill_contact['customer_name'] if prefill_contact else '',
+            'recipient_email': prefill_contact['customer_email'] if prefill_contact else '',
+            'client_address': prefill_contact['customer_address'] if prefill_contact else '',
+            'invoice_date': today_iso,
+            'due_date': default_due_date,
+            'public_payment_link': '',
+            'sales_tax_amount': '0.00',
+            'notes': prefill_contact['customer_notes'] if prefill_contact else '',
+            'customer_phone': prefill_contact['customer_phone'] if prefill_contact else '',
+        }
+    invoice_form_items = invoice_form_seed_rows(editing_invoice_line_items)
     if auto_reminder_count:
         flash(f'{auto_reminder_count} overdue invoice reminder(s) were sent automatically.', 'success')
     return render_template(
@@ -18729,6 +18891,9 @@ def invoices():
         today=today_iso,
         default_due_date=default_due_date,
         auto_reminder_count=auto_reminder_count,
+        editing_invoice=dict(editing_invoice) if editing_invoice else None,
+        invoice_form_source=invoice_form_source,
+        invoice_form_items=invoice_form_items,
     )
 
 
