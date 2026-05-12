@@ -4802,29 +4802,25 @@ def load_email_settings_profile() -> dict:
 
         legacy = legacy_email_settings_values()
         if any((legacy.get(key) or '').strip() for key in ['smtp_email', 'smtp_host', 'smtp_port', 'smtp_username', 'smtp_sender_name', 'smtp_password_enc', 'app_base_url']):
-            conn.execute(
-                '''INSERT INTO email_settings_profile (
-                    id, smtp_email, smtp_host, smtp_port, smtp_username, smtp_sender_name, smtp_password_enc, app_base_url
-                ) VALUES (1,?,?,?,?,?,?,?)''',
-                (
-                    legacy['smtp_email'],
-                    legacy['smtp_host'],
-                    legacy['smtp_port'],
-                    legacy['smtp_username'] or legacy['smtp_email'],
-                    legacy['smtp_sender_name'],
-                    legacy['smtp_password_enc'],
-                    legacy['app_base_url'],
-                )
-            )
-            conn.commit()
-            row = conn.execute(
-                '''SELECT esp.*, u.full_name updated_by_name
-                   FROM email_settings_profile esp
-                   LEFT JOIN users u ON u.id = esp.updated_by_user_id
-                   WHERE esp.id = 1'''
-            ).fetchone()
-            if row:
-                return dict(row)
+            # Avoid creating a nested write inside read-heavy request paths such as
+            # invoices, where email readiness is checked while another connection is open.
+            return {
+                'id': 1,
+                'smtp_email': legacy['smtp_email'],
+                'smtp_host': legacy['smtp_host'],
+                'smtp_port': legacy['smtp_port'],
+                'smtp_username': legacy['smtp_username'] or legacy['smtp_email'],
+                'smtp_sender_name': legacy['smtp_sender_name'],
+                'smtp_password_enc': legacy['smtp_password_enc'],
+                'app_base_url': legacy['app_base_url'],
+                'updated_at': '',
+                'updated_by_user_id': None,
+                'updated_by_name': '',
+                'last_tested_at': '',
+                'last_test_status': '',
+                'last_test_recipient': '',
+                'last_test_error': '',
+            }
 
     return {
         'id': 1,
