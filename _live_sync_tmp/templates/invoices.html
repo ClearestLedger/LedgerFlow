@@ -196,6 +196,16 @@
   <details class='compact-details sales-doc-workspace-details' id='savedCustomerInvoicesDetails' open>
     <summary>{{ tr('Saved Customer Invoices') }}</summary>
     <div class='small' style='margin:12px 0'>{{ tr('Hosted invoice pages, reminders, and pay-online links') }}</div>
+    <form method='get' class='form-grid' style='margin:12px 0'>
+      {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <div><label>{{ tr('Search Name / Address') }}</label><input name='invoice_search' value='{{ invoice_filters.search }}' placeholder='{{ tr("Customer, address, or invoice title") }}'></div>
+      <div><label>{{ tr('From Date') }}</label><input name='invoice_start_date' type='date' value='{{ invoice_filters.start_date }}'></div>
+      <div><label>{{ tr('To Date') }}</label><input name='invoice_end_date' type='date' value='{{ invoice_filters.end_date }}'></div>
+      <div style='display:flex;gap:8px;flex-wrap:wrap;align-items:end'>
+        <button type='submit'>{{ tr('Filter Invoices') }}</button>
+        <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}#savedCustomerInvoicesDetails'>{{ tr('Clear') }}</a>
+      </div>
+    </form>
     <div class='scroll-x'>
       <table class='table'>
         <tr><th>{{ tr('Invoice #') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Status') }}</th><th>{{ tr('Total') }}</th><th>{{ tr('Paid') }}</th><th>{{ tr('Balance') }}</th><th>{{ tr('Due') }}</th><th>{{ tr('Actions') }}</th></tr>
@@ -297,9 +307,10 @@
             <input type='hidden' name='action' value='add_invoice'>
             {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
             <div><label>{{ tr('Income Type') }}</label><select name='income_category'>{% for value, label in income_category_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+            <div><label>{{ tr('Linked Job') }}</label><select id='income_record_job_select' name='linked_job_id'><option value=''>{{ tr('Choose job (optional)') }}</option>{% for job in job_rows %}<option value='{{ job.id }}' data-name='{{ (job.customer_name or job.title)|e }}' data-address='{{ job.full_service_address|e }}'>#{{ job.id }} &middot; {{ job.customer_name or job.title }}{% if job.full_service_address %} &middot; {{ job.full_service_address }}{% endif %}</option>{% endfor %}</select></div>
             <div><label>{{ tr('Gross Income Received') }}</label><input name='paid_amount' type='number' step='0.01' min='0'></div>
-            <div><label>{{ tr('Income Source / Customer') }}</label><input name='client_name' required></div>
-            <div><label>{{ tr('Service Address / Sale Location') }}</label><input name='client_address'></div>
+            <div><label>{{ tr('Income Source / Customer') }}</label><input id='income_record_client_name' name='client_name' required></div>
+            <div><label>{{ tr('Service Address / Sale Location') }}</label><input id='income_record_client_address' name='client_address'></div>
             <div><label>{{ tr('Date Received') }}</label><input name='invoice_date' type='date' value='{{ today }}'></div>
             <div><label>{{ tr('Sales Tax Portion') }}</label><input name='sales_tax_amount' type='number' step='0.01' min='0' value='0.00'></div>
             <div style='grid-column:1/-1'><label><input type='checkbox' name='sales_tax_paid' value='1'> {{ tr('Sales tax on this record has already been paid / remitted') }}</label></div>
@@ -312,16 +323,19 @@
       <div class='sales-doc-mini-card'>
         <details class='compact-details' id='invoiceMileageAttachmentDetails'>
           <summary>{{ tr('Income Mileage Attachment') }}</summary>
-          <div class='small' style='margin:12px 0'>{{ tr('Attach deductible travel only when you need to tie mileage to a saved internal income record.') }}</div>
+          <div class='small' style='margin:12px 0'>{{ tr('Attach deductible travel to a saved internal income record, optionally linking the real job so the address pulls in automatically.') }}</div>
           <form method='post' class='form-grid invoice-mileage-form' id='invoiceMileageForm'>
             <input type='hidden' name='action' value='add_mileage'>
             {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-            <div><label>{{ tr('Income Record') }}</label><select name='invoice_id' required><option value=''>{{ tr('Select saved record') }}</option>{% for row in income_records %}<option value='{{ row.id }}'>{{ tr('Record #') }}{{ row.job_number }} &middot; {{ row.client_name }}</option>{% endfor %}</select></div>
+            <div><label>{{ tr('Income Record') }}</label><select id='mileage_invoice_select' name='invoice_id' required><option value=''>{{ tr('Select saved record') }}</option>{% for row in income_records %}<option value='{{ row.id }}' data-address='{{ (row.client_address or "")|e }}' data-job-id='{{ row.linked_job_id or "" }}'>{{ tr('Record #') }}{{ row.job_number }} &middot; {{ row.client_name }}{% if row.invoice_date %} &middot; {{ row.invoice_date }}{% endif %}</option>{% endfor %}</select></div>
+            <div><label>{{ tr('Linked Job') }}</label><select id='mileage_job_select' name='job_id'><option value=''>{{ tr('Choose job (optional)') }}</option>{% for job in job_rows %}<option value='{{ job.id }}' data-address='{{ job.full_service_address|e }}'>#{{ job.id }} &middot; {{ job.customer_name or job.title }}{% if job.full_service_address %} &middot; {{ job.full_service_address }}{% endif %}</option>{% endfor %}</select></div>
             <div><label>{{ tr('Trip Date') }}</label><input name='trip_date' type='date' value='{{ today }}'></div>
+            <div><label>{{ tr('Trip End Date') }}</label><input name='trip_end_date' id='trip_end_date' type='date' value='{{ today }}'></div>
             <div><label>{{ tr('Starting Point') }}</label><input name='start_point' value='{{ home_address }}'></div>
-            <div><label>{{ tr('Destination') }}</label><input name='destination' placeholder='{{ tr("Customer or job address") }}'></div>
+            <div><label>{{ tr('Destination') }}</label><input id='mileage_destination' name='destination' placeholder='{{ tr("Customer or job address") }}'></div>
             <div><label>{{ tr('Trip Type') }}</label><select name='trip_type' id='trip_type'><option value='two_way' selected>{{ tr('Two-way') }}</option><option value='one_way'>{{ tr('One-way') }}</option></select></div>
-            <div><label>{{ tr('Number of Round Trips') }}</label><input name='round_trips' id='round_trips' type='number' min='1' step='1' value='1'></div>
+            <div><label>{{ tr('Round Trips Per Day') }}</label><input name='round_trips' id='round_trips' type='number' min='1' step='1' value='1'></div>
+            <div><label>{{ tr('Travel Days') }}</label><input name='travel_days_preview' id='travel_days_preview' type='text' value='1' readonly></div>
             <div><label>{{ tr('One-Way Miles') }}</label><input name='one_way_miles' id='one_way_miles' type='number' min='0' step='0.01' placeholder='{{ tr("Leave blank to auto-estimate") }}'></div>
             <div><label>{{ tr('Rate / Cost') }}</label><input name='rate' id='rate' type='number' min='0' step='0.0001' value='0.67'></div>
             <div><label>{{ tr('Total Miles') }}</label><input name='total_miles_preview' id='total_miles_preview' type='text' value='0.00' readonly></div>
@@ -361,7 +375,7 @@
       <details class='compact-details' id='savedMileageAttachmentsDetails'>
         <summary>{{ tr('Saved Mileage Attachments') }}</summary>
         <div class='small' style='margin:12px 0'>{{ tr('Mileage entries tied to internal income records') }}</div>
-        <div class='scroll-x'><table class='table'><tr><th>{{ tr('Date') }}</th><th>{{ tr('Record #') }}</th><th>{{ tr('Source') }}</th><th>{{ tr('Route') }}</th><th>{{ tr('Total Miles') }}</th><th>{{ tr('Rate / Cost') }}</th><th>{{ tr('Amount') }}</th></tr>{% for row in invoice_mileage_entries %}<tr><td>{{ row.trip_date or '' }}</td><td>{% if row.job_number %}#{{ row.job_number }}{% else %}-{% endif %}</td><td>{{ row.client_name or '' }}</td><td>{{ row.start_point }} &rarr; {{ row.destination }}</td><td>{{ '%.2f'|format(row.total_miles or 0) }}</td><td>${{ '%.4f'|format(row.rate or 0) }}</td><td>${{ '%.2f'|format(row.total_amount or 0) }}</td></tr>{% else %}<tr><td colspan='7' class='small'>{{ tr('No mileage attachments saved yet.') }}</td></tr>{% endfor %}</table></div>
+        <div class='scroll-x'><table class='table'><tr><th>{{ tr('Date Range') }}</th><th>{{ tr('Record #') }}</th><th>{{ tr('Job') }}</th><th>{{ tr('Source') }}</th><th>{{ tr('Route') }}</th><th>{{ tr('Total Miles') }}</th><th>{{ tr('Rate / Cost') }}</th><th>{{ tr('Amount') }}</th></tr>{% for row in invoice_mileage_entries %}<tr><td>{% if row.trip_date and row.trip_end_date and row.trip_end_date != row.trip_date %}{{ row.trip_date }} &rarr; {{ row.trip_end_date }}{% else %}{{ row.trip_date or '' }}{% endif %}{% if row.travel_days and row.travel_days > 1 %}<div class='small'>{{ row.travel_days }} {{ tr('days') }}</div>{% endif %}</td><td>{% if row.job_number %}#{{ row.job_number }}{% else %}-{% endif %}</td><td>{% if row.job_title or row.job_customer_name %}#{{ row.job_id }} &middot; {{ row.job_customer_name or row.job_title }}{% if row.job_full_service_address %}<div class='small'>{{ row.job_full_service_address }}</div>{% endif %}{% else %}-{% endif %}</td><td>{{ row.client_name or '' }}</td><td>{{ row.start_point }} &rarr; {{ row.destination }}</td><td>{{ '%.2f'|format(row.total_miles or 0) }}</td><td>${{ '%.4f'|format(row.rate or 0) }}</td><td>${{ '%.2f'|format(row.total_amount or 0) }}</td></tr>{% else %}<tr><td colspan='8' class='small'>{{ tr('No mileage attachments saved yet.') }}</td></tr>{% endfor %}</table></div>
       </details>
     </div>
   </details>
@@ -409,11 +423,29 @@
     var rate = parseFloat(document.getElementById('rate')?.value || '0') || 0;
     var roundTrips = parseInt(document.getElementById('round_trips')?.value || '1', 10) || 1;
     var tripType = document.getElementById('trip_type')?.value || 'two_way';
+    var tripDate = document.querySelector('#invoiceMileageForm input[name="trip_date"]')?.value || '';
+    var tripEndDate = document.getElementById('trip_end_date')?.value || tripDate;
+    var daysField = document.getElementById('travel_days_preview');
+    var travelDays = 1;
+    if (tripDate && tripEndDate) {
+      var start = new Date(tripDate + 'T00:00:00');
+      var finish = new Date(tripEndDate + 'T00:00:00');
+      if (!isNaN(start.getTime()) && !isNaN(finish.getTime())) {
+        if (finish < start) {
+          finish = start;
+          var tripEndField = document.getElementById('trip_end_date');
+          if (tripEndField) tripEndField.value = tripDate;
+        }
+        var diff = Math.floor((finish - start) / 86400000) + 1;
+        travelDays = Math.max(diff, 1);
+      }
+    }
     var multiplier = tripType === 'one_way' ? 1 : 2;
-    var totalMiles = oneWay * multiplier * roundTrips;
+    var totalMiles = oneWay * multiplier * roundTrips * travelDays;
     var totalAmount = totalMiles * rate;
     var milesField = document.getElementById('total_miles_preview');
     var amountField = document.getElementById('total_amount_preview');
+    if (daysField) daysField.value = String(travelDays);
     if (milesField) milesField.value = totalMiles.toFixed(2);
     if (amountField) amountField.value = '$' + totalAmount.toFixed(2);
   }
@@ -431,6 +463,33 @@
         if (value) field.value = value;
       });
     });
+  }
+
+  function syncMileageDestinationFromSelection(){
+    var invoiceSelect = document.getElementById('mileage_invoice_select');
+    var jobSelect = document.getElementById('mileage_job_select');
+    var destinationField = document.getElementById('mileage_destination');
+    if (!destinationField) return;
+    var address = '';
+    if (invoiceSelect) {
+      var invoiceOption = invoiceSelect.options[invoiceSelect.selectedIndex];
+      var linkedJobId = invoiceOption ? (invoiceOption.getAttribute('data-job-id') || '') : '';
+      if (jobSelect) {
+        jobSelect.value = linkedJobId || '';
+      }
+      if (linkedJobId && jobSelect) {
+        var linkedJobOption = jobSelect.options[jobSelect.selectedIndex];
+        address = linkedJobOption ? (linkedJobOption.getAttribute('data-address') || '') : '';
+      }
+      if (!address) {
+        address = invoiceOption ? (invoiceOption.getAttribute('data-address') || '') : '';
+      }
+    }
+    if (!address && jobSelect) {
+      var jobOption = jobSelect.options[jobSelect.selectedIndex];
+      address = jobOption ? (jobOption.getAttribute('data-address') || '') : '';
+    }
+    if (address) destinationField.value = address;
   }
 
   function openDetailsForHash(){
@@ -454,10 +513,14 @@
       window.setTimeout(function(){ btn.textContent = copyLabel; }, 1400);
     });
   });
-  ['one_way_miles','rate','round_trips','trip_type'].forEach(function(id){
+  ['one_way_miles','rate','round_trips','trip_type','trip_end_date'].forEach(function(id){
     var el = document.getElementById(id);
     if (el) el.addEventListener('input', recalcInvoiceMileage);
     if (el) el.addEventListener('change', recalcInvoiceMileage);
+  });
+  document.querySelectorAll('#invoiceMileageForm input[name="trip_date"]').forEach(function(el){
+    el.addEventListener('input', recalcInvoiceMileage);
+    el.addEventListener('change', recalcInvoiceMileage);
   });
   bindSavedClientSelect('customer_invoice_contact_select', {
     name: 'customer_invoice_name',
@@ -466,6 +529,19 @@
     address: 'customer_invoice_address',
     notes: 'customer_invoice_notes'
   });
+  bindSavedClientSelect('income_record_job_select', {
+    name: 'income_record_client_name',
+    address: 'income_record_client_address'
+  });
+  var mileageInvoiceSelect = document.getElementById('mileage_invoice_select');
+  if (mileageInvoiceSelect) {
+    mileageInvoiceSelect.addEventListener('change', syncMileageDestinationFromSelection);
+  }
+  var mileageJobSelect = document.getElementById('mileage_job_select');
+  if (mileageJobSelect) {
+    mileageJobSelect.addEventListener('change', syncMileageDestinationFromSelection);
+  }
+  syncMileageDestinationFromSelection();
   recalcCustomerInvoice();
   recalcInvoiceMileage();
   openDetailsForHash();

@@ -7749,6 +7749,10 @@ def init_db():
         ensure_column(conn, 'invoices', 'converted_invoice_id', 'INTEGER')
         ensure_column(conn, 'invoices', 'customer_contact_id', 'INTEGER')
         ensure_column(conn, 'invoices', 'payment_note', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoices', 'linked_job_id', 'INTEGER')
+        ensure_column(conn, 'invoice_mileage_entries', 'job_id', 'INTEGER')
+        ensure_column(conn, 'invoice_mileage_entries', 'trip_end_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'invoice_mileage_entries', 'travel_days', 'INTEGER NOT NULL DEFAULT 1')
         ensure_column(conn, 'customer_contacts', 'customer_phone', "TEXT DEFAULT ''")
         ensure_column(conn, 'customer_contacts', 'customer_address', "TEXT DEFAULT ''")
         ensure_column(conn, 'customer_contacts', 'customer_notes', "TEXT DEFAULT ''")
@@ -13494,6 +13498,47 @@ def estimate_status_after_edit(existing_row) -> str:
     return 'draft'
 
 
+def ops_job_service_address(row) -> str:
+    if not row:
+        return ''
+    street = (row['service_address'] or '').strip()
+    locality_parts = [part.strip() for part in [row['city'] or '', row['state'] or ''] if part and str(part).strip()]
+    locality = ', '.join(locality_parts)
+    postal = (row['postal_code'] or '').strip()
+    trailing = ' '.join(part for part in [locality, postal] if part).strip()
+    if street and trailing:
+        return f'{street}, {trailing}'
+    return street or trailing
+
+
+def ops_job_reference_rows(conn: sqlite3.Connection, client_id: int) -> list[dict]:
+    rows = safe_fetchall(
+        conn,
+        '''SELECT id, title, customer_name, service_address, city, state, postal_code, scheduled_start
+           FROM jobs
+           WHERE client_id=?
+           ORDER BY
+               CASE WHEN COALESCE(substr(scheduled_start,1,10), '')='' THEN 1 ELSE 0 END,
+               COALESCE(substr(scheduled_start,1,10), '') DESC,
+               id DESC''',
+        (client_id,),
+    )
+    out = []
+    for row in rows:
+        item = dict(row)
+        item['full_service_address'] = ops_job_service_address(row)
+        out.append(item)
+    return out
+
+
+def invoice_row_sort_sql() -> str:
+    return """ORDER BY
+                CASE WHEN COALESCE(invoice_date,'')='' THEN 1 ELSE 0 END,
+                COALESCE(invoice_date,'') DESC,
+                COALESCE(job_number,0) DESC,
+                id DESC"""
+
+
 def parse_invoice_line_items(form) -> tuple[list[dict], list[str]]:
     descriptions = form.getlist('line_description')
     quantities = form.getlist('line_quantity')
@@ -18278,6 +18323,9 @@ def invoices():
     default_due_date = (date.today() + timedelta(days=14)).isoformat()
     prefill_contact_id = request.values.get('customer_contact_id', type=int)
     edit_invoice_id = request.values.get('edit_invoice_id', type=int)
+    invoice_search = (request.args.get('invoice_search') or '').strip()
+    invoice_start_date = (request.args.get('invoice_start_date') or '').strip()
+    invoice_end_date = (request.args.get('invoice_end_date') or '').strip()
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         if not client or not allowed_client(user, client_id):
@@ -18292,6 +18340,8 @@ def invoices():
         ).fetchall() if sales_workspace_enabled else []
         customer_contact_lookup = {row['id']: row for row in customer_contact_rows}
         prefill_contact = customer_contact_lookup.get(prefill_contact_id) if sales_workspace_enabled else None
+        job_rows = ops_job_reference_rows(conn, client_id)
+        jobs_lookup = {int(row['id']): row for row in job_rows}
         editing_invoice = conn.execute(
             '''SELECT *
                FROM invoices
@@ -18310,21 +18360,54 @@ def invoices():
                 start_point = request.form.get('start_point', '').strip()
                 destination = request.form.get('destination', '').strip()
                 trip_type = request.form.get('trip_type', 'two_way').strip()
+                invoice_id = request.form.get('invoice_id', type=int)
+                linked_job_id = request.form.get('job_id', type=int)
+                linked_invoice = safe_fetchone(
+                    conn,
+                    "SELECT id, linked_job_id, client_address, client_name FROM invoices WHERE id=? AND client_id=? AND COALESCE(record_kind,'income_record')='income_record'",
+                    (invoice_id, client_id),
+                ) if invoice_id else None
+                if not linked_invoice:
+                    flash('Choose a saved income record before attaching mileage.', 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
+                if not linked_job_id and linked_invoice['linked_job_id']:
+                    linked_job_id = int(linked_invoice['linked_job_id'])
+                linked_job = jobs_lookup.get(int(linked_job_id)) if linked_job_id else None
+                if not destination and linked_job:
+                    destination = linked_job['full_service_address']
+                if not destination:
+                    destination = (linked_invoice['client_address'] or '').strip()
                 round_trips = request.form.get('round_trips', type=int) or 1
                 round_trips = max(round_trips, 1)
-                invoice_id = request.form.get('invoice_id', type=int)
+                trip_start_date = request.form.get('trip_date', '').strip()
+                trip_end_date = request.form.get('trip_end_date', '').strip() or trip_start_date
+                travel_days = 1
+                start_value = parse_date(trip_start_date)
+                end_value = parse_date(trip_end_date)
+                if start_value and end_value:
+                    if end_value < start_value:
+                        trip_end_date = trip_start_date
+                        end_value = start_value
+                    travel_days = max((end_value - start_value).days + 1, 1)
+                elif not start_value and end_value:
+                    trip_start_date = trip_end_date
+                elif start_value and not end_value:
+                    trip_end_date = trip_start_date
                 one_way_miles = request.form.get('one_way_miles', type=float) or 0
                 if one_way_miles <= 0 and start_point and destination:
                     one_way_miles = estimate_miles(start_point, destination)
                 trip_multiplier = 1 if trip_type == 'one_way' else 2
-                total_miles = round(one_way_miles * trip_multiplier * round_trips, 2)
+                total_miles = round(one_way_miles * trip_multiplier * round_trips * travel_days, 2)
+                if total_miles <= 0:
+                    flash('Enter miles or choose a job or address that can produce a mileage calculation.', 'error')
+                    return redirect(url_for('invoices', client_id=client_id))
                 rate = request.form.get('rate', type=float)
                 if rate is None:
                     rate = IRS_MILEAGE_RATE
                 total_amount = round(total_miles * rate, 2)
                 conn.execute(
-                    'INSERT INTO invoice_mileage_entries (client_id, invoice_id, trip_date, start_point, destination, trip_type, round_trips, one_way_miles, total_miles, rate, total_amount, note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-                    (client_id, invoice_id, request.form.get('trip_date', '').strip(), start_point, destination, trip_type, round_trips, one_way_miles, total_miles, rate, total_amount, request.form.get('note', '').strip())
+                    'INSERT INTO invoice_mileage_entries (client_id, invoice_id, job_id, trip_date, trip_end_date, travel_days, start_point, destination, trip_type, round_trips, one_way_miles, total_miles, rate, total_amount, note) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                    (client_id, invoice_id, linked_job_id, trip_start_date, trip_end_date, travel_days, start_point, destination, trip_type, round_trips, one_way_miles, total_miles, rate, total_amount, request.form.get('note', '').strip())
                 )
                 conn.commit()
                 flash('Invoice mileage entry saved.', 'success')
@@ -18763,20 +18846,27 @@ def invoices():
                 return redirect(url_for('invoices', client_id=client_id))
             next_job = conn.execute('SELECT COALESCE(MAX(job_number),0)+1 n FROM invoices WHERE client_id=?', (client_id,)).fetchone()['n']
             gross_amount = request.form.get('paid_amount', type=float) or 0
+            linked_job_id = request.form.get('linked_job_id', type=int)
+            linked_job = jobs_lookup.get(int(linked_job_id)) if linked_job_id else None
+            income_source_name = request.form.get('client_name', '').strip()
+            income_address = request.form.get('client_address', '').strip()
+            if linked_job:
+                income_source_name = income_source_name or (linked_job['customer_name'] or linked_job['title'] or '').strip()
+                income_address = income_address or (linked_job['full_service_address'] or '').strip()
             conn.execute(
                 '''INSERT INTO invoices (
                     client_id, job_number, record_kind, invoice_title, client_name, recipient_email, client_address,
                     invoice_total_amount, paid_amount, invoice_date, due_date, invoice_status, public_invoice_token,
-                    public_payment_link, notes, income_category, sales_tax_amount, sales_tax_paid
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                    public_payment_link, notes, income_category, sales_tax_amount, sales_tax_paid, linked_job_id
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
                 (
                     client_id,
                     next_job,
                     'income_record',
                     'Income Record',
-                    request.form.get('client_name', '').strip(),
+                    income_source_name,
                     '',
-                    request.form.get('client_address', '').strip(),
+                    income_address,
                     gross_amount,
                     gross_amount,
                     request.form.get('invoice_date', '').strip(),
@@ -18788,6 +18878,7 @@ def invoices():
                     request.form.get('income_category', 'service_income').strip() or 'service_income',
                     request.form.get('sales_tax_amount', type=float) or 0,
                     1 if request.form.get('sales_tax_paid') else 0,
+                    linked_job_id,
                 )
             )
             conn.commit()
@@ -18807,18 +18898,49 @@ def invoices():
         auto_reminder_count = automatic_invoice_reminders(conn, client_id=client_id, created_by_user_id=user['id'])
         if auto_reminder_count:
             conn.commit()
-        rows = conn.execute('SELECT * FROM invoices WHERE client_id=? ORDER BY job_number DESC, id DESC', (client_id,)).fetchall()
+        rows = conn.execute(
+            f'''SELECT *
+                FROM invoices
+                WHERE client_id=?
+                {invoice_row_sort_sql()}''',
+            (client_id,),
+        ).fetchall()
         invoice_mileage_rows = conn.execute('''
-            SELECT im.*, i.job_number, i.client_name
+            SELECT im.*, i.job_number, i.client_name, i.client_address, i.linked_job_id,
+                   j.title job_title, j.customer_name job_customer_name, j.service_address job_service_address,
+                   j.city job_city, j.state job_state, j.postal_code job_postal_code
             FROM invoice_mileage_entries im
             LEFT JOIN invoices i ON i.id = im.invoice_id
+            LEFT JOIN jobs j ON j.id = im.job_id
             WHERE im.client_id=?
-            ORDER BY im.trip_date DESC, im.id DESC
+            ORDER BY
+                CASE WHEN COALESCE(im.trip_date,'')='' THEN 1 ELSE 0 END,
+                COALESCE(im.trip_date,'') DESC,
+                im.id DESC
         ''', (client_id,)).fetchall()
-        customer_rows = [row for row in rows if (row['record_kind'] or 'income_record') == 'customer_invoice']
+        customer_rows = []
+        search_term = invoice_search.lower()
+        for row in rows:
+            if (row['record_kind'] or 'income_record') != 'customer_invoice':
+                continue
+            row_date = (row['invoice_date'] or '').strip()
+            if invoice_start_date and row_date and row_date < invoice_start_date:
+                continue
+            if invoice_end_date and row_date and row_date > invoice_end_date:
+                continue
+            if search_term:
+                haystack = ' '.join([
+                    row['client_name'] or '',
+                    row['client_address'] or '',
+                    row['recipient_email'] or '',
+                    row['invoice_title'] or '',
+                ]).lower()
+                if search_term not in haystack:
+                    continue
+            customer_rows.append(row)
         income_rows = [row for row in rows if (row['record_kind'] or 'income_record') == 'income_record']
         estimate_source_rows = conn.execute(
-            "SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'')='estimate' ORDER BY job_number DESC, id DESC LIMIT 6",
+            f"SELECT * FROM invoices WHERE client_id=? AND COALESCE(record_kind,'')='estimate' {invoice_row_sort_sql()} LIMIT 6",
             (client_id,),
         ).fetchall()
         line_items_map = invoice_line_items_for_ids(conn, [row['id'] for row in customer_rows])
@@ -18845,6 +18967,16 @@ def invoices():
             estimate_preview_links[row['id']] = public_estimate_url(token)
             if current_status in estimate_status_counts:
                 estimate_status_counts[current_status] += 1
+        mileage_rows_prepared = []
+        for row in invoice_mileage_rows:
+            row_dict = dict(row)
+            row_dict['job_full_service_address'] = ops_job_service_address({
+                'service_address': row['job_service_address'],
+                'city': row['job_city'],
+                'state': row['job_state'],
+                'postal_code': row['job_postal_code'],
+            })
+            mileage_rows_prepared.append(row_dict)
         conn.commit()
     invoice_form_source = dict(prefill_contact) if prefill_contact else {}
     if editing_invoice:
@@ -18888,10 +19020,11 @@ def invoices():
         income_records=income_rows,
         invoice_line_items_map=line_items_map,
         invoice_public_links=invoice_public_links,
-        invoice_mileage_entries=invoice_mileage_rows,
+        invoice_mileage_entries=mileage_rows_prepared,
         client=client,
         client_id=client_id,
         home_address=DEFAULT_HOME_ADDRESS,
+        job_rows=job_rows,
         income_category_options=income_category_options(),
         income_category_labels=income_category_label_map(),
         invoice_status_labels=invoice_status_label_map(),
@@ -18905,6 +19038,11 @@ def invoices():
         editing_invoice=dict(editing_invoice) if editing_invoice else None,
         invoice_form_source=invoice_form_source,
         invoice_form_items=invoice_form_items,
+        invoice_filters={
+            'search': invoice_search,
+            'start_date': invoice_start_date,
+            'end_date': invoice_end_date,
+        },
     )
 
 
