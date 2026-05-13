@@ -1,23 +1,175 @@
 {% extends 'base.html' %}
 {% block body %}
-<div class='toolbar'><div class='small'><strong>{{ client.business_name }}</strong> · Mileage tracker</div><button onclick='window.print()' class='btn btn-secondary' type='button'>Print This Page</button></div>
-<div class='grid cards-2'>
-  <div class='card'>
-    <h3>Add Trip</h3>
-    <form method='post' class='form-grid'>
-      {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-      <div><label>Date</label><input name='trip_date' type='date' value='{{ today }}'></div>
-      <div><label>Miles (leave blank to auto-calculate)</label><input name='miles' type='number' step='0.01'></div>
-      <div style='grid-column:1/-1'><label>From</label><input name='from_address' value='{{ home_address }}'></div>
-      <div style='grid-column:1/-1'><label>To</label><input name='to_address'></div>
-      <div style='grid-column:1/-1'><label>Purpose</label><input name='purpose' placeholder='Client visit, estimate, supply pickup'></div>
-      <div><button>Save Mileage</button></div>
-    </form>
-    <p class='small'>Deduction uses the 2026 IRS business standard mileage rate of ${{ '%.3f'|format(irs_mileage_rate) }} per mile. If From and To are entered and miles are left blank, LedgerFlow estimates miles automatically.</p>
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>Miles</div>
+    <div class='page-title'>Mileage Tracker</div>
+    <div class='page-subtitle'>Track travel by linked job or income record so the address, route, and deduction actually flow through the business workspace.</div>
   </div>
-  <div class='card'>
-    <h3>Mileage History</h3>
-    <table class='table'><tr><th>Date</th><th>Purpose</th><th>Miles</th><th>Deduction</th></tr>{% for row in mileage_entries %}<tr><td>{{ row.trip_date }}</td><td>{{ row.purpose }}</td><td>{{ '%.2f'|format(row.miles or 0) }}</td><td>${{ '%.2f'|format(row.deduction or 0) }}</td></tr>{% endfor %}</table>
+  <div class='stack-actions'>
+    <a class='btn btn-secondary' href='{{ url_for("invoices", client_id=client_id) }}#savedIncomeRecordsDetails'>Back to Income Records</a>
+    <button onclick='window.print()' class='btn btn-secondary' type='button'>Print This Page</button>
   </div>
 </div>
+
+<div class='grid cards-2'>
+  <div class='card'>
+    <div class='card-head'><h3>Add Mileage</h3><span class='badge'>Linked Flow</span></div>
+    <details class='compact-details' id='addTripDetails' open>
+      <summary>Open Mileage Entry</summary>
+      <form method='post' class='form-grid' id='mileageForm' style='margin-top:12px'>
+        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <div>
+          <label>Linked Income Record</label>
+          <select id='linked_income_record_id' name='linked_income_record_id'>
+            <option value=''>Choose saved income record (optional)</option>
+            {% for row in income_records %}
+            <option value='{{ row.id }}' {% if prefill_income_record_id and prefill_income_record_id == row.id %}selected{% endif %} data-address='{{ (row.client_address or "")|e }}' data-job-id='{{ row.linked_job_id or "" }}' data-purpose='Income record #{{ row.job_number }} - {{ (row.client_name or "")|e }}'>
+              Record #{{ row.job_number }} | {{ row.client_name }}{% if row.invoice_date %} | {{ row.invoice_date }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label>Linked Job</label>
+          <select id='linked_job_id' name='linked_job_id'>
+            <option value=''>Choose job (optional)</option>
+            {% for job in job_rows %}
+            <option value='{{ job.id }}' {% if prefill_job_id and prefill_job_id == job.id %}selected{% endif %} data-address='{{ job.full_service_address|e }}' data-purpose='Job #{{ job.id }} - {{ (job.customer_name or job.title or "")|e }}'>
+              #{{ job.id }} | {{ job.customer_name or job.title }}{% if job.full_service_address %} | {{ job.full_service_address }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div><label>Trip Date</label><input id='trip_date' name='trip_date' type='date' value='{{ today }}'></div>
+        <div><label>Trip End Date</label><input id='trip_end_date' name='trip_end_date' type='date' value='{{ today }}'></div>
+        <div><label>From</label><input id='from_address' name='from_address' value='{{ home_address }}'></div>
+        <div><label>To</label><input id='to_address' name='to_address' placeholder='Customer or job address'></div>
+        <div><label>Trip Type</label><select id='trip_type' name='trip_type'><option value='two_way' selected>Two-way</option><option value='one_way'>One-way</option></select></div>
+        <div><label>Round Trips Per Day</label><input id='round_trips' name='round_trips' type='number' min='1' step='1' value='1'></div>
+        <div><label>Travel Days</label><input id='travel_days_preview' type='text' value='1' readonly></div>
+        <div><label>One-Way Miles</label><input id='one_way_miles' name='one_way_miles' type='number' min='0' step='0.01' placeholder='Leave blank to auto-calculate'></div>
+        <div><label>Total Miles</label><input id='total_miles_preview' type='text' value='0.00' readonly></div>
+        <div><label>Total Deduction</label><input id='deduction_preview' type='text' value='$0.00' readonly></div>
+        <div style='grid-column:1/-1'><label>Purpose</label><input id='purpose' name='purpose' placeholder='Client visit, supply pickup, service route'></div>
+        <div><button type='submit'>Save Mileage</button></div>
+      </form>
+      <p class='small' style='margin-top:12px'>Deduction uses the 2026 IRS business standard mileage rate of ${{ '%.3f'|format(irs_mileage_rate) }} per mile. Linked jobs and income records now pull the address into the route instead of leaving the box disconnected.</p>
+    </details>
+  </div>
+
+  <div class='card'>
+    <div class='card-head'><h3>Mileage History</h3><span class='badge'>{{ mileage_entries|length }} entries</span></div>
+    <details class='compact-details' open>
+      <summary>Open Mileage History</summary>
+      <div class='scroll-x' style='margin-top:12px'>
+        <table class='table'>
+          <tr><th>Date Range</th><th>Income Record</th><th>Job</th><th>Purpose</th><th>Route</th><th>Miles</th><th>Deduction</th></tr>
+          {% for row in mileage_entries %}
+          <tr>
+            <td>{% if row.trip_date and row.trip_end_date and row.trip_end_date != row.trip_date %}{{ row.trip_date }} &rarr; {{ row.trip_end_date }}{% else %}{{ row.trip_date or '' }}{% endif %}{% if row.travel_days and row.travel_days > 1 %}<div class='small'>{{ row.travel_days }} days</div>{% endif %}</td>
+            <td>{% if row.income_record_number %}#{{ row.income_record_number }}{% if row.income_record_name %}<div class='small'>{{ row.income_record_name }}</div>{% endif %}{% else %}-{% endif %}</td>
+            <td>{% if row.linked_job_id %}#{{ row.linked_job_id }} | {{ row.job_customer_name or row.job_title or 'Linked job' }}{% if row.job_full_service_address %}<div class='small'>{{ row.job_full_service_address }}</div>{% endif %}{% else %}-{% endif %}</td>
+            <td>{{ row.purpose or '-' }}</td>
+            <td>{{ row.from_address }} &rarr; {{ row.to_address }}</td>
+            <td>{{ '%.2f'|format(row.miles or 0) }}</td>
+            <td>${{ '%.2f'|format(row.deduction or 0) }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan='7' class='small'>No mileage entries saved yet.</td></tr>
+          {% endfor %}
+        </table>
+      </div>
+    </details>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script>
+(function(){
+  function syncMileageLinks(forceIncomeJob) {
+    var incomeSelect = document.getElementById('linked_income_record_id');
+    var jobSelect = document.getElementById('linked_job_id');
+    var addressField = document.getElementById('to_address');
+    var purposeField = document.getElementById('purpose');
+    if (!addressField || !incomeSelect || !jobSelect) return;
+
+    var incomeOption = incomeSelect.options[incomeSelect.selectedIndex];
+    var linkedJobId = incomeOption ? (incomeOption.getAttribute('data-job-id') || '') : '';
+    if (linkedJobId && forceIncomeJob) {
+      jobSelect.value = linkedJobId;
+    }
+
+    var jobOption = jobSelect.options[jobSelect.selectedIndex];
+    var address = jobOption ? (jobOption.getAttribute('data-address') || '') : '';
+    if (!address && incomeOption) {
+      address = incomeOption.getAttribute('data-address') || '';
+    }
+    if (address) {
+      addressField.value = address;
+    }
+
+    if (purposeField && !purposeField.value) {
+      var purpose = '';
+      if (jobOption) {
+        purpose = jobOption.getAttribute('data-purpose') || '';
+      }
+      if (!purpose && incomeOption) {
+        purpose = incomeOption.getAttribute('data-purpose') || '';
+      }
+      if (purpose) purposeField.value = purpose;
+    }
+  }
+
+  function recalcMileage() {
+    var oneWay = parseFloat(document.getElementById('one_way_miles')?.value || '0') || 0;
+    var roundTrips = parseInt(document.getElementById('round_trips')?.value || '1', 10) || 1;
+    var tripType = document.getElementById('trip_type')?.value || 'two_way';
+    var tripDate = document.getElementById('trip_date')?.value || '';
+    var tripEndDateField = document.getElementById('trip_end_date');
+    var tripEndDate = tripEndDateField?.value || tripDate;
+    var daysField = document.getElementById('travel_days_preview');
+    var milesField = document.getElementById('total_miles_preview');
+    var deductionField = document.getElementById('deduction_preview');
+    var travelDays = 1;
+    if (tripDate && tripEndDate) {
+      var start = new Date(tripDate + 'T00:00:00');
+      var finish = new Date(tripEndDate + 'T00:00:00');
+      if (!isNaN(start.getTime()) && !isNaN(finish.getTime())) {
+        if (finish < start) {
+          finish = start;
+          if (tripEndDateField) tripEndDateField.value = tripDate;
+        }
+        var diff = Math.floor((finish - start) / 86400000) + 1;
+        travelDays = Math.max(diff, 1);
+      }
+    }
+    var multiplier = tripType === 'one_way' ? 1 : 2;
+    var totalMiles = oneWay * multiplier * roundTrips * travelDays;
+    var deduction = totalMiles * {{ irs_mileage_rate|tojson }};
+    if (daysField) daysField.value = String(travelDays);
+    if (milesField) milesField.value = totalMiles.toFixed(2);
+    if (deductionField) deductionField.value = '$' + deduction.toFixed(2);
+  }
+
+  var incomeSelect = document.getElementById('linked_income_record_id');
+  if (incomeSelect) {
+    incomeSelect.addEventListener('change', function() { syncMileageLinks(true); });
+  }
+  var jobSelect = document.getElementById('linked_job_id');
+  if (jobSelect) {
+    jobSelect.addEventListener('change', function() { syncMileageLinks(false); });
+  }
+  ['one_way_miles', 'round_trips', 'trip_type', 'trip_date', 'trip_end_date'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', recalcMileage);
+      el.addEventListener('change', recalcMileage);
+    }
+  });
+  syncMileageLinks(true);
+  recalcMileage();
+})();
+</script>
 {% endblock %}

@@ -7573,6 +7573,12 @@ def init_db():
         ensure_column(conn, 'worker_payments', 'payment_method', "TEXT DEFAULT 'direct_deposit'")
         ensure_column(conn, 'worker_payments', 'payment_status', "TEXT DEFAULT 'paid'")
         ensure_column(conn, 'worker_payments', 'reference_number', "TEXT DEFAULT ''")
+        ensure_column(conn, 'mileage_entries', 'linked_job_id', 'INTEGER')
+        ensure_column(conn, 'mileage_entries', 'linked_income_record_id', 'INTEGER')
+        ensure_column(conn, 'mileage_entries', 'trip_end_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'mileage_entries', 'travel_days', 'INTEGER NOT NULL DEFAULT 1')
+        ensure_column(conn, 'mileage_entries', 'trip_type', "TEXT DEFAULT 'two_way'")
+        ensure_column(conn, 'mileage_entries', 'round_trips', 'INTEGER NOT NULL DEFAULT 1')
         ensure_column(conn, 'worker_policy_notices', 'is_active', 'INTEGER NOT NULL DEFAULT 1')
         ensure_column(conn, 'worker_policy_notices', 'updated_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
         ensure_column(conn, 'users', 'last_seen_at', "TEXT DEFAULT ''")
@@ -13580,6 +13586,18 @@ def invoice_row_sort_sql() -> str:
                 COALESCE(invoice_date,'') DESC,
                 COALESCE(job_number,0) DESC,
                 id DESC"""
+
+
+def income_record_reference_rows(conn: sqlite3.Connection, client_id: int) -> list[dict]:
+    rows = safe_fetchall(
+        conn,
+        f'''SELECT id, job_number, client_name, client_address, invoice_date, linked_job_id
+            FROM invoices
+            WHERE client_id=? AND COALESCE(record_kind,'income_record')='income_record'
+            {invoice_row_sort_sql()}''',
+        (client_id,),
+    )
+    return [dict(row) for row in rows]
 
 
 def parse_invoice_line_items(form) -> tuple[list[dict], list[str]]:
@@ -20068,23 +20086,122 @@ def mileage():
     user = current_user()
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
     with get_conn() as conn:
+        income_records = income_record_reference_rows(conn, client_id)
+        income_lookup = {int(row['id']): row for row in income_records}
+        job_rows = ops_job_reference_rows(conn, client_id)
+        jobs_lookup = {int(row['id']): row for row in job_rows}
         if request.method == 'POST':
-            miles = request.form.get('miles', type=float) or 0
             from_address = request.form.get('from_address', '').strip()
             to_address = request.form.get('to_address', '').strip()
-            if miles <= 0 and from_address and to_address:
-                miles = estimate_miles(from_address, to_address)
+            linked_income_record_id = request.form.get('linked_income_record_id', type=int)
+            linked_job_id = request.form.get('linked_job_id', type=int)
+            linked_income_record = income_lookup.get(int(linked_income_record_id)) if linked_income_record_id else None
+            if linked_income_record and not linked_job_id and linked_income_record.get('linked_job_id'):
+                linked_job_id = int(linked_income_record['linked_job_id'])
+            linked_job = jobs_lookup.get(int(linked_job_id)) if linked_job_id else None
+            if linked_job and not to_address:
+                to_address = linked_job['full_service_address']
+            if linked_income_record and not to_address:
+                to_address = (linked_income_record.get('client_address') or '').strip()
+            if not from_address:
+                from_address = DEFAULT_HOME_ADDRESS
+            trip_date = request.form.get('trip_date', '').strip()
+            trip_end_date = request.form.get('trip_end_date', '').strip() or trip_date
+            trip_type = (request.form.get('trip_type') or 'two_way').strip()
+            if trip_type not in {'one_way', 'two_way'}:
+                trip_type = 'two_way'
+            round_trips = request.form.get('round_trips', type=int) or 1
+            round_trips = max(round_trips, 1)
+            travel_days = 1
+            trip_start_value = parse_date(trip_date)
+            trip_end_value = parse_date(trip_end_date)
+            if trip_start_value and trip_end_value:
+                if trip_end_value < trip_start_value:
+                    trip_end_date = trip_date
+                    trip_end_value = trip_start_value
+                travel_days = max((trip_end_value - trip_start_value).days + 1, 1)
+            elif not trip_start_value and trip_end_value:
+                trip_date = trip_end_date
+            elif trip_start_value and not trip_end_value:
+                trip_end_date = trip_date
+            one_way_miles = request.form.get('one_way_miles', type=float)
+            if one_way_miles is None:
+                one_way_miles = request.form.get('miles', type=float) or 0
+            if one_way_miles <= 0 and from_address and to_address:
+                one_way_miles = estimate_miles(from_address, to_address)
+            trip_multiplier = 1 if trip_type == 'one_way' else 2
+            miles = round(one_way_miles * trip_multiplier * round_trips * travel_days, 2)
+            if miles <= 0:
+                flash('Choose a job or income record, or enter route details that can calculate miles.', 'error')
+                return redirect(url_for('mileage', client_id=client_id))
+            purpose = request.form.get('purpose', '').strip()
+            if linked_income_record and not purpose:
+                purpose = f"Income record #{linked_income_record['job_number']} - {linked_income_record['client_name']}"
+            elif linked_job and not purpose:
+                purpose = f"Job #{linked_job['id']} - {(linked_job['customer_name'] or linked_job['title'] or 'Service visit').strip()}"
             deduction = round(miles * IRS_MILEAGE_RATE, 2)
             conn.execute(
-                'INSERT INTO mileage_entries (client_id, trip_date, from_address, to_address, purpose, miles, deduction) VALUES (?,?,?,?,?,?,?)',
-                (client_id, request.form.get('trip_date', '').strip(), from_address, to_address, request.form.get('purpose', '').strip(), miles, deduction)
+                '''INSERT INTO mileage_entries (
+                       client_id, trip_date, trip_end_date, from_address, to_address, purpose, miles, deduction,
+                       linked_job_id, linked_income_record_id, travel_days, trip_type, round_trips
+                   ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                (
+                    client_id,
+                    trip_date,
+                    trip_end_date,
+                    from_address,
+                    to_address,
+                    purpose,
+                    miles,
+                    deduction,
+                    linked_job_id,
+                    linked_income_record_id,
+                    travel_days,
+                    trip_type,
+                    round_trips,
+                )
             )
             conn.commit()
             flash('Mileage entry saved.', 'success')
             return redirect(url_for('mileage', client_id=client_id))
-        rows = conn.execute('SELECT * FROM mileage_entries WHERE client_id=? ORDER BY trip_date DESC, id DESC', (client_id,)).fetchall()
+        rows = conn.execute(
+            '''SELECT me.*, i.job_number income_record_number, i.client_name income_record_name, i.client_address income_record_address,
+                      j.title job_title, j.customer_name job_customer_name, j.service_address job_service_address,
+                      j.city job_city, j.state job_state, j.postal_code job_postal_code
+               FROM mileage_entries me
+               LEFT JOIN invoices i ON i.id = me.linked_income_record_id
+               LEFT JOIN jobs j ON j.id = me.linked_job_id
+               WHERE me.client_id=?
+               ORDER BY
+                   CASE WHEN COALESCE(me.trip_date,'')='' THEN 1 ELSE 0 END,
+                   COALESCE(me.trip_date,'') DESC,
+                   me.id DESC''',
+            (client_id,),
+        ).fetchall()
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
-    return render_template('mileage.html', mileage_entries=rows, client=client, client_id=client_id, home_address=DEFAULT_HOME_ADDRESS)
+    mileage_rows = []
+    for row in rows:
+        item = dict(row)
+        item['job_full_service_address'] = ops_job_service_address({
+            'service_address': row['job_service_address'],
+            'city': row['job_city'],
+            'state': row['job_state'],
+            'postal_code': row['job_postal_code'],
+        })
+        mileage_rows.append(item)
+    return render_template(
+        'mileage.html',
+        mileage_entries=mileage_rows,
+        client=client,
+        client_id=client_id,
+        home_address=DEFAULT_HOME_ADDRESS,
+        job_rows=job_rows,
+        income_records=income_records,
+        today=date.today().isoformat(),
+        prefill_income_record_id=request.args.get('prefill_income_record_id', type=int),
+        prefill_job_id=request.args.get('prefill_job_id', type=int),
+        irs_mileage_rate=IRS_MILEAGE_RATE,
+    )
 
 
 
