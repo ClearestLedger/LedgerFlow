@@ -199,6 +199,9 @@ html,body{max-width:100%;overflow-x:hidden}
 .workspace-link{display:flex;align-items:center;padding:7px 10px;border-radius:14px;background:rgba(248,248,246,.09);border:1px solid rgba(116,130,155,.24);color:var(--soft);font-weight:800;font-size:13px;text-decoration:none}
 .workspace-link:hover{background:rgba(248,248,246,.14);box-shadow:var(--shadow-soft)}
 .workspace-link.active{background:linear-gradient(135deg,var(--primary-dark),var(--primary));border-color:transparent;color:#fff;box-shadow:0 10px 18px rgba(34,37,43,.26)}
+.workspace-link-spotlight{justify-content:center;padding:10px 14px;border:1px solid rgba(200,162,74,.78);background:linear-gradient(135deg,rgba(200,162,74,.22),rgba(255,248,220,.12));color:#F7E5B2;font-size:15px;font-weight:900;letter-spacing:.04em;box-shadow:0 16px 28px rgba(34,37,43,.20),0 0 0 1px rgba(200,162,74,.18) inset}
+.workspace-link-spotlight:hover{background:linear-gradient(135deg,rgba(200,162,74,.28),rgba(255,248,220,.16));border-color:rgba(223,186,99,.92);box-shadow:0 18px 30px rgba(34,37,43,.24),0 0 0 1px rgba(223,186,99,.24) inset}
+.workspace-link-spotlight.active{background:linear-gradient(135deg,#8E6A1E,#C8A24A);border-color:rgba(245,226,172,.92);color:#fff7df;box-shadow:0 18px 34px rgba(80,58,14,.34)}
 .workspace-link.nav-sub-link,.app-nav-link.nav-sub-link{margin-left:16px;padding-left:18px;font-size:12px}
 .workspace-main{min-width:0}
 @media (max-width:1100px){.workspace-shell{grid-template-columns:1fr}.workspace-sidebar{position:static;max-height:none}}
@@ -674,11 +677,15 @@ linear-gradient(180deg,#f4f8ff 0%,#f8fbff 52%,#f6fafc 100%)}
 .app-nav-link + .app-nav-link{margin-top:4px}
 .app-nav-link:hover{background:rgba(248,248,246,.12);border-color:rgba(116,130,155,.24);box-shadow:var(--shadow-soft)}
 .app-nav-link.active{background:linear-gradient(135deg,var(--primary-dark),var(--primary));color:#fff;border-color:transparent;box-shadow:0 14px 22px rgba(34,37,43,.26)}
+.app-nav-link-spotlight{justify-content:center;padding:10px 14px;border:1px solid rgba(200,162,74,.78);background:linear-gradient(135deg,rgba(200,162,74,.22),rgba(255,248,220,.12));color:#F7E5B2;font-size:15px;font-weight:900;letter-spacing:.04em;box-shadow:0 16px 28px rgba(34,37,43,.22),0 0 0 1px rgba(200,162,74,.18) inset}
+.app-nav-link-spotlight:hover{background:linear-gradient(135deg,rgba(200,162,74,.28),rgba(255,248,220,.16));border-color:rgba(223,186,99,.92);box-shadow:0 18px 30px rgba(34,37,43,.26),0 0 0 1px rgba(223,186,99,.24) inset}
+.app-nav-link-spotlight.active{background:linear-gradient(135deg,#8E6A1E,#C8A24A);border-color:rgba(245,226,172,.92);color:#fff7df;box-shadow:0 18px 34px rgba(80,58,14,.36)}
 .nav-fold > summary::-webkit-details-marker{display:none}
 .nav-fold > summary::after{content:'+';font-size:16px;font-weight:800;line-height:1;color:rgba(248,248,246,.78)}
 .nav-fold[open] > summary::after{content:'−'}
 .nav-tone-admin{background:linear-gradient(180deg,#223147,#182233);border-color:rgba(168,178,193,.32)}
 .nav-tone-workspace{background:linear-gradient(180deg,#233349,#192336);border-color:rgba(168,178,193,.24)}
+.nav-tone-bookkeeping{background:linear-gradient(180deg,#2D3D54,#1D283A);border-color:rgba(200,162,74,.34)}
 .nav-tone-finance{background:linear-gradient(180deg,#26384f,#1b2639);border-color:rgba(122,145,175,.30)}
 .nav-tone-ops{background:linear-gradient(180deg,#22384c,#182b3c);border-color:rgba(105,140,160,.30)}
 .nav-tone-library{background:linear-gradient(180deg,#2a394f,#1d2a3b);border-color:rgba(132,149,172,.28)}

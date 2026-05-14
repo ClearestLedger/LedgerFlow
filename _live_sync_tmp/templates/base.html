@@ -165,11 +165,15 @@
       {% endif %}
 
       {% if active_client and current_user.role != 'admin' %}
-      <details class='app-nav-group nav-fold nav-tone-workspace' {% if request.endpoint in ["welcome_center","dashboard","ops_jobs","customer_sales","estimates","invoices","mileage","reports","business_payments_page"] %}open{% endif %}>
+      <a class='app-nav-link app-nav-link-spotlight {% if request.endpoint=="welcome_center" %}active{% endif %}' href='{{ url_for("welcome_center", client_id=active_client.id) }}'>{{ tr('Welcome Center') }}</a>
+      <details class='app-nav-group nav-fold nav-tone-workspace'>
         <summary class='app-nav-group-label'>{{ tr('Business Workspace') }}</summary>
-        <a class='app-nav-link {% if request.endpoint=="welcome_center" %}active{% endif %}' href='{{ url_for("welcome_center", client_id=active_client.id) }}'>{{ tr('Welcome Center') }}</a>
         <a class='app-nav-link {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Owner View') }}</a>
         <a class='app-nav-link {% if request.endpoint=="ops_jobs" %}active{% endif %}' href='{{ url_for("ops_jobs", client_id=active_client.id) }}'>{{ tr('Jobs') }}</a>
+      </details>
+
+      <details class='app-nav-group nav-fold nav-tone-bookkeeping' {% if request.endpoint in ["customer_sales","estimates","invoices","mileage","reports","business_payments_page"] %}open{% endif %}>
+        <summary class='app-nav-group-label'>{{ tr('Bookkeeping') }}</summary>
         {% if sales_workspace_access_enabled(active_client) %}
         <a class='app-nav-link {% if request.endpoint=="customer_sales" %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>{{ tr('Clients & Sales') }}</a>
         <a class='app-nav-link {% if request.endpoint=="estimates" %}active{% endif %}' href='{{ url_for("estimates", client_id=active_client.id) }}'>{{ tr('Estimates') }}</a>
@@ -247,14 +251,14 @@
         </div>
       </div>
       <nav class='workspace-nav'>
-        <details class='workspace-group nav-fold nav-tone-workspace' {% if request.endpoint in ["welcome_center","dashboard","ops_jobs"] %}open{% endif %}>
+        <a class='workspace-link workspace-link-spotlight {% if request.endpoint=="welcome_center" %}active{% endif %}' href='{{ url_for("welcome_center", client_id=active_client.id) }}'>{{ tr('Welcome Center') }}</a>
+        <details class='workspace-group nav-fold nav-tone-workspace'>
           <summary class='workspace-group-label'>{{ tr('Business Workspace') }}</summary>
-          <a class='workspace-link {% if request.endpoint=="welcome_center" %}active{% endif %}' href='{{ url_for("welcome_center", client_id=active_client.id) }}'>{{ tr('Welcome Center') }}</a>
           <a class='workspace-link {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Owner View') }}</a>
           <a class='workspace-link {% if request.endpoint=="ops_jobs" %}active{% endif %}' href='{{ url_for("ops_jobs", client_id=active_client.id) }}'>{{ tr('Jobs') }}</a>
         </details>
-        <details class='workspace-group nav-fold nav-tone-finance' {% if request.endpoint in ["customer_sales","estimates","invoices","mileage","reports","business_payments_page"] %}open{% endif %}>
-          <summary class='workspace-group-label'>{{ tr('Financial Core') }}</summary>
+        <details class='workspace-group nav-fold nav-tone-bookkeeping' {% if request.endpoint in ["customer_sales","estimates","invoices","mileage","reports","business_payments_page"] %}open{% endif %}>
+          <summary class='workspace-group-label'>{{ tr('Bookkeeping') }}</summary>
           {% if sales_workspace_access_enabled(active_client) %}
           <a class='workspace-link {% if request.endpoint=="customer_sales" %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>{{ tr('Clients & Sales') }}</a>
           <a class='workspace-link {% if request.endpoint=="estimates" %}active{% endif %}' href='{{ url_for("estimates", client_id=active_client.id) }}'>{{ tr('Estimates') }}</a>
