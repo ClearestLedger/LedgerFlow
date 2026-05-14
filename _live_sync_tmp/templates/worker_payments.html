@@ -1,7 +1,23 @@
 {% extends 'base.html' %}
 {% block body %}
+{% set selected_worker = (workers|selectattr('id','equalto',selected_worker_id)|list|first) if selected_worker_id else none %}
+<style>
+  .worker-pay-report-card{margin-bottom:16px}
+  .worker-pay-report-card .summary-strip{margin-top:12px}
+  .worker-pay-report-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
+  .worker-pay-report-note{margin-top:10px}
+  .worker-pay-report-print-title{display:none}
+  .worker-payment-ledger-row td{vertical-align:top}
+  @media print{
+    .app-sidebar,.workspace-sidebar,.mobile-app-dock,.portal-footer,.stack-actions,.worker-pay-entry-card,.worker-payment-edit-row,.worker-pay-filter-form,.worker-pay-report-actions,.flash{display:none !important}
+    .container,.app-main,.workspace-main{max-width:none !important;padding:0 !important;margin:0 !important}
+    .toolbar{margin-bottom:10px}
+    .worker-pay-report-print-title{display:block;font-size:20px;font-weight:800;margin-bottom:6px}
+    .worker-pay-report-card,.worker-pay-ledger-card{box-shadow:none !important;border:1px solid #AAB7C4 !important;background:#fff !important}
+  }
+</style>
 <div class='toolbar'>
-  <div class='small'><strong>{{ client.business_name }}</strong> &middot; Team Member Payouts</div>
+  <div class='small'><strong>{{ client.business_name }}</strong> &middot; Team Member Payouts{% if selected_worker %} &middot; {{ selected_worker.name }} ({{ selected_worker.worker_type }}){% endif %}</div>
   <div class='stack-actions'>
     <a class='btn btn-secondary' href='{{ url_for("ops_team", client_id=client_id, worker_id=selected_worker_id) if selected_worker_id else url_for("ops_team", client_id=client_id) }}'>Back to Team</a>
     <a class='btn btn-secondary' href='{{ url_for("reports", client_id=client_id, report_type="payments", worker_id=selected_worker_id) if selected_worker_id else url_for("reports", client_id=client_id, report_type="payments") }}'>Payment Report</a>
@@ -9,8 +25,46 @@
   </div>
 </div>
 
+<div class='card worker-pay-report-card'>
+  <div class='worker-pay-report-print-title'>{{ client.business_name }} · Worker Payment Report</div>
+  <div class='card-head'>
+    <div>
+      <h3>Worker Payment Report</h3>
+      <div class='small'>Run this from saved worker payout records only. It is not linked to customer invoices, so 1099 contractors like Eduardo can still be tracked and printed here.</div>
+    </div>
+  </div>
+  <form method='get' class='inline-form worker-pay-filter-form' style='margin-top:10px'>
+    {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+    <label>Team Member</label>
+    <select name='worker_id'>
+      <option value=''>All team members</option>
+      {% for w in workers %}
+      <option value='{{ w.id }}' {% if selected_worker_id == w.id %}selected{% endif %}>{{ w.name }} ({{ w.worker_type }})</option>
+      {% endfor %}
+    </select>
+    <button type='submit'>Open Worker</button>
+  </form>
+  <div class='form-grid' style='margin-top:12px'>
+    <div><label>From Date</label><input id='worker_payment_start_date' type='date'></div>
+    <div><label>To Date</label><input id='worker_payment_end_date' type='date'></div>
+    <div class='worker-pay-report-actions'>
+      <button class='btn btn-secondary' id='apply_worker_payment_dates' type='button'>Apply Dates</button>
+      <button class='btn btn-secondary' id='clear_worker_payment_dates' type='button'>Clear Dates</button>
+      <button class='btn btn-secondary' id='print_worker_payment_report' type='button'>Print Report</button>
+    </div>
+  </div>
+  <div class='summary-strip'>
+    <div class='summary-pill'>Worker: <strong id='worker_payment_report_worker'>{{ selected_worker.name if selected_worker else 'All team members' }}</strong></div>
+    <div class='summary-pill'>Type: <strong id='worker_payment_report_type'>{{ selected_worker.worker_type if selected_worker else 'W-2 and 1099' }}</strong></div>
+    <div class='summary-pill'>Payments: <strong id='worker_payment_report_count'>{{ payments|length }}</strong></div>
+    <div class='summary-pill'>Total: <strong id='worker_payment_report_total'>${{ '%.2f'|format(payments|sum(attribute='amount') or 0) }}</strong></div>
+    <div class='summary-pill'>Period: <strong id='worker_payment_report_period'>All saved dates</strong></div>
+  </div>
+  <div class='small worker-pay-report-note'>This report prints only worker payment information: name, worker type, payment dates, method, amount, reference, and total for the selected time period.</div>
+</div>
+
 <div class='grid cards-2'>
-  <div class='card'>
+  <div class='card worker-pay-entry-card'>
     <h3>Save Team Member Payout</h3>
     <div class='small' style='margin-bottom:10px'>Use this section for business-to-team-member payments or administrator-managed payouts.</div>
     <form method='post' class='form-grid'>
@@ -27,12 +81,12 @@
     </form>
   </div>
 
-  <div class='card'>
+  <div class='card worker-pay-ledger-card'>
     <h3>Payout Ledger</h3>
-    <table class='table'>
+    <table class='table' id='worker_payments_ledger'>
       <tr><th>Date</th><th>Team Member</th><th>Type</th><th>Method</th><th>Status</th><th>Amount</th><th>Reference</th></tr>
       {% for row in payments %}
-      <tr>
+      <tr class='worker-payment-ledger-row' data-payment-date='{{ row.payment_date or "" }}' data-payment-amount='{{ row.amount or 0 }}' data-worker-name='{{ row.worker_name|e }}' data-worker-type='{{ row.worker_type|e }}'>
         <td>{{ row.payment_date }}</td>
         <td>{{ row.worker_name }}</td>
         <td>{{ row.worker_type }}</td>
@@ -41,7 +95,7 @@
         <td>${{ '%.2f'|format(row.amount or 0) }}</td>
         <td>{{ row.reference_number or '&mdash;' }}</td>
       </tr>
-      <tr>
+      <tr class='worker-payment-edit-row' data-payment-date='{{ row.payment_date or "" }}'>
         <td colspan='7' style='padding-top:0'>
           <form method='post' class='form-grid' style='padding:10px 0 0 0'>
             <input type='hidden' name='action' value='update'>
@@ -58,9 +112,86 @@
         </td>
       </tr>
       {% else %}
-      <tr><td colspan='7'>No team member payouts saved yet.</td></tr>
+      <tr id='worker_payment_empty_row'><td colspan='7'>No team member payouts saved yet.</td></tr>
       {% endfor %}
     </table>
+    <div id='worker_payment_no_results' class='small' style='display:none;margin-top:12px'>No worker payouts matched the selected dates.</div>
   </div>
 </div>
+<script>
+(function(){
+  var startInput = document.getElementById('worker_payment_start_date');
+  var endInput = document.getElementById('worker_payment_end_date');
+  var applyButton = document.getElementById('apply_worker_payment_dates');
+  var clearButton = document.getElementById('clear_worker_payment_dates');
+  var printButton = document.getElementById('print_worker_payment_report');
+  var rows = Array.prototype.slice.call(document.querySelectorAll('.worker-payment-ledger-row'));
+  var noResults = document.getElementById('worker_payment_no_results');
+  var countNode = document.getElementById('worker_payment_report_count');
+  var totalNode = document.getElementById('worker_payment_report_total');
+  var periodNode = document.getElementById('worker_payment_report_period');
+
+  function currency(value){
+    var amount = Number(value || 0);
+    return '$' + amount.toFixed(2);
+  }
+
+  function paymentInRange(paymentDate, startDate, endDate){
+    if (!paymentDate) return false;
+    if (startDate && paymentDate < startDate) return false;
+    if (endDate && paymentDate > endDate) return false;
+    return true;
+  }
+
+  function applyDateFilter(){
+    var startDate = (startInput && startInput.value) || '';
+    var endDate = (endInput && endInput.value) || '';
+    var visibleCount = 0;
+    var visibleTotal = 0;
+    rows.forEach(function(row){
+      var paymentDate = row.getAttribute('data-payment-date') || '';
+      var showRow = (!startDate && !endDate) || paymentInRange(paymentDate, startDate, endDate);
+      row.style.display = showRow ? '' : 'none';
+      var nextRow = row.nextElementSibling;
+      if (nextRow && nextRow.classList.contains('worker-payment-edit-row')) {
+        nextRow.style.display = showRow ? '' : 'none';
+      }
+      if (showRow) {
+        visibleCount += 1;
+        visibleTotal += Number(row.getAttribute('data-payment-amount') || 0);
+      }
+    });
+    if (countNode) countNode.textContent = String(visibleCount);
+    if (totalNode) totalNode.textContent = currency(visibleTotal);
+    if (periodNode) {
+      if (startDate || endDate) {
+        periodNode.textContent = (startDate || 'Any start') + ' to ' + (endDate || 'Today');
+      } else {
+        periodNode.textContent = 'All saved dates';
+      }
+    }
+    if (noResults) {
+      noResults.style.display = visibleCount ? 'none' : 'block';
+    }
+  }
+
+  if (applyButton) {
+    applyButton.addEventListener('click', applyDateFilter);
+  }
+  if (clearButton) {
+    clearButton.addEventListener('click', function(){
+      if (startInput) startInput.value = '';
+      if (endInput) endInput.value = '';
+      applyDateFilter();
+    });
+  }
+  if (printButton) {
+    printButton.addEventListener('click', function(){
+      applyDateFilter();
+      window.print();
+    });
+  }
+  applyDateFilter();
+})();
+</script>
 {% endblock %}
