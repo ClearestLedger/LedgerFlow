@@ -172,7 +172,7 @@
         <a class='app-nav-link {% if request.endpoint=="ops_jobs" %}active{% endif %}' href='{{ url_for("ops_jobs", client_id=active_client.id) }}'>{{ tr('Jobs') }}</a>
       </details>
 
-      <details class='app-nav-group nav-fold nav-tone-bookkeeping' {% if request.endpoint in ["customer_sales","estimates","invoices","mileage","reports","business_payments_page"] %}open{% endif %}>
+      <details class='app-nav-group nav-fold nav-tone-bookkeeping' {% if request.endpoint in ["customer_sales","estimates","invoices","mileage","other_expenses","reports","business_payments_page"] %}open{% endif %}>
         <summary class='app-nav-group-label'>{{ tr('Bookkeeping') }}</summary>
         {% if sales_workspace_access_enabled(active_client) %}
         <a class='app-nav-link {% if request.endpoint=="customer_sales" %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>{{ tr('Clients & Sales') }}</a>
@@ -180,6 +180,7 @@
         {% endif %}
         <a class='app-nav-link {% if request.endpoint=="invoices" %}active{% endif %}' href='{{ url_for("invoices", client_id=active_client.id) }}'>{{ tr('Invoices & Income') }}</a>
         <a class='app-nav-link {% if request.endpoint=="mileage" %}active{% endif %}' href='{{ url_for("mileage", client_id=active_client.id) }}'>{{ tr('Miles') }}</a>
+        <a class='app-nav-link {% if request.endpoint=="other_expenses" %}active{% endif %}' href='{{ url_for("other_expenses", client_id=active_client.id) }}'>{{ tr('Expenses') }}</a>
         <a class='app-nav-link {% if request.endpoint=="reports" %}active{% endif %}' href='{{ url_for("reports", client_id=active_client.id) }}'>{{ tr('Reports') }}</a>
         <a class='app-nav-link {% if request.endpoint=="business_payments_page" %}active{% endif %}' href='{{ url_for("business_payments_page", client_id=active_client.id) }}'>{{ tr('Billing') }}</a>
       </details>
@@ -257,7 +258,7 @@
           <a class='workspace-link {% if request.endpoint=="dashboard" %}active{% endif %}' href='{{ url_for("dashboard", client_id=active_client.id) }}'>{{ tr('Owner View') }}</a>
           <a class='workspace-link {% if request.endpoint=="ops_jobs" %}active{% endif %}' href='{{ url_for("ops_jobs", client_id=active_client.id) }}'>{{ tr('Jobs') }}</a>
         </details>
-        <details class='workspace-group nav-fold nav-tone-bookkeeping' {% if request.endpoint in ["customer_sales","estimates","invoices","mileage","reports","business_payments_page"] %}open{% endif %}>
+        <details class='workspace-group nav-fold nav-tone-bookkeeping' {% if request.endpoint in ["customer_sales","estimates","invoices","mileage","other_expenses","reports","business_payments_page"] %}open{% endif %}>
           <summary class='workspace-group-label'>{{ tr('Bookkeeping') }}</summary>
           {% if sales_workspace_access_enabled(active_client) %}
           <a class='workspace-link {% if request.endpoint=="customer_sales" %}active{% endif %}' href='{{ url_for("customer_sales", client_id=active_client.id) }}'>{{ tr('Clients & Sales') }}</a>
@@ -265,6 +266,7 @@
           {% endif %}
           <a class='workspace-link {% if request.endpoint=="invoices" %}active{% endif %}' href='{{ url_for("invoices", client_id=active_client.id) }}'>{{ tr('Invoices & Income') }}</a>
           <a class='workspace-link {% if request.endpoint=="mileage" %}active{% endif %}' href='{{ url_for("mileage", client_id=active_client.id) }}'>{{ tr('Miles') }}</a>
+          <a class='workspace-link {% if request.endpoint=="other_expenses" %}active{% endif %}' href='{{ url_for("other_expenses", client_id=active_client.id) }}'>{{ tr('Expenses') }}</a>
           <a class='workspace-link {% if request.endpoint=="reports" %}active{% endif %}' href='{{ url_for("reports", client_id=active_client.id) }}'>{{ tr('Reports') }}</a>
           <a class='workspace-link {% if request.endpoint=="business_payments_page" %}active{% endif %}' href='{{ url_for("business_payments_page", client_id=active_client.id) }}'>{{ tr('Billing') }}</a>
         </details>
