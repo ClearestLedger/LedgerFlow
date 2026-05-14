@@ -16,6 +16,8 @@
   <div style='display:flex;gap:10px;flex-wrap:wrap'>
     <a class='btn btn-secondary' href='{{ url_for("payroll_summary", client_id=client_id, year=year, month=quarter_months[0]) }}'>Monthly Payroll Summary</a>
     <a class='btn {{ "btn-secondary" if view!="quarter" else "" }}' href='{{ url_for("payroll_tax", client_id=client_id, year=year, quarter=quarter, view="quarter") }}'>941 Quarter Builder</a>
+    <a class='btn btn-secondary' href='{{ url_for("reports", client_id=client_id, report_type="payroll_941_support", start_date=quarter_start, end_date=quarter_end) }}'>941 Support by Employee</a>
+    <a class='btn btn-secondary' href='{{ url_for("reports", client_id=client_id, report_type="insurance_audit_payroll", start_date=quarter_start, end_date=quarter_end) }}'>Insurance Audit Report</a>
     <a class='btn {{ "btn-secondary" if view!="final_w2" else "" }}' href='{{ url_for("payroll_tax", client_id=client_id, year=year, quarter=quarter, view="final_w2") }}'>Generate Final W-2</a>
   </div>
 </div>

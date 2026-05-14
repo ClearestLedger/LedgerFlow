@@ -8983,6 +8983,224 @@ def payroll_monthly_summary(client_id: int, year: int):
     }
 
 
+def payroll_details_for_worker_period(conn: sqlite3.Connection, worker, start_date: str | None = None, end_date: str | None = None) -> dict:
+    payments = conn.execute(
+        'SELECT * FROM worker_payments WHERE worker_id=? ORDER BY payment_date, id',
+        (worker['id'],),
+    ).fetchall()
+    details: list[dict] = []
+    totals = {
+        'gross': 0.0,
+        'federal_withholding': 0.0,
+        'social_security_wages': 0.0,
+        'employee_social_security': 0.0,
+        'employer_social_security': 0.0,
+        'medicare_wages': 0.0,
+        'employee_medicare': 0.0,
+        'employer_medicare': 0.0,
+        'additional_medicare_wages': 0.0,
+        'additional_medicare_tax': 0.0,
+        'net_check': 0.0,
+    }
+    by_year: dict[int, list] = {}
+    for payment in payments:
+        pay_date = parse_date(payment['payment_date'])
+        if not pay_date:
+            continue
+        by_year.setdefault(pay_date.year, []).append(payment)
+    start_value = parse_date(start_date or '')
+    end_value = parse_date(end_date or '')
+    for year in sorted(by_year.keys()):
+        rollup = compute_worker_payment_rollup(worker, by_year[year], current_tax_rules(year))
+        for detail in rollup['details']:
+            pay_date = parse_date(detail['payment_date'])
+            if not pay_date:
+                continue
+            if start_value and pay_date < start_value:
+                continue
+            if end_value and pay_date > end_value:
+                continue
+            item = dict(detail)
+            details.append(item)
+            for key in totals:
+                totals[key] = money(totals[key] + float(item.get(key, 0) or 0))
+    return {
+        'details': details,
+        'totals': totals,
+        'payment_count': len(details),
+        'first_payment_date': details[0]['payment_date'] if details else '',
+        'last_payment_date': details[-1]['payment_date'] if details else '',
+    }
+
+
+def report_period_quarter_match(start_date: str | None, end_date: str | None) -> dict | None:
+    start_value = parse_date(start_date or '')
+    end_value = parse_date(end_date or '')
+    if not start_value or not end_value or start_value.year != end_value.year:
+        return None
+    for quarter in (1, 2, 3, 4):
+        q_start, q_end = quarter_date_range(start_value.year, quarter)
+        if start_value == q_start and end_value == q_end:
+            return {'year': start_value.year, 'quarter': quarter}
+    return None
+
+
+def payroll_941_support_report(conn: sqlite3.Connection, client_id: int, start_date: str | None = None, end_date: str | None = None, worker_id: int | None = None) -> dict:
+    workers = conn.execute(
+        'SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name',
+        (client_id,),
+    ).fetchall()
+    selected_workers = [row for row in workers if not worker_id or int(row['id']) == int(worker_id)]
+    included_rows: list[dict] = []
+    excluded_1099_rows: list[dict] = []
+    detail_rows: list[dict] = []
+    totals = {
+        'employee_count_with_wages': 0,
+        'gross_wages': 0.0,
+        'federal_withholding': 0.0,
+        'social_security_wages': 0.0,
+        'social_security_tax': 0.0,
+        'medicare_wages': 0.0,
+        'medicare_tax': 0.0,
+        'employer_match': 0.0,
+        'additional_medicare_tax': 0.0,
+        'net_pay': 0.0,
+        'total_941_liability': 0.0,
+    }
+    for worker in selected_workers:
+        snapshot = payroll_details_for_worker_period(conn, worker, start_date, end_date)
+        worker_totals = snapshot['totals']
+        if worker['worker_type'] != 'W-2':
+            if snapshot['payment_count'] or worker_id:
+                excluded_1099_rows.append({
+                    'worker_id': worker['id'],
+                    'worker_name': worker['name'],
+                    'worker_type': worker['worker_type'],
+                    'gross': money(worker_totals['gross']),
+                    'payment_count': snapshot['payment_count'],
+                    'first_payment_date': snapshot['first_payment_date'],
+                    'last_payment_date': snapshot['last_payment_date'],
+                    'reason': '1099 contractor payments are excluded from Form 941 wages and withholding.',
+                })
+            continue
+        if snapshot['payment_count'] == 0 and not worker_id:
+            continue
+        social_security_tax = money(worker_totals['employee_social_security'] + worker_totals['employer_social_security'])
+        medicare_tax = money(worker_totals['employee_medicare'] + worker_totals['employer_medicare'] + worker_totals['additional_medicare_tax'])
+        employer_match = money(worker_totals['employer_social_security'] + worker_totals['employer_medicare'])
+        total_941_liability = money(
+            worker_totals['federal_withholding']
+            + worker_totals['employee_social_security']
+            + worker_totals['employer_social_security']
+            + worker_totals['employee_medicare']
+            + worker_totals['employer_medicare']
+            + worker_totals['additional_medicare_tax']
+        )
+        row = {
+            'worker_id': worker['id'],
+            'worker_name': worker['name'],
+            'worker_type': worker['worker_type'],
+            'status': worker['status'] or 'active',
+            'payroll_frequency': (worker['payroll_frequency'] or 'weekly').replace('_', ' '),
+            'payment_count': snapshot['payment_count'],
+            'first_payment_date': snapshot['first_payment_date'],
+            'last_payment_date': snapshot['last_payment_date'],
+            'gross_wages': money(worker_totals['gross']),
+            'federal_withholding': money(worker_totals['federal_withholding']),
+            'social_security_wages': money(worker_totals['social_security_wages']),
+            'social_security_tax': social_security_tax,
+            'medicare_wages': money(worker_totals['medicare_wages']),
+            'medicare_tax': medicare_tax,
+            'additional_medicare_tax': money(worker_totals['additional_medicare_tax']),
+            'employer_match': employer_match,
+            'net_pay': money(worker_totals['net_check']),
+            'total_941_liability': total_941_liability,
+        }
+        included_rows.append(row)
+        totals['employee_count_with_wages'] += 1 if row['gross_wages'] > 0 else 0
+        for key in ('gross_wages', 'federal_withholding', 'social_security_wages', 'social_security_tax', 'medicare_wages', 'medicare_tax', 'additional_medicare_tax', 'employer_match', 'net_pay', 'total_941_liability'):
+            totals[key] = money(totals[key] + float(row[key] or 0))
+        for detail in snapshot['details']:
+            detail_item = dict(detail)
+            detail_item['total_fica_liability'] = money(
+                float(detail_item['employee_social_security'] or 0)
+                + float(detail_item['employer_social_security'] or 0)
+                + float(detail_item['employee_medicare'] or 0)
+                + float(detail_item['employer_medicare'] or 0)
+                + float(detail_item['additional_medicare_tax'] or 0)
+            )
+            detail_item['total_941_liability'] = money(float(detail_item['federal_withholding'] or 0) + detail_item['total_fica_liability'])
+            detail_rows.append(detail_item)
+    detail_rows.sort(key=lambda item: ((item.get('payment_date') or ''), item.get('worker_name') or '', int(item.get('id') or 0)))
+    return {
+        'rows': included_rows,
+        'totals': totals,
+        'detail_rows': detail_rows,
+        'excluded_1099_rows': excluded_1099_rows,
+        'quarter_match': report_period_quarter_match(start_date, end_date),
+    }
+
+
+def insurance_audit_payroll_report(conn: sqlite3.Connection, client_id: int, start_date: str | None = None, end_date: str | None = None, worker_id: int | None = None) -> dict:
+    workers = conn.execute(
+        'SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name',
+        (client_id,),
+    ).fetchall()
+    selected_workers = [row for row in workers if not worker_id or int(row['id']) == int(worker_id)]
+    rows: list[dict] = []
+    payment_detail_rows: list[dict] = []
+    totals = {
+        'employee_count': 0,
+        'w2_gross_total': 0.0,
+        'contractor_gross_total': 0.0,
+        'combined_gross_total': 0.0,
+        'payment_count': 0,
+    }
+    for worker in selected_workers:
+        snapshot = payroll_details_for_worker_period(conn, worker, start_date, end_date)
+        if snapshot['payment_count'] == 0 and not worker_id:
+            continue
+        gross_total = money(snapshot['totals']['gross'])
+        row = {
+            'worker_id': worker['id'],
+            'worker_name': worker['name'],
+            'worker_type': row_value(worker, 'worker_type', ''),
+            'status': row_value(worker, 'status', 'active') or 'active',
+            'hire_date': row_value(worker, 'hire_date', '') or '',
+            'ops_role': row_value(worker, 'ops_role', '') or row_value(worker, 'role_classification', '') or '',
+            'crew_label': row_value(worker, 'crew_label', '') or '',
+            'payment_count': snapshot['payment_count'],
+            'first_payment_date': snapshot['first_payment_date'],
+            'last_payment_date': snapshot['last_payment_date'],
+            'gross_pay': gross_total,
+            'net_pay': money(snapshot['totals']['net_check']),
+            'worker_comp_note': 'Review W-2 payroll by employee for the selected period.' if row_value(worker, 'worker_type', '') == 'W-2' else '1099 contractor totals may require certificate-of-insurance review by the carrier.',
+        }
+        rows.append(row)
+        totals['employee_count'] += 1
+        totals['payment_count'] += snapshot['payment_count']
+        totals['combined_gross_total'] = money(totals['combined_gross_total'] + gross_total)
+        if row_value(worker, 'worker_type', '') == 'W-2':
+            totals['w2_gross_total'] = money(totals['w2_gross_total'] + gross_total)
+        else:
+            totals['contractor_gross_total'] = money(totals['contractor_gross_total'] + gross_total)
+        for detail in snapshot['details']:
+            payment_detail_rows.append({
+                'payment_date': detail['payment_date'],
+                'worker_name': worker['name'],
+                'worker_type': row_value(worker, 'worker_type', ''),
+                'gross': money(detail['gross']),
+                'net_pay': money(detail['net_check']),
+                'note': detail['note'] or '',
+            })
+    payment_detail_rows.sort(key=lambda item: ((item.get('payment_date') or ''), item.get('worker_name') or ''))
+    return {
+        'rows': rows,
+        'totals': totals,
+        'payment_detail_rows': payment_detail_rows,
+    }
+
+
 def cpa_dashboard_summary(user):
     ids = visible_client_ids(user)
     totals = {
@@ -20340,6 +20558,8 @@ def reports():
             'invoice_id': invoice_id,
             'summary': summary_data,
             'report_graphics': graphics_snapshot,
+            'payroll_941_report': {'rows': [], 'totals': {}, 'detail_rows': [], 'excluded_1099_rows': [], 'quarter_match': None},
+            'insurance_audit_report': {'rows': [], 'totals': {}, 'payment_detail_rows': []},
         }
 
         if report_type == 'workers':
@@ -20407,6 +20627,18 @@ def reports():
                 params += more
             query += ' ORDER BY trip_date DESC'
             context['rows'] = safe_fetchall(query, tuple(params))
+        elif report_type == 'payroll_941_support':
+            context['rows'] = []
+            try:
+                context['payroll_941_report'] = payroll_941_support_report(conn, client_id, start_date or None, end_date or None, worker_id)
+            except sqlite3.Error as exc:
+                report_warnings.append(str(exc))
+        elif report_type == 'insurance_audit_payroll':
+            context['rows'] = []
+            try:
+                context['insurance_audit_report'] = insurance_audit_payroll_report(conn, client_id, start_date or None, end_date or None, worker_id)
+            except sqlite3.Error as exc:
+                report_warnings.append(str(exc))
         else:
             context['rows'] = []
 
@@ -20435,7 +20667,8 @@ def payroll_tax():
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         w2_workers = conn.execute('SELECT * FROM workers WHERE client_id=? AND worker_type="W-2" ORDER BY name', (client_id,)).fetchall()
     summary = payroll_tax_summary(client_id, year, quarter)
-    return render_template('payroll_tax.html', client=client, client_id=client_id, payroll_tax=summary, year=year, quarter=quarter, quarter_months=quarter_months(quarter), view=view, w2_workers=w2_workers, today=date.today().isoformat(), eftps_url=eftps_payment_url())
+    quarter_start, quarter_end = quarter_date_range(year, quarter)
+    return render_template('payroll_tax.html', client=client, client_id=client_id, payroll_tax=summary, year=year, quarter=quarter, quarter_months=quarter_months(quarter), quarter_start=quarter_start.isoformat(), quarter_end=quarter_end.isoformat(), view=view, w2_workers=w2_workers, today=date.today().isoformat(), eftps_url=eftps_payment_url())
 
 
 @app.route('/payroll-summary')
@@ -20451,6 +20684,9 @@ def payroll_summary():
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
     summary = payroll_monthly_summary(client_id, year)
     selected_month_row = next((row for row in summary['month_rows'] if row['month'] == selected_month), summary['month_rows'][selected_month - 1])
+    import calendar as pycal
+    month_start = date(year, selected_month, 1)
+    month_end = date(year, selected_month, pycal.monthrange(year, selected_month)[1])
     return render_template(
         'payroll_summary.html',
         client=client,
@@ -20459,6 +20695,8 @@ def payroll_summary():
         year=year,
         selected_month=selected_month,
         selected_month_row=selected_month_row,
+        selected_month_start=month_start.isoformat(),
+        selected_month_end=month_end.isoformat(),
         eftps_url=eftps_payment_url(),
     )
 

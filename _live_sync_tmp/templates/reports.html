@@ -61,7 +61,9 @@
   'invoices': tr('Invoices'),
   'gas': tr('Gas'),
   'materials': tr('Materials'),
-  'mileage': tr('Mileage')
+  'mileage': tr('Mileage'),
+  'payroll_941_support': tr('941 Support by Employee'),
+  'insurance_audit_payroll': tr('Insurance Audit Payroll')
 } %}
 {% set graph = report_graphics %}
 {% set selected_worker = (workers|selectattr('id','equalto',worker_id)|list|first) if worker_id else none %}
@@ -122,7 +124,7 @@
       {% endif %}
       <label>{{ tr('Report') }}</label>
       <select name='report_type'>
-        {% for opt in ['summary','workers','payments','invoices','gas','materials','mileage'] %}
+        {% for opt in ['summary','workers','payments','invoices','gas','materials','mileage','payroll_941_support','insurance_audit_payroll'] %}
           <option value='{{ opt }}' {% if report_type==opt %}selected{% endif %}>{{ report_labels.get(opt, opt.title()) }}</option>
         {% endfor %}
       </select>
@@ -248,6 +250,110 @@
     <table class='table'><tr><th>{{ tr('Date') }}</th><th>{{ tr('Description') }}</th><th>{{ tr('Amount') }}</th></tr>{% for row in rows %}<tr><td>{{ row.material_date }}</td><td>{{ row.description }}</td><td>${{ '%.2f'|format(row.amount or 0) }}</td></tr>{% endfor %}</table>
   {% elif report_type == 'mileage' %}
     <table class='table'><tr><th>{{ tr('Date') }}</th><th>{{ tr('From') }}</th><th>{{ tr('To') }}</th><th>{{ tr('Purpose') }}</th><th>{{ tr('Miles') }}</th><th>{{ tr('Deduction') }}</th></tr>{% for row in rows %}<tr><td>{{ row.trip_date }}</td><td>{{ row.from_address }}</td><td>{{ row.to_address }}</td><td>{{ row.purpose }}</td><td>{{ '%.2f'|format(row.miles or 0) }}</td><td>${{ '%.2f'|format(row.deduction or 0) }}</td></tr>{% endfor %}</table>
+  {% elif report_type == 'payroll_941_support' %}
+    <div class='card section-frame' style='margin-bottom:16px;border:1px solid #bfdbfe;background:#eff6ff'>
+      <div class='card-head'><h3>{{ tr('941 Support by Employee') }}</h3><span class='badge'>{{ tr('Payroll support') }}</span></div>
+      <div class='small' style='margin-bottom:10px'>{{ tr('This support report uses pay-date payroll records for the selected period. Use the official quarter builder for final Form 941 line review and quarter-specific employee count logic.') }}</div>
+      <div class='summary-strip'>
+        <span class='summary-pill'>{{ tr('Employees with wages') }}: {{ payroll_941_report.totals.employee_count_with_wages or 0 }}</span>
+        <span class='summary-pill'>{{ tr('Gross wages') }}: ${{ '%.2f'|format(payroll_941_report.totals.gross_wages or 0) }}</span>
+        <span class='summary-pill'>{{ tr('Federal withheld') }}: ${{ '%.2f'|format(payroll_941_report.totals.federal_withholding or 0) }}</span>
+        <span class='summary-pill'>{{ tr('Total 941 liability') }}: ${{ '%.2f'|format(payroll_941_report.totals.total_941_liability or 0) }}</span>
+      </div>
+      {% if payroll_941_report.quarter_match %}
+      <div class='small' style='margin-top:10px'>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("payroll_tax", client_id=client_id, year=payroll_941_report.quarter_match.year, quarter=payroll_941_report.quarter_match.quarter) }}'>{{ tr('Open Matching 941 Quarter Builder') }}</a>
+      </div>
+      {% endif %}
+    </div>
+    <table class='table'>
+      <tr><th>{{ tr('Employee') }}</th><th>{{ tr('Payments') }}</th><th>{{ tr('Gross Wages') }}</th><th>{{ tr('Federal Withholding') }}</th><th>{{ tr('Social Security Wages') }}</th><th>{{ tr('Social Security Tax') }}</th><th>{{ tr('Medicare Wages') }}</th><th>{{ tr('Medicare Tax') }}</th><th>{{ tr('Employer Match') }}</th><th>{{ tr('Total 941 Liability') }}</th></tr>
+      {% for row in payroll_941_report.rows %}
+      <tr>
+        <td>{{ row.worker_name }}<div class='small'>{{ row.status|replace('_', ' ')|title }} · {{ row.payroll_frequency|title }}</div></td>
+        <td>{{ row.payment_count }}<div class='small'>{{ row.first_payment_date or '-' }}{% if row.last_payment_date and row.last_payment_date != row.first_payment_date %} → {{ row.last_payment_date }}{% endif %}</div></td>
+        <td>${{ '%.2f'|format(row.gross_wages or 0) }}</td>
+        <td>${{ '%.2f'|format(row.federal_withholding or 0) }}</td>
+        <td>${{ '%.2f'|format(row.social_security_wages or 0) }}</td>
+        <td>${{ '%.2f'|format(row.social_security_tax or 0) }}</td>
+        <td>${{ '%.2f'|format(row.medicare_wages or 0) }}</td>
+        <td>${{ '%.2f'|format(row.medicare_tax or 0) }}</td>
+        <td>${{ '%.2f'|format(row.employer_match or 0) }}</td>
+        <td>${{ '%.2f'|format(row.total_941_liability or 0) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan='10' class='small'>{{ tr('No W-2 payroll rows matched the selected employee/date filters.') }}</td></tr>
+      {% endfor %}
+    </table>
+    {% if payroll_941_report.excluded_1099_rows %}
+    <div class='card section-frame' style='margin-top:16px;background:#fff7ed;border:1px solid #fdba74'>
+      <div class='card-head'><h3>{{ tr('1099 Exclusions') }}</h3><span class='badge'>{{ tr('Not on Form 941') }}</span></div>
+      <table class='table'>
+        <tr><th>{{ tr('Worker') }}</th><th>{{ tr('Gross') }}</th><th>{{ tr('Payments') }}</th><th>{{ tr('Reason') }}</th></tr>
+        {% for row in payroll_941_report.excluded_1099_rows %}
+        <tr><td>{{ row.worker_name }}</td><td>${{ '%.2f'|format(row.gross or 0) }}</td><td>{{ row.payment_count }}</td><td>{{ row.reason }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% endif %}
+    <div class='card' style='margin-top:16px'>
+      <div class='card-head'><h3>{{ tr('941 Support Payment Detail') }}</h3><div class='small'>{{ tr('Per paycheck detail in the selected period') }}</div></div>
+      <table class='table'>
+        <tr><th>{{ tr('Pay Date') }}</th><th>{{ tr('Employee') }}</th><th>{{ tr('Gross') }}</th><th>{{ tr('Federal Withholding') }}</th><th>{{ tr('FICA Liability') }}</th><th>{{ tr('Total 941 Liability') }}</th><th>{{ tr('Net Pay') }}</th></tr>
+        {% for row in payroll_941_report.detail_rows %}
+        <tr>
+          <td>{{ row.payment_date }}</td>
+          <td>{{ row.worker_name }}</td>
+          <td>${{ '%.2f'|format(row.gross or 0) }}</td>
+          <td>${{ '%.2f'|format(row.federal_withholding or 0) }}</td>
+          <td>${{ '%.2f'|format(row.total_fica_liability or 0) }}</td>
+          <td>${{ '%.2f'|format(row.total_941_liability or 0) }}</td>
+          <td>${{ '%.2f'|format(row.net_check or 0) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan='7' class='small'>{{ tr('No paycheck detail matched the current filters.') }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% elif report_type == 'insurance_audit_payroll' %}
+    <div class='card section-frame' style='margin-bottom:16px;border:1px solid #d8e7f3;background:#f8fbff'>
+      <div class='card-head'><h3>{{ tr('Insurance Audit Payroll') }}</h3><span class='badge'>{{ tr('Employee period report') }}</span></div>
+      <div class='small' style='margin-bottom:10px'>{{ tr('This report organizes payroll by employee for the selected pay-date period. Insurance audit requirements vary by carrier and state, so this should be reviewed with the carrier or advisor before final submission.') }}</div>
+      <div class='summary-strip'>
+        <span class='summary-pill'>{{ tr('Workers in report') }}: {{ insurance_audit_report.totals.employee_count or 0 }}</span>
+        <span class='summary-pill'>{{ tr('W-2 gross payroll') }}: ${{ '%.2f'|format(insurance_audit_report.totals.w2_gross_total or 0) }}</span>
+        <span class='summary-pill'>{{ tr('1099 totals') }}: ${{ '%.2f'|format(insurance_audit_report.totals.contractor_gross_total or 0) }}</span>
+        <span class='summary-pill'>{{ tr('Combined gross') }}: ${{ '%.2f'|format(insurance_audit_report.totals.combined_gross_total or 0) }}</span>
+      </div>
+    </div>
+    <table class='table'>
+      <tr><th>{{ tr('Employee / Contractor') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Role / Crew') }}</th><th>{{ tr('Payment Window') }}</th><th>{{ tr('Payments') }}</th><th>{{ tr('Gross Pay') }}</th><th>{{ tr('Net Pay') }}</th><th>{{ tr('Audit Note') }}</th></tr>
+      {% for row in insurance_audit_report.rows %}
+      <tr>
+        <td>{{ row.worker_name }}<div class='small'>{{ row.status|replace('_', ' ')|title }}{% if row.hire_date %} · {{ row.hire_date }}{% endif %}</div></td>
+        <td>{{ row.worker_type }}</td>
+        <td>{% if row.ops_role or row.crew_label %}{{ row.ops_role or 'Team member' }}{% if row.crew_label %}<div class='small'>{{ row.crew_label }}</div>{% endif %}{% else %}-{% endif %}</td>
+        <td>{{ row.first_payment_date or '-' }}{% if row.last_payment_date and row.last_payment_date != row.first_payment_date %} → {{ row.last_payment_date }}{% endif %}</td>
+        <td>{{ row.payment_count }}</td>
+        <td>${{ '%.2f'|format(row.gross_pay or 0) }}</td>
+        <td>${{ '%.2f'|format(row.net_pay or 0) }}</td>
+        <td>{{ row.worker_comp_note }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan='8' class='small'>{{ tr('No payroll rows matched the selected employee/date filters.') }}</td></tr>
+      {% endfor %}
+    </table>
+    <div class='card' style='margin-top:16px'>
+      <div class='card-head'><h3>{{ tr('Insurance Audit Payment Detail') }}</h3><div class='small'>{{ tr('Pay-date detail for the selected period') }}</div></div>
+      <table class='table'>
+        <tr><th>{{ tr('Pay Date') }}</th><th>{{ tr('Worker') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Gross') }}</th><th>{{ tr('Net Pay') }}</th><th>{{ tr('Note') }}</th></tr>
+        {% for row in insurance_audit_report.payment_detail_rows %}
+        <tr><td>{{ row.payment_date }}</td><td>{{ row.worker_name }}</td><td>{{ row.worker_type }}</td><td>${{ '%.2f'|format(row.gross or 0) }}</td><td>${{ '%.2f'|format(row.net_pay or 0) }}</td><td>{{ row.note or '-' }}</td></tr>
+        {% else %}
+        <tr><td colspan='6' class='small'>{{ tr('No payment detail matched the current filters.') }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
   {% endif %}
 </div>
 {% endblock %}
