@@ -267,10 +267,41 @@
       <h3>1099 & Contractor Compliance</h3>
       <div class='stack-actions'>
         <a class='btn btn-secondary btn-sm' href='{{ url_for("form_1099", worker_id=selected_worker.id) }}' target='_blank'>1099-NEC</a>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("subcontractor_w9", worker_id=selected_worker.id) }}' target='_blank'>W-9 Record</a>
         <a class='btn btn-secondary btn-sm' href='{{ url_for("subcontractor_agreement", worker_id=selected_worker.id) }}' target='_blank'>Subcontractor Agreement</a>
         <a class='btn btn-secondary btn-sm' href='{{ florida_new_hire_reporting_url }}' target='_blank' rel='noopener'>Florida New-Hire</a>
       </div>
     </div>
+    <details class='compact-details' open>
+      <summary>Electronic Onboarding and E-Sign</summary>
+      <div class='team-info-grid' style='margin-top:14px'>
+        <div class='team-info-card'>
+          <div class='small-label'>E-Sign Status</div>
+          <strong>{{ contractor_onboarding_status.label }}</strong>
+          <span>{% if contractor_onboarding_status.completed_at %}Completed {{ contractor_onboarding_status.completed_at }}{% elif contractor_onboarding_status.sent_at %}Sent {{ contractor_onboarding_status.sent_at }}{% else %}No link sent yet{% endif %}</span>
+        </div>
+        <div class='team-info-card'>
+          <div class='small-label'>Link Expires</div>
+          <strong>{{ contractor_onboarding_status.expires_at or 'Not generated' }}</strong>
+          <span>{% if contractor_onboarding_status.last_viewed_at %}Last viewed {{ contractor_onboarding_status.last_viewed_at }}{% else %}Not viewed yet{% endif %}</span>
+        </div>
+      </div>
+      <form method='post' class='form-grid' style='margin-top:14px'>
+        <input type='hidden' name='action' value='send_subcontractor_onboarding'>
+        <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
+        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <div><label>Subcontractor Email</label><input type='email' name='contractor_onboarding_email' required value='{{ selected_worker.email or "" }}'></div>
+        <div><label>Recipient Name</label><input name='contractor_onboarding_name' value='{{ selected_worker.contractor_legal_name or selected_worker.name or "" }}'></div>
+        <div style='grid-column:1/-1'><button type='submit'>Send W-9 and E-Sign Link</button></div>
+      </form>
+      {% if contractor_onboarding_link %}
+      <div class='team-callout' style='margin-top:14px'>
+        <strong>Secure onboarding link</strong>
+        <div class='small' style='word-break:break-all;margin-top:6px'>{{ contractor_onboarding_link }}</div>
+        <div class='small' style='margin-top:8px'>Use this only if email delivery fails. Sending a new link replaces the previous token.</div>
+      </div>
+      {% endif %}
+    </details>
     <details class='compact-details' open>
       <summary>Open 1099 Compliance Snapshot</summary>
       <div class='team-info-grid' style='margin-top:14px'>

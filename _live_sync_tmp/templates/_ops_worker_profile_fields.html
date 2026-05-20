@@ -59,6 +59,10 @@
     <div><label>Federal Tax Classification</label><select name='contractor_tax_classification'><option value=''>Select</option>{% for value, label in contractor_tax_classification_options %}<option value='{{ value }}' {% if worker and worker.contractor_tax_classification == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
     <div><label>W-9 Received Date</label><input name='contractor_w9_received_date' type='date' value='{{ worker.contractor_w9_received_date if worker else "" }}'></div>
     <div><label>W-9 Signature Date</label><input name='contractor_w9_signed_date' type='date' value='{{ worker.contractor_w9_signed_date if worker else "" }}'></div>
+    <div><label>W-9 Signature Name</label><input name='contractor_w9_signature_name' value='{{ worker.contractor_w9_signature_name if worker else "" }}' placeholder='Typed signer name'></div>
+    <div><label>W-9 Exempt Payee Code</label><input name='contractor_w9_exempt_payee_code' value='{{ worker.contractor_w9_exempt_payee_code if worker else "" }}'></div>
+    <div><label>W-9 FATCA Code</label><input name='contractor_w9_fatca_code' value='{{ worker.contractor_w9_fatca_code if worker else "" }}'></div>
+    <div><label>W-9 Account Numbers</label><input name='contractor_w9_account_numbers' value='{{ worker.contractor_w9_account_numbers if worker else "" }}'></div>
     <div><label>Agreement Effective Date</label><input name='contractor_agreement_effective_date' type='date' value='{{ worker.contractor_agreement_effective_date if worker else "" }}'></div>
     <div><label>Agreement Signed Date</label><input name='contractor_agreement_signed_date' type='date' value='{{ worker.contractor_agreement_signed_date if worker else "" }}'></div>
     <div><label>License Number</label><input name='contractor_license_number' value='{{ worker.contractor_license_number if worker else "" }}' placeholder='Optional state or trade license'></div>
@@ -83,6 +87,7 @@
     <div><label><input type='checkbox' name='contractor_review_job_based_pay' value='1' required> Paid by job, invoice, deliverable, or agreed contractor terms</label></div>
     <div style='grid-column:1/-1'><label>Typed Agreement Signature</label><input name='contractor_signature_name' value='{{ worker.contractor_signature_name if worker else "" }}' placeholder='Subcontractor legal name typed as signature'></div>
     <div><label>Agreement Signature Date</label><input name='contractor_signature_date' type='date' value='{{ worker.contractor_signature_date if worker else "" }}'></div>
+    <div><label>Signer Title / Authority</label><input name='contractor_signer_title' value='{{ worker.contractor_signer_title if worker else "" }}' placeholder='Owner, member, authorized signer'></div>
     <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_disclosure_ack' value='1' {% if worker and worker.contractor_disclosure_ack_at %}checked{% endif %} required> Independent contractor disclosure acknowledged</label></div>
     <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_no_benefits_ack' value='1' {% if worker and worker.contractor_no_benefits_ack_at %}checked{% endif %} required> Employee benefits disclosure acknowledged</label></div>
     <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_insurance_ack' value='1' {% if worker and worker.contractor_insurance_ack_at %}checked{% endif %} required> Insurance and workers comp documentation responsibility acknowledged</label></div>

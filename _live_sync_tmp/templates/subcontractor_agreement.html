@@ -53,9 +53,12 @@
       <tr><th>Business Representative</th><th>Subcontractor</th></tr>
       <tr>
         <td style='height:90px;vertical-align:bottom'>__________________________________<br>Name / Title<br>Date</td>
-        <td style='height:90px;vertical-align:bottom'>__________________________________<br>{{ worker.contractor_legal_name or worker.name }}<br>Date</td>
+        <td style='height:90px;vertical-align:bottom'>{% if worker.contractor_signature_name %}<strong>Electronically signed by {{ worker.contractor_signature_name }}</strong>{% else %}__________________________________{% endif %}<br>{{ worker.contractor_legal_name or worker.name }}{% if worker.contractor_signer_title %} / {{ worker.contractor_signer_title }}{% endif %}<br>{{ worker.contractor_signature_date or 'Date' }}</td>
       </tr>
     </table>
+    {% if worker.contractor_onboarding_completed_at %}
+    <div class='small' style='margin-top:12px'>Electronic signature audit: submitted {{ worker.contractor_onboarding_completed_at }}{% if worker.contractor_onboarding_submit_ip %}, IP {{ worker.contractor_onboarding_submit_ip }}{% endif %}. W-9 certification recorded {{ worker.contractor_w9_perjury_certified_at or worker.contractor_w9_signature_date or '' }}.</div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

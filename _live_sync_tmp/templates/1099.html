@@ -35,6 +35,7 @@
     <table class='table'>
       <tr><th>Service Start</th><td>{{ worker.engagement_start_date or worker.hire_date or '' }}</td><th>W-9 Received</th><td>{{ worker.contractor_w9_received_date or '' }}</td></tr>
       <tr><th>W-9 Signed</th><td>{{ worker.contractor_w9_signed_date or '' }}</td><th>Agreement Effective</th><td>{{ worker.contractor_agreement_effective_date or '' }}</td></tr>
+      <tr><th>W-9 E-Signature</th><td>{{ worker.contractor_w9_signature_name or '' }}</td><th>Perjury Certification</th><td>{{ worker.contractor_w9_perjury_certified_at or '' }}</td></tr>
       <tr><th>Workers Comp Status</th><td>{{ (worker.contractor_workers_comp_status or '')|replace('_', ' ')|title }}</td><th>Proof / Exemption</th><td>{{ worker.contractor_workers_comp_policy_number or worker.contractor_workers_comp_exemption_number or worker.contractor_workers_comp_document_reference or '' }}</td></tr>
       <tr><th>Payment Terms</th><td colspan='3'>{{ worker.contractor_payment_terms or '' }}</td></tr>
       <tr><th>Scope of Work</th><td colspan='3'>{{ worker.contractor_scope_of_work or '' }}</td></tr>

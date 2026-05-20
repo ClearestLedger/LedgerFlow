@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='report'>
+  <div class='toolbar'>
+    <a href='{{ url_for("ops_team_member", client_id=worker.client_id, worker_id=worker.id) }}' class='btn btn-secondary'>Back to Team Member</a>
+    <button onclick='window.print()' class='btn btn-dark' type='button'>Print</button>
+  </div>
+  <h2>Substitute Form W-9 Record</h2>
+  <div class='small'>Electronic W-9 intake record retained by {{ client.business_name }}. Review against official IRS Form W-9/requester instructions before relying on it for filing.</div>
+
+  <div class='card' style='margin-top:16px'>
+    <table class='table'>
+      <tr><th>Requester / Business</th><td>{{ client.business_name }}</td><th>Subcontractor</th><td>{{ worker.contractor_legal_name or worker.name }}</td></tr>
+      <tr><th>Business / DBA</th><td colspan='3'>{{ worker.contractor_business_name or '' }}</td></tr>
+      <tr><th>Federal Tax Classification</th><td>{{ (worker.contractor_tax_classification or '')|replace('_', ' ')|title }}</td><th>TIN Type</th><td>{{ (worker.contractor_tin_type or '')|upper }}</td></tr>
+      <tr><th>TIN / SSN / EIN</th><td>{{ worker.ssn or '' }}</td><th>Address</th><td>{{ worker.address or '' }}</td></tr>
+      <tr><th>Exempt Payee Code</th><td>{{ worker.contractor_w9_exempt_payee_code or '' }}</td><th>FATCA Code</th><td>{{ worker.contractor_w9_fatca_code or '' }}</td></tr>
+      <tr><th>Account Numbers</th><td colspan='3'>{{ worker.contractor_w9_account_numbers or '' }}</td></tr>
+      <tr><th>W-9 Received</th><td>{{ worker.contractor_w9_received_date or '' }}</td><th>W-9 Signed</th><td>{{ worker.contractor_w9_signed_date or worker.contractor_w9_signature_date or '' }}</td></tr>
+      <tr><th>Electronic Signature</th><td>{{ worker.contractor_w9_signature_name or worker.contractor_signature_name or '' }}</td><th>Electronic Consent</th><td>{{ worker.contractor_w9_electronic_consent_at or '' }}</td></tr>
+      <tr><th>Perjury Certification</th><td>{{ worker.contractor_w9_perjury_certified_at or '' }}</td><th>Submission IP</th><td>{{ worker.contractor_onboarding_submit_ip or '' }}</td></tr>
+    </table>
+  </div>
+
+  <div class='card' style='margin-top:16px'>
+    <h3>Certification Record</h3>
+    <p>The signer certified the W-9 information electronically and acknowledged that the business may rely on the information for 1099 reporting support. This page is a LedgerFlow record of the electronic intake, not an IRS-issued form.</p>
+    <p class='small'>Official references: <a href='{{ irs_w9_requester_url }}' target='_blank' rel='noopener'>IRS W-9 requester instructions</a>, <a href='{{ irs_1099_nec_url }}' target='_blank' rel='noopener'>IRS 1099-NEC instructions</a>, <a href='{{ irs_independent_contractor_url }}' target='_blank' rel='noopener'>IRS worker classification</a>.</p>
+  </div>
+</div>
+{% endblock %}

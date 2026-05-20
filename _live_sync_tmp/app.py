@@ -4145,6 +4145,103 @@ def worker_start_date_display(worker) -> str:
     return (row_value(worker, 'engagement_start_date', '') or row_value(worker, 'hire_date', '') or '').strip()
 
 
+def contractor_onboarding_link(token: str) -> str:
+    return public_app_url(f"/subcontractor-onboarding/{(token or '').strip()}")
+
+
+def contractor_onboarding_status(worker) -> dict:
+    if not worker or worker_is_w2(worker):
+        return {'state': 'not_applicable', 'label': 'Not applicable', 'is_expired': False, 'is_complete': False}
+    completed_at = row_value(worker, 'contractor_onboarding_completed_at', '')
+    expires_at = row_value(worker, 'contractor_onboarding_token_expires_at', '')
+    sent_at = row_value(worker, 'contractor_onboarding_sent_at', '')
+    token = row_value(worker, 'contractor_onboarding_token', '')
+    expires_dt = parse_datetime_value(expires_at)
+    is_expired = bool(expires_dt and expires_dt < datetime.now())
+    if completed_at:
+        state, label = 'complete', 'Completed'
+    elif token and is_expired:
+        state, label = 'expired', 'Expired'
+    elif sent_at:
+        state, label = 'sent', 'Sent'
+    elif token:
+        state, label = 'ready', 'Link ready'
+    else:
+        state, label = 'not_sent', 'Not sent'
+    return {
+        'state': state,
+        'label': label,
+        'is_expired': is_expired,
+        'is_complete': bool(completed_at),
+        'sent_at': sent_at,
+        'completed_at': completed_at,
+        'expires_at': expires_at,
+        'last_viewed_at': row_value(worker, 'contractor_onboarding_last_viewed_at', ''),
+    }
+
+
+def create_contractor_onboarding_token(conn: sqlite3.Connection, worker_id: int, *, days_valid: int = 14) -> tuple[str, str]:
+    token = secrets.token_urlsafe(32)
+    created_at = now_iso()
+    expires_at = (datetime.now() + timedelta(days=days_valid)).isoformat(timespec='seconds')
+    conn.execute(
+        '''UPDATE workers
+           SET contractor_onboarding_token=?,
+               contractor_onboarding_token_created_at=?,
+               contractor_onboarding_token_expires_at=?,
+               contractor_onboarding_completed_at='',
+               updated_at=?
+           WHERE id=?''',
+        (token, created_at, expires_at, created_at, worker_id),
+    )
+    return token, expires_at
+
+
+def create_subcontractor_invite_placeholder(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int | None, form) -> int:
+    name = (form.get('name') or form.get('contractor_legal_name') or '').strip()
+    email = normalize_email_address(form.get('email') or '')
+    if not name:
+        raise ValueError('Subcontractor name is required before sending the e-sign invite.')
+    if not email:
+        raise ValueError('Subcontractor email is required before sending the e-sign invite.')
+    now_text = now_iso()
+    payload = {
+        'client_id': client_id,
+        'name': name,
+        'worker_type': '1099',
+        'email': email,
+        'phone': (form.get('phone') or '').strip(),
+        'preferred_language': normalize_language(form.get('preferred_language') or 'en'),
+        'worker_role': (form.get('worker_role') or 'Subcontractor').strip(),
+        'role_classification': (form.get('worker_role') or 'Subcontractor').strip(),
+        'engagement_start_date': (form.get('engagement_start_date') or '').strip(),
+        'contractor_legal_name': (form.get('contractor_legal_name') or name).strip(),
+        'contractor_scope_of_work': (form.get('contractor_scope_of_work') or '').strip(),
+        'contractor_payment_terms': (form.get('contractor_payment_terms') or '').strip(),
+        'contractor_workers_comp_status': 'pending',
+        'payroll_frequency': 'monthly',
+        'status': 'active',
+        'created_by_user_id': actor_user_id,
+        'updated_at': now_text,
+        'updated_by_user_id': actor_user_id,
+    }
+    conn.execute(
+        '''INSERT INTO workers (
+               client_id, name, worker_type, email, phone, preferred_language, worker_role, role_classification,
+               engagement_start_date, contractor_legal_name, contractor_scope_of_work, contractor_payment_terms,
+               contractor_workers_comp_status, payroll_frequency, status, created_by_user_id, updated_at, updated_by_user_id
+           ) VALUES (
+               :client_id, :name, :worker_type, :email, :phone, :preferred_language, :worker_role, :role_classification,
+               :engagement_start_date, :contractor_legal_name, :contractor_scope_of_work, :contractor_payment_terms,
+               :contractor_workers_comp_status, :payroll_frequency, :status, :created_by_user_id, :updated_at, :updated_by_user_id
+           )''',
+        payload,
+    )
+    worker_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+    log_worker_profile_history(conn, worker_id=worker_id, client_id=client_id, action='subcontractor_invited', changed_by_user_id=actor_user_id)
+    return worker_id
+
+
 def normalize_worker_payment_method(value: str) -> str:
     allowed = {key for key, _ in worker_payment_method_options()}
     cleaned = (value or '').strip().lower()
@@ -5251,6 +5348,60 @@ def send_invite_email(to_email: str, to_name: str, business_name: str, invite_li
         html=html,
     )
     return {'subject': subject, 'body_text': body, 'body_html': html, 'email_type': 'business_invite'}
+
+
+def send_subcontractor_onboarding_email(to_email: str, to_name: str, business_name: str, onboarding_link: str, *, expires_at: str = ''):
+    cfg = smtp_config()
+    sender_email = cfg['sender_email']
+    smtp_username = cfg['smtp_username']
+    smtp_password = cfg['smtp_password']
+    if cfg.get('password_unreadable'):
+        raise RuntimeError('Saved SMTP password must be entered again once after the security-key update.')
+    if not sender_email or not smtp_username or not smtp_password:
+        raise RuntimeError('SMTP not configured')
+    greeting = f"Hi {to_name}," if to_name else "Hi,"
+    expires_line = f"This secure link expires on {expires_at[:10]}." if expires_at else "This secure link expires soon."
+    body = "\n".join([
+        greeting,
+        "",
+        f"{business_name} invited you to complete subcontractor onboarding in LedgerFlow.",
+        "Use the secure link below to complete the W-9 intake, review the subcontractor agreement, and sign electronically.",
+        onboarding_link,
+        "",
+        expires_line,
+        "If you were not expecting this request, contact the business before submitting information.",
+        "",
+        "LedgerFlow",
+    ])
+    html_body = render_marketing_email(
+        eyebrow='Subcontractor Onboarding',
+        title='Complete W-9 intake and e-signature',
+        intro=f'{business_name} uses LedgerFlow to collect subcontractor onboarding records securely.',
+        greeting=greeting,
+        body_lines=[
+            'Use the button below to complete your W-9 intake, review the subcontractor agreement, and sign electronically.',
+            expires_line,
+            'Only submit this form if you recognize the business and agree to provide subcontractor records electronically.',
+        ],
+        cta_label='Open Secure Onboarding',
+        cta_link=onboarding_link,
+        detail_rows=[
+            ('Business', business_name),
+            ('Recipient', to_email),
+            ('Link Expires', expires_at[:10] if expires_at else 'Soon'),
+        ],
+        feature_tags=['W-9 Intake', 'E-Signature', 'Agreement', 'Audit Trail'],
+        support_note='If you were not expecting this request, contact the business before submitting information.',
+    )
+    subject = f"Complete subcontractor onboarding for {business_name}"
+    send_rich_email(
+        cfg,
+        subject=subject,
+        to_email=to_email,
+        plain_text=body,
+        html=html_body,
+    )
+    return {'subject': subject, 'body_text': body, 'body_html': html_body, 'email_type': 'subcontractor_onboarding'}
 
 
 def send_trial_invite_email(to_email: str, to_name: str, business_name: str, invite_link: str, trial_days: int = 0, *, business_category: str = '', tracking_token: str = '', preferred_language: str = 'en'):
@@ -7701,6 +7852,10 @@ def init_db():
         ensure_column(conn, 'workers', 'contractor_w9_signed_date', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_scope_of_work', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_payment_terms', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_signer_title', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_w9_exempt_payee_code', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_w9_fatca_code', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_w9_account_numbers', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_license_number', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_insurance_carrier', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_policy_number', "TEXT DEFAULT ''")
@@ -7717,12 +7872,25 @@ def init_db():
         ensure_column(conn, 'workers', 'contractor_agreement_signed_date', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_signature_name', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_signature_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_w9_signature_name', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_w9_signature_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_w9_electronic_consent_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_w9_perjury_certified_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_disclosure_ack_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_no_benefits_ack_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_insurance_ack_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_safety_ack_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_classification_ack_at', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'contractor_classification_review_json', "TEXT DEFAULT '{}'")
+        ensure_column(conn, 'workers', 'contractor_onboarding_token', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_onboarding_token_created_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_onboarding_token_expires_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_onboarding_sent_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_onboarding_last_viewed_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_onboarding_completed_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_onboarding_submit_ip', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_onboarding_submit_user_agent', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_e_signature_audit_json', "TEXT DEFAULT '{}'")
         ensure_column(conn, 'workers', 'termination_date', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'termination_cause', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'portal_password_hash', "TEXT DEFAULT ''")
@@ -11028,8 +11196,12 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
     contractor_tax_classification = normalize_contractor_tax_classification(field_text('contractor_tax_classification'))
     contractor_w9_received_date = field_text('contractor_w9_received_date')
     contractor_w9_signed_date = field_text('contractor_w9_signed_date')
+    contractor_w9_exempt_payee_code = field_text('contractor_w9_exempt_payee_code')
+    contractor_w9_fatca_code = field_text('contractor_w9_fatca_code')
+    contractor_w9_account_numbers = field_text('contractor_w9_account_numbers')
     contractor_scope_of_work = field_text('contractor_scope_of_work')
     contractor_payment_terms = field_text('contractor_payment_terms')
+    contractor_signer_title = field_text('contractor_signer_title')
     contractor_license_number = field_text('contractor_license_number')
     contractor_insurance_carrier = field_text('contractor_insurance_carrier')
     contractor_policy_number = field_text('contractor_policy_number')
@@ -11046,6 +11218,8 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
     contractor_agreement_signed_date = field_text('contractor_agreement_signed_date')
     contractor_signature_name = field_text('contractor_signature_name') or contractor_legal_name or name
     contractor_signature_date = field_text('contractor_signature_date') or contractor_agreement_signed_date
+    contractor_w9_signature_name = field_text('contractor_w9_signature_name') or contractor_signature_name
+    contractor_w9_signature_date = field_text('contractor_w9_signature_date') or contractor_signature_date
     existing_disclosure_ack_at = row_value(existing, 'contractor_disclosure_ack_at', '') if existing else ''
     existing_no_benefits_ack_at = row_value(existing, 'contractor_no_benefits_ack_at', '') if existing else ''
     existing_insurance_ack_at = row_value(existing, 'contractor_insurance_ack_at', '') if existing else ''
@@ -11092,6 +11266,8 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
             raise ValueError('Select the federal tax classification shown on the subcontractor W-9.')
         if not contractor_w9_received_date:
             raise ValueError('Enter the date the signed W-9 was received for the subcontractor.')
+        if not contractor_w9_signature_name or not contractor_w9_signature_date:
+            raise ValueError('W-9 electronic signature name and signature date are required for subcontractors.')
         if not contractor_agreement_effective_date:
             contractor_agreement_effective_date = engagement_start_date
         if not contractor_signature_name or not contractor_signature_date:
@@ -11136,8 +11312,12 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
         'contractor_tax_classification': contractor_tax_classification,
         'contractor_w9_received_date': contractor_w9_received_date,
         'contractor_w9_signed_date': contractor_w9_signed_date,
+        'contractor_w9_exempt_payee_code': contractor_w9_exempt_payee_code,
+        'contractor_w9_fatca_code': contractor_w9_fatca_code,
+        'contractor_w9_account_numbers': contractor_w9_account_numbers,
         'contractor_scope_of_work': contractor_scope_of_work,
         'contractor_payment_terms': contractor_payment_terms,
+        'contractor_signer_title': contractor_signer_title,
         'contractor_license_number': contractor_license_number,
         'contractor_insurance_carrier': contractor_insurance_carrier,
         'contractor_policy_number': contractor_policy_number,
@@ -11154,6 +11334,8 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
         'contractor_agreement_signed_date': contractor_agreement_signed_date,
         'contractor_signature_name': contractor_signature_name,
         'contractor_signature_date': contractor_signature_date,
+        'contractor_w9_signature_name': contractor_w9_signature_name,
+        'contractor_w9_signature_date': contractor_w9_signature_date,
         'contractor_disclosure_ack_at': contractor_disclosure_ack_at,
         'contractor_no_benefits_ack_at': contractor_no_benefits_ack_at,
         'contractor_insurance_ack_at': contractor_insurance_ack_at,
@@ -11182,8 +11364,13 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
                    availability_baseline=:availability_baseline, status=:status, contractor_legal_name=:contractor_legal_name,
                    contractor_business_name=:contractor_business_name, contractor_tin_type=:contractor_tin_type,
                    contractor_tax_classification=:contractor_tax_classification, contractor_w9_received_date=:contractor_w9_received_date,
-                   contractor_w9_signed_date=:contractor_w9_signed_date, contractor_scope_of_work=:contractor_scope_of_work,
-                   contractor_payment_terms=:contractor_payment_terms, contractor_license_number=:contractor_license_number,
+                   contractor_w9_signed_date=:contractor_w9_signed_date,
+                   contractor_w9_exempt_payee_code=:contractor_w9_exempt_payee_code,
+                   contractor_w9_fatca_code=:contractor_w9_fatca_code,
+                   contractor_w9_account_numbers=:contractor_w9_account_numbers,
+                   contractor_scope_of_work=:contractor_scope_of_work,
+                   contractor_payment_terms=:contractor_payment_terms, contractor_signer_title=:contractor_signer_title,
+                   contractor_license_number=:contractor_license_number,
                    contractor_insurance_carrier=:contractor_insurance_carrier, contractor_policy_number=:contractor_policy_number,
                    contractor_policy_expiration=:contractor_policy_expiration,
                    contractor_general_liability_document_reference=:contractor_general_liability_document_reference,
@@ -11197,6 +11384,8 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
                    contractor_agreement_effective_date=:contractor_agreement_effective_date,
                    contractor_agreement_signed_date=:contractor_agreement_signed_date,
                    contractor_signature_name=:contractor_signature_name, contractor_signature_date=:contractor_signature_date,
+                   contractor_w9_signature_name=:contractor_w9_signature_name,
+                   contractor_w9_signature_date=:contractor_w9_signature_date,
                    contractor_disclosure_ack_at=:contractor_disclosure_ack_at,
                    contractor_no_benefits_ack_at=:contractor_no_benefits_ack_at,
                    contractor_insurance_ack_at=:contractor_insurance_ack_at,
@@ -11220,13 +11409,16 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
                    client_id, name, worker_type, ssn, address, worker_role, role_classification, phone, email, preferred_language,
                    hire_date, engagement_start_date, date_of_birth, pay_notes, payroll_frequency, crew_label, skill_tags,
                    availability_baseline, status, contractor_legal_name, contractor_business_name, contractor_tin_type,
-                   contractor_tax_classification, contractor_w9_received_date, contractor_w9_signed_date, contractor_scope_of_work,
-                   contractor_payment_terms, contractor_license_number, contractor_insurance_carrier, contractor_policy_number,
+                   contractor_tax_classification, contractor_w9_received_date, contractor_w9_signed_date,
+                   contractor_w9_exempt_payee_code, contractor_w9_fatca_code, contractor_w9_account_numbers,
+                   contractor_scope_of_work, contractor_payment_terms, contractor_signer_title,
+                   contractor_license_number, contractor_insurance_carrier, contractor_policy_number,
                    contractor_policy_expiration, contractor_general_liability_document_reference, contractor_workers_comp_status,
                    contractor_workers_comp_carrier, contractor_workers_comp_policy_number, contractor_workers_comp_expiration,
                    contractor_workers_comp_exemption_number, contractor_workers_comp_exemption_expiration,
                    contractor_workers_comp_document_reference, contractor_agreement_effective_date, contractor_agreement_signed_date,
-                   contractor_signature_name, contractor_signature_date, contractor_disclosure_ack_at, contractor_no_benefits_ack_at,
+                   contractor_signature_name, contractor_signature_date, contractor_w9_signature_name, contractor_w9_signature_date,
+                   contractor_disclosure_ack_at, contractor_no_benefits_ack_at,
                    contractor_insurance_ack_at, contractor_safety_ack_at, contractor_classification_ack_at, contractor_classification_review_json,
                    payout_preference, deposit_bank_name, deposit_account_holder_name, deposit_account_type, deposit_account_last4,
                    deposit_routing_number_enc, deposit_account_number_enc, zelle_contact, created_by_user_id, updated_at, updated_by_user_id
@@ -11234,13 +11426,16 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
                    :client_id, :name, :worker_type, :ssn, :address, :worker_role, :role_classification, :phone, :email, :preferred_language,
                    :hire_date, :engagement_start_date, :date_of_birth, :pay_notes, :payroll_frequency, :crew_label, :skill_tags,
                    :availability_baseline, :status, :contractor_legal_name, :contractor_business_name, :contractor_tin_type,
-                   :contractor_tax_classification, :contractor_w9_received_date, :contractor_w9_signed_date, :contractor_scope_of_work,
-                   :contractor_payment_terms, :contractor_license_number, :contractor_insurance_carrier, :contractor_policy_number,
+                   :contractor_tax_classification, :contractor_w9_received_date, :contractor_w9_signed_date,
+                   :contractor_w9_exempt_payee_code, :contractor_w9_fatca_code, :contractor_w9_account_numbers,
+                   :contractor_scope_of_work, :contractor_payment_terms, :contractor_signer_title,
+                   :contractor_license_number, :contractor_insurance_carrier, :contractor_policy_number,
                    :contractor_policy_expiration, :contractor_general_liability_document_reference, :contractor_workers_comp_status,
                    :contractor_workers_comp_carrier, :contractor_workers_comp_policy_number, :contractor_workers_comp_expiration,
                    :contractor_workers_comp_exemption_number, :contractor_workers_comp_exemption_expiration,
                    :contractor_workers_comp_document_reference, :contractor_agreement_effective_date, :contractor_agreement_signed_date,
-                   :contractor_signature_name, :contractor_signature_date, :contractor_disclosure_ack_at, :contractor_no_benefits_ack_at,
+                   :contractor_signature_name, :contractor_signature_date, :contractor_w9_signature_name, :contractor_w9_signature_date,
+                   :contractor_disclosure_ack_at, :contractor_no_benefits_ack_at,
                    :contractor_insurance_ack_at, :contractor_safety_ack_at, :contractor_classification_ack_at, :contractor_classification_review_json,
                    :payout_preference, :deposit_bank_name, :deposit_account_holder_name, :deposit_account_type, :deposit_account_last4,
                    :deposit_routing_number_enc, :deposit_account_number_enc, :zelle_contact, :created_by_user_id, :updated_at, :updated_by_user_id
@@ -12454,6 +12649,7 @@ def current_mode_for_request(user) -> str:
         'w2',
         'form_1099',
         'subcontractor_agreement',
+        'subcontractor_w9',
     }
     if endpoint in admin_cpa_endpoints:
         return 'cpa'
@@ -15743,6 +15939,10 @@ def ops_team_context(conn: sqlite3.Connection, client_id: int, selected_worker_i
     worker_availability = [row for row in ops_availability_rows(conn, client_id, date.today().isoformat(), (date.today() + timedelta(days=21)).isoformat()) if row['worker_id'] == selected_worker_id]
     answers = conn.execute('SELECT * FROM w4_answers WHERE worker_id=?', (selected_worker_id,)).fetchone() if selected_worker_id else None
     worker_pay_snapshot = worker_gross_pay_snapshot(conn, selected_worker_id) if selected_worker_id else {'year': date.today().year, 'year_label': str(date.today().year), 'year_to_date_total': 0.0, 'current_month_total': 0.0, 'monthly_rows': [], 'has_payments': False}
+    contractor_onboarding_url = ''
+    contractor_status = contractor_onboarding_status(selected_worker)
+    if selected_worker and not worker_is_w2(selected_worker) and selected_worker.get('contractor_onboarding_token'):
+        contractor_onboarding_url = contractor_onboarding_link(selected_worker.get('contractor_onboarding_token'))
     return {
         'client': client,
         'client_id': client_id,
@@ -15751,6 +15951,8 @@ def ops_team_context(conn: sqlite3.Connection, client_id: int, selected_worker_i
         'worker_jobs': worker_jobs,
         'worker_availability': worker_availability,
         'worker_pay_snapshot': worker_pay_snapshot,
+        'contractor_onboarding_link': contractor_onboarding_url,
+        'contractor_onboarding_status': contractor_status,
         'worker_login_url': url_for('worker_login'),
         'today_iso': date.today().isoformat(),
         'ops_workspace_warning': workspace_warning,
@@ -15778,6 +15980,65 @@ def ops_team_handle_post_action(conn: sqlite3.Connection, *, client_id: int, use
             conn.rollback()
             flash(str(exc), 'error')
             return selected_worker_id, 'ops_team_member' if action == 'update_worker' else 'ops_team_new'
+    if action == 'send_subcontractor_onboarding':
+        worker = safe_fetchone(conn, 'SELECT * FROM workers WHERE id=? AND client_id=?', (selected_worker_id, client_id)) if selected_worker_id else None
+        if not worker:
+            flash('Subcontractor not found.', 'error')
+            return None, 'ops_team'
+        if worker_is_w2(worker):
+            flash('Electronic subcontractor onboarding is only available for 1099 subcontractors.', 'error')
+            return selected_worker_id, 'ops_team_member'
+        recipient_email = normalize_email_address(request.form.get('contractor_onboarding_email') or worker['email'] or '')
+        recipient_name = (request.form.get('contractor_onboarding_name') or worker['contractor_legal_name'] or worker['name'] or '').strip()
+        if not recipient_email:
+            flash('Enter a subcontractor email before sending the electronic onboarding link.', 'error')
+            return selected_worker_id, 'ops_team_member'
+        token, expires_at = create_contractor_onboarding_token(conn, selected_worker_id)
+        sent_at = now_iso()
+        conn.execute(
+            'UPDATE workers SET email=COALESCE(NULLIF(?, ""), email), contractor_onboarding_sent_at=?, updated_at=?, updated_by_user_id=? WHERE id=?',
+            (recipient_email, sent_at, sent_at, user['id'], selected_worker_id),
+        )
+        client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
+        onboarding_url = contractor_onboarding_link(token)
+        try:
+            email_result = send_subcontractor_onboarding_email(
+                recipient_email,
+                recipient_name,
+                client['business_name'] if client else 'your business',
+                onboarding_url,
+                expires_at=expires_at,
+            )
+            log_email_delivery(
+                client_id=client_id,
+                email_type=email_result['email_type'],
+                recipient_email=recipient_email,
+                recipient_name=recipient_name,
+                subject=email_result['subject'],
+                body_text=email_result['body_text'],
+                body_html=email_result['body_html'],
+                status='sent',
+                created_by_user_id=user['id'],
+                conn=conn,
+            )
+            conn.commit()
+            flash('Electronic subcontractor onboarding link sent.', 'success')
+        except Exception as exc:
+            log_email_delivery(
+                client_id=client_id,
+                email_type='subcontractor_onboarding',
+                recipient_email=recipient_email,
+                recipient_name=recipient_name,
+                subject='Subcontractor onboarding link',
+                body_text=onboarding_url,
+                status='failed',
+                error_message=str(exc)[:500],
+                created_by_user_id=user['id'],
+                conn=conn,
+            )
+            conn.commit()
+            flash(f'Onboarding link was created, but email could not be sent: {exc}. Copy this secure link: {onboarding_url}', 'warning')
+        return selected_worker_id, 'ops_team_member'
     if action == 'update_worker_portal':
         worker = safe_fetchone(conn, 'SELECT * FROM workers WHERE id=? AND client_id=?', (selected_worker_id, client_id)) if selected_worker_id else None
         if not worker:
@@ -15950,6 +16211,62 @@ def ops_subcontractor_new():
     user = current_user()
     client_id = ops_team_client_id_from_request(user)
     if request.method == 'POST':
+        action = (request.form.get('action') or '').strip()
+        if action == 'invite_subcontractor':
+            with get_conn() as conn:
+                workspace_warning = prepare_ops_workspace(conn, client_id)
+                if workspace_warning:
+                    flash(workspace_warning, 'warning')
+                try:
+                    worker_id = create_subcontractor_invite_placeholder(conn, client_id=client_id, actor_user_id=user['id'], form=request.form)
+                    token, expires_at = create_contractor_onboarding_token(conn, worker_id)
+                    worker = safe_fetchone(conn, 'SELECT * FROM workers WHERE id=?', (worker_id,))
+                    client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
+                    onboarding_url = contractor_onboarding_link(token)
+                    sent_at = now_iso()
+                    conn.execute('UPDATE workers SET contractor_onboarding_sent_at=?, updated_at=?, updated_by_user_id=? WHERE id=?', (sent_at, sent_at, user['id'], worker_id))
+                    try:
+                        email_result = send_subcontractor_onboarding_email(
+                            worker['email'],
+                            worker['contractor_legal_name'] or worker['name'],
+                            client['business_name'] if client else 'your business',
+                            onboarding_url,
+                            expires_at=expires_at,
+                        )
+                        log_email_delivery(
+                            client_id=client_id,
+                            email_type=email_result['email_type'],
+                            recipient_email=worker['email'],
+                            recipient_name=worker['contractor_legal_name'] or worker['name'],
+                            subject=email_result['subject'],
+                            body_text=email_result['body_text'],
+                            body_html=email_result['body_html'],
+                            status='sent',
+                            created_by_user_id=user['id'],
+                            conn=conn,
+                        )
+                        conn.commit()
+                        flash('Subcontractor e-sign/W-9 invitation sent.', 'success')
+                    except Exception as exc:
+                        log_email_delivery(
+                            client_id=client_id,
+                            email_type='subcontractor_onboarding',
+                            recipient_email=worker['email'],
+                            recipient_name=worker['contractor_legal_name'] or worker['name'],
+                            subject='Subcontractor onboarding link',
+                            body_text=onboarding_url,
+                            status='failed',
+                            error_message=str(exc)[:500],
+                            created_by_user_id=user['id'],
+                            conn=conn,
+                        )
+                        conn.commit()
+                        flash(f'Invitation link was created, but email could not be sent: {exc}. Copy this secure link: {onboarding_url}', 'warning')
+                    return redirect(url_for('ops_team_member', client_id=client_id, worker_id=worker_id))
+                except ValueError as exc:
+                    conn.rollback()
+                    flash(str(exc), 'error')
+                    return redirect(url_for('ops_subcontractor_new', client_id=client_id))
         form_data = request.form.copy()
         form_data['worker_type'] = '1099'
         form_data['contractor_onboarding_mode'] = '1'
@@ -21521,6 +21838,162 @@ def form_1099(worker_id):
         client = conn.execute('SELECT * FROM clients WHERE id=?', (worker['client_id'],)).fetchone()
     payer = payer_profile_for_client(client)
     return render_template('1099.html', worker=worker, payments=payments, year=year, totals=worker_year_totals(worker_id, year), **payer)
+
+
+@app.route('/forms/subcontractor-w9/<int:worker_id>')
+@login_required
+def subcontractor_w9(worker_id):
+    user = current_user()
+    with get_conn() as conn:
+        worker = conn.execute('SELECT * FROM workers WHERE id=?', (worker_id,)).fetchone()
+        if not worker or not allowed_client(user, worker['client_id']):
+            abort(403)
+        if worker_is_w2(worker):
+            flash('W-9 records are only available for subcontractors.', 'error')
+            return redirect(url_for('ops_team_member', client_id=worker['client_id'], worker_id=worker_id))
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (worker['client_id'],)).fetchone()
+    return render_template('subcontractor_w9.html', worker=worker, client=client)
+
+
+@app.route('/subcontractor-onboarding/<token>', methods=['GET', 'POST'])
+def subcontractor_onboarding_public(token):
+    token = (token or '').strip()
+    if not token:
+        abort(404)
+    errors: list[str] = []
+    form_values = dict(request.form) if request.method == 'POST' else {}
+    with get_conn() as conn:
+        row = conn.execute(
+            '''SELECT w.*, c.business_name, c.email business_email, c.phone business_phone, c.address business_address
+               FROM workers w
+               JOIN clients c ON c.id = w.client_id
+               WHERE w.contractor_onboarding_token=?''',
+            (token,),
+        ).fetchone()
+        if not row or worker_is_w2(row):
+            return render_template('subcontractor_onboarding.html', unavailable_reason='This subcontractor onboarding link is not available.')
+        status = contractor_onboarding_status(row)
+        if status['is_expired'] and not status['is_complete']:
+            return render_template('subcontractor_onboarding.html', worker=row, client=row, status=status, unavailable_reason='This subcontractor onboarding link has expired. Ask the business to send a fresh link.')
+        if status['is_complete']:
+            return render_template('subcontractor_onboarding.html', worker=row, client=row, status=status, completed=True)
+        if request.method == 'GET':
+            conn.execute('UPDATE workers SET contractor_onboarding_last_viewed_at=? WHERE id=?', (now_iso(), row['id']))
+            conn.commit()
+            return render_template(
+                'subcontractor_onboarding.html',
+                worker=row,
+                client=row,
+                status=status,
+                form_values=dict(row),
+                contractor_tin_type_options=contractor_tin_type_options(),
+                contractor_tax_classification_options=contractor_tax_classification_options(),
+                contractor_workers_comp_status_options=contractor_workers_comp_status_options(),
+            )
+        if not request.form.get('contractor_electronic_consent'):
+            errors.append('Consent to use electronic records and electronic signatures is required.')
+        if not request.form.get('contractor_w9_perjury_certification'):
+            errors.append('W-9 certification under penalties of perjury is required.')
+        if not request.form.get('contractor_agreement_esign_ack'):
+            errors.append('Subcontractor agreement electronic signature acknowledgement is required.')
+        if errors:
+            return render_template(
+                'subcontractor_onboarding.html',
+                worker=row,
+                client=row,
+                status=status,
+                errors=errors,
+                form_values=form_values,
+                contractor_tin_type_options=contractor_tin_type_options(),
+                contractor_tax_classification_options=contractor_tax_classification_options(),
+                contractor_workers_comp_status_options=contractor_workers_comp_status_options(),
+            )
+        form_data = request.form.copy()
+        today_text = date.today().isoformat()
+        form_data['worker_type'] = '1099'
+        form_data['status'] = row['status'] or 'active'
+        form_data['preferred_language'] = row['preferred_language'] or 'en'
+        form_data['contractor_w9_received_date'] = form_data.get('contractor_w9_received_date') or today_text
+        form_data['contractor_w9_signed_date'] = form_data.get('contractor_w9_signed_date') or form_data.get('contractor_w9_signature_date') or today_text
+        form_data['contractor_w9_signature_date'] = form_data.get('contractor_w9_signature_date') or today_text
+        form_data['contractor_signature_date'] = form_data.get('contractor_signature_date') or today_text
+        form_data['contractor_agreement_signed_date'] = form_data.get('contractor_agreement_signed_date') or form_data.get('contractor_signature_date') or today_text
+        form_data['contractor_agreement_effective_date'] = form_data.get('contractor_agreement_effective_date') or form_data.get('engagement_start_date') or today_text
+        for checkbox_name in (
+            'contractor_disclosure_ack',
+            'contractor_no_benefits_ack',
+            'contractor_insurance_ack',
+            'contractor_safety_ack',
+            'contractor_classification_ack',
+            'contractor_review_independent_business',
+            'contractor_review_controls_methods',
+            'contractor_review_provides_tools',
+            'contractor_review_may_work_for_others',
+            'contractor_review_job_based_pay',
+        ):
+            if request.form.get(checkbox_name):
+                form_data[checkbox_name] = '1'
+        try:
+            worker_id = ops_save_worker_profile(conn, client_id=row['client_id'], actor_user_id=None, form=form_data, existing=row)
+            submitted_at = now_iso()
+            submit_ip = (request.headers.get('X-Forwarded-For') or request.remote_addr or '').split(',')[0].strip()[:120]
+            submit_user_agent = (request.headers.get('User-Agent') or '').strip()[:500]
+            audit_payload = {
+                'submitted_at': submitted_at,
+                'submit_ip': submit_ip,
+                'user_agent': submit_user_agent,
+                'token_created_at': row_value(row, 'contractor_onboarding_token_created_at', ''),
+                'token_expires_at': row_value(row, 'contractor_onboarding_token_expires_at', ''),
+                'electronic_consent': bool(request.form.get('contractor_electronic_consent')),
+                'w9_perjury_certified': bool(request.form.get('contractor_w9_perjury_certification')),
+                'agreement_esign_acknowledged': bool(request.form.get('contractor_agreement_esign_ack')),
+            }
+            conn.execute(
+                '''UPDATE workers
+                   SET contractor_onboarding_completed_at=?,
+                       contractor_onboarding_submit_ip=?,
+                       contractor_onboarding_submit_user_agent=?,
+                       contractor_w9_electronic_consent_at=?,
+                       contractor_w9_perjury_certified_at=?,
+                       contractor_e_signature_audit_json=?,
+                       updated_at=?
+                   WHERE id=?''',
+                (
+                    submitted_at,
+                    submit_ip,
+                    submit_user_agent,
+                    submitted_at,
+                    submitted_at,
+                    json.dumps(audit_payload, sort_keys=True),
+                    submitted_at,
+                    worker_id,
+                ),
+            )
+            log_worker_profile_history(conn, worker_id=worker_id, client_id=row['client_id'], action='subcontractor_esigned', changed_by_user_id=None, detail='Subcontractor completed electronic W-9 intake and agreement signature.')
+            conn.commit()
+            saved = conn.execute(
+                '''SELECT w.*, c.business_name, c.email business_email, c.phone business_phone, c.address business_address
+                   FROM workers w JOIN clients c ON c.id = w.client_id WHERE w.id=?''',
+                (worker_id,),
+            ).fetchone()
+            return render_template('subcontractor_onboarding.html', worker=saved, client=saved, status=contractor_onboarding_status(saved), completed=True)
+        except ValueError as exc:
+            conn.rollback()
+            errors.append(str(exc))
+        except sqlite3.Error:
+            conn.rollback()
+            errors.append('The subcontractor record could not be saved. Please review the form and try again.')
+    return render_template(
+        'subcontractor_onboarding.html',
+        worker=row,
+        client=row,
+        status=status,
+        errors=errors,
+        form_values=form_values,
+        contractor_tin_type_options=contractor_tin_type_options(),
+        contractor_tax_classification_options=contractor_tax_classification_options(),
+        contractor_workers_comp_status_options=contractor_workers_comp_status_options(),
+    )
 
 
 @app.route('/forms/subcontractor-agreement/<int:worker_id>')

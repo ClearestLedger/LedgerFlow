@@ -18,6 +18,31 @@
   <a class='team-subnav-link active' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
 </div>
 
+<details class='compact-details' open>
+  <summary>Send Electronic W-9 / E-Sign Invite</summary>
+  <div class='card' style='margin-top:12px'>
+    <div class='card-head'>
+      <div>
+        <h3>Let the subcontractor fill and sign</h3>
+        <div class='small'>Create a secure link so the subcontractor completes W-9 intake, insurance/workers comp disclosures, and the agreement signature electronically.</div>
+      </div>
+      <span class='badge'>Recommended</span>
+    </div>
+    <form method='post' class='form-grid'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <input type='hidden' name='action' value='invite_subcontractor'>
+      <div><label>Subcontractor Name</label><input name='name' required placeholder='Legal or business name'></div>
+      <div><label>Email for E-Sign Link</label><input name='email' type='email' required placeholder='subcontractor@email.com'></div>
+      <div><label>Phone</label><input name='phone'></div>
+      <div><label>Role / Trade</label><input name='worker_role' placeholder='Painter, cleaner, route partner'></div>
+      <div><label>Expected Service Start</label><input name='engagement_start_date' type='date'></div>
+      <div style='grid-column:1/-1'><label>Initial Scope of Work</label><textarea name='contractor_scope_of_work' placeholder='Optional. The subcontractor can confirm or complete this in the signed form.'></textarea></div>
+      <div style='grid-column:1/-1'><label>Initial Payment Terms</label><textarea name='contractor_payment_terms' placeholder='Optional. Example: paid per approved job after completion.'></textarea></div>
+      <div style='grid-column:1/-1'><button type='submit'>Create and Send E-Sign Invite</button></div>
+    </form>
+  </div>
+</details>
+
 <form method='post' class='subcontractor-onboarding-form'>
   {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
   <input type='hidden' name='worker_type' value='1099'>
@@ -52,6 +77,10 @@
       <div><label>Federal Tax Classification</label><select name='contractor_tax_classification' required><option value=''>Select</option>{% for value, label in contractor_tax_classification_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
       <div><label>W-9 Received Date</label><input name='contractor_w9_received_date' type='date' required></div>
       <div><label>W-9 Signature Date</label><input name='contractor_w9_signed_date' type='date'></div>
+      <div><label>W-9 Signature Name</label><input name='contractor_w9_signature_name' placeholder='Typed signer name'></div>
+      <div><label>W-9 Exempt Payee Code</label><input name='contractor_w9_exempt_payee_code'></div>
+      <div><label>W-9 FATCA Code</label><input name='contractor_w9_fatca_code'></div>
+      <div><label>W-9 Account Numbers</label><input name='contractor_w9_account_numbers'></div>
       <div><label>Usual Payment Cadence</label><select name='payroll_frequency'><option value='weekly'>Weekly</option><option value='biweekly'>Biweekly</option><option value='semimonthly'>Semimonthly</option><option value='monthly' selected>Monthly</option></select></div>
     </div>
   </div>
@@ -96,6 +125,7 @@
       <div><label>Agreement Effective Date</label><input name='contractor_agreement_effective_date' type='date' value='{{ today_iso }}' required></div>
       <div><label>Agreement Signed Date</label><input name='contractor_signature_date' type='date' value='{{ today_iso }}' required></div>
       <div style='grid-column:1/-1'><label>Typed Signature</label><input name='contractor_signature_name' required placeholder='Subcontractor legal name typed as signature'></div>
+      <div><label>Signer Title / Authority</label><input name='contractor_signer_title' placeholder='Owner, member, authorized signer'></div>
       <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_disclosure_ack' value='1' required> The subcontractor acknowledges this is an independent contractor engagement and not a W-2 employee position, subject to the actual facts and applicable law.</label></div>
       <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_no_benefits_ack' value='1' required> The subcontractor acknowledges they are not enrolled in employee benefits through the business unless a law or separate written plan requires otherwise.</label></div>
       <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_insurance_ack' value='1' required> The subcontractor acknowledges responsibility for required insurance, workers compensation coverage, or valid exemption documentation.</label></div>

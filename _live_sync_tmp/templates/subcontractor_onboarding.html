@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LedgerFlow Subcontractor Onboarding</title>
+  <style>
+    :root{--navy:#17243c;--ink:#1f2a3d;--muted:#64748b;--line:#d9e3ee;--card:#ffffff;--soft:#f6f9fc;--gold:#caa45d;--green:#2f8f5b}
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(135deg,#eef4f9,#fff 45%,#f7efe1);color:var(--ink);font-family:Georgia,"Times New Roman",serif}
+    .shell{max-width:1040px;margin:0 auto;padding:32px 18px 48px}
+    .hero{border:1px solid rgba(202,164,93,.5);border-radius:28px;padding:24px;background:rgba(255,255,255,.9);box-shadow:0 24px 70px rgba(23,36,60,.12)}
+    .brand{font-size:1.8rem;font-weight:800;color:var(--navy);letter-spacing:-.03em}
+    .kicker{margin-top:6px;color:var(--gold);font-weight:800;text-transform:uppercase;letter-spacing:.12em;font-size:.78rem}
+    h1{margin:10px 0 8px;font-size:clamp(2rem,4vw,3.1rem);line-height:1.05;color:var(--navy)}
+    p{line-height:1.65}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .card{margin-top:16px;border:1px solid var(--line);border-radius:22px;background:var(--card);padding:18px;box-shadow:0 12px 34px rgba(23,36,60,.07)}
+    .section-title{font-size:1.25rem;font-weight:800;color:var(--navy);margin:0 0 10px}
+    label{display:block;font-weight:800;color:#26364d;font-size:.92rem;margin-bottom:6px}
+    input,select,textarea{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px 13px;font:inherit;background:#fff;color:var(--ink)}
+    textarea{min-height:92px;resize:vertical}
+    .full{grid-column:1/-1}
+    .small{font-size:.9rem;color:var(--muted);line-height:1.55}
+    .check{display:flex;gap:10px;align-items:flex-start;padding:10px 0}
+    .check input{width:auto;margin-top:4px}
+    .notice{border:1px solid #bed8ca;background:#f0fbf5;color:#1f6b43;border-radius:18px;padding:14px;margin-top:14px}
+    .error{border:1px solid #f1b9b9;background:#fff1f1;color:#9b1c1c;border-radius:18px;padding:14px;margin-top:14px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:999px;background:var(--navy);color:#fff;padding:13px 18px;font-weight:800;cursor:pointer;text-decoration:none}
+    .btn.secondary{background:#fff;color:var(--navy);border:1px solid var(--line)}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+    .w9-cert{border:1px dashed #b7c6d8;background:#f9fbfd;border-radius:18px;padding:14px}
+    @media(max-width:760px){.grid{grid-template-columns:1fr}.shell{padding:18px 12px 36px}}
+    @media print{body{background:#fff}.actions{display:none}.hero,.card{box-shadow:none}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="brand">LedgerFlow</div>
+      <div class="kicker">Subcontractor Electronic Onboarding</div>
+      {% if unavailable_reason %}
+        <h1>Link unavailable</h1>
+        <div class="error">{{ unavailable_reason }}</div>
+      {% elif completed %}
+        <h1>Onboarding submitted</h1>
+        <p>{{ worker.business_name }} received your electronic W-9 intake and subcontractor agreement signature.</p>
+        <div class="notice">
+          Submitted: {{ worker.contractor_onboarding_completed_at or 'Recorded' }}<br>
+          W-9 certified: {{ worker.contractor_w9_perjury_certified_at or 'Recorded' }}<br>
+          Agreement signed by: {{ worker.contractor_signature_name or worker.name }}
+        </div>
+        <div class="actions"><button class="btn secondary" onclick="window.print()" type="button">Print confirmation</button></div>
+      {% else %}
+        {% set v = form_values if form_values is defined and form_values else {} %}
+        <h1>Complete W-9 intake and e-signature</h1>
+        <p>{{ worker.business_name }} invited you to complete subcontractor onboarding. This is an electronic record collection workflow for W-9 support, contractor agreement signature, insurance/workers comp documentation, and audit traceability.</p>
+        <p class="small">This does not file a tax form with the IRS. The business uses this information for its records, 1099 preparation, and contractor onboarding review. Ask the business or your tax/legal adviser if you are unsure before signing.</p>
+        {% if errors %}
+          <div class="error"><strong>Please fix:</strong><br>{% for error in errors %}{{ error }}<br>{% endfor %}</div>
+        {% endif %}
+
+        <form method="post" autocomplete="on">
+          <input type="hidden" name="worker_type" value="1099">
+          <input type="hidden" name="payout_preference" value="{{ v.get('payout_preference') or worker.payout_preference or 'paper_check' }}">
+
+          <section class="card">
+            <h2 class="section-title">Electronic Consent</h2>
+            <label class="check"><input type="checkbox" name="contractor_electronic_consent" value="1" required> <span>I consent to use electronic records and electronic signatures for this subcontractor onboarding, W-9 intake, and agreement.</span></label>
+            <label class="check"><input type="checkbox" name="contractor_agreement_esign_ack" value="1" required> <span>I understand my typed name below will be treated as my electronic signature on the subcontractor agreement.</span></label>
+          </section>
+
+          <section class="card">
+            <h2 class="section-title">W-9 Intake</h2>
+            <div class="grid">
+              <div><label>Legal name shown on tax return</label><input name="contractor_legal_name" required value="{{ v.get('contractor_legal_name') or worker.contractor_legal_name or worker.name }}"></div>
+              <div><label>Business name / disregarded entity name</label><input name="contractor_business_name" value="{{ v.get('contractor_business_name') or worker.contractor_business_name or '' }}"></div>
+              <div><label>Federal tax classification</label><select name="contractor_tax_classification" required><option value="">Select</option>{% for value, label in contractor_tax_classification_options %}<option value="{{ value }}" {% if (v.get('contractor_tax_classification') or worker.contractor_tax_classification or '') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+              <div><label>TIN Type</label><select name="contractor_tin_type" required><option value="">Select</option>{% for value, label in contractor_tin_type_options %}<option value="{{ value }}" {% if (v.get('contractor_tin_type') or worker.contractor_tin_type or '') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+              <div><label>TIN / SSN / EIN</label><input name="ssn" required value="{{ v.get('ssn') or worker.ssn or '' }}" autocomplete="off"></div>
+              <div><label>Service Start Date</label><input type="date" name="engagement_start_date" required value="{{ v.get('engagement_start_date') or worker.engagement_start_date or '' }}"></div>
+              <div><label>Exempt Payee Code, if any</label><input name="contractor_w9_exempt_payee_code" value="{{ v.get('contractor_w9_exempt_payee_code') or worker.contractor_w9_exempt_payee_code or '' }}"></div>
+              <div><label>FATCA exemption code, if any</label><input name="contractor_w9_fatca_code" value="{{ v.get('contractor_w9_fatca_code') or worker.contractor_w9_fatca_code or '' }}"></div>
+              <div class="full"><label>Account numbers, if requested by business</label><input name="contractor_w9_account_numbers" value="{{ v.get('contractor_w9_account_numbers') or worker.contractor_w9_account_numbers or '' }}"></div>
+              <div><label>Email</label><input type="email" name="email" required value="{{ v.get('email') or worker.email or '' }}"></div>
+              <div><label>Phone</label><input name="phone" value="{{ v.get('phone') or worker.phone or '' }}"></div>
+              <div class="full"><label>Full mailing address</label><input name="address" required value="{{ v.get('address') or worker.address or '' }}" placeholder="Street, city, state, ZIP"></div>
+            </div>
+            <div class="w9-cert" style="margin-top:14px">
+              <strong>W-9 certification</strong>
+              <p class="small">By signing, you certify that the tax identification number provided is correct, you are a U.S. person or other U.S. person status applies for W-9 purposes, and the backup withholding/FATCA statements you submit are accurate for your situation.</p>
+              <label class="check"><input type="checkbox" name="contractor_w9_perjury_certification" value="1" required> <span>I certify the W-9 information under penalties of perjury and understand the business may rely on it for 1099 reporting.</span></label>
+              <div class="grid">
+                <div><label>W-9 Electronic Signature Name</label><input name="contractor_w9_signature_name" required value="{{ v.get('contractor_w9_signature_name') or worker.contractor_w9_signature_name or worker.contractor_signature_name or '' }}"></div>
+                <div><label>W-9 Signature Date</label><input type="date" name="contractor_w9_signature_date" required value="{{ v.get('contractor_w9_signature_date') or worker.contractor_w9_signature_date or today }}"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2 class="section-title">Scope, Agreement, and Classification Review</h2>
+            <div class="grid">
+              <div class="full"><label>Scope of work</label><textarea name="contractor_scope_of_work" required>{{ v.get('contractor_scope_of_work') or worker.contractor_scope_of_work or '' }}</textarea></div>
+              <div class="full"><label>Payment terms</label><textarea name="contractor_payment_terms" required>{{ v.get('contractor_payment_terms') or worker.contractor_payment_terms or '' }}</textarea></div>
+              <div><label>Agreement Effective Date</label><input type="date" name="contractor_agreement_effective_date" required value="{{ v.get('contractor_agreement_effective_date') or worker.contractor_agreement_effective_date or today }}"></div>
+              <div><label>Agreement Signature Date</label><input type="date" name="contractor_signature_date" required value="{{ v.get('contractor_signature_date') or worker.contractor_signature_date or today }}"></div>
+              <div><label>Typed Agreement Signature</label><input name="contractor_signature_name" required value="{{ v.get('contractor_signature_name') or worker.contractor_signature_name or '' }}"></div>
+              <div><label>Signer Title / Authority</label><input name="contractor_signer_title" value="{{ v.get('contractor_signer_title') or worker.contractor_signer_title or '' }}" placeholder="Owner, member, authorized signer"></div>
+            </div>
+            <label class="check"><input type="checkbox" name="contractor_review_independent_business" value="1" required> <span>I operate an independent business or trade.</span></label>
+            <label class="check"><input type="checkbox" name="contractor_review_controls_methods" value="1" required> <span>I control the means and methods of my work, subject to the accepted job result and applicable safety/jobsite rules.</span></label>
+            <label class="check"><input type="checkbox" name="contractor_review_provides_tools" value="1" required> <span>I provide tools, equipment, business resources, or specialized resources when applicable to the work.</span></label>
+            <label class="check"><input type="checkbox" name="contractor_review_may_work_for_others" value="1" required> <span>I may perform services for other customers or businesses.</span></label>
+            <label class="check"><input type="checkbox" name="contractor_review_job_based_pay" value="1" required> <span>I am paid by job, invoice, deliverable, or agreed contractor terms.</span></label>
+          </section>
+
+          <section class="card">
+            <h2 class="section-title">Insurance, Workers Comp, and Safety</h2>
+            <div class="grid">
+              <div><label>General Liability Carrier</label><input name="contractor_insurance_carrier" value="{{ v.get('contractor_insurance_carrier') or worker.contractor_insurance_carrier or '' }}"></div>
+              <div><label>General Liability Policy Number</label><input name="contractor_policy_number" value="{{ v.get('contractor_policy_number') or worker.contractor_policy_number or '' }}"></div>
+              <div><label>General Liability Expiration</label><input type="date" name="contractor_policy_expiration" value="{{ v.get('contractor_policy_expiration') or worker.contractor_policy_expiration or '' }}"></div>
+              <div><label>Insurance Document Reference</label><input name="contractor_general_liability_document_reference" value="{{ v.get('contractor_general_liability_document_reference') or worker.contractor_general_liability_document_reference or '' }}" placeholder="Certificate file name or note"></div>
+              <div><label>Workers Comp Status</label><select name="contractor_workers_comp_status" required><option value="">Select</option>{% for value, label in contractor_workers_comp_status_options %}<option value="{{ value }}" {% if (v.get('contractor_workers_comp_status') or worker.contractor_workers_comp_status or '') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+              <div><label>Workers Comp Carrier</label><input name="contractor_workers_comp_carrier" value="{{ v.get('contractor_workers_comp_carrier') or worker.contractor_workers_comp_carrier or '' }}"></div>
+              <div><label>Workers Comp Policy Number</label><input name="contractor_workers_comp_policy_number" value="{{ v.get('contractor_workers_comp_policy_number') or worker.contractor_workers_comp_policy_number or '' }}"></div>
+              <div><label>Workers Comp Expiration</label><input type="date" name="contractor_workers_comp_expiration" value="{{ v.get('contractor_workers_comp_expiration') or worker.contractor_workers_comp_expiration or '' }}"></div>
+              <div><label>Exemption Certificate Number</label><input name="contractor_workers_comp_exemption_number" value="{{ v.get('contractor_workers_comp_exemption_number') or worker.contractor_workers_comp_exemption_number or '' }}"></div>
+              <div><label>Exemption Expiration</label><input type="date" name="contractor_workers_comp_exemption_expiration" value="{{ v.get('contractor_workers_comp_exemption_expiration') or worker.contractor_workers_comp_exemption_expiration or '' }}"></div>
+              <div class="full"><label>Workers Comp Document Reference</label><input name="contractor_workers_comp_document_reference" value="{{ v.get('contractor_workers_comp_document_reference') or worker.contractor_workers_comp_document_reference or '' }}" placeholder="Certificate/exemption file name or note"></div>
+            </div>
+            <label class="check"><input type="checkbox" name="contractor_disclosure_ack" value="1" required> <span>I acknowledge this is an independent contractor engagement and not a W-2 employee position, subject to the actual facts and applicable law.</span></label>
+            <label class="check"><input type="checkbox" name="contractor_no_benefits_ack" value="1" required> <span>I acknowledge I am not enrolled in employee benefits through the business unless a law or separate written plan requires otherwise.</span></label>
+            <label class="check"><input type="checkbox" name="contractor_insurance_ack" value="1" required> <span>I acknowledge responsibility for required insurance, workers compensation coverage, or valid exemption documentation.</span></label>
+            <label class="check"><input type="checkbox" name="contractor_safety_ack" value="1" required> <span>I acknowledge responsibility for safe work practices, licensing, training, and OSHA/jobsite safety obligations that apply to my work.</span></label>
+            <label class="check"><input type="checkbox" name="contractor_classification_ack" value="1" required> <span>I acknowledge the classification review and understand the actual working relationship controls if law requires a different result.</span></label>
+          </section>
+
+          <section class="card">
+            <h2 class="section-title">Submit</h2>
+            <p class="small">LedgerFlow will store the submission time, access/submission status, IP address, browser user agent, electronic consent, W-9 certification, and electronic signature audit record.</p>
+            <button class="btn" type="submit">Submit W-9 Intake and E-Sign Agreement</button>
+          </section>
+        </form>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>
