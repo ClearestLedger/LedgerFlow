@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='report'>
+  <div class='toolbar'>
+    <a href='{{ url_for("ops_team_member", client_id=worker.client_id, worker_id=worker.id) }}' class='btn btn-secondary'>Back to Team Member</a>
+    <button onclick='window.print()' class='btn btn-dark' type='button'>Print</button>
+  </div>
+
+  <h2>Independent Contractor Agreement Draft</h2>
+  <div class='small'>Operational draft for business use. Review with legal counsel before signing or relying on it as a final contract.</div>
+  <div class='small' style='margin-top:8px'>Official references: <a href='{{ irs_independent_contractor_url }}' target='_blank' rel='noopener'>IRS worker classification</a>, <a href='{{ irs_w9_requester_url }}' target='_blank' rel='noopener'>W-9 requester instructions</a>, <a href='{{ irs_1099_nec_url }}' target='_blank' rel='noopener'>1099-NEC instructions</a>, <a href='{{ dol_flsa_contractor_url }}' target='_blank' rel='noopener'>DOL FLSA classification</a>, <a href='{{ osha_multi_employer_url }}' target='_blank' rel='noopener'>OSHA multi-employer policy</a>, <a href='{{ florida_workers_comp_exemption_url }}' target='_blank' rel='noopener'>Florida workers comp exemptions</a>.</div>
+
+  <div class='card' style='margin-top:16px;padding:24px'>
+    <p>This Independent Contractor Agreement is between <strong>{{ client.business_name }}</strong> ("Business") and <strong>{{ worker.contractor_legal_name or worker.name }}</strong>{% if worker.contractor_business_name %}, doing business as <strong>{{ worker.contractor_business_name }}</strong>{% endif %} ("Subcontractor"). The effective date is <strong>{{ effective_date }}</strong>.</p>
+
+    <h3>1. Relationship of the Parties</h3>
+    <p>The parties intend to create an independent contractor relationship. The Subcontractor is not being engaged as a W-2 employee, and the Subcontractor remains responsible for the Subcontractor's own taxes, licensing, insurance, staffing, tools, training, and business obligations, except where applicable law or a separate signed agreement requires something else.</p>
+    <p>This agreement documents the parties' intent and onboarding record. It does not override IRS, Department of Labor, OSHA, state workers compensation, or court classification rules if the actual working relationship is different from the facts recorded here.</p>
+
+    <h3>2. Services</h3>
+    <p>{{ worker.contractor_scope_of_work or 'Services will be performed as assigned by the Business and accepted by the Subcontractor in writing, by text, or through the operating system schedule.' }}</p>
+
+    <h3>3. Compensation and Payment Terms</h3>
+    <p>{{ worker.contractor_payment_terms or 'The Business will pay the Subcontractor according to the approved pay records, job approvals, or written service terms saved in LedgerFlow.' }}</p>
+
+    <h3>4. Tax Records and 1099 Support</h3>
+    <p>The Business expects a completed W-9 from the Subcontractor before payment processing for 1099 reporting support. Current LedgerFlow record: TIN type <strong>{{ worker.contractor_tin_type|upper if worker.contractor_tin_type else 'Not saved' }}</strong>, W-9 received <strong>{{ worker.contractor_w9_received_date or 'Not saved' }}</strong>, W-9 signed <strong>{{ worker.contractor_w9_signed_date or 'Not saved' }}</strong>.</p>
+
+    <h3>5. Insurance and Licensing</h3>
+    <p>General liability carrier: <strong>{{ worker.contractor_insurance_carrier or 'Not saved' }}</strong>{% if worker.contractor_policy_number %}, policy <strong>{{ worker.contractor_policy_number }}</strong>{% endif %}{% if worker.contractor_policy_expiration %}, expiring <strong>{{ worker.contractor_policy_expiration }}</strong>{% endif %}. License number: <strong>{{ worker.contractor_license_number or 'Not saved' }}</strong>.</p>
+    <p>Workers compensation status: <strong>{{ (worker.contractor_workers_comp_status or 'not_saved')|replace('_', ' ')|title }}</strong>{% if worker.contractor_workers_comp_carrier %}, carrier <strong>{{ worker.contractor_workers_comp_carrier }}</strong>{% endif %}{% if worker.contractor_workers_comp_policy_number %}, policy <strong>{{ worker.contractor_workers_comp_policy_number }}</strong>{% endif %}{% if worker.contractor_workers_comp_exemption_number %}, exemption certificate <strong>{{ worker.contractor_workers_comp_exemption_number }}</strong>{% endif %}. The Subcontractor must maintain required coverage or valid exemption documentation and provide updated proof when records expire.</p>
+
+    <h3>6. Safety and Jobsite Duties</h3>
+    <p>The Subcontractor is responsible for safe work practices, training, supervision of its own helpers, required protective equipment, and compliance with OSHA and jobsite safety requirements that apply to the Subcontractor's work. Nothing in this agreement removes any safety duties that may apply to the Business as a host, controlling, creating, exposing, or correcting employer under applicable law.</p>
+
+    <h3>7. Employee Benefits Disclosure</h3>
+    <p>The Subcontractor acknowledges that this engagement is not enrollment in employee benefit programs, paid employee leave, payroll withholding, unemployment benefits, or W-2 employee payroll unless applicable law or a separate written plan requires otherwise.</p>
+
+    <h3>8. Term and Termination</h3>
+    <p>This agreement begins on <strong>{{ effective_date }}</strong> and continues until the work ends or either party terminates the relationship according to written notice, job completion, or a separate signed service schedule.</p>
+
+    <h3>9. Addresses for Notice</h3>
+    <table class='table' style='margin-top:12px'>
+      <tr><th>Business</th><th>Subcontractor</th></tr>
+      <tr>
+        <td>{{ client.business_name }}<br>{{ client.address or '' }}<br>{{ client.email or '' }}<br>{{ client.phone or '' }}</td>
+        <td>{{ worker.contractor_legal_name or worker.name }}{% if worker.contractor_business_name %}<br>{{ worker.contractor_business_name }}{% endif %}<br>{{ worker.address or '' }}<br>{{ worker.email or '' }}<br>{{ worker.phone or '' }}</td>
+      </tr>
+    </table>
+
+    <h3>10. Signatures</h3>
+    <table class='table' style='margin-top:12px'>
+      <tr><th>Business Representative</th><th>Subcontractor</th></tr>
+      <tr>
+        <td style='height:90px;vertical-align:bottom'>__________________________________<br>Name / Title<br>Date</td>
+        <td style='height:90px;vertical-align:bottom'>__________________________________<br>{{ worker.contractor_legal_name or worker.name }}<br>Date</td>
+      </tr>
+    </table>
+  </div>
+</div>
+{% endblock %}

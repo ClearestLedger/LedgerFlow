@@ -4,7 +4,7 @@
   <div>
     <div class='page-kicker'>Team & Workers</div>
     <div class='page-title'>{{ selected_worker.name }}</div>
-    <div class='page-subtitle'>Full-screen team information view for worker profile updates, payroll context, availability, and restricted portal management.</div>
+    <div class='page-subtitle'>Full-screen team information view for {% if selected_worker.worker_type == 'W-2' %}employee{% else %}subcontractor{% endif %} profile updates, payout context, availability, and restricted portal management.</div>
   </div>
   <div class='stack-actions'>
     <a class='btn btn-secondary' href='{{ url_for("ops_team", client_id=client_id) }}'>Back to Team</a>
@@ -15,7 +15,8 @@
 
 <div class='team-subnav'>
   <a class='team-subnav-link' href='{{ url_for("ops_team", client_id=client_id) }}'>Team Directory</a>
-  <a class='team-subnav-link' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Team Member</a>
+  <a class='team-subnav-link' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Employee</a>
+  <a class='team-subnav-link' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
   <a class='team-subnav-link active' href='{{ url_for("ops_team_member", client_id=client_id, worker_id=selected_worker.id) }}'>Team Information</a>
 </div>
 
@@ -24,7 +25,7 @@
     <div class='team-info-card'>
       <div class='small-label'>Status</div>
       <strong>{{ (selected_worker.status or 'active')|replace('_', ' ')|title }}</strong>
-      <span>{{ selected_worker.worker_type or '1099' }} | {{ selected_worker.ops_role or selected_worker.role_classification or 'Crew Member' }}</span>
+      <span>{{ 'W-2 Employee' if selected_worker.worker_type == 'W-2' else '1099 Subcontractor' }} | {{ selected_worker.ops_role or selected_worker.role_classification or 'Crew Member' }}</span>
     </div>
     <div class='team-info-card'>
       <div class='small-label'>Crew</div>
@@ -52,7 +53,7 @@
     <div class='card-head'><h3>Edit Team Member</h3><span class='badge'>Folded Setup</span></div>
     <details class='compact-details'>
       <summary>{{ tr('Update Team Member') }}</summary>
-      <form method='post' class='form-grid' style='margin-top:12px'>
+      <form method='post' class='form-grid worker-profile-form' style='margin-top:12px'>
         {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
         <input type='hidden' name='action' value='update_worker'>
         <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
@@ -74,14 +75,14 @@
           <span>Preferred language: {{ selected_worker.preferred_language or 'en' }}</span>
         </div>
         <div class='team-info-card'>
-          <div class='small-label'>Hire Date</div>
-          <strong>{{ selected_worker.hire_date or 'Not set yet' }}</strong>
-          <span>Payroll frequency: {{ (selected_worker.payroll_frequency or 'weekly')|replace('_', ' ')|title }}</span>
+          <div class='small-label'>{{ 'Hire Date' if selected_worker.worker_type == 'W-2' else 'Service Start Date' }}</div>
+          <strong>{{ (selected_worker.hire_date if selected_worker.worker_type == 'W-2' else (selected_worker.engagement_start_date or selected_worker.hire_date)) or 'Not set yet' }}</strong>
+          <span>{{ 'Payroll frequency' if selected_worker.worker_type == 'W-2' else 'Usual payment cadence' }}: {{ (selected_worker.payroll_frequency or 'weekly')|replace('_', ' ')|title }}</span>
         </div>
         <div class='team-info-card'>
           <div class='small-label'>Address</div>
           <strong>{{ selected_worker.address or 'No address saved yet' }}</strong>
-          <span>Tax ID / SSN: {{ selected_worker.ssn or 'Not set yet' }}</span>
+          <span>{{ 'SSN / Tax ID' if selected_worker.worker_type == 'W-2' else 'TIN / SSN / EIN' }}: {{ selected_worker.ssn or 'Not set yet' }}</span>
         </div>
         <div class='team-info-card'>
           <div class='small-label'>Payment Method</div>
@@ -92,6 +93,7 @@
       <div class='team-callout' style='margin-top:14px'>
         <p><strong>Availability baseline:</strong> {{ selected_worker.availability_baseline or 'No baseline notes saved yet.' }}</p>
         {% if selected_worker.pay_notes %}<p style='margin-top:10px'><strong>Pay notes:</strong> {{ selected_worker.pay_notes }}</p>{% endif %}
+        {% if selected_worker.date_of_birth %}<p style='margin-top:10px'><strong>Date of birth:</strong> {{ selected_worker.date_of_birth }}</p>{% endif %}
       </div>
     </details>
   </div>
@@ -230,13 +232,14 @@
     </details>
   </div>
 
+  {% if selected_worker.worker_type == 'W-2' %}
   <div class='card'>
     <div class='card-head'>
-      <h3>W-4 & Forms</h3>
+      <h3>Employee Tax Forms</h3>
       <div class='stack-actions'>
         <a class='btn btn-secondary btn-sm' href='{{ url_for("w4", worker_id=selected_worker.id) }}' target='_blank'>Printable W-4</a>
         <a class='btn btn-secondary btn-sm' href='{{ url_for("w2", worker_id=selected_worker.id) }}' target='_blank'>W-2</a>
-        {% if selected_worker.worker_type != 'W-2' %}<a class='btn btn-secondary btn-sm' href='{{ url_for("form_1099", worker_id=selected_worker.id) }}' target='_blank'>1099</a>{% endif %}
+        <a class='btn btn-secondary btn-sm' href='{{ florida_new_hire_reporting_url }}' target='_blank' rel='noopener'>Florida New-Hire</a>
       </div>
     </div>
     <details class='compact-details'>
@@ -258,24 +261,91 @@
       </form>
     </details>
   </div>
+  {% else %}
+  <div class='card'>
+    <div class='card-head'>
+      <h3>1099 & Contractor Compliance</h3>
+      <div class='stack-actions'>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("form_1099", worker_id=selected_worker.id) }}' target='_blank'>1099-NEC</a>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("subcontractor_agreement", worker_id=selected_worker.id) }}' target='_blank'>Subcontractor Agreement</a>
+        <a class='btn btn-secondary btn-sm' href='{{ florida_new_hire_reporting_url }}' target='_blank' rel='noopener'>Florida New-Hire</a>
+      </div>
+    </div>
+    <details class='compact-details' open>
+      <summary>Open 1099 Compliance Snapshot</summary>
+      <div class='team-info-grid' style='margin-top:14px'>
+        <div class='team-info-card'>
+          <div class='small-label'>Legal Name on W-9</div>
+          <strong>{{ selected_worker.contractor_legal_name or selected_worker.name or 'Not saved yet' }}</strong>
+          <span>{{ selected_worker.contractor_business_name or 'No DBA or business name saved.' }}</span>
+        </div>
+        <div class='team-info-card'>
+          <div class='small-label'>Tax Classification</div>
+          <strong>{{ (selected_worker.contractor_tax_classification or 'not_set')|replace('_', ' ')|title }}</strong>
+          <span>TIN type: {{ (selected_worker.contractor_tin_type or 'not_set')|upper }}</span>
+        </div>
+        <div class='team-info-card'>
+          <div class='small-label'>W-9 on File</div>
+          <strong>{{ selected_worker.contractor_w9_received_date or 'Missing' }}</strong>
+          <span>Signed {{ selected_worker.contractor_w9_signed_date or 'date not saved yet' }}</span>
+        </div>
+        <div class='team-info-card'>
+          <div class='small-label'>Agreement</div>
+          <strong>{{ selected_worker.contractor_agreement_effective_date or 'Draft not dated yet' }}</strong>
+          <span>Signed {{ selected_worker.contractor_agreement_signed_date or 'not saved yet' }}</span>
+        </div>
+        <div class='team-info-card'>
+          <div class='small-label'>Workers Comp</div>
+          <strong>{{ (selected_worker.contractor_workers_comp_status or 'missing')|replace('_', ' ')|title }}</strong>
+          <span>{% if selected_worker.contractor_workers_comp_policy_number %}Policy {{ selected_worker.contractor_workers_comp_policy_number }}{% elif selected_worker.contractor_workers_comp_exemption_number %}Exemption {{ selected_worker.contractor_workers_comp_exemption_number }}{% else %}Coverage or exemption proof not saved yet{% endif %}</span>
+        </div>
+      </div>
+      <div class='team-callout' style='margin-top:14px'>
+        <p><strong>Scope of work:</strong> {{ selected_worker.contractor_scope_of_work or 'No subcontractor scope saved yet.' }}</p>
+        <p style='margin-top:10px'><strong>Payment terms:</strong> {{ selected_worker.contractor_payment_terms or 'No contractor payment terms saved yet.' }}</p>
+        <p style='margin-top:10px'><strong>Insurance / license:</strong> {{ selected_worker.contractor_insurance_carrier or 'No insurance carrier saved' }}{% if selected_worker.contractor_policy_number %} | Policy {{ selected_worker.contractor_policy_number }}{% endif %}{% if selected_worker.contractor_policy_expiration %} | Expires {{ selected_worker.contractor_policy_expiration }}{% endif %}{% if selected_worker.contractor_license_number %} | License {{ selected_worker.contractor_license_number }}{% endif %}</p>
+        <p style='margin-top:10px'><strong>Workers comp / exemption:</strong> {{ selected_worker.contractor_workers_comp_carrier or 'No carrier saved' }}{% if selected_worker.contractor_workers_comp_policy_number %} | Policy {{ selected_worker.contractor_workers_comp_policy_number }}{% endif %}{% if selected_worker.contractor_workers_comp_exemption_number %} | Exemption {{ selected_worker.contractor_workers_comp_exemption_number }}{% endif %}{% if selected_worker.contractor_workers_comp_document_reference %} | Proof {{ selected_worker.contractor_workers_comp_document_reference }}{% endif %}</p>
+        <p style='margin-top:10px' class='small'>Reference links: <a href='{{ irs_independent_contractor_url }}' target='_blank' rel='noopener'>IRS worker-classification guidance</a>, <a href='{{ irs_w9_requester_url }}' target='_blank' rel='noopener'>IRS W-9 requester instructions</a>, <a href='{{ irs_1099_nec_url }}' target='_blank' rel='noopener'>IRS 1099-NEC instructions</a>, <a href='{{ dol_flsa_contractor_url }}' target='_blank' rel='noopener'>DOL FLSA classification</a>, <a href='{{ osha_multi_employer_url }}' target='_blank' rel='noopener'>OSHA multi-employer policy</a>, <a href='{{ florida_workers_comp_exemption_url }}' target='_blank' rel='noopener'>Florida workers comp exemptions</a>.</p>
+      </div>
+    </details>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 {% block scripts %}
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('form').forEach(function (form) {
+  document.querySelectorAll('.worker-profile-form').forEach(function (form) {
     var select = form.querySelector('.worker-payout-select');
-    if (!select) return;
     function updatePayoutFields() {
+      if (!select) return;
       var value = select.value;
       form.querySelectorAll('.worker-payout-field').forEach(function (field) {
         var show = field.classList.contains('payout-' + value);
         field.style.display = show ? '' : 'none';
       });
     }
-    select.addEventListener('change', updatePayoutFields);
+    if (select) {
+      select.addEventListener('change', updatePayoutFields);
+    }
+    function updateWorkerTypePanels() {
+      var typeField = form.querySelector('.worker-type-select');
+      var workerType = typeField ? typeField.value : (form.querySelector('input[name="worker_type"]') || {}).value || 'W-2';
+      form.querySelectorAll('.worker-type-group').forEach(function (group) {
+        var show = group.classList.contains('worker-type-' + workerType);
+        group.style.display = show ? '' : 'none';
+        group.querySelectorAll('input, select, textarea').forEach(function (input) {
+          input.disabled = !show;
+        });
+      });
+    }
+    var typeSelect = form.querySelector('.worker-type-select');
+    if (typeSelect) {
+      typeSelect.addEventListener('change', updateWorkerTypePanels);
+    }
     updatePayoutFields();
+    updateWorkerTypePanels();
   });
 });
 </script>

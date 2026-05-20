@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block body %}
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>1099 Subcontractors</div>
+    <div class='page-title'>Add Subcontractor</div>
+    <div class='page-subtitle'>Separate onboarding for independent contractor records, W-9 support, insurance review, safety acknowledgement, and agreement signature.</div>
+  </div>
+  <div class='stack-actions'>
+    <a class='btn btn-secondary' href='{{ url_for("ops_team", client_id=client_id) }}'>Back to Team</a>
+    <a class='btn btn-secondary' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Employee</a>
+  </div>
+</div>
+
+<div class='team-subnav'>
+  <a class='team-subnav-link' href='{{ url_for("ops_team", client_id=client_id) }}'>Team Directory</a>
+  <a class='team-subnav-link' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Employee</a>
+  <a class='team-subnav-link active' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
+</div>
+
+<form method='post' class='subcontractor-onboarding-form'>
+  {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+  <input type='hidden' name='worker_type' value='1099'>
+  <input type='hidden' name='contractor_onboarding_mode' value='1'>
+
+  <div class='card'>
+    <div class='card-head'>
+      <div>
+        <h3>Business and Contractor Identity</h3>
+        <div class='small'>Use W-9 information for the legal name, tax classification, and taxpayer identification fields.</div>
+      </div>
+      <span class='badge'>1099 setup</span>
+    </div>
+    <div class='form-grid'>
+      <div><label>Roster Name</label><input name='name' required placeholder='Name shown in LedgerFlow'></div>
+      <div><label>Legal Name on W-9</label><input name='contractor_legal_name' required placeholder='Exact W-9 name'></div>
+      <div><label>Business Name / DBA</label><input name='contractor_business_name' placeholder='Optional business or DBA name'></div>
+      <div><label>Email</label><input name='email' type='email'></div>
+      <div><label>Phone</label><input name='phone'></div>
+      <div><label>Language</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if option.code == 'en' %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
+      <div style='grid-column:1/-1'><label>Full Mailing Address</label><input name='address' required placeholder='Street, city, state, ZIP'></div>
+      <div><label>Service Start Date</label><input name='engagement_start_date' type='date' value='{{ today_iso }}' required></div>
+      <div><label>Operational Role</label><input name='worker_role' placeholder='Subcontractor, specialty trade, route partner'></div>
+    </div>
+  </div>
+
+  <div class='card' style='margin-top:16px'>
+    <div class='card-head'><h3>W-9 and 1099 Record</h3><span class='badge'>Required</span></div>
+    <div class='form-grid'>
+      <div><label>TIN / SSN / EIN from W-9</label><input name='ssn' required></div>
+      <div><label>TIN Type</label><select name='contractor_tin_type' required><option value=''>Select</option>{% for value, label in contractor_tin_type_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Federal Tax Classification</label><select name='contractor_tax_classification' required><option value=''>Select</option>{% for value, label in contractor_tax_classification_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>W-9 Received Date</label><input name='contractor_w9_received_date' type='date' required></div>
+      <div><label>W-9 Signature Date</label><input name='contractor_w9_signed_date' type='date'></div>
+      <div><label>Usual Payment Cadence</label><select name='payroll_frequency'><option value='weekly'>Weekly</option><option value='biweekly'>Biweekly</option><option value='semimonthly'>Semimonthly</option><option value='monthly' selected>Monthly</option></select></div>
+    </div>
+  </div>
+
+  <div class='card' style='margin-top:16px'>
+    <div class='card-head'><h3>Scope, Payment, and Classification Review</h3><span class='badge'>Audit file</span></div>
+    <div class='form-grid'>
+      <div style='grid-column:1/-1'><label>Scope of Work</label><textarea name='contractor_scope_of_work' required placeholder='Describe the specific services the subcontractor provides.'></textarea></div>
+      <div style='grid-column:1/-1'><label>Payment Terms</label><textarea name='contractor_payment_terms' required placeholder='Per job, per route, invoice terms, net 7, net 15, etc.'></textarea></div>
+      <div><label><input type='checkbox' name='contractor_review_independent_business' value='1' required> Operates an independent business or trade</label></div>
+      <div><label><input type='checkbox' name='contractor_review_controls_methods' value='1' required> Controls the means and methods of work</label></div>
+      <div><label><input type='checkbox' name='contractor_review_provides_tools' value='1' required> Provides tools, equipment, or business resources when applicable</label></div>
+      <div><label><input type='checkbox' name='contractor_review_may_work_for_others' value='1' required> May perform services for other customers</label></div>
+      <div><label><input type='checkbox' name='contractor_review_job_based_pay' value='1' required> Paid by job, invoice, deliverable, or agreed contractor terms</label></div>
+    </div>
+  </div>
+
+  <div class='card' style='margin-top:16px'>
+    <div class='card-head'><h3>Insurance, Workers Comp, and Safety</h3><span class='badge'>Required</span></div>
+    <div class='form-grid'>
+      <div><label>General Liability Carrier</label><input name='contractor_insurance_carrier' placeholder='Carrier name'></div>
+      <div><label>General Liability Policy Number</label><input name='contractor_policy_number'></div>
+      <div><label>General Liability Expiration</label><input name='contractor_policy_expiration' type='date'></div>
+      <div><label>Insurance Document Reference</label><input name='contractor_general_liability_document_reference' placeholder='Certificate file name or note'></div>
+      <div><label>Workers Comp Status</label><select name='contractor_workers_comp_status' required><option value=''>Select</option>{% for value, label in contractor_workers_comp_status_options %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
+      <div><label>Workers Comp Carrier</label><input name='contractor_workers_comp_carrier'></div>
+      <div><label>Workers Comp Policy Number</label><input name='contractor_workers_comp_policy_number'></div>
+      <div><label>Workers Comp Expiration</label><input name='contractor_workers_comp_expiration' type='date'></div>
+      <div><label>Exemption Certificate Number</label><input name='contractor_workers_comp_exemption_number'></div>
+      <div><label>Exemption Expiration</label><input name='contractor_workers_comp_exemption_expiration' type='date'></div>
+      <div style='grid-column:1/-1'><label>Workers Comp Document Reference</label><input name='contractor_workers_comp_document_reference' placeholder='Certificate/exemption file name or note'></div>
+      <div style='grid-column:1/-1' class='team-callout'>
+        <strong>Safety acknowledgement</strong>
+        <p class='small' style='margin-top:6px'>The subcontractor remains responsible for its own training, safe work practices, licenses, tools, insurance records, and OSHA/jobsite safety obligations. This record does not remove any host-business or controlling-employer duties that may apply by law.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class='card' style='margin-top:16px'>
+    <div class='card-head'><h3>Agreement and Required Disclosures</h3><span class='badge'>Signature required</span></div>
+    <div class='form-grid'>
+      <div><label>Agreement Effective Date</label><input name='contractor_agreement_effective_date' type='date' value='{{ today_iso }}' required></div>
+      <div><label>Agreement Signed Date</label><input name='contractor_signature_date' type='date' value='{{ today_iso }}' required></div>
+      <div style='grid-column:1/-1'><label>Typed Signature</label><input name='contractor_signature_name' required placeholder='Subcontractor legal name typed as signature'></div>
+      <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_disclosure_ack' value='1' required> The subcontractor acknowledges this is an independent contractor engagement and not a W-2 employee position, subject to the actual facts and applicable law.</label></div>
+      <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_no_benefits_ack' value='1' required> The subcontractor acknowledges they are not enrolled in employee benefits through the business unless a law or separate written plan requires otherwise.</label></div>
+      <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_insurance_ack' value='1' required> The subcontractor acknowledges responsibility for required insurance, workers compensation coverage, or valid exemption documentation.</label></div>
+      <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_safety_ack' value='1' required> The subcontractor acknowledges responsibility for safe work practices, licensing, training, and OSHA/jobsite safety obligations that apply to its work.</label></div>
+      <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_classification_ack' value='1' required> The business has reviewed the classification factors and will keep this file available for payroll, 1099, insurance, and audit review.</label></div>
+      <div style='grid-column:1/-1'><div class='small'>Official references: <a href='{{ irs_independent_contractor_url }}' target='_blank' rel='noopener'>IRS worker classification</a>, <a href='{{ irs_w9_requester_url }}' target='_blank' rel='noopener'>W-9 requester instructions</a>, <a href='{{ irs_1099_nec_url }}' target='_blank' rel='noopener'>1099-NEC instructions</a>, <a href='{{ dol_flsa_contractor_url }}' target='_blank' rel='noopener'>DOL FLSA classification</a>, <a href='{{ osha_multi_employer_url }}' target='_blank' rel='noopener'>OSHA multi-employer policy</a>, <a href='{{ florida_new_hire_reporting_url }}' target='_blank' rel='noopener'>Florida new-hire reporting</a>, <a href='{{ florida_workers_comp_exemption_url }}' target='_blank' rel='noopener'>Florida workers comp exemptions</a>.</div></div>
+    </div>
+  </div>
+
+  <div class='card' style='margin-top:16px'>
+    <div class='card-head'><h3>Payout Setup</h3><span class='badge'>Optional</span></div>
+    <div class='form-grid worker-profile-form'>
+      <div><label>Payment Preference</label><select name='payout_preference' class='worker-payout-select'>{% for value, label in worker_payout_preferences %}<option value='{{ value }}' {% if value == 'paper_check' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+      <div class='worker-payout-field payout-zelle'><label>Zelle Email / Phone</label><input name='zelle_contact' placeholder='contractor@email.com or phone'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Bank Name</label><input name='deposit_bank_name'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Holder Name</label><input name='deposit_account_holder_name'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Type</label><select name='deposit_account_type'><option value='checking'>Checking</option><option value='savings'>Savings</option></select></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Routing Number</label><input name='deposit_routing_number' inputmode='numeric' maxlength='9'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Account Number</label><input name='deposit_account_number' inputmode='numeric'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Confirm Account Number</label><input name='confirm_deposit_account_number' inputmode='numeric'></div>
+      <div class='worker-payout-field payout-direct_deposit'><label>Last 4 Digits</label><input name='deposit_account_last4' inputmode='numeric' maxlength='4'></div>
+      <div style='grid-column:1/-1'><label>Internal Pay Notes</label><textarea name='pay_notes'></textarea></div>
+    </div>
+  </div>
+
+  <div style='margin-top:16px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap'>
+    <a class='btn btn-secondary' href='{{ url_for("ops_team", client_id=client_id) }}'>Cancel</a>
+    <button type='submit'>Save Subcontractor and Agreement</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('form').forEach(function (form) {
+    var select = form.querySelector('.worker-payout-select');
+    if (!select) return;
+    function updatePayoutFields() {
+      var value = select.value;
+      form.querySelectorAll('.worker-payout-field').forEach(function (field) {
+        var show = field.classList.contains('payout-' + value);
+        field.style.display = show ? '' : 'none';
+      });
+    }
+    select.addEventListener('change', updatePayoutFields);
+    updatePayoutFields();
+  });
+});
+</script>
+{% endblock %}

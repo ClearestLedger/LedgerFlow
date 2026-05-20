@@ -3,33 +3,35 @@
 <div class='toolbar hero-toolbar'>
   <div>
     <div class='page-kicker'>Team & Workers</div>
-    <div class='page-title'>Add Team Member</div>
-    <div class='page-subtitle'>This full-screen setup page gives the business owner a calmer place to add a new worker without mixing roster details into the same view.</div>
+    <div class='page-title'>Add Employee</div>
+    <div class='page-subtitle'>Use this page for W-2 employees only. Subcontractors have a separate 1099 onboarding workflow with W-9, insurance, safety, and agreement records.</div>
   </div>
   <div class='stack-actions'>
     <a class='btn btn-secondary' href='{{ url_for("ops_team", client_id=client_id) }}'>Back to Team</a>
+    <a class='btn btn-secondary' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
   </div>
 </div>
 
 <div class='team-subnav'>
   <a class='team-subnav-link' href='{{ url_for("ops_team", client_id=client_id) }}'>Team Directory</a>
-  <a class='team-subnav-link active' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Team Member</a>
+  <a class='team-subnav-link active' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Employee</a>
+  <a class='team-subnav-link' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
 </div>
 
 <div class='card'>
   <div class='card-head'>
     <div>
-      <h3>Add Team Member</h3>
-      <div class='small'>Create the worker first, then open the full-screen team information page for updates, availability, portal access, and payroll details.</div>
+      <h3>Add W-2 Employee</h3>
+      <div class='small'>Employee onboarding keeps hire date, W-4, W-2, payroll schedule, and Florida new-hire reporting together.</div>
     </div>
     <span class='badge'>{{ workers|length }} on file</span>
   </div>
   <details class='compact-details' open>
-    <summary>{{ tr('Add Team Member') }}</summary>
-    <form method='post' class='form-grid' style='margin-top:12px'>
+    <summary>Add Employee</summary>
+    <form method='post' class='form-grid worker-profile-form' style='margin-top:12px'>
       {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
       <input type='hidden' name='action' value='create_worker'>
-      {% with worker=None, submit_label='Add Team Member' %}
+      {% with worker=None, submit_label='Add Employee', fixed_worker_type='W-2' %}
         {% include '_ops_worker_profile_fields.html' %}
       {% endwith %}
     </form>
@@ -40,18 +42,36 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('form').forEach(function (form) {
+  document.querySelectorAll('.worker-profile-form').forEach(function (form) {
     var select = form.querySelector('.worker-payout-select');
-    if (!select) return;
     function updatePayoutFields() {
+      if (!select) return;
       var value = select.value;
       form.querySelectorAll('.worker-payout-field').forEach(function (field) {
         var show = field.classList.contains('payout-' + value);
         field.style.display = show ? '' : 'none';
       });
     }
-    select.addEventListener('change', updatePayoutFields);
+    if (select) {
+      select.addEventListener('change', updatePayoutFields);
+    }
+    function updateWorkerTypePanels() {
+      var typeField = form.querySelector('.worker-type-select');
+      var workerType = typeField ? typeField.value : (form.querySelector('input[name="worker_type"]') || {}).value || 'W-2';
+      form.querySelectorAll('.worker-type-group').forEach(function (group) {
+        var show = group.classList.contains('worker-type-' + workerType);
+        group.style.display = show ? '' : 'none';
+        group.querySelectorAll('input, select, textarea').forEach(function (input) {
+          input.disabled = !show;
+        });
+      });
+    }
+    var typeSelect = form.querySelector('.worker-type-select');
+    if (typeSelect) {
+      typeSelect.addEventListener('change', updateWorkerTypePanels);
+    }
     updatePayoutFields();
+    updateWorkerTypePanels();
   });
 });
 </script>

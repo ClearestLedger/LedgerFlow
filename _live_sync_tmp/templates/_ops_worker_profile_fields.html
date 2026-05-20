@@ -1,25 +1,110 @@
-<div><label>Name</label><input name='name' required value='{{ worker.name if worker else "" }}'></div>
-<div><label>Classification</label><select name='worker_type'><option value='1099' {% if not worker or worker.worker_type == '1099' %}selected{% endif %}>1099</option><option value='W-2' {% if worker and worker.worker_type == 'W-2' %}selected{% endif %}>W-2</option></select></div>
-<div><label>Operational Role</label><input name='worker_role' value='{{ worker.worker_role if worker else "" }}' placeholder='Crew Lead, Painter, Dispatcher'></div>
+{% set effective_type = fixed_worker_type or (worker.worker_type if worker else 'W-2') %}
+{% set type_locked = fixed_worker_type is defined and fixed_worker_type %}
+{% set default_date = today_iso if today_iso is defined else today %}
+
+<div>
+  <label>Name</label>
+  <input name='name' required value='{{ worker.name if worker else "" }}' placeholder='Legal or roster name'>
+</div>
+
+{% if type_locked %}
+<input type='hidden' name='worker_type' value='{{ fixed_worker_type }}'>
+<div>
+  <label>Worker Type</label>
+  <input value='{{ "W-2 Employee" if fixed_worker_type == "W-2" else "1099 Subcontractor" }}' readonly>
+</div>
+{% else %}
+<div>
+  <label>Worker Type</label>
+  <select name='worker_type' class='worker-type-select'>
+    <option value='W-2' {% if effective_type == 'W-2' %}selected{% endif %}>W-2 Employee</option>
+    <option value='1099' {% if effective_type != 'W-2' %}selected{% endif %}>1099 Subcontractor</option>
+  </select>
+</div>
+{% endif %}
+
+<div><label>Operational Role</label><input name='worker_role' value='{{ worker.worker_role if worker else (worker.role_classification if worker else "") }}' placeholder='Crew Lead, Painter, Dispatcher'></div>
 <div><label>Phone</label><input name='phone' value='{{ worker.phone if worker else "" }}'></div>
-<div><label>Email</label><input name='email' value='{{ worker.email if worker else "" }}'></div>
+<div><label>Email</label><input name='email' type='email' value='{{ worker.email if worker else "" }}'></div>
 <div><label>Language</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if worker and worker.preferred_language == option.code %}selected{% elif not worker and option.code == 'en' %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
 <div><label>Status</label><select name='status'><option value='active' {% if not worker or worker.status == 'active' %}selected{% endif %}>Active</option><option value='inactive' {% if worker and worker.status == 'inactive' %}selected{% endif %}>Inactive</option><option value='terminated' {% if worker and worker.status == 'terminated' %}selected{% endif %}>Terminated</option></select></div>
-<div><label>Payroll Frequency</label><select name='payroll_frequency'><option value='weekly' {% if not worker or worker.payroll_frequency == 'weekly' %}selected{% endif %}>Weekly</option><option value='biweekly' {% if worker and worker.payroll_frequency == 'biweekly' %}selected{% endif %}>Biweekly</option><option value='semimonthly' {% if worker and worker.payroll_frequency == 'semimonthly' %}selected{% endif %}>Semimonthly</option><option value='monthly' {% if worker and worker.payroll_frequency == 'monthly' %}selected{% endif %}>Monthly</option></select></div>
-<div><label>Hire Date</label><input name='hire_date' type='date' value='{{ worker.hire_date if worker else today_iso }}'></div>
-<div><label>SSN / Tax ID</label><input name='ssn' value='{{ worker.ssn if worker else "" }}'></div>
+<div><label>Date of Birth</label><input name='date_of_birth' type='date' value='{{ worker.date_of_birth if worker else "" }}'></div>
+<div style='grid-column:1/-1'><label>Full Mailing Address</label><input name='address' required value='{{ worker.address if worker else "" }}' placeholder='Street, city, state, ZIP'></div>
+
+<div class='worker-type-group worker-type-w2' style='grid-column:1/-1'>
+  <div class='team-callout'>
+    <strong>Employee onboarding</strong>
+    <div class='small' style='margin-top:6px'>Use this section for W-2 employees. Keep the hire date, W-4, and payroll schedule here. Florida new-hire reporting stays linked below for manager follow-through.</div>
+  </div>
+  <div class='form-grid' style='margin-top:14px'>
+    <div><label>Hire Date</label><input name='hire_date' type='date' value='{{ worker.hire_date if worker else default_date }}'></div>
+    <div><label>Payroll Frequency</label><select name='payroll_frequency'><option value='weekly' {% if not worker or (worker.payroll_frequency or 'weekly') == 'weekly' %}selected{% endif %}>Weekly</option><option value='biweekly' {% if worker and worker.payroll_frequency == 'biweekly' %}selected{% endif %}>Biweekly</option><option value='semimonthly' {% if worker and worker.payroll_frequency == 'semimonthly' %}selected{% endif %}>Semimonthly</option><option value='monthly' {% if worker and worker.payroll_frequency == 'monthly' %}selected{% endif %}>Monthly</option></select></div>
+    <div><label>SSN / Tax ID</label><input name='ssn' value='{{ worker.ssn if worker else "" }}'></div>
+    <div><label>Florida New-Hire</label><div class='small' style='padding-top:10px'><a href='{{ florida_new_hire_reporting_url }}' target='_blank' rel='noopener'>Open Florida reporting page</a><br><a href='{{ florida_new_hire_instructions_url }}' target='_blank' rel='noopener'>Florida reporting instructions</a></div></div>
+  </div>
+</div>
+
+<div class='worker-type-group worker-type-1099' style='grid-column:1/-1'>
+  <div class='team-callout'>
+    <strong>Subcontractor onboarding</strong>
+    <div class='small' style='margin-top:6px'>Use this section for independent contractors only. It follows a W-9 and 1099 recordkeeping flow, not an employee hire flow.</div>
+  </div>
+  <div class='form-grid' style='margin-top:14px'>
+    <div><label>Service Start Date</label><input name='engagement_start_date' type='date' value='{{ worker.engagement_start_date if worker and worker.engagement_start_date else (worker.hire_date if worker and worker.worker_type != "W-2" else default_date) }}'></div>
+    <div><label>Usual Payment Cadence</label><select name='payroll_frequency'><option value='weekly' {% if worker and worker.payroll_frequency == 'weekly' %}selected{% endif %}>Weekly</option><option value='biweekly' {% if worker and worker.payroll_frequency == 'biweekly' %}selected{% endif %}>Biweekly</option><option value='semimonthly' {% if worker and worker.payroll_frequency == 'semimonthly' %}selected{% endif %}>Semimonthly</option><option value='monthly' {% if not worker or (worker.payroll_frequency or 'monthly') == 'monthly' %}selected{% endif %}>Monthly</option></select></div>
+    <div><label>Legal Name on W-9</label><input name='contractor_legal_name' value='{{ worker.contractor_legal_name if worker else "" }}' placeholder='Exact name on the W-9'></div>
+    <div><label>Business Name (if any)</label><input name='contractor_business_name' value='{{ worker.contractor_business_name if worker else "" }}' placeholder='DBA or registered business name'></div>
+    <div><label>TIN / SSN / EIN from W-9</label><input name='ssn' value='{{ worker.ssn if worker else "" }}'></div>
+    <div><label>TIN Type</label><select name='contractor_tin_type'><option value=''>Select</option>{% for value, label in contractor_tin_type_options %}<option value='{{ value }}' {% if worker and worker.contractor_tin_type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div><label>Federal Tax Classification</label><select name='contractor_tax_classification'><option value=''>Select</option>{% for value, label in contractor_tax_classification_options %}<option value='{{ value }}' {% if worker and worker.contractor_tax_classification == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div><label>W-9 Received Date</label><input name='contractor_w9_received_date' type='date' value='{{ worker.contractor_w9_received_date if worker else "" }}'></div>
+    <div><label>W-9 Signature Date</label><input name='contractor_w9_signed_date' type='date' value='{{ worker.contractor_w9_signed_date if worker else "" }}'></div>
+    <div><label>Agreement Effective Date</label><input name='contractor_agreement_effective_date' type='date' value='{{ worker.contractor_agreement_effective_date if worker else "" }}'></div>
+    <div><label>Agreement Signed Date</label><input name='contractor_agreement_signed_date' type='date' value='{{ worker.contractor_agreement_signed_date if worker else "" }}'></div>
+    <div><label>License Number</label><input name='contractor_license_number' value='{{ worker.contractor_license_number if worker else "" }}' placeholder='Optional state or trade license'></div>
+    <div><label>Insurance Carrier</label><input name='contractor_insurance_carrier' value='{{ worker.contractor_insurance_carrier if worker else "" }}' placeholder='General liability or workers comp carrier'></div>
+    <div><label>Policy Number</label><input name='contractor_policy_number' value='{{ worker.contractor_policy_number if worker else "" }}'></div>
+    <div><label>Policy Expiration</label><input name='contractor_policy_expiration' type='date' value='{{ worker.contractor_policy_expiration if worker else "" }}'></div>
+    <div><label>Insurance Document Reference</label><input name='contractor_general_liability_document_reference' value='{{ worker.contractor_general_liability_document_reference if worker else "" }}' placeholder='Certificate file name or note'></div>
+    <div><label>Workers Comp Status</label><select name='contractor_workers_comp_status'><option value=''>Select</option>{% for value, label in contractor_workers_comp_status_options %}<option value='{{ value }}' {% if worker and worker.contractor_workers_comp_status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div><label>Workers Comp Carrier</label><input name='contractor_workers_comp_carrier' value='{{ worker.contractor_workers_comp_carrier if worker else "" }}'></div>
+    <div><label>Workers Comp Policy Number</label><input name='contractor_workers_comp_policy_number' value='{{ worker.contractor_workers_comp_policy_number if worker else "" }}'></div>
+    <div><label>Workers Comp Expiration</label><input name='contractor_workers_comp_expiration' type='date' value='{{ worker.contractor_workers_comp_expiration if worker else "" }}'></div>
+    <div><label>Exemption Certificate Number</label><input name='contractor_workers_comp_exemption_number' value='{{ worker.contractor_workers_comp_exemption_number if worker else "" }}'></div>
+    <div><label>Exemption Expiration</label><input name='contractor_workers_comp_exemption_expiration' type='date' value='{{ worker.contractor_workers_comp_exemption_expiration if worker else "" }}'></div>
+    <div style='grid-column:1/-1'><label>Workers Comp Document Reference</label><input name='contractor_workers_comp_document_reference' value='{{ worker.contractor_workers_comp_document_reference if worker else "" }}' placeholder='Certificate/exemption file name or note'></div>
+    <div style='grid-column:1/-1'><label>Scope of Work</label><textarea name='contractor_scope_of_work' placeholder='Painting prep, final clean, lawn service route, detailing support, specialty labor'>{{ worker.contractor_scope_of_work if worker else "" }}</textarea></div>
+    <div style='grid-column:1/-1'><label>Payment Terms</label><textarea name='contractor_payment_terms' placeholder='Per job, per hour, per completed route, net 7, net 15, etc.'>{{ worker.contractor_payment_terms if worker else "" }}</textarea></div>
+    <div style='grid-column:1/-1'><strong>Classification Review</strong><div class='small' style='margin-top:4px'>These are recordkeeping prompts, not a guarantee of legal classification. Keep documents that support the actual working relationship.</div></div>
+    <div><label><input type='checkbox' name='contractor_review_independent_business' value='1' required> Operates an independent business or trade</label></div>
+    <div><label><input type='checkbox' name='contractor_review_controls_methods' value='1' required> Controls the means and methods of work</label></div>
+    <div><label><input type='checkbox' name='contractor_review_provides_tools' value='1' required> Provides tools, equipment, or business resources when applicable</label></div>
+    <div><label><input type='checkbox' name='contractor_review_may_work_for_others' value='1' required> May perform services for other customers</label></div>
+    <div><label><input type='checkbox' name='contractor_review_job_based_pay' value='1' required> Paid by job, invoice, deliverable, or agreed contractor terms</label></div>
+    <div style='grid-column:1/-1'><label>Typed Agreement Signature</label><input name='contractor_signature_name' value='{{ worker.contractor_signature_name if worker else "" }}' placeholder='Subcontractor legal name typed as signature'></div>
+    <div><label>Agreement Signature Date</label><input name='contractor_signature_date' type='date' value='{{ worker.contractor_signature_date if worker else "" }}'></div>
+    <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_disclosure_ack' value='1' {% if worker and worker.contractor_disclosure_ack_at %}checked{% endif %} required> Independent contractor disclosure acknowledged</label></div>
+    <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_no_benefits_ack' value='1' {% if worker and worker.contractor_no_benefits_ack_at %}checked{% endif %} required> Employee benefits disclosure acknowledged</label></div>
+    <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_insurance_ack' value='1' {% if worker and worker.contractor_insurance_ack_at %}checked{% endif %} required> Insurance and workers comp documentation responsibility acknowledged</label></div>
+    <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_safety_ack' value='1' {% if worker and worker.contractor_safety_ack_at %}checked{% endif %} required> OSHA/jobsite safety responsibility acknowledged</label></div>
+    <div style='grid-column:1/-1'><label><input type='checkbox' name='contractor_classification_ack' value='1' {% if worker and worker.contractor_classification_ack_at %}checked{% endif %} required> Classification review acknowledged</label></div>
+    <div style='grid-column:1/-1'>
+      <div class='small'>Official references: <a href='{{ irs_independent_contractor_url }}' target='_blank' rel='noopener'>IRS worker-classification guidance</a>, <a href='{{ irs_w9_requester_url }}' target='_blank' rel='noopener'>IRS W-9 requester instructions</a>, <a href='{{ irs_1099_nec_url }}' target='_blank' rel='noopener'>IRS 1099-NEC instructions</a>, <a href='{{ dol_flsa_contractor_url }}' target='_blank' rel='noopener'>DOL FLSA classification</a>, <a href='{{ osha_multi_employer_url }}' target='_blank' rel='noopener'>OSHA multi-employer policy</a>, <a href='{{ florida_new_hire_reporting_url }}' target='_blank' rel='noopener'>Florida new-hire reporting</a>, <a href='{{ florida_workers_comp_exemption_url }}' target='_blank' rel='noopener'>Florida workers comp exemptions</a>.</div>
+    </div>
+  </div>
+</div>
+
 <div><label>Crew / Group</label><input name='crew_label' value='{{ worker.crew_label if worker else "" }}' placeholder='Crew A, East Route'></div>
 <div><label>Skill Tags</label><input name='skill_tags' value='{{ worker.skill_tags if worker else "" }}' placeholder='deep clean, ladder work, trim'></div>
-<div><label>Team Member Payment Preference</label><select name='payout_preference' class='worker-payout-select'>{% for value, label in worker_payout_preferences %}<option value='{{ value }}' {% if worker and (worker.payout_preference or 'paper_check') == value %}selected{% elif not worker and value == 'paper_check' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+<div><label>Payment Preference</label><select name='payout_preference' class='worker-payout-select'>{% for value, label in worker_payout_preferences %}<option value='{{ value }}' {% if worker and (worker.payout_preference or 'paper_check') == value %}selected{% elif not worker and value == 'paper_check' %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
 <div class='worker-payout-field payout-zelle'><label>Zelle Email / Phone</label><input name='zelle_contact' value='{{ worker.zelle_contact if worker else "" }}' placeholder='teammember@email.com or phone'></div>
 <div class='worker-payout-field payout-direct_deposit'><label>Bank Name</label><input name='deposit_bank_name' value='{{ worker.deposit_bank_name if worker else "" }}' placeholder='Chase Business Checking'></div>
-<div class='worker-payout-field payout-direct_deposit'><label>Account Holder Name</label><input name='deposit_account_holder_name' value='{{ worker.deposit_account_holder_name if worker else "" }}' placeholder='Team member legal name'></div>
+<div class='worker-payout-field payout-direct_deposit'><label>Account Holder Name</label><input name='deposit_account_holder_name' value='{{ worker.deposit_account_holder_name if worker else "" }}' placeholder='Payee legal name'></div>
 <div class='worker-payout-field payout-direct_deposit'><label>Account Type</label><select name='deposit_account_type'><option value='checking' {% if not worker or (worker.deposit_account_type or 'checking') == 'checking' %}selected{% endif %}>Checking</option><option value='savings' {% if worker and worker.deposit_account_type == 'savings' %}selected{% endif %}>Savings</option></select></div>
 <div class='worker-payout-field payout-direct_deposit'><label>Routing Number</label><input name='deposit_routing_number' inputmode='numeric' maxlength='9' placeholder='{% if worker and worker.deposit_account_last4 %}Leave blank to keep current{% else %}9 digits{% endif %}'></div>
 <div class='worker-payout-field payout-direct_deposit'><label>Account Number</label><input name='deposit_account_number' inputmode='numeric' placeholder='{% if worker and worker.deposit_account_last4 %}Leave blank to keep current{% else %}Enter account number{% endif %}'></div>
 <div class='worker-payout-field payout-direct_deposit'><label>Confirm Account Number</label><input name='confirm_deposit_account_number' inputmode='numeric' placeholder='{% if worker and worker.deposit_account_last4 %}Re-enter only if changing{% else %}Re-enter account number{% endif %}'></div>
 <div class='worker-payout-field payout-direct_deposit'><label>Last 4 Digits</label><input name='deposit_account_last4' value='{{ worker.deposit_account_last4 if worker else "" }}' inputmode='numeric' maxlength='4' placeholder='6789'></div>
-<div style='grid-column:1/-1'><label>Address</label><input name='address' value='{{ worker.address if worker else "" }}'></div>
-<div style='grid-column:1/-1'><label>Pay Notes</label><textarea name='pay_notes'>{{ worker.pay_notes if worker else "" }}</textarea></div>
-<div style='grid-column:1/-1'><label>Availability Baseline</label><textarea name='availability_baseline'>{{ worker.availability_baseline if worker else "" }}</textarea></div>
+<div style='grid-column:1/-1'><label>Internal Pay Notes</label><textarea name='pay_notes'>{{ worker.pay_notes if worker else "" }}</textarea></div>
+<div style='grid-column:1/-1'><label>Availability / Scheduling Notes</label><textarea name='availability_baseline'>{{ worker.availability_baseline if worker else "" }}</textarea></div>
 <div><button type='submit'>{{ submit_label }}</button></div>

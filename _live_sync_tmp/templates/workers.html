@@ -8,33 +8,23 @@
   <div class='card'>
     <details class='compact-details'>
       <summary>Add Team Member</summary>
-      <div class='small' style='margin:12px 0'>Create a new team member record only when you need to onboard someone into payroll or contractor tracking.</div>
-      <div class='small' style='margin:0 0 12px 0;padding:12px 14px;border:1px solid #e3ebf4;border-radius:16px;background:#f8fbff'>New team member records are now saved inside LedgerFlow with permanent profile history after creation.</div>
-      <form method='post' class='form-grid'>
-      {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-      <input type='hidden' name='action' value='add'>
-      <div><label>Name</label><input name='name' required></div>
-      <div><label>Classification</label><select name='worker_type'><option>1099</option><option>W-2</option></select></div>
-      <div><label>Payroll Frequency</label><select name='payroll_frequency'><option value='weekly'>Weekly</option><option value='biweekly'>Biweekly</option><option value='semimonthly'>Semimonthly</option><option value='monthly'>Monthly</option></select></div>
-      <div><label>SSN / Tax ID</label><input name='ssn'></div>
-      <div><label>Hire Date</label><input name='hire_date' type='date' value='{{ today }}'></div>
-      <div><label>Phone</label><input name='phone'></div>
-      <div><label>Email</label><input name='email'></div>
-      <div><label>{{ tr('Preferred Language') }}</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if option.code == 'en' %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
-      <div><label>Role / Classification</label><input name='role_classification' placeholder='Painter, admin, owner'></div>
-      <div><label>Team Member Payment Preference</label><select name='payout_preference' class='worker-payout-select'>{% for value, label in worker_payout_preferences %}<option value='{{ value }}'>{{ label }}</option>{% endfor %}</select></div>
-      <div class='worker-payout-field payout-zelle'><label>Zelle Email / Phone</label><input name='zelle_contact' placeholder='teammember@email.com or phone'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Bank Name</label><input name='deposit_bank_name' placeholder='Chase Business Checking'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Account Holder Name</label><input name='deposit_account_holder_name' placeholder='Team member legal name'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Account Type</label><select name='deposit_account_type'><option value='checking'>Checking</option><option value='savings'>Savings</option></select></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Routing Number</label><input name='deposit_routing_number' inputmode='numeric' maxlength='9' placeholder='9 digits'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Account Number</label><input name='deposit_account_number' inputmode='numeric' placeholder='Enter account number'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Confirm Account Number</label><input name='confirm_deposit_account_number' inputmode='numeric' placeholder='Re-enter account number'></div>
-      <div class='worker-payout-field payout-direct_deposit'><label>Last 4 Digits</label><input name='deposit_account_last4' inputmode='numeric' maxlength='4' placeholder='6789'></div>
-      <div style='grid-column:1/-1'><label>Address</label><input name='address'></div>
-      <div style='grid-column:1/-1'><label>Pay Notes</label><textarea name='pay_notes'></textarea></div>
-      <div><button>Save Team Member</button></div>
-    </form>
+      <div class='small' style='margin:12px 0'>Use separate setup flows so W-2 employees and 1099 subcontractors are not mixed together.</div>
+      <div class='small' style='margin:0 0 12px 0;padding:12px 14px;border:1px solid #e3ebf4;border-radius:16px;background:#f8fbff'>New team member records are saved with permanent profile history. The contractor flow now collects W-9 and agreement support details instead of treating the subcontractor like a hired employee.</div>
+      <details class='compact-details' open>
+        <summary>Add W-2 Employee</summary>
+        <form method='post' class='form-grid worker-profile-form' style='margin-top:12px'>
+          {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+          <input type='hidden' name='action' value='add'>
+          {% with worker=None, submit_label='Add Employee', fixed_worker_type='W-2' %}
+            {% include '_ops_worker_profile_fields.html' %}
+          {% endwith %}
+        </form>
+      </details>
+      <details class='compact-details' style='margin-top:12px'>
+        <summary>Add 1099 Subcontractor</summary>
+        <div class='small' style='margin:12px 0'>Subcontractors use a separate full-page onboarding flow with W-9, agreement, insurance, workers comp, safety, and classification acknowledgements.</div>
+        <a class='btn btn-secondary' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Open Add Subcontractor</a>
+      </details>
     </details>
   </div>
   <div class='card'>
@@ -44,10 +34,10 @@
       {% for w in workers %}
       <tr {% if selected_worker and selected_worker.id==w.id %}class='selected-row'{% endif %}>
         <td><a href='{{ url_for("workers", client_id=client_id, worker_id=w.id) }}'>{{ w.name }}</a></td>
-        <td>{{ w.worker_type }}</td>
+        <td>{{ 'W-2 Employee' if w.worker_type == 'W-2' else '1099 Subcontractor' }}</td>
         <td>{{ w.status or 'active' }}</td>
         <td>{{ w.payroll_frequency or 'weekly' }}</td>
-        <td><a href='{{ url_for("workers", client_id=client_id, worker_id=w.id) }}'>Manage</a> · <a href='{{ url_for("w2", worker_id=w.id) }}' target='_blank'>W-2</a> · <a href='{{ url_for("form_1099", worker_id=w.id) }}' target='_blank'>1099</a></td>
+        <td><a href='{{ url_for("workers", client_id=client_id, worker_id=w.id) }}'>Manage</a>{% if w.worker_type == 'W-2' %} · <a href='{{ url_for("w2", worker_id=w.id) }}' target='_blank'>W-2</a>{% else %} · <a href='{{ url_for("form_1099", worker_id=w.id) }}' target='_blank'>1099</a> · <a href='{{ url_for("subcontractor_agreement", worker_id=w.id) }}' target='_blank'>Agreement</a>{% endif %}</td>
       </tr>
       {% endfor %}
     </table>
@@ -63,15 +53,21 @@
   <div class='card-head'><h3>Manage Team Member · {{ selected_worker.name }}</h3><div class='small'>Edit, delete, or deactivate this team member</div></div>
   <details class='compact-details'>
     <summary>Edit Team Member Profile</summary>
+    {% if selected_worker.worker_type == 'W-2' %}
     <form method='post' class='form-grid' style='margin-top:12px'>
     <input type='hidden' name='action' value='edit'>
     <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
     {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
     <div><label>Name</label><input name='name' value='{{ selected_worker.name }}' required></div>
-    <div><label>Classification</label><select name='worker_type'><option value='1099' {% if selected_worker.worker_type=='1099' %}selected{% endif %}>1099</option><option value='W-2' {% if selected_worker.worker_type=='W-2' %}selected{% endif %}>W-2</option></select></div>
+    <input type='hidden' name='worker_type' value='W-2'>
+    <div><label>Classification</label><input value='W-2 Employee' readonly></div>
     <div><label>Payroll Frequency</label><select name='payroll_frequency'><option value='weekly' {% if selected_worker.payroll_frequency=='weekly' %}selected{% endif %}>Weekly</option><option value='biweekly' {% if selected_worker.payroll_frequency=='biweekly' %}selected{% endif %}>Biweekly</option><option value='semimonthly' {% if selected_worker.payroll_frequency=='semimonthly' %}selected{% endif %}>Semimonthly</option><option value='monthly' {% if selected_worker.payroll_frequency=='monthly' %}selected{% endif %}>Monthly</option></select></div>
     <div><label>SSN / Tax ID</label><input name='ssn' value='{{ selected_worker.ssn }}'></div>
+    {% if selected_worker.worker_type == 'W-2' %}
     <div><label>Hire Date</label><input name='hire_date' type='date' value='{{ selected_worker.hire_date }}'></div>
+    {% else %}
+    <div><label>Service Start Date</label><input name='engagement_start_date' type='date' value='{{ selected_worker.engagement_start_date or selected_worker.hire_date }}'></div>
+    {% endif %}
     <div><label>Phone</label><input name='phone' value='{{ selected_worker.phone }}'></div>
     <div><label>Email</label><input name='email' value='{{ selected_worker.email }}'></div>
     <div><label>{{ tr('Preferred Language') }}</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if (selected_worker.preferred_language or "en") == option.code %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
@@ -91,6 +87,16 @@
     <div style='grid-column:1/-1'><label>Pay Notes</label><textarea name='pay_notes'>{{ selected_worker.pay_notes }}</textarea></div>
     <div><button>Save Changes</button></div>
   </form>
+    {% else %}
+    <form method='post' class='form-grid worker-profile-form' style='margin-top:12px'>
+      <input type='hidden' name='action' value='edit'>
+      <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
+      {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      {% with worker=selected_worker, submit_label='Save Subcontractor Profile', fixed_worker_type='1099' %}
+        {% include '_ops_worker_profile_fields.html' %}
+      {% endwith %}
+    </form>
+    {% endif %}
   </details>
 
   <hr style='margin:16px 0'>
@@ -226,8 +232,9 @@
 
 
 
+{% if selected_worker.worker_type == 'W-2' %}
 <div class='card' style='margin-top:16px'>
-  <div class='card-head'><h3>Complete / Review W-4 · {{ selected_worker.name }}</h3><div class='stack-actions'><a class='btn btn-secondary btn-sm' href='{{ url_for("w4", worker_id=selected_worker.id) }}' target='_blank'>Open Printable W-4</a><a class='btn btn-secondary btn-sm' href='{{ url_for("w2", worker_id=selected_worker.id) }}' target='_blank'>Open W-2</a>{% if selected_worker.worker_type != 'W-2' %}<a class='btn btn-secondary btn-sm' href='{{ url_for("form_1099", worker_id=selected_worker.id) }}' target='_blank'>Open 1099</a>{% endif %}</div></div>
+  <div class='card-head'><h3>Complete / Review W-4 · {{ selected_worker.name }}</h3><div class='stack-actions'><a class='btn btn-secondary btn-sm' href='{{ url_for("w4", worker_id=selected_worker.id) }}' target='_blank'>Open Printable W-4</a><a class='btn btn-secondary btn-sm' href='{{ url_for("w2", worker_id=selected_worker.id) }}' target='_blank'>Open W-2</a><a class='btn btn-secondary btn-sm' href='{{ florida_new_hire_reporting_url }}' target='_blank' rel='noopener'>Florida New-Hire</a></div></div>
   <details class='compact-details'>
     <summary>Open W-4 Answers</summary>
     <form method='post' action='{{ url_for("save_worker_w4", worker_id=selected_worker.id) }}' class='form-grid' style='margin-top:12px'>
@@ -246,21 +253,55 @@
   </form>
   </details>
 </div>
+{% else %}
+<div class='card' style='margin-top:16px'>
+  <div class='card-head'><h3>1099 Contractor Snapshot · {{ selected_worker.name }}</h3><div class='stack-actions'><a class='btn btn-secondary btn-sm' href='{{ url_for("form_1099", worker_id=selected_worker.id) }}' target='_blank'>Open 1099</a><a class='btn btn-secondary btn-sm' href='{{ url_for("subcontractor_agreement", worker_id=selected_worker.id) }}' target='_blank'>Open Agreement</a><a class='btn btn-secondary btn-sm' href='{{ florida_new_hire_reporting_url }}' target='_blank' rel='noopener'>Florida New-Hire</a></div></div>
+  <details class='compact-details' open>
+    <summary>Open Contractor Compliance</summary>
+    <div class='form-grid' style='margin-top:12px'>
+      <div><label>Legal Name on W-9</label><input value='{{ selected_worker.contractor_legal_name or selected_worker.name }}' readonly></div>
+      <div><label>TIN Type</label><input value='{{ selected_worker.contractor_tin_type|upper if selected_worker.contractor_tin_type else "" }}' readonly></div>
+      <div><label>Tax Classification</label><input value='{{ (selected_worker.contractor_tax_classification or "")|replace("_", " ")|title }}' readonly></div>
+      <div><label>W-9 Received</label><input value='{{ selected_worker.contractor_w9_received_date or "" }}' readonly></div>
+      <div style='grid-column:1/-1'><label>Scope of Work</label><textarea readonly>{{ selected_worker.contractor_scope_of_work or "" }}</textarea></div>
+      <div style='grid-column:1/-1'><label>Payment Terms</label><textarea readonly>{{ selected_worker.contractor_payment_terms or "" }}</textarea></div>
+    </div>
+  </details>
+</div>
+{% endif %}
 {% endif %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('form').forEach(function (form) {
     var select = form.querySelector('.worker-payout-select');
-    if (!select) return;
     function updatePayoutFields() {
+      if (!select) return;
       var value = select.value;
       form.querySelectorAll('.worker-payout-field').forEach(function (field) {
         var show = field.classList.contains('payout-' + value);
         field.style.display = show ? '' : 'none';
       });
     }
-    select.addEventListener('change', updatePayoutFields);
+    if (select) {
+      select.addEventListener('change', updatePayoutFields);
+    }
+    function updateWorkerTypePanels() {
+      var typeField = form.querySelector('.worker-type-select');
+      var workerType = typeField ? typeField.value : (form.querySelector('input[name="worker_type"]') || {}).value || 'W-2';
+      form.querySelectorAll('.worker-type-group').forEach(function (group) {
+        var show = group.classList.contains('worker-type-' + workerType);
+        group.style.display = show ? '' : 'none';
+        group.querySelectorAll('input, select, textarea').forEach(function (input) {
+          input.disabled = !show;
+        });
+      });
+    }
+    var typeSelect = form.querySelector('.worker-type-select');
+    if (typeSelect) {
+      typeSelect.addEventListener('change', updateWorkerTypePanels);
+    }
     updatePayoutFields();
+    updateWorkerTypePanels();
   });
 });
 </script>

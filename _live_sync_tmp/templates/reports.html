@@ -51,6 +51,24 @@
   .report-filter-summary{display:flex;gap:8px;flex-wrap:wrap;align-items:center;color:#546A7B;font-weight:800;font-size:.88rem}
   .report-filter-body{padding:0 18px 18px}
   .report-filter-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .print-report-sheet{display:none}
+  .worker-report-stack{display:grid;gap:14px}
+  .worker-report-card{border:1px solid #DDE8F0;border-radius:18px;padding:16px;background:#fff;box-shadow:0 12px 28px rgba(28,55,78,.06)}
+  .worker-report-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .worker-report-title{font-size:1.2rem;font-weight:800;color:#16384F}
+  .worker-report-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+  .worker-report-meta div{border:1px solid #E6ECF2;border-radius:14px;padding:10px;background:#F8FBFF}
+  .worker-report-payments{margin-top:14px}
+  @media (max-width:900px){.worker-report-meta{grid-template-columns:1fr}}
+  @media print{
+    body{background:#fff !important}
+    .report-prime-strip,#report-filters,#live-finance-graphics,.portal-footer,.mobile-app-dock,.btn,button{display:none !important}
+    .card,.worker-report-card{box-shadow:none !important;border:1px solid #9aa7b3 !important;background:#fff !important}
+    .print-report-sheet{display:block}
+    .report-printable-only{display:block !important}
+    .report-screen-only{display:none !important}
+    .worker-report-card{page-break-inside:avoid}
+  }
   @media (max-width:900px){.report-kpi-grid,.report-chart-wrap{grid-template-columns:1fr}.report-donut-row{grid-template-columns:1fr}.report-donut{margin:auto}.report-kpi-grid{gap:10px}}
   @media (max-width:900px){.report-prime-strip{background:linear-gradient(145deg,#17384F,#1F5D8C)}.report-prime-content,.report-prime-cards{grid-template-columns:1fr}.report-prime-panel{color:#16384F}}
 </style>
@@ -68,16 +86,23 @@
 {% set graph = report_graphics %}
 {% set selected_worker = (workers|selectattr('id','equalto',worker_id)|list|first) if worker_id else none %}
 {% set selected_invoice = (invoices|selectattr('id','equalto',invoice_id)|list|first) if invoice_id else none %}
+{% set payroll_report_types = ['workers','payments','payroll_941_support','insurance_audit_payroll'] %}
 <div class='card report-prime-strip'>
   <div class='report-prime-content'>
     <div>
-      <div class='report-prime-kicker'>{{ tr('Report Center') }} &middot; {{ tr('Finance first') }}</div>
-      <div class='report-prime-title'>{{ tr('See the money before the tables.') }}</div>
-      <div class='report-prime-subtitle'>{{ tr('LedgerFlow turns the current business records into a fast owner view: revenue, profit, expenses, margin, and tax-readiness at the top of the page.') }}</div>
+      <div class='report-prime-kicker'>{{ tr('Report Center') }} &middot; {{ tr('Payroll first') if report_type in payroll_report_types else tr('Finance first') }}</div>
+      <div class='report-prime-title'>{{ tr('See saved payroll before the tables.') if report_type in payroll_report_types else tr('See the money before the tables.') }}</div>
+      <div class='report-prime-subtitle'>{{ tr('These payroll views are built from saved worker payment records only, so employee totals stay tied to real payouts instead of customer invoices.') if report_type in payroll_report_types else tr('LedgerFlow turns the current business records into a fast owner view: revenue, profit, expenses, margin, and tax-readiness at the top of the page.') }}</div>
       <div class='report-prime-cards'>
+        {% if report_type in payroll_report_types %}
+        <div class='report-prime-card'><span>{{ tr('Gross Payroll') }}</span><strong>${{ '%.2f'|format(worker_salary_report.totals.gross_total or 0) }}</strong></div>
+        <div class='report-prime-card'><span>{{ tr('Net Pay') }}</span><strong>${{ '%.2f'|format(worker_salary_report.totals.net_total or 0) }}</strong></div>
+        <div class='report-prime-card'><span>{{ tr('Payments Logged') }}</span><strong>{{ worker_salary_report.totals.payment_count or 0 }}</strong></div>
+        {% else %}
         <div class='report-prime-card'><span>{{ tr('Gross Income') }}</span><strong>${{ '%.2f'|format(summary.gross_income or 0) }}</strong></div>
         <div class='report-prime-card'><span>{{ tr('Operating Profit') }}</span><strong>${{ '%.2f'|format(summary.operating_profit or 0) }}</strong></div>
         <div class='report-prime-card'><span>{{ tr('Margin') }}</span><strong>{{ '%.1f'|format(graph.profit_margin or 0) }}%</strong></div>
+        {% endif %}
       </div>
       <div class='report-prime-actions'>
         <a class='btn' href='#live-finance-graphics'>{{ tr('Open live graphics') }}</a>
@@ -86,7 +111,7 @@
     </div>
     <div class='report-prime-panel'>
       <div class='card-head'>
-        <h3>{{ tr('Revenue / Profit Pulse') }}</h3>
+        <h3>{{ tr('Payroll Pulse') if report_type in payroll_report_types else tr('Revenue / Profit Pulse') }}</h3>
         <span class='badge'>{{ tr('Live') }}</span>
       </div>
       <svg class='report-prime-mini-chart' viewBox='0 0 340 150' role='img' aria-label='Revenue and profit pulse'>
@@ -98,8 +123,8 @@
         {% endif %}
       </svg>
       <div class='report-chart-legend'>
-        <span class='legend-dot'>{{ tr('Revenue') }}</span>
-        <span class='legend-dot profit'>{{ tr('Profit') }}</span>
+        <span class='legend-dot'>{{ tr('Revenue') if report_type not in payroll_report_types else tr('Gross pay context') }}</span>
+        <span class='legend-dot profit'>{{ tr('Profit') if report_type not in payroll_report_types else tr('Net pay context') }}</span>
       </div>
     </div>
   </div>
@@ -113,7 +138,7 @@
       <span>{{ start_date or tr('Any start') }} {{ tr('to') }} {{ end_date or tr('Today') }}</span>
       <span>&middot;</span>
       <span>{{ selected_worker.name if selected_worker else tr('All workers') }}</span>
-      {% if selected_invoice %}<span>&middot; #{{ selected_invoice.job_number }} {{ selected_invoice.client_name }}</span>{% endif %}
+      {% if selected_invoice and report_type not in payroll_report_types %}<span>&middot; #{{ selected_invoice.job_number }} {{ selected_invoice.client_name }}</span>{% endif %}
     </span>
   </summary>
   <div class='report-filter-body'>
@@ -132,8 +157,10 @@
       <label>{{ tr('To') }}</label><input type='date' name='end_date' value='{{ end_date }}'>
       <label>{{ tr('Worker') }}</label>
       <select name='worker_id'><option value=''>{{ tr('All') }}</option>{% for w in workers %}<option value='{{ w.id }}' {% if worker_id==w.id %}selected{% endif %}>{{ w.name }}</option>{% endfor %}</select>
+      {% if report_type not in payroll_report_types %}
       <label>{{ tr('Invoices') }}</label>
       <select name='invoice_id'><option value=''>{{ tr('All') }}</option>{% for i in invoices %}<option value='{{ i.id }}' {% if invoice_id==i.id %}selected{% endif %}>#{{ i.job_number }} &middot; {{ i.client_name }}</option>{% endfor %}</select>
+      {% endif %}
       <button type='submit'>{{ tr('Run Report') }}</button>
     </form>
     <div class='report-filter-actions'>
@@ -239,7 +266,78 @@
   {% if report_type == 'summary' %}
     <div class='metric'>{{ tr('Use Print Current Report for this summary view.') }}</div>
   {% elif report_type == 'workers' %}
-    <table class='table'><tr><th>{{ tr('Name') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('SSN/Tax ID') }}</th><th>{{ tr('Phone') }}</th><th>{{ tr('Email') }}</th><th>{{ tr('Hire Date') }}</th></tr>{% for row in rows %}<tr><td>{{ row.name }}</td><td>{{ row.worker_type }}</td><td>{{ row.ssn }}</td><td>{{ row.phone }}</td><td>{{ row.email }}</td><td>{{ row.hire_date }}</td></tr>{% endfor %}</table>
+    <div class='card section-frame' style='margin-bottom:16px;border:1px solid #bfdbfe;background:#eff6ff'>
+      <div class='card-head'><h3>{{ tr('Worker Salary Report') }}</h3><span class='badge'>{{ tr('Payroll only') }}</span></div>
+      <div class='small' style='margin-bottom:10px'>{{ tr('This report is based only on saved worker payment records for the selected period. Customer invoices are not used in these worker salary totals.') }}</div>
+      <div class='summary-strip'>
+        <span class='summary-pill'>{{ tr('Workers in report') }}: {{ worker_salary_report.totals.worker_count or 0 }}</span>
+        <span class='summary-pill'>{{ tr('Payments logged') }}: {{ worker_salary_report.totals.payment_count or 0 }}</span>
+        <span class='summary-pill'>{{ tr('Gross payroll') }}: ${{ '%.2f'|format(worker_salary_report.totals.gross_total or 0) }}</span>
+        <span class='summary-pill'>{{ tr('Net pay') }}: ${{ '%.2f'|format(worker_salary_report.totals.net_total or 0) }}</span>
+      </div>
+    </div>
+    <div class='worker-report-stack report-screen-only'>
+      {% for row in worker_salary_report.rows %}
+      <section class='worker-report-card'>
+        <div class='worker-report-head'>
+          <div>
+            <div class='worker-report-title'>{{ row.worker_name }}</div>
+            <div class='small'>{{ row.worker_type }} &middot; {{ row.status|replace('_',' ')|title }} &middot; {{ row.payroll_frequency|title }}</div>
+          </div>
+          <div class='small'>{{ tr('Selected Period') }}: {{ start_date or tr('Any start') }} {{ tr('to') }} {{ end_date or tr('Today') }}</div>
+        </div>
+        <div class='worker-report-meta'>
+          <div><strong>{{ tr('Contact') }}</strong><br>{{ row.phone or '-' }}<br>{{ row.email or '-' }}</div>
+          <div><strong>{{ tr('Address') }}</strong><br>{{ row.address or '-' }}</div>
+          <div><strong>{{ tr('Tax ID / Type') }}</strong><br>{{ row.tax_id or '-' }}<br>{{ row.worker_type }}</div>
+        </div>
+        <div class='worker-report-payments'>
+          <table class='table'>
+            <tr><th>{{ tr('Payment Date') }}</th><th>{{ tr('Method') }}</th><th>{{ tr('Amount') }}</th><th>{{ tr('Reference') }}</th><th>{{ tr('Note') }}</th></tr>
+            {% for payment in row.payment_rows %}
+            <tr><td>{{ payment.payment_date }}</td><td>{{ worker_payment_method_labels.get(payment.payment_method or 'other', 'Other') }}</td><td>${{ '%.2f'|format(payment.amount or 0) }}</td><td>{{ payment.reference_number or '-' }}</td><td>{{ payment.note or '-' }}</td></tr>
+            {% else %}
+            <tr><td colspan='5' class='small'>{{ tr('No worker payment records matched the selected employee/date filters.') }}</td></tr>
+            {% endfor %}
+            <tr><th colspan='2'>{{ tr('Total') }}</th><th>${{ '%.2f'|format(row.recorded_payment_total or 0) }}</th><th colspan='2'>{{ row.salary_report_note }}</th></tr>
+          </table>
+        </div>
+      </section>
+      {% else %}
+      <div class='card'><div class='small'>{{ tr('No worker payment records matched the selected employee/date filters.') }}</div></div>
+      {% endfor %}
+    </div>
+    <div class='print-report-sheet report-printable-only'>
+      <div class='card' style='margin-bottom:14px'>
+        <h2 style='margin:0'>{{ client.business_name if client else tr('Business') }} · {{ tr('Worker Salary Report') }}</h2>
+        <div class='small'>{{ tr('Selected Period') }}: {{ start_date or tr('Any start') }} {{ tr('to') }} {{ end_date or tr('Today') }}</div>
+        <div class='small'>{{ tr('This printable report is based only on saved worker payment records.') }}</div>
+      </div>
+      {% for row in worker_salary_report.rows %}
+      <section class='worker-report-card'>
+        <div class='worker-report-head'>
+          <div>
+            <div class='worker-report-title'>{{ row.worker_name }}</div>
+            <div class='small'>{{ tr('Type') }}: {{ row.worker_type }} &middot; {{ tr('Status') }}: {{ row.status|replace('_',' ')|title }}</div>
+          </div>
+          <div class='small'>{{ tr('Total') }}: ${{ '%.2f'|format(row.recorded_payment_total or 0) }}</div>
+        </div>
+        <div class='worker-report-meta'>
+          <div><strong>{{ tr('Phone / Email') }}</strong><br>{{ row.phone or '-' }}<br>{{ row.email or '-' }}</div>
+          <div><strong>{{ tr('Address') }}</strong><br>{{ row.address or '-' }}</div>
+          <div><strong>{{ tr('Tax ID') }}</strong><br>{{ row.tax_id or '-' }}</div>
+        </div>
+        <table class='table' style='margin-top:12px'>
+          <tr><th>{{ tr('Payment Date') }}</th><th>{{ tr('Method') }}</th><th>{{ tr('Amount') }}</th><th>{{ tr('Reference') }}</th></tr>
+          {% for payment in row.payment_rows %}
+          <tr><td>{{ payment.payment_date }}</td><td>{{ worker_payment_method_labels.get(payment.payment_method or 'other', 'Other') }}</td><td>${{ '%.2f'|format(payment.amount or 0) }}</td><td>{{ payment.reference_number or '-' }}</td></tr>
+          {% else %}
+          <tr><td colspan='4' class='small'>{{ tr('No worker payment records matched the selected employee/date filters.') }}</td></tr>
+          {% endfor %}
+        </table>
+      </section>
+      {% endfor %}
+    </div>
   {% elif report_type == 'payments' %}
     <table class='table'><tr><th>{{ tr('Date') }}</th><th>{{ tr('Worker') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Amount') }}</th><th>{{ tr('Note') }}</th></tr>{% for row in rows %}<tr><td>{{ row.payment_date }}</td><td>{{ row.worker_name }}</td><td>{{ row.worker_type }}</td><td>${{ '%.2f'|format(row.amount or 0) }}</td><td>{{ row.note }}</td></tr>{% endfor %}</table>
   {% elif report_type == 'invoices' %}

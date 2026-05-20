@@ -88,6 +88,15 @@ PAYROLL_PERIODS = {
     'monthly': 12,
 }
 
+IRS_INDEPENDENT_CONTRACTOR_URL = 'https://www.irs.gov/businesses/small-businesses-self-employed/independent-contractor-defined'
+IRS_W9_REQUESTER_URL = 'https://www.irs.gov/instructions/iw9'
+IRS_1099_NEC_URL = 'https://www.irs.gov/instructions/i1099mec'
+FLORIDA_NEW_HIRE_REPORTING_URL = 'https://floridarevenue.com/taxes/taxesfees/Pages/newhire.aspx'
+FLORIDA_NEW_HIRE_INSTRUCTIONS_URL = 'https://servicesforemployers.floridarevenue.com/SiteAssets/docs/New_Hire_Reporting_Form_Instructions.pdf'
+DOL_FLSA_CONTRACTOR_URL = 'https://www.dol.gov/agencies/whd/fact-sheets/13-flsa-employment-relationship'
+OSHA_MULTI_EMPLOYER_URL = 'https://www.osha.gov/enforcement/directives/cpl-02-00-124'
+FLORIDA_WORKERS_COMP_EXEMPTION_URL = 'https://www.myfloridacfo.com/division/wc/employer/exemptions'
+
 OPS_DEFAULT_SERVICE_TYPES = [
     {
         'name': 'Cleaning',
@@ -3414,7 +3423,8 @@ def quick_search_catalog(user=None, worker=None, active_client=None, current_mod
         quick_search_entry('Schedule', workspace_url('ops_schedule'), current_language, description='Open the business calendar and scheduled work view.', category='Operations', aliases=('calendar', 'agenda', 'calendario', 'appointments')),
         quick_search_entry('Dispatch', workspace_url('ops_dispatch'), current_language, description='Manage dispatch and active job coordination.', category='Operations', aliases=('dispatch', 'routing', 'rota', 'despacho')),
         quick_search_entry('Team', workspace_url('ops_team'), current_language, description='Review team members, crew assignments, and labor visibility.', category='Operations', aliases=('team', 'workers', 'crew', 'equipe', 'equipo', 'team members')),
-        quick_search_entry('Add Team Member', workspace_url('ops_team_new'), current_language, description='Open the full-screen team member setup view.', category='Operations', aliases=('add team member', 'new worker', 'create worker', 'new crew member', 'team setup')),
+        quick_search_entry('Add Team Member', workspace_url('ops_team_new'), current_language, description='Open the full-screen employee setup view.', category='Operations', aliases=('add team member', 'new worker', 'create worker', 'new crew member', 'team setup', 'new employee')),
+        quick_search_entry('Add Subcontractor', workspace_url('ops_subcontractor_new'), current_language, description='Open the 1099 subcontractor onboarding and agreement workflow.', category='Operations', aliases=('subcontractor', '1099', 'contractor', 'w9', 'independent contractor')),
         quick_search_entry('Availability', workspace_url('ops_availability'), current_language, description='Check worker availability and time-off context.', category='Operations', aliases=('availability', 'time off', 'disponibilidade', 'disponibilidad')),
         quick_search_entry('Activity', workspace_url('ops_activity'), current_language, description='Review recent operational activity and history.', category='Operations', aliases=('activity', 'recent activity', 'history', 'atividade', 'actividad')),
         quick_search_entry('Locations', workspace_url('ops_locations'), current_language, description='Manage saved service locations and client addresses.', category='Library', aliases=('locations', 'addresses', 'service addresses', 'locais', 'ubicaciones')),
@@ -4062,6 +4072,77 @@ def worker_payout_preference_options():
 
 def worker_payout_preference_label_map():
     return dict(worker_payout_preference_options())
+
+
+def contractor_tin_type_options():
+    return [
+        ('ssn', 'SSN'),
+        ('itin', 'ITIN'),
+        ('ein', 'EIN'),
+    ]
+
+
+def contractor_tax_classification_options():
+    return [
+        ('individual', 'Individual / Sole Proprietor'),
+        ('single_member_llc', 'Single-Member LLC'),
+        ('partnership', 'Partnership'),
+        ('c_corporation', 'C Corporation'),
+        ('s_corporation', 'S Corporation'),
+        ('llc_c_corp', 'LLC taxed as C Corporation'),
+        ('llc_s_corp', 'LLC taxed as S Corporation'),
+        ('llc_partnership', 'LLC taxed as Partnership'),
+        ('trust_estate', 'Trust / Estate'),
+        ('other', 'Other'),
+    ]
+
+
+def contractor_workers_comp_status_options():
+    return [
+        ('coverage_certificate', 'Coverage certificate on file'),
+        ('exemption_certificate', 'Florida exemption certificate on file'),
+        ('not_required_reviewed', 'Reviewed as not required for this engagement'),
+        ('pending', 'Pending review'),
+    ]
+
+
+def normalize_contractor_workers_comp_status(value: str | None) -> str:
+    allowed = {key for key, _ in contractor_workers_comp_status_options()}
+    cleaned = (value or '').strip().lower()
+    return cleaned if cleaned in allowed else ''
+
+
+def normalize_worker_type(value: str | None, *, default: str = '1099') -> str:
+    cleaned = (value or default or '1099').strip().upper()
+    return 'W-2' if cleaned == 'W-2' else '1099'
+
+
+def worker_is_w2(value_or_worker) -> bool:
+    if isinstance(value_or_worker, (dict, sqlite3.Row)):
+        value = row_value(value_or_worker, 'worker_type', '')
+    else:
+        value = value_or_worker
+    return normalize_worker_type(value) == 'W-2'
+
+
+def normalize_contractor_tin_type(value: str | None) -> str:
+    allowed = {key for key, _ in contractor_tin_type_options()}
+    cleaned = (value or '').strip().lower()
+    return cleaned if cleaned in allowed else ''
+
+
+def normalize_contractor_tax_classification(value: str | None) -> str:
+    allowed = {key for key, _ in contractor_tax_classification_options()}
+    cleaned = (value or '').strip().lower()
+    return cleaned if cleaned in allowed else ''
+
+
+def worker_start_date_display(worker) -> str:
+    if not worker:
+        return ''
+    if worker_is_w2(worker):
+        return row_value(worker, 'hire_date', '') or ''
+    return (row_value(worker, 'engagement_start_date', '') or row_value(worker, 'hire_date', '') or '').strip()
 
 
 def normalize_worker_payment_method(value: str) -> str:
@@ -7607,9 +7688,41 @@ def init_db():
 
         ensure_column(conn, 'internal_messages', 'is_read', 'INTEGER DEFAULT 0')
         ensure_column(conn, 'workers', 'hire_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'engagement_start_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'date_of_birth', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'payroll_frequency', "TEXT DEFAULT 'weekly'")
         ensure_column(conn, 'workers', 'role_classification', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'status', "TEXT DEFAULT 'active'")
+        ensure_column(conn, 'workers', 'contractor_legal_name', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_business_name', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_tin_type', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_tax_classification', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_w9_received_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_w9_signed_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_scope_of_work', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_payment_terms', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_license_number', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_insurance_carrier', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_policy_number', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_policy_expiration', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_general_liability_document_reference', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_workers_comp_status', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_workers_comp_carrier', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_workers_comp_policy_number', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_workers_comp_expiration', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_workers_comp_exemption_number', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_workers_comp_exemption_expiration', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_workers_comp_document_reference', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_agreement_effective_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_agreement_signed_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_signature_name', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_signature_date', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_disclosure_ack_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_no_benefits_ack_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_insurance_ack_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_safety_ack_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_classification_ack_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'workers', 'contractor_classification_review_json', "TEXT DEFAULT '{}'")
         ensure_column(conn, 'workers', 'termination_date', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'termination_cause', "TEXT DEFAULT ''")
         ensure_column(conn, 'workers', 'portal_password_hash', "TEXT DEFAULT ''")
@@ -9199,6 +9312,73 @@ def insurance_audit_payroll_report(conn: sqlite3.Connection, client_id: int, sta
         'totals': totals,
         'payment_detail_rows': payment_detail_rows,
     }
+
+
+def worker_salary_report(conn: sqlite3.Connection, client_id: int, start_date: str | None = None, end_date: str | None = None, worker_id: int | None = None) -> dict:
+    workers = conn.execute(
+        'SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 ELSE 1 END, name',
+        (client_id,),
+    ).fetchall()
+    selected_workers = [row for row in workers if not worker_id or int(row['id']) == int(worker_id)]
+    rows: list[dict] = []
+    totals = {
+        'worker_count': 0,
+        'payment_count': 0,
+        'gross_total': 0.0,
+        'net_total': 0.0,
+        'w2_total': 0.0,
+        'contractor_total': 0.0,
+    }
+    for worker in selected_workers:
+        snapshot = payroll_details_for_worker_period(conn, worker, start_date, end_date)
+        payment_query = 'SELECT * FROM worker_payments WHERE worker_id=?'
+        payment_params: list = [worker['id']]
+        clauses, more = between_clause('payment_date', start_date or None, end_date or None)
+        if clauses:
+            payment_query += ' AND ' + ' AND '.join(clauses)
+            payment_params += more
+        payment_query += ' ORDER BY payment_date DESC, id DESC'
+        payment_rows = conn.execute(payment_query, tuple(payment_params)).fetchall()
+        recorded_payment_total = money(sum(float(row['amount'] or 0) for row in payment_rows))
+        if snapshot['payment_count'] == 0 and not worker_id:
+            continue
+        gross_total = money(snapshot['totals']['gross'])
+        net_total = money(snapshot['totals']['net_check'])
+        row = {
+            'worker_id': worker['id'],
+            'worker_name': row_value(worker, 'name', '') or '',
+            'worker_type': row_value(worker, 'worker_type', '') or '',
+            'status': row_value(worker, 'status', 'active') or 'active',
+            'payroll_frequency': (row_value(worker, 'payroll_frequency', 'weekly') or 'weekly').replace('_', ' '),
+            'hire_date': row_value(worker, 'hire_date', '') or '',
+            'payment_count': snapshot['payment_count'],
+            'first_payment_date': snapshot['first_payment_date'],
+            'last_payment_date': snapshot['last_payment_date'],
+            'gross_pay': gross_total,
+            'net_pay': net_total,
+            'recorded_payment_total': recorded_payment_total,
+            'federal_withholding': money(snapshot['totals']['federal_withholding']),
+            'employer_liability': money(
+                snapshot['totals']['employer_social_security']
+                + snapshot['totals']['employer_medicare']
+            ),
+            'salary_report_note': 'Based only on saved worker payment records.' if snapshot['payment_count'] else 'No saved worker payments in the selected period.',
+            'phone': row_value(worker, 'phone', '') or '',
+            'email': row_value(worker, 'email', '') or '',
+            'address': row_value(worker, 'address', '') or '',
+            'tax_id': row_value(worker, 'ssn', '') or '',
+            'payment_rows': [dict(payment_row) for payment_row in payment_rows],
+        }
+        rows.append(row)
+        totals['worker_count'] += 1
+        totals['payment_count'] += snapshot['payment_count']
+        totals['gross_total'] = money(totals['gross_total'] + recorded_payment_total)
+        totals['net_total'] = money(totals['net_total'] + net_total)
+        if row['worker_type'] == 'W-2':
+            totals['w2_total'] = money(totals['w2_total'] + recorded_payment_total)
+        else:
+            totals['contractor_total'] = money(totals['contractor_total'] + recorded_payment_total)
+    return {'rows': rows, 'totals': totals}
 
 
 def cpa_dashboard_summary(user):
@@ -10810,104 +10990,266 @@ def ops_duplicate_job(conn: sqlite3.Connection, *, client_id: int, job_id: int, 
 
 
 def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int, form, existing=None) -> int:
-    name = (form.get('name', '') or '').strip()
+    form_keys = set(form.keys()) if hasattr(form, 'keys') else set(form)
+
+    def field_text(name: str, default: str = '') -> str:
+        if name in form_keys:
+            return (form.get(name, default) or default).strip()
+        if existing is not None:
+            return (row_value(existing, name, default) or default).strip()
+        return default
+
+    name = field_text('name')
     if not name:
         raise ValueError('Worker name is required.')
-    worker_role = (form.get('worker_role', '') or '').strip()
-    worker_type = (form.get('worker_type', '1099') or '1099').strip()
-    if worker_type not in {'1099', 'W-2'}:
-        worker_type = '1099'
-    payroll_frequency = (form.get('payroll_frequency', 'weekly') or 'weekly').strip().lower()
+
+    worker_type = normalize_worker_type(field_text('worker_type', row_value(existing, 'worker_type', '1099') if existing else '1099'))
+    worker_role = field_text('worker_role') or field_text('role_classification')
+    payroll_frequency_default = field_text('payroll_frequency', row_value(existing, 'payroll_frequency', '') if existing else ('weekly' if worker_type == 'W-2' else 'monthly')).lower()
+    payroll_frequency = payroll_frequency_default or ('weekly' if worker_type == 'W-2' else 'monthly')
     if payroll_frequency not in {'weekly', 'biweekly', 'semimonthly', 'monthly'}:
-        payroll_frequency = 'weekly'
-    status = (form.get('status', '') or '').strip().lower() or 'active'
+        payroll_frequency = 'weekly' if worker_type == 'W-2' else 'monthly'
+    status = (field_text('status', row_value(existing, 'status', 'active') if existing else 'active') or 'active').lower()
     if status not in {'active', 'inactive', 'terminated'}:
         status = 'active'
+
     payout_cleaned, payout_errors = validate_worker_payout_setup(form, existing=existing or {})
     if payout_errors:
         raise ValueError(payout_errors[0])
-    payload = (
-        name,
-        worker_type,
-        (form.get('ssn', '') or '').strip(),
-        (form.get('address', '') or '').strip(),
-        worker_role,
-        worker_role,
-        (form.get('phone', '') or '').strip(),
-        (form.get('email', '') or '').strip(),
-        normalize_language(form.get('preferred_language') or 'en'),
-        (form.get('hire_date', '') or '').strip(),
-        (form.get('pay_notes', '') or '').strip(),
-        payroll_frequency,
-        (form.get('crew_label', '') or '').strip(),
-        ops_clean_csv(form.get('skill_tags', '')),
-        (form.get('availability_baseline', '') or '').strip(),
-        status,
-        payout_cleaned['payout_preference'],
-        payout_cleaned['deposit_bank_name'],
-        payout_cleaned['deposit_account_holder_name'],
-        payout_cleaned['deposit_account_type'],
-        payout_cleaned['deposit_account_last4'],
-        payout_cleaned['deposit_routing_number_enc'],
-        payout_cleaned['deposit_account_number_enc'],
-        payout_cleaned['zelle_contact'],
-        now_iso(),
-        actor_user_id,
-    )
+
+    address = field_text('address')
+    ssn = field_text('ssn')
+    date_of_birth = field_text('date_of_birth')
+    hire_date = field_text('hire_date')
+    engagement_start_date = field_text('engagement_start_date')
+    contractor_legal_name = field_text('contractor_legal_name')
+    contractor_business_name = field_text('contractor_business_name')
+    contractor_tin_type = normalize_contractor_tin_type(field_text('contractor_tin_type'))
+    contractor_tax_classification = normalize_contractor_tax_classification(field_text('contractor_tax_classification'))
+    contractor_w9_received_date = field_text('contractor_w9_received_date')
+    contractor_w9_signed_date = field_text('contractor_w9_signed_date')
+    contractor_scope_of_work = field_text('contractor_scope_of_work')
+    contractor_payment_terms = field_text('contractor_payment_terms')
+    contractor_license_number = field_text('contractor_license_number')
+    contractor_insurance_carrier = field_text('contractor_insurance_carrier')
+    contractor_policy_number = field_text('contractor_policy_number')
+    contractor_policy_expiration = field_text('contractor_policy_expiration')
+    contractor_general_liability_document_reference = field_text('contractor_general_liability_document_reference')
+    contractor_workers_comp_status = normalize_contractor_workers_comp_status(field_text('contractor_workers_comp_status'))
+    contractor_workers_comp_carrier = field_text('contractor_workers_comp_carrier')
+    contractor_workers_comp_policy_number = field_text('contractor_workers_comp_policy_number')
+    contractor_workers_comp_expiration = field_text('contractor_workers_comp_expiration')
+    contractor_workers_comp_exemption_number = field_text('contractor_workers_comp_exemption_number')
+    contractor_workers_comp_exemption_expiration = field_text('contractor_workers_comp_exemption_expiration')
+    contractor_workers_comp_document_reference = field_text('contractor_workers_comp_document_reference')
+    contractor_agreement_effective_date = field_text('contractor_agreement_effective_date')
+    contractor_agreement_signed_date = field_text('contractor_agreement_signed_date')
+    contractor_signature_name = field_text('contractor_signature_name') or contractor_legal_name or name
+    contractor_signature_date = field_text('contractor_signature_date') or contractor_agreement_signed_date
+    existing_disclosure_ack_at = row_value(existing, 'contractor_disclosure_ack_at', '') if existing else ''
+    existing_no_benefits_ack_at = row_value(existing, 'contractor_no_benefits_ack_at', '') if existing else ''
+    existing_insurance_ack_at = row_value(existing, 'contractor_insurance_ack_at', '') if existing else ''
+    existing_safety_ack_at = row_value(existing, 'contractor_safety_ack_at', '') if existing else ''
+    existing_classification_ack_at = row_value(existing, 'contractor_classification_ack_at', '') if existing else ''
+    now_for_ack = now_iso()
+    contractor_disclosure_ack_at = now_for_ack if form.get('contractor_disclosure_ack') else existing_disclosure_ack_at
+    contractor_no_benefits_ack_at = now_for_ack if form.get('contractor_no_benefits_ack') else existing_no_benefits_ack_at
+    contractor_insurance_ack_at = now_for_ack if form.get('contractor_insurance_ack') else existing_insurance_ack_at
+    contractor_safety_ack_at = now_for_ack if form.get('contractor_safety_ack') else existing_safety_ack_at
+    contractor_classification_ack_at = now_for_ack if form.get('contractor_classification_ack') else existing_classification_ack_at
+    classification_review_flags = {
+        'independent_business': bool(form.get('contractor_review_independent_business')),
+        'controls_methods': bool(form.get('contractor_review_controls_methods')),
+        'provides_tools': bool(form.get('contractor_review_provides_tools')),
+        'may_work_for_others': bool(form.get('contractor_review_may_work_for_others')),
+        'job_based_or_invoice_pay': bool(form.get('contractor_review_job_based_pay')),
+    }
+    classification_review = {
+        **classification_review_flags,
+        'reviewed_at': now_for_ack if form.get('contractor_classification_ack') else (row_value(existing, 'contractor_classification_review_json', '') and ''),
+    }
+    if existing and not any(classification_review_flags.values()) and row_value(existing, 'contractor_classification_review_json', ''):
+        contractor_classification_review_json = row_value(existing, 'contractor_classification_review_json', '{}') or '{}'
+    else:
+        contractor_classification_review_json = json.dumps(classification_review, sort_keys=True)
+
+    if not address:
+        raise ValueError('Full mailing address is required.')
+
+    if worker_type == 'W-2':
+        if not hire_date:
+            raise ValueError('Hire date is required for W-2 employees.')
+    else:
+        if not engagement_start_date:
+            raise ValueError('Service start date is required for 1099 subcontractors.')
+        if not ssn:
+            raise ValueError('TIN / SSN / EIN is required for 1099 subcontractors.')
+        if not contractor_legal_name:
+            contractor_legal_name = name
+        if not contractor_tin_type:
+            raise ValueError('Select the TIN type for the 1099 subcontractor.')
+        if not contractor_tax_classification:
+            raise ValueError('Select the federal tax classification shown on the subcontractor W-9.')
+        if not contractor_w9_received_date:
+            raise ValueError('Enter the date the signed W-9 was received for the subcontractor.')
+        if not contractor_agreement_effective_date:
+            contractor_agreement_effective_date = engagement_start_date
+        if not contractor_signature_name or not contractor_signature_date:
+            raise ValueError('Subcontractor agreement typed signature and signature date are required.')
+        if not contractor_agreement_signed_date:
+            contractor_agreement_signed_date = contractor_signature_date
+        if not all([contractor_disclosure_ack_at, contractor_no_benefits_ack_at, contractor_insurance_ack_at, contractor_safety_ack_at, contractor_classification_ack_at]):
+            raise ValueError('All subcontractor disclosure, insurance, safety, and classification acknowledgements must be accepted before saving.')
+        if not all(classification_review_flags.values()) and not (existing and row_value(existing, 'contractor_classification_review_json', '')):
+            raise ValueError('Complete the subcontractor classification review before saving the 1099 record.')
+        if not contractor_workers_comp_status:
+            raise ValueError('Select the subcontractor workers compensation coverage or exemption status.')
+        if contractor_workers_comp_status == 'coverage_certificate' and (not contractor_workers_comp_carrier or not contractor_workers_comp_policy_number):
+            raise ValueError('Workers compensation carrier and policy number are required when coverage is on file.')
+        if contractor_workers_comp_status == 'exemption_certificate' and not contractor_workers_comp_exemption_number:
+            raise ValueError('Workers compensation exemption certificate number is required when exemption is selected.')
+        hire_date = ''
+
+    payload = {
+        'client_id': client_id,
+        'name': name,
+        'worker_type': worker_type,
+        'ssn': ssn,
+        'address': address,
+        'worker_role': worker_role,
+        'role_classification': worker_role,
+        'phone': field_text('phone'),
+        'email': field_text('email'),
+        'preferred_language': normalize_language(field_text('preferred_language', row_value(existing, 'preferred_language', 'en') if existing else 'en')),
+        'hire_date': hire_date,
+        'engagement_start_date': engagement_start_date,
+        'date_of_birth': date_of_birth,
+        'pay_notes': field_text('pay_notes'),
+        'payroll_frequency': payroll_frequency,
+        'crew_label': field_text('crew_label'),
+        'skill_tags': ops_clean_csv(field_text('skill_tags')),
+        'availability_baseline': field_text('availability_baseline'),
+        'status': status,
+        'contractor_legal_name': contractor_legal_name,
+        'contractor_business_name': contractor_business_name,
+        'contractor_tin_type': contractor_tin_type,
+        'contractor_tax_classification': contractor_tax_classification,
+        'contractor_w9_received_date': contractor_w9_received_date,
+        'contractor_w9_signed_date': contractor_w9_signed_date,
+        'contractor_scope_of_work': contractor_scope_of_work,
+        'contractor_payment_terms': contractor_payment_terms,
+        'contractor_license_number': contractor_license_number,
+        'contractor_insurance_carrier': contractor_insurance_carrier,
+        'contractor_policy_number': contractor_policy_number,
+        'contractor_policy_expiration': contractor_policy_expiration,
+        'contractor_general_liability_document_reference': contractor_general_liability_document_reference,
+        'contractor_workers_comp_status': contractor_workers_comp_status,
+        'contractor_workers_comp_carrier': contractor_workers_comp_carrier,
+        'contractor_workers_comp_policy_number': contractor_workers_comp_policy_number,
+        'contractor_workers_comp_expiration': contractor_workers_comp_expiration,
+        'contractor_workers_comp_exemption_number': contractor_workers_comp_exemption_number,
+        'contractor_workers_comp_exemption_expiration': contractor_workers_comp_exemption_expiration,
+        'contractor_workers_comp_document_reference': contractor_workers_comp_document_reference,
+        'contractor_agreement_effective_date': contractor_agreement_effective_date,
+        'contractor_agreement_signed_date': contractor_agreement_signed_date,
+        'contractor_signature_name': contractor_signature_name,
+        'contractor_signature_date': contractor_signature_date,
+        'contractor_disclosure_ack_at': contractor_disclosure_ack_at,
+        'contractor_no_benefits_ack_at': contractor_no_benefits_ack_at,
+        'contractor_insurance_ack_at': contractor_insurance_ack_at,
+        'contractor_safety_ack_at': contractor_safety_ack_at,
+        'contractor_classification_ack_at': contractor_classification_ack_at,
+        'contractor_classification_review_json': contractor_classification_review_json,
+        'payout_preference': payout_cleaned['payout_preference'],
+        'deposit_bank_name': payout_cleaned['deposit_bank_name'],
+        'deposit_account_holder_name': payout_cleaned['deposit_account_holder_name'],
+        'deposit_account_type': payout_cleaned['deposit_account_type'],
+        'deposit_account_last4': payout_cleaned['deposit_account_last4'],
+        'deposit_routing_number_enc': payout_cleaned['deposit_routing_number_enc'],
+        'deposit_account_number_enc': payout_cleaned['deposit_account_number_enc'],
+        'zelle_contact': payout_cleaned['zelle_contact'],
+        'updated_at': now_iso(),
+        'updated_by_user_id': actor_user_id,
+    }
     if existing:
+        payload['id'] = existing['id']
         conn.execute(
             '''UPDATE workers
-               SET name=?, worker_type=?, ssn=?, address=?, worker_role=?, role_classification=?, phone=?, email=?, preferred_language=?,
-                   hire_date=?, pay_notes=?, payroll_frequency=?, crew_label=?, skill_tags=?, availability_baseline=?, status=?,
-                   payout_preference=?, deposit_bank_name=?, deposit_account_holder_name=?, deposit_account_type=?, deposit_account_last4=?,
-                   deposit_routing_number_enc=?, deposit_account_number_enc=?, zelle_contact=?, updated_at=?, updated_by_user_id=?
-               WHERE id=?''',
-            payload + (existing['id'],),
+               SET name=:name, worker_type=:worker_type, ssn=:ssn, address=:address, worker_role=:worker_role, role_classification=:role_classification,
+                   phone=:phone, email=:email, preferred_language=:preferred_language, hire_date=:hire_date,
+                   engagement_start_date=:engagement_start_date, date_of_birth=:date_of_birth, pay_notes=:pay_notes,
+                   payroll_frequency=:payroll_frequency, crew_label=:crew_label, skill_tags=:skill_tags,
+                   availability_baseline=:availability_baseline, status=:status, contractor_legal_name=:contractor_legal_name,
+                   contractor_business_name=:contractor_business_name, contractor_tin_type=:contractor_tin_type,
+                   contractor_tax_classification=:contractor_tax_classification, contractor_w9_received_date=:contractor_w9_received_date,
+                   contractor_w9_signed_date=:contractor_w9_signed_date, contractor_scope_of_work=:contractor_scope_of_work,
+                   contractor_payment_terms=:contractor_payment_terms, contractor_license_number=:contractor_license_number,
+                   contractor_insurance_carrier=:contractor_insurance_carrier, contractor_policy_number=:contractor_policy_number,
+                   contractor_policy_expiration=:contractor_policy_expiration,
+                   contractor_general_liability_document_reference=:contractor_general_liability_document_reference,
+                   contractor_workers_comp_status=:contractor_workers_comp_status,
+                   contractor_workers_comp_carrier=:contractor_workers_comp_carrier,
+                   contractor_workers_comp_policy_number=:contractor_workers_comp_policy_number,
+                   contractor_workers_comp_expiration=:contractor_workers_comp_expiration,
+                   contractor_workers_comp_exemption_number=:contractor_workers_comp_exemption_number,
+                   contractor_workers_comp_exemption_expiration=:contractor_workers_comp_exemption_expiration,
+                   contractor_workers_comp_document_reference=:contractor_workers_comp_document_reference,
+                   contractor_agreement_effective_date=:contractor_agreement_effective_date,
+                   contractor_agreement_signed_date=:contractor_agreement_signed_date,
+                   contractor_signature_name=:contractor_signature_name, contractor_signature_date=:contractor_signature_date,
+                   contractor_disclosure_ack_at=:contractor_disclosure_ack_at,
+                   contractor_no_benefits_ack_at=:contractor_no_benefits_ack_at,
+                   contractor_insurance_ack_at=:contractor_insurance_ack_at,
+                   contractor_safety_ack_at=:contractor_safety_ack_at,
+                   contractor_classification_ack_at=:contractor_classification_ack_at,
+                   contractor_classification_review_json=:contractor_classification_review_json, payout_preference=:payout_preference,
+                   deposit_bank_name=:deposit_bank_name, deposit_account_holder_name=:deposit_account_holder_name,
+                   deposit_account_type=:deposit_account_type, deposit_account_last4=:deposit_account_last4,
+                   deposit_routing_number_enc=:deposit_routing_number_enc, deposit_account_number_enc=:deposit_account_number_enc,
+                   zelle_contact=:zelle_contact, updated_at=:updated_at, updated_by_user_id=:updated_by_user_id
+               WHERE id=:id''',
+            payload,
         )
         worker_id = existing['id']
+        if worker_type == 'W-2':
+            conn.execute('INSERT OR IGNORE INTO w4_answers (worker_id, signed_date) VALUES (?,?)', (worker_id, date.today().isoformat()))
         log_worker_profile_history(conn, worker_id=worker_id, client_id=client_id, action='updated', changed_by_user_id=actor_user_id)
     else:
         conn.execute(
             '''INSERT INTO workers (
-                   client_id, name, worker_type, ssn, address, phone, email, preferred_language, hire_date, pay_notes,
-                   payroll_frequency, role_classification, worker_role, crew_label, skill_tags, availability_baseline,
-                   status, payout_preference, deposit_bank_name, deposit_account_holder_name, deposit_account_type,
-                   deposit_account_last4, deposit_routing_number_enc, deposit_account_number_enc, zelle_contact,
-                   created_by_user_id, updated_at, updated_by_user_id
-               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-            (
-                client_id,
-                name,
-                worker_type,
-                payload[2],
-                payload[3],
-                payload[6],
-                payload[7],
-                payload[8],
-                payload[9],
-                payload[10],
-                payload[11],
-                worker_role,
-                worker_role,
-                payload[12],
-                payload[13],
-                payload[14],
-                status,
-                payload[16],
-                payload[17],
-                payload[18],
-                payload[19],
-                payload[20],
-                payload[21],
-                payload[22],
-                payload[23],
-                actor_user_id,
-                now_iso(),
-                actor_user_id,
-            ),
+                   client_id, name, worker_type, ssn, address, worker_role, role_classification, phone, email, preferred_language,
+                   hire_date, engagement_start_date, date_of_birth, pay_notes, payroll_frequency, crew_label, skill_tags,
+                   availability_baseline, status, contractor_legal_name, contractor_business_name, contractor_tin_type,
+                   contractor_tax_classification, contractor_w9_received_date, contractor_w9_signed_date, contractor_scope_of_work,
+                   contractor_payment_terms, contractor_license_number, contractor_insurance_carrier, contractor_policy_number,
+                   contractor_policy_expiration, contractor_general_liability_document_reference, contractor_workers_comp_status,
+                   contractor_workers_comp_carrier, contractor_workers_comp_policy_number, contractor_workers_comp_expiration,
+                   contractor_workers_comp_exemption_number, contractor_workers_comp_exemption_expiration,
+                   contractor_workers_comp_document_reference, contractor_agreement_effective_date, contractor_agreement_signed_date,
+                   contractor_signature_name, contractor_signature_date, contractor_disclosure_ack_at, contractor_no_benefits_ack_at,
+                   contractor_insurance_ack_at, contractor_safety_ack_at, contractor_classification_ack_at, contractor_classification_review_json,
+                   payout_preference, deposit_bank_name, deposit_account_holder_name, deposit_account_type, deposit_account_last4,
+                   deposit_routing_number_enc, deposit_account_number_enc, zelle_contact, created_by_user_id, updated_at, updated_by_user_id
+               ) VALUES (
+                   :client_id, :name, :worker_type, :ssn, :address, :worker_role, :role_classification, :phone, :email, :preferred_language,
+                   :hire_date, :engagement_start_date, :date_of_birth, :pay_notes, :payroll_frequency, :crew_label, :skill_tags,
+                   :availability_baseline, :status, :contractor_legal_name, :contractor_business_name, :contractor_tin_type,
+                   :contractor_tax_classification, :contractor_w9_received_date, :contractor_w9_signed_date, :contractor_scope_of_work,
+                   :contractor_payment_terms, :contractor_license_number, :contractor_insurance_carrier, :contractor_policy_number,
+                   :contractor_policy_expiration, :contractor_general_liability_document_reference, :contractor_workers_comp_status,
+                   :contractor_workers_comp_carrier, :contractor_workers_comp_policy_number, :contractor_workers_comp_expiration,
+                   :contractor_workers_comp_exemption_number, :contractor_workers_comp_exemption_expiration,
+                   :contractor_workers_comp_document_reference, :contractor_agreement_effective_date, :contractor_agreement_signed_date,
+                   :contractor_signature_name, :contractor_signature_date, :contractor_disclosure_ack_at, :contractor_no_benefits_ack_at,
+                   :contractor_insurance_ack_at, :contractor_safety_ack_at, :contractor_classification_ack_at, :contractor_classification_review_json,
+                   :payout_preference, :deposit_bank_name, :deposit_account_holder_name, :deposit_account_type, :deposit_account_last4,
+                   :deposit_routing_number_enc, :deposit_account_number_enc, :zelle_contact, :created_by_user_id, :updated_at, :updated_by_user_id
+               )''',
+            {**payload, 'created_by_user_id': actor_user_id},
         )
         worker_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
-        conn.execute('INSERT OR IGNORE INTO w4_answers (worker_id, signed_date) VALUES (?,?)', (worker_id, date.today().isoformat()))
+        if worker_type == 'W-2':
+            conn.execute('INSERT OR IGNORE INTO w4_answers (worker_id, signed_date) VALUES (?,?)', (worker_id, date.today().isoformat()))
         log_worker_profile_history(conn, worker_id=worker_id, client_id=client_id, action='created', changed_by_user_id=actor_user_id)
     return worker_id
 
@@ -12101,6 +12443,9 @@ def current_mode_for_request(user) -> str:
         'ops_dispatch',
         'ops_schedule',
         'ops_team',
+        'ops_team_new',
+        'ops_team_member',
+        'ops_subcontractor_new',
         'ops_availability',
         'ops_activity',
         'ops_locations',
@@ -12108,6 +12453,7 @@ def current_mode_for_request(user) -> str:
         'w4',
         'w2',
         'form_1099',
+        'subcontractor_agreement',
     }
     if endpoint in admin_cpa_endpoints:
         return 'cpa'
@@ -12178,6 +12524,14 @@ def inject_globals():
         'brand_logo_url': static_asset_url(BRAND_LOGO_FILENAME),
         'brand_mark_url': static_asset_url(BRAND_MARK_FILENAME),
         'irs_mileage_rate': IRS_MILEAGE_RATE,
+        'irs_independent_contractor_url': IRS_INDEPENDENT_CONTRACTOR_URL,
+        'irs_w9_requester_url': IRS_W9_REQUESTER_URL,
+        'irs_1099_nec_url': IRS_1099_NEC_URL,
+        'dol_flsa_contractor_url': DOL_FLSA_CONTRACTOR_URL,
+        'osha_multi_employer_url': OSHA_MULTI_EMPLOYER_URL,
+        'florida_new_hire_reporting_url': FLORIDA_NEW_HIRE_REPORTING_URL,
+        'florida_new_hire_instructions_url': FLORIDA_NEW_HIRE_INSTRUCTIONS_URL,
+        'florida_workers_comp_exemption_url': FLORIDA_WORKERS_COMP_EXEMPTION_URL,
         'current_mode': current_mode,
         'active_client': active_client,
         'active_business_color': business_color(active_client['id']) if active_client else '#0f766e',
@@ -15401,6 +15755,9 @@ def ops_team_context(conn: sqlite3.Connection, client_id: int, selected_worker_i
         'today_iso': date.today().isoformat(),
         'ops_workspace_warning': workspace_warning,
         'worker_payout_preferences': worker_payout_preference_options(),
+        'contractor_tin_type_options': contractor_tin_type_options(),
+        'contractor_tax_classification_options': contractor_tax_classification_options(),
+        'contractor_workers_comp_status_options': contractor_workers_comp_status_options(),
         'answers': answers,
     }
 
@@ -15584,6 +15941,36 @@ def ops_team_new():
         'ops_team_new.html',
         **team_context,
         team_subview='add',
+    )
+
+
+@app.route('/subcontractors/new', methods=['GET', 'POST'])
+@login_required
+def ops_subcontractor_new():
+    user = current_user()
+    client_id = ops_team_client_id_from_request(user)
+    if request.method == 'POST':
+        form_data = request.form.copy()
+        form_data['worker_type'] = '1099'
+        form_data['contractor_onboarding_mode'] = '1'
+        with get_conn() as conn:
+            workspace_warning = prepare_ops_workspace(conn, client_id)
+            if workspace_warning:
+                flash(workspace_warning, 'warning')
+            try:
+                worker_id = ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=form_data)
+                conn.commit()
+                flash('Subcontractor saved with 1099, W-9, insurance, and agreement acknowledgements.', 'success')
+                return redirect(url_for('ops_team_member', client_id=client_id, worker_id=worker_id))
+            except ValueError as exc:
+                conn.rollback()
+                flash(str(exc), 'error')
+    with get_conn() as conn:
+        team_context = ops_team_context(conn, client_id)
+    return render_template(
+        'ops_subcontractor_new.html',
+        **team_context,
+        team_subview='subcontractor',
     )
 
 
@@ -19869,104 +20256,27 @@ def workers():
         if request.method == 'POST':
             action = request.form.get('action', 'add')
             if action == 'add':
-                payout_cleaned, payout_errors = validate_worker_payout_setup(request.form)
-                if payout_errors:
-                    for error in payout_errors:
-                        flash(error, 'error')
+                try:
+                    worker_id = ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=request.form)
+                    conn.commit()
+                    flash('Worker saved.', 'success')
+                    return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
+                except ValueError as exc:
+                    conn.rollback()
+                    flash(str(exc), 'error')
                     return redirect(url_for('workers', client_id=client_id))
-                saved_at = now_iso()
-                preferred_language = normalize_language(request.form.get('preferred_language'))
-                conn.execute(
-                    '''INSERT INTO workers (
-                        client_id, name, worker_type, ssn, address, phone, email, hire_date, pay_notes, payroll_frequency,
-                        role_classification, status, termination_date, termination_cause, payout_preference, deposit_bank_name,
-                        deposit_account_holder_name, deposit_account_type, deposit_account_last4, deposit_routing_number_enc,
-                        deposit_account_number_enc, zelle_contact, preferred_language, created_by_user_id, updated_at, updated_by_user_id
-                    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                    (
-                        client_id,
-                        request.form.get('name', '').strip(),
-                        request.form.get('worker_type', '1099').strip(),
-                        request.form.get('ssn', '').strip(),
-                        request.form.get('address', '').strip(),
-                        request.form.get('phone', '').strip(),
-                        request.form.get('email', '').strip(),
-                        request.form.get('hire_date', '').strip(),
-                        request.form.get('pay_notes', '').strip(),
-                        request.form.get('payroll_frequency', 'weekly').strip(),
-                        request.form.get('role_classification', '').strip(),
-                        'active',
-                        '',
-                        '',
-                        payout_cleaned['payout_preference'],
-                        payout_cleaned['deposit_bank_name'],
-                        payout_cleaned['deposit_account_holder_name'],
-                        payout_cleaned['deposit_account_type'],
-                        payout_cleaned['deposit_account_last4'],
-                        payout_cleaned['deposit_routing_number_enc'],
-                        payout_cleaned['deposit_account_number_enc'],
-                        payout_cleaned['zelle_contact'],
-                        preferred_language,
-                        user['id'],
-                        saved_at,
-                        user['id'],
-                    )
-                )
-                worker_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
-                conn.execute('INSERT OR IGNORE INTO w4_answers (worker_id, signed_date) VALUES (?,?)', (worker_id, date.today().isoformat()))
-                log_worker_profile_history(conn, worker_id=worker_id, client_id=client_id, action='created', changed_by_user_id=user['id'])
-                conn.commit()
-                flash('Worker saved.', 'success')
-                return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
             worker_id = request.form.get('worker_id', type=int)
             worker = conn.execute('SELECT * FROM workers WHERE id=? AND client_id=?', (worker_id, client_id)).fetchone() if worker_id else None
             if not worker:
                 abort(403)
             if action == 'edit':
-                payout_cleaned, payout_errors = validate_worker_payout_setup(request.form, existing=worker)
-                if payout_errors:
-                    for error in payout_errors:
-                        flash(error, 'error')
-                    return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
                 try:
-                    saved_at = now_iso()
-                    preferred_language = normalize_language(request.form.get('preferred_language') or worker['preferred_language'])
-                    conn.execute(
-                        '''UPDATE workers
-                           SET name=?, worker_type=?, ssn=?, address=?, phone=?, email=?, hire_date=?, pay_notes=?,
-                               payroll_frequency=?, role_classification=?, payout_preference=?, deposit_bank_name=?,
-                               deposit_account_holder_name=?, deposit_account_type=?, deposit_account_last4=?,
-                               deposit_routing_number_enc=?, deposit_account_number_enc=?, zelle_contact=?, preferred_language=?,
-                               updated_at=?, updated_by_user_id=?
-                           WHERE id=?''',
-                        (
-                            request.form.get('name', '').strip(),
-                            request.form.get('worker_type', '1099').strip(),
-                            request.form.get('ssn', '').strip(),
-                            request.form.get('address', '').strip(),
-                            request.form.get('phone', '').strip(),
-                            request.form.get('email', '').strip(),
-                            request.form.get('hire_date', '').strip(),
-                            request.form.get('pay_notes', '').strip(),
-                            request.form.get('payroll_frequency', 'weekly').strip(),
-                            request.form.get('role_classification', '').strip(),
-                            payout_cleaned['payout_preference'],
-                            payout_cleaned['deposit_bank_name'],
-                            payout_cleaned['deposit_account_holder_name'],
-                            payout_cleaned['deposit_account_type'],
-                            payout_cleaned['deposit_account_last4'],
-                            payout_cleaned['deposit_routing_number_enc'],
-                            payout_cleaned['deposit_account_number_enc'],
-                            payout_cleaned['zelle_contact'],
-                            preferred_language,
-                            saved_at,
-                            user['id'],
-                            worker_id,
-                        )
-                    )
-                    log_worker_profile_history(conn, worker_id=worker_id, client_id=client_id, action='updated', changed_by_user_id=user['id'])
+                    ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=request.form, existing=worker)
                     conn.commit()
                     flash('Worker updated.', 'success')
+                except ValueError as exc:
+                    conn.rollback()
+                    flash(str(exc), 'error')
                 except sqlite3.Error:
                     conn.rollback()
                     flash('Worker changes could not be saved.', 'error')
@@ -20151,7 +20461,20 @@ def workers():
         ).fetchone() if selected_worker_id else None
         answers = conn.execute('SELECT * FROM w4_answers WHERE worker_id=?', (selected_worker_id,)).fetchone() if selected_worker_id else None
         policy_notices = conn.execute('SELECT * FROM worker_policy_notices WHERE client_id=? ORDER BY updated_at DESC, id DESC', (client_id,)).fetchall()
-    return render_template('workers.html', workers=rows, client=client, client_id=client_id, selected_worker=selected_worker, answers=answers, worker_login_url=url_for('worker_login'), policy_notices=policy_notices, worker_payout_preferences=worker_payout_preference_options())
+    return render_template(
+        'workers.html',
+        workers=rows,
+        client=client,
+        client_id=client_id,
+        selected_worker=selected_worker,
+        answers=answers,
+        worker_login_url=url_for('worker_login'),
+        policy_notices=policy_notices,
+        worker_payout_preferences=worker_payout_preference_options(),
+        contractor_tin_type_options=contractor_tin_type_options(),
+        contractor_tax_classification_options=contractor_tax_classification_options(),
+        contractor_workers_comp_status_options=contractor_workers_comp_status_options(),
+    )
 
 
 @app.route('/workers/<int:worker_id>/w4', methods=['POST'])
@@ -20162,6 +20485,9 @@ def save_worker_w4(worker_id):
         worker = conn.execute('SELECT * FROM workers WHERE id=?', (worker_id,)).fetchone()
         if not worker or not allowed_client(user, worker['client_id']):
             abort(403)
+        if not worker_is_w2(worker):
+            flash('W-4 answers only apply to W-2 employees.', 'error')
+            return redirect(url_for('ops_team_member', client_id=worker['client_id'], worker_id=worker_id))
         existing = conn.execute('SELECT id FROM w4_answers WHERE worker_id=?', (worker_id,)).fetchone()
         data = (
             request.form.get('filing_status', ''),
@@ -20556,20 +20882,21 @@ def reports():
             'end_date': end_date,
             'worker_id': worker_id,
             'invoice_id': invoice_id,
+            'worker_payment_method_labels': worker_payment_method_label_map(),
             'summary': summary_data,
             'report_graphics': graphics_snapshot,
+            'worker_salary_report': {'rows': [], 'totals': {}},
             'payroll_941_report': {'rows': [], 'totals': {}, 'detail_rows': [], 'excluded_1099_rows': [], 'quarter_match': None},
             'insurance_audit_report': {'rows': [], 'totals': {}, 'payment_detail_rows': []},
         }
+        if report_type in {'workers', 'payments', 'payroll_941_support', 'insurance_audit_payroll'}:
+            try:
+                context['worker_salary_report'] = worker_salary_report(conn, client_id, start_date or None, end_date or None, worker_id)
+            except sqlite3.Error as exc:
+                report_warnings.append(str(exc))
 
         if report_type == 'workers':
-            query = 'SELECT * FROM workers WHERE client_id=?'
-            params = [client_id]
-            if worker_id:
-                query += ' AND id=?'
-                params.append(worker_id)
-            query += ' ORDER BY name'
-            context['rows'] = safe_fetchall(query, tuple(params))
+            context['rows'] = []
         elif report_type == 'payments':
             query = 'SELECT wp.*, w.name worker_name, w.worker_type FROM worker_payments wp JOIN workers w ON w.id=wp.worker_id WHERE w.client_id=?'
             params = [client_id]
@@ -21132,6 +21459,9 @@ def w4(worker_id):
         worker = conn.execute('SELECT * FROM workers WHERE id=?', (worker_id,)).fetchone()
         if not worker or not allowed_client(user, worker['client_id']):
             abort(403)
+        if not worker_is_w2(worker):
+            flash('W-4 is only available for W-2 employees.', 'error')
+            return redirect(url_for('ops_team_member', client_id=worker['client_id'], worker_id=worker_id))
         if request.method == 'POST':
             existing = conn.execute('SELECT id FROM w4_answers WHERE worker_id=?', (worker_id,)).fetchone()
             data = (
@@ -21166,6 +21496,9 @@ def w2(worker_id):
         worker = conn.execute('SELECT * FROM workers WHERE id=?', (worker_id,)).fetchone()
         if not worker or not allowed_client(user, worker['client_id']):
             abort(403)
+        if not worker_is_w2(worker):
+            flash('Final W-2 is only available for W-2 employees.', 'error')
+            return redirect(url_for('form_1099', worker_id=worker_id, year=year))
         payments = conn.execute('SELECT * FROM worker_payments WHERE worker_id=? AND substr(payment_date,1,4)=? ORDER BY payment_date', (worker_id, str(year))).fetchall()
         client = conn.execute('SELECT * FROM clients WHERE id=?', (worker['client_id'],)).fetchone()
     payer = payer_profile_for_client(client)
@@ -21181,10 +21514,33 @@ def form_1099(worker_id):
         worker = conn.execute('SELECT * FROM workers WHERE id=?', (worker_id,)).fetchone()
         if not worker or not allowed_client(user, worker['client_id']):
             abort(403)
+        if worker_is_w2(worker):
+            flash('1099-NEC is only available for subcontractors.', 'error')
+            return redirect(url_for('w2', worker_id=worker_id, year=year))
         payments = conn.execute('SELECT * FROM worker_payments WHERE worker_id=? AND substr(payment_date,1,4)=? ORDER BY payment_date', (worker_id, str(year))).fetchall()
         client = conn.execute('SELECT * FROM clients WHERE id=?', (worker['client_id'],)).fetchone()
     payer = payer_profile_for_client(client)
     return render_template('1099.html', worker=worker, payments=payments, year=year, totals=worker_year_totals(worker_id, year), **payer)
+
+
+@app.route('/forms/subcontractor-agreement/<int:worker_id>')
+@login_required
+def subcontractor_agreement(worker_id):
+    user = current_user()
+    with get_conn() as conn:
+        worker = conn.execute('SELECT * FROM workers WHERE id=?', (worker_id,)).fetchone()
+        if not worker or not allowed_client(user, worker['client_id']):
+            abort(403)
+        if worker_is_w2(worker):
+            flash('Independent contractor agreement is only available for subcontractors.', 'error')
+            return redirect(url_for('ops_team_member', client_id=worker['client_id'], worker_id=worker_id))
+        client = conn.execute('SELECT * FROM clients WHERE id=?', (worker['client_id'],)).fetchone()
+    return render_template(
+        'subcontractor_agreement.html',
+        worker=worker,
+        client=client,
+        effective_date=(row_value(worker, 'contractor_agreement_effective_date', '') or worker_start_date_display(worker) or date.today().isoformat()),
+    )
 
 
 init_db()

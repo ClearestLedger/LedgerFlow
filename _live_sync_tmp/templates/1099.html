@@ -1,8 +1,57 @@
 {% extends 'base.html' %}
 {% block body %}
 <div class='report'>
-  <div class='toolbar'><a href='{{ url_for("workers", client_id=worker.client_id, worker_id=worker.id) }}' class='btn btn-secondary'>Back to Workers</a><button onclick='window.print()' class='btn btn-dark' type='button'>Print</button></div>
-  <h2>1099-NEC {{ year }} · {{ worker.name }}</h2>
-  <div class='grid cards-3'><div class='card'><strong>Payer</strong><br>{{ payer_name }}<br>{{ payer_ein }}<br>{{ payer_address }}</div><div class='card'><strong>Recipient</strong><br>{{ worker.name }}<br>{{ worker.ssn }}<br>{{ worker.address }}</div><div class='card'><strong>Box 1 Nonemployee Compensation</strong><br>${{ '%.2f'|format(totals.gross) }}<br><br><strong>SE Tax Est.</strong><br>${{ '%.2f'|format(totals.se) }}</div></div><table class='table' style='margin-top:16px'><tr><th>Date</th><th>Amount</th><th>Note</th></tr>{% for p in payments %}<tr><td>{{ p.payment_date }}</td><td>${{ '%.2f'|format(p.amount or 0) }}</td><td>{{ p.note }}</td></tr>{% endfor %}</table><div class='small' style='margin-top:12px'>1099 summary generated from business-specific payer details for administrator review before final filing.</div>
+  <div class='toolbar'>
+    <a href='{{ url_for("ops_team_member", client_id=worker.client_id, worker_id=worker.id) }}' class='btn btn-secondary'>Back to Team Member</a>
+    <button onclick='window.print()' class='btn btn-dark' type='button'>Print</button>
+  </div>
+  <h2>1099-NEC {{ year }} · {{ worker.contractor_legal_name or worker.name }}</h2>
+  <div class='small'>Prepared from saved worker payouts and contractor profile data for manager review before final filing.</div>
+
+  <div class='grid cards-3' style='margin-top:16px'>
+    <div class='card'>
+      <strong>Payer</strong><br>
+      {{ payer_name }}<br>
+      {{ payer_ein }}<br>
+      {{ payer_address }}
+    </div>
+    <div class='card'>
+      <strong>Recipient</strong><br>
+      {{ worker.contractor_legal_name or worker.name }}<br>
+      {% if worker.contractor_business_name %}{{ worker.contractor_business_name }}<br>{% endif %}
+      {{ worker.ssn }}{% if worker.contractor_tin_type %} ({{ worker.contractor_tin_type|upper }}){% endif %}<br>
+      {{ worker.address }}
+    </div>
+    <div class='card'>
+      <strong>1099 Snapshot</strong><br>
+      Box 1 Nonemployee compensation: ${{ '%.2f'|format(totals.gross) }}<br>
+      SE tax estimate: ${{ '%.2f'|format(totals.se) }}<br>
+      Tax classification: {{ (worker.contractor_tax_classification or 'not_set')|replace('_', ' ')|title }}
+    </div>
+  </div>
+
+  <div class='card' style='margin-top:16px'>
+    <div class='card-head'><h3>Contractor Profile</h3><span class='badge'>W-9 support</span></div>
+    <table class='table'>
+      <tr><th>Service Start</th><td>{{ worker.engagement_start_date or worker.hire_date or '' }}</td><th>W-9 Received</th><td>{{ worker.contractor_w9_received_date or '' }}</td></tr>
+      <tr><th>W-9 Signed</th><td>{{ worker.contractor_w9_signed_date or '' }}</td><th>Agreement Effective</th><td>{{ worker.contractor_agreement_effective_date or '' }}</td></tr>
+      <tr><th>Workers Comp Status</th><td>{{ (worker.contractor_workers_comp_status or '')|replace('_', ' ')|title }}</td><th>Proof / Exemption</th><td>{{ worker.contractor_workers_comp_policy_number or worker.contractor_workers_comp_exemption_number or worker.contractor_workers_comp_document_reference or '' }}</td></tr>
+      <tr><th>Payment Terms</th><td colspan='3'>{{ worker.contractor_payment_terms or '' }}</td></tr>
+      <tr><th>Scope of Work</th><td colspan='3'>{{ worker.contractor_scope_of_work or '' }}</td></tr>
+    </table>
+  </div>
+
+  <table class='table' style='margin-top:16px'>
+    <tr><th>Date</th><th>Amount</th><th>Method</th><th>Note</th></tr>
+    {% for p in payments %}
+    <tr>
+      <td>{{ p.payment_date }}</td>
+      <td>${{ '%.2f'|format(p.amount or 0) }}</td>
+      <td>{{ (p.payment_method or 'other')|replace('_', ' ')|title }}</td>
+      <td>{{ p.note }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <div class='small' style='margin-top:12px'>Review the final 1099-NEC against the signed W-9 and your filing workflow before issuing or filing. Official references: <a href='{{ irs_w9_requester_url }}' target='_blank' rel='noopener'>IRS W-9 requester instructions</a>, <a href='{{ irs_1099_nec_url }}' target='_blank' rel='noopener'>IRS 1099-NEC instructions</a>, <a href='{{ irs_independent_contractor_url }}' target='_blank' rel='noopener'>IRS worker classification</a>.</div>
 </div>
 {% endblock %}

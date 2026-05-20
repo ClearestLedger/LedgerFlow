@@ -4,17 +4,19 @@
   <div>
     <div class='page-kicker'>Team & Workers</div>
     <div class='page-title'>Operations Team</div>
-    <div class='page-subtitle'>Keep the team directory clean, add new workers from a folded setup panel, and open team information in a full-screen view only when you need it.</div>
+    <div class='page-subtitle'>Keep employees and subcontractors visible in one directory while using separate onboarding flows for W-2 and 1099 records.</div>
   </div>
   <div class='stack-actions'>
     <a class='btn btn-secondary' href='{{ url_for("ops_availability", client_id=client_id) }}'>Availability</a>
-    <a class='btn' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Open Full Screen Add</a>
+    <a class='btn btn-secondary' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
+    <a class='btn' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Employee</a>
   </div>
 </div>
 
 <div class='team-subnav'>
   <a class='team-subnav-link active' href='{{ url_for("ops_team", client_id=client_id) }}'>Team Directory</a>
-  <a class='team-subnav-link' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Team Member</a>
+  <a class='team-subnav-link' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Employee</a>
+  <a class='team-subnav-link' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
 </div>
 
 <div class='grid cards-2 ops-jobs-layout'>
@@ -41,19 +43,20 @@
 
   <div class='card'>
     <div class='card-head'>
-      <h3>Add Team Member</h3>
+      <h3>Add Employee</h3>
       <div class='stack-actions'>
         <span class='badge'>Folded Setup</span>
-        <a class='btn btn-secondary btn-sm' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Open Full Screen</a>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Subcontractor Form</a>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Full Employee Form</a>
       </div>
     </div>
     <details class='compact-details' {% if open_add_panel %}open{% endif %}>
-      <summary>{{ tr('Add Team Member') }}</summary>
-      <div class='small' style='margin:12px 0 14px 0'>Use this folded panel for quick setup, or switch to the full-screen add page when you want more room to work.</div>
+      <summary>Add W-2 Employee</summary>
+      <div class='small' style='margin:12px 0 14px 0'>Use this folded panel for W-2 employee setup. Use the separate subcontractor form for 1099 contractors.</div>
       <form method='post' class='form-grid'>
         {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
         <input type='hidden' name='action' value='create_worker'>
-        {% with worker=None, submit_label='Add Team Member' %}
+        {% with worker=None, submit_label='Add Employee', fixed_worker_type='W-2' %}
           {% include '_ops_worker_profile_fields.html' %}
         {% endwith %}
       </form>

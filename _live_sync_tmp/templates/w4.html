@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% block body %}
 <div class='report'>
-  <div class='toolbar'><a href='{{ url_for("workers", client_id=worker.client_id, worker_id=worker.id) }}' class='btn btn-secondary'>Back to Workers</a><button onclick='window.print()' class='btn btn-dark' type='button'>Print</button></div>
+  <div class='toolbar'><a href='{{ url_for("ops_team_member", client_id=worker.client_id, worker_id=worker.id) }}' class='btn btn-secondary'>Back to Team Member</a><button onclick='window.print()' class='btn btn-dark' type='button'>Print</button></div>
   <h2>Form W-4 Employee Withholding Certificate</h2>
   <p class='small'>IRS-style employee worksheet. Save answers for this worker.</p>
   <form method='post'>
