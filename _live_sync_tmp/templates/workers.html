@@ -1,278 +1,148 @@
 {% extends 'base.html' %}
 {% block body %}
-<div class='toolbar'>
-  <div class='small'><strong>{{ client.business_name }}</strong> · Team members, payroll & forms</div>
-  <button onclick='window.print()' class='btn btn-secondary' type='button'>Print This Page</button>
+<div class='toolbar hero-toolbar'>
+  <div>
+    <div class='page-kicker'>1099 Subcontractors</div>
+    <div class='page-title'>Subcontractors</div>
+    <div class='page-subtitle'>Manage independent contractor records here. Team members and W-2 employees stay on the Team Members page.</div>
+  </div>
+  <div class='stack-actions'>
+    <a class='btn btn-secondary' href='{{ url_for("ops_team", client_id=client_id) }}'>Team Members</a>
+    <a class='btn btn-secondary' href='{{ url_for("worker_payments", client_id=client_id, worker_id=selected_worker.id) if selected_worker else url_for("worker_payments", client_id=client_id) }}'>Payouts</a>
+    <a class='btn' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
+  </div>
 </div>
+
+<div class='team-subnav'>
+  <a class='team-subnav-link' href='{{ url_for("ops_team", client_id=client_id) }}'>Team Members / Employees</a>
+  <a class='team-subnav-link active' href='{{ url_for("workers", client_id=client_id) }}'>Subcontractors</a>
+  <a class='team-subnav-link' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Employee</a>
+  <a class='team-subnav-link' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
+</div>
+
 <div class='grid cards-2 workers-layout'>
   <div class='card'>
-    <details class='compact-details'>
-      <summary>Add Team Member</summary>
-      <div class='small' style='margin:12px 0'>Use separate setup flows so W-2 employees and 1099 subcontractors are not mixed together.</div>
-      <div class='small' style='margin:0 0 12px 0;padding:12px 14px;border:1px solid #e3ebf4;border-radius:16px;background:#f8fbff'>New team member records are saved with permanent profile history. The contractor flow now collects W-9 and agreement support details instead of treating the subcontractor like a hired employee.</div>
-      <details class='compact-details' open>
-        <summary>Add W-2 Employee</summary>
-        <form method='post' class='form-grid worker-profile-form' style='margin-top:12px'>
-          {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-          <input type='hidden' name='action' value='add'>
-          {% with worker=None, submit_label='Add Employee', fixed_worker_type='W-2' %}
-            {% include '_ops_worker_profile_fields.html' %}
-          {% endwith %}
-        </form>
-      </details>
-      <details class='compact-details' style='margin-top:12px'>
-        <summary>Add 1099 Subcontractor</summary>
-        <div class='small' style='margin:12px 0'>Subcontractors use a separate full-page onboarding flow with W-9, agreement, insurance, workers comp, safety, and classification acknowledgements.</div>
-        <a class='btn btn-secondary' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Open Add Subcontractor</a>
-      </details>
-    </details>
-  </div>
-  <div class='card'>
-    <div class='card-head'><h3>Team Members</h3><div class='small'>Manage active and inactive team members</div></div>
+    <div class='card-head'>
+      <div>
+        <h3>Subcontractors Only</h3>
+        <div class='small'>1099 profiles, agreements, W-9 details, insurance notes, and payout preferences.</div>
+      </div>
+      <span class='badge'>{{ workers|length }}</span>
+    </div>
+    {% if workers %}
     <table class='table'>
-      <tr><th>Name</th><th>Type</th><th>Status</th><th>Frequency</th><th>Forms</th></tr>
+      <tr><th>Name</th><th>Type</th><th>Status</th><th>Actions</th></tr>
       {% for w in workers %}
       <tr {% if selected_worker and selected_worker.id==w.id %}class='selected-row'{% endif %}>
         <td><a href='{{ url_for("workers", client_id=client_id, worker_id=w.id) }}'>{{ w.name }}</a></td>
-        <td>{{ 'W-2 Employee' if w.worker_type == 'W-2' else '1099 Subcontractor' }}</td>
-        <td>{{ w.status or 'active' }}</td>
-        <td>{{ w.payroll_frequency or 'weekly' }}</td>
-        <td><a href='{{ url_for("workers", client_id=client_id, worker_id=w.id) }}'>Manage</a>{% if w.worker_type == 'W-2' %} · <a href='{{ url_for("w2", worker_id=w.id) }}' target='_blank'>W-2</a>{% else %} · <a href='{{ url_for("form_1099", worker_id=w.id) }}' target='_blank'>1099</a> · <a href='{{ url_for("subcontractor_agreement", worker_id=w.id) }}' target='_blank'>Agreement</a>{% endif %}</td>
+        <td>1099 Subcontractor</td>
+        <td>{{ (w.status or 'active')|replace('_',' ')|title }}</td>
+        <td>
+          <a href='{{ url_for("workers", client_id=client_id, worker_id=w.id) }}'>Manage</a>
+          &middot; <a href='{{ url_for("form_1099", worker_id=w.id) }}' target='_blank'>1099</a>
+          &middot; <a href='{{ url_for("subcontractor_agreement", worker_id=w.id) }}' target='_blank'>Agreement</a>
+          &middot; <a href='{{ url_for("worker_payments", client_id=client_id, worker_id=w.id) }}'>Payouts</a>
+        </td>
       </tr>
       {% endfor %}
     </table>
+    {% else %}
+    <div class='empty-state'><strong>No subcontractors yet.</strong><span>Add 1099 subcontractors here, not in Team Members.</span></div>
+    {% endif %}
+  </div>
+
+  <div class='card'>
+    <div class='card-head'>
+      <div>
+        <h3>Add Subcontractor</h3>
+        <div class='small'>Use the dedicated 1099 onboarding flow so subcontractors never become team-member records.</div>
+      </div>
+      <span class='badge'>Separate</span>
+    </div>
+    <div class='team-callout'>
+      <p>Subcontractors are independent contractor records. They do not use the team member portal, W-4, W-2, or employee hire workflow.</p>
+      <div class='stack-actions' style='margin-top:12px'>
+        <a class='btn' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Open Add Subcontractor</a>
+        <a class='btn btn-secondary' href='{{ url_for("ops_team", client_id=client_id) }}'>Open Team Members</a>
+      </div>
+    </div>
   </div>
 </div>
+
 {% if selected_worker %}
-<div class='card' style='margin-top:16px'>
-  <div class='small' style='margin-bottom:12px;padding:12px 14px;border:1px solid #e3ebf4;border-radius:16px;background:#f8fbff'>
-    <strong>Saved in LedgerFlow</strong>
-    <div style='margin-top:4px'>Created {{ selected_worker.created_at or 'Not recorded yet' }}{% if selected_worker.created_by_name %} by {{ selected_worker.created_by_name }}{% endif %}</div>
-    <div>Last updated {{ selected_worker.updated_at or selected_worker.created_at or 'Not recorded yet' }}{% if selected_worker.updated_by_name %} by {{ selected_worker.updated_by_name }}{% endif %}</div>
+<div class='card' style='margin-top:18px'>
+  <div class='card-head'>
+    <div>
+      <h3>Manage Subcontractor - {{ selected_worker.name }}</h3>
+      <div class='small'>Created {{ selected_worker.created_at or 'Not recorded yet' }}{% if selected_worker.created_by_name %} by {{ selected_worker.created_by_name }}{% endif %}. Last updated {{ selected_worker.updated_at or selected_worker.created_at or 'Not recorded yet' }}{% if selected_worker.updated_by_name %} by {{ selected_worker.updated_by_name }}{% endif %}.</div>
+    </div>
+    <div class='stack-actions'>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("form_1099", worker_id=selected_worker.id) }}' target='_blank'>1099</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("subcontractor_agreement", worker_id=selected_worker.id) }}' target='_blank'>Agreement</a>
+      <a class='btn btn-secondary btn-sm' href='{{ url_for("worker_payments", client_id=client_id, worker_id=selected_worker.id) }}'>Payouts</a>
+    </div>
   </div>
-  <div class='card-head'><h3>Manage Team Member · {{ selected_worker.name }}</h3><div class='small'>Edit, delete, or deactivate this team member</div></div>
-  <details class='compact-details'>
-    <summary>Edit Team Member Profile</summary>
-    {% if selected_worker.worker_type == 'W-2' %}
-    <form method='post' class='form-grid' style='margin-top:12px'>
-    <input type='hidden' name='action' value='edit'>
-    <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
-    {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-    <div><label>Name</label><input name='name' value='{{ selected_worker.name }}' required></div>
-    <input type='hidden' name='worker_type' value='W-2'>
-    <div><label>Classification</label><input value='W-2 Employee' readonly></div>
-    <div><label>Payroll Frequency</label><select name='payroll_frequency'><option value='weekly' {% if selected_worker.payroll_frequency=='weekly' %}selected{% endif %}>Weekly</option><option value='biweekly' {% if selected_worker.payroll_frequency=='biweekly' %}selected{% endif %}>Biweekly</option><option value='semimonthly' {% if selected_worker.payroll_frequency=='semimonthly' %}selected{% endif %}>Semimonthly</option><option value='monthly' {% if selected_worker.payroll_frequency=='monthly' %}selected{% endif %}>Monthly</option></select></div>
-    <div><label>SSN / Tax ID</label><input name='ssn' value='{{ selected_worker.ssn }}'></div>
-    {% if selected_worker.worker_type == 'W-2' %}
-    <div><label>Hire Date</label><input name='hire_date' type='date' value='{{ selected_worker.hire_date }}'></div>
-    {% else %}
-    <div><label>Service Start Date</label><input name='engagement_start_date' type='date' value='{{ selected_worker.engagement_start_date or selected_worker.hire_date }}'></div>
-    {% endif %}
-    <div><label>Phone</label><input name='phone' value='{{ selected_worker.phone }}'></div>
-    <div><label>Email</label><input name='email' value='{{ selected_worker.email }}'></div>
-    <div><label>{{ tr('Preferred Language') }}</label><select name='preferred_language'>{% for option in language_options %}<option value='{{ option.code }}' {% if (selected_worker.preferred_language or "en") == option.code %}selected{% endif %}>{{ option.label }}</option>{% endfor %}</select></div>
-    <div><label>Role / Classification</label><input name='role_classification' value='{{ selected_worker.role_classification }}'></div>
-    <div><label>Status</label><input value='{{ selected_worker.status or "active" }}' readonly></div>
-    <div><label>Team Member Payment Preference</label><select name='payout_preference' class='worker-payout-select'>{% for value, label in worker_payout_preferences %}<option value='{{ value }}' {% if (selected_worker.payout_preference or 'paper_check') == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
-    <div class='worker-payout-field payout-zelle'><label>Zelle Email / Phone</label><input name='zelle_contact' value='{{ selected_worker.zelle_contact or "" }}' placeholder='teammember@email.com or phone'></div>
-    <div class='worker-payout-field payout-direct_deposit'><label>Bank Name</label><input name='deposit_bank_name' value='{{ selected_worker.deposit_bank_name or "" }}' placeholder='Chase Business Checking'></div>
-    <div class='worker-payout-field payout-direct_deposit'><label>Account Holder Name</label><input name='deposit_account_holder_name' value='{{ selected_worker.deposit_account_holder_name or "" }}' placeholder='Team member legal name'></div>
-    <div class='worker-payout-field payout-direct_deposit'><label>Account Type</label><select name='deposit_account_type'><option value='checking' {% if (selected_worker.deposit_account_type or 'checking') == 'checking' %}selected{% endif %}>Checking</option><option value='savings' {% if selected_worker.deposit_account_type == 'savings' %}selected{% endif %}>Savings</option></select></div>
-    <div class='worker-payout-field payout-direct_deposit'><label>Routing Number</label><input name='deposit_routing_number' inputmode='numeric' maxlength='9' placeholder='Leave blank to keep current'></div>
-    <div class='worker-payout-field payout-direct_deposit'><label>Account Number</label><input name='deposit_account_number' inputmode='numeric' placeholder='Leave blank to keep current'></div>
-    <div class='worker-payout-field payout-direct_deposit'><label>Confirm Account Number</label><input name='confirm_deposit_account_number' inputmode='numeric' placeholder='Re-enter only if changing'></div>
-    <div class='worker-payout-field payout-direct_deposit'><label>Last 4 Digits</label><input name='deposit_account_last4' value='{{ selected_worker.deposit_account_last4 or "" }}' inputmode='numeric' maxlength='4' placeholder='6789'></div>
-    <div class='small' style='grid-column:1/-1'>Current payout setup: {{ (selected_worker.payout_preference or 'paper_check')|replace('_',' ')|title }}{% if selected_worker.deposit_bank_name %} · {{ selected_worker.deposit_bank_name }}{% endif %}{% if selected_worker.deposit_account_last4 %} · ending in {{ selected_worker.deposit_account_last4 }}{% endif %}{% if selected_worker.zelle_contact %} · {{ selected_worker.zelle_contact }}{% endif %}</div>
-    <div style='grid-column:1/-1'><label>Address</label><input name='address' value='{{ selected_worker.address }}'></div>
-    <div style='grid-column:1/-1'><label>Pay Notes</label><textarea name='pay_notes'>{{ selected_worker.pay_notes }}</textarea></div>
-    <div><button>Save Changes</button></div>
-  </form>
-    {% else %}
+
+  <details class='compact-details' open>
+    <summary>Edit Subcontractor Profile</summary>
     <form method='post' class='form-grid worker-profile-form' style='margin-top:12px'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
       <input type='hidden' name='action' value='edit'>
       <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
-      {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
       {% with worker=selected_worker, submit_label='Save Subcontractor Profile', fixed_worker_type='1099' %}
         {% include '_ops_worker_profile_fields.html' %}
       {% endwith %}
     </form>
-    {% endif %}
   </details>
+</div>
 
-  <hr style='margin:16px 0'>
-  <div class='grid cards-2'>
-    <div>
-      <details class='compact-details'>
-        <summary>Deactivate Team Member</summary>
-        <form method='post' class='form-grid' style='margin-top:12px'>
+<div class='grid cards-2' style='margin-top:18px'>
+  <div class='card'>
+    <div class='card-head'><h3>Subcontractor Status</h3><span class='badge'>{{ (selected_worker.status or 'active')|replace('_',' ')|title }}</span></div>
+    {% if selected_worker.status == 'terminated' %}
+    <form method='post' style='margin-top:12px'>
+      {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+      <input type='hidden' name='action' value='reactivate'>
+      <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
+      <button class='btn btn-secondary' type='submit'>Reactivate Subcontractor</button>
+    </form>
+    {% else %}
+    <details class='compact-details'>
+      <summary>Deactivate Subcontractor</summary>
+      <form method='post' class='form-grid' style='margin-top:12px'>
+        {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
         <input type='hidden' name='action' value='terminate'>
         <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
-        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-        <div><label>Termination Date</label><input name='termination_date' type='date' value='{{ selected_worker.termination_date or today }}'></div>
-          <div><label>Reason for Deactivation</label><input name='termination_cause' value='{{ selected_worker.termination_cause }}' placeholder='Performance, voluntary, seasonal, etc.'></div>
-        <div><button type='submit'>Deactivate Team Member</button></div>
+        <div><label>Deactivation Date</label><input name='termination_date' type='date' value='{{ selected_worker.termination_date or today }}'></div>
+        <div><label>Reason</label><input name='termination_cause' value='{{ selected_worker.termination_cause }}' placeholder='Completed engagement, inactive, seasonal, etc.'></div>
+        <div><button type='submit'>Deactivate Subcontractor</button></div>
       </form>
-      {% if selected_worker.status == 'terminated' %}
-      <form method='post' style='margin-top:12px'>
-        <input type='hidden' name='action' value='reactivate'>
-        <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
-        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-        <button class='btn btn-secondary' type='submit'>Reactivate Team Member</button>
-      </form>
-      {% endif %}
-      </details>
-    </div>
-    <div>
-      <details class='compact-details'>
-        <summary>Delete Team Member</summary>
-        <p class='small' style='margin-top:12px'>Delete only if this team member has no payment history.</p>
-        <form method='post'>
-        <input type='hidden' name='action' value='delete'>
-        <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
-        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-        <button class='btn btn-danger' type='submit'>Delete Team Member</button>
-      </form>
-      </details>
-    </div>
-  </div>
-</div>
-
-<div class='card' style='margin-top:16px'>
-  <div class='card-head'><h3>Team Member Portal Access · {{ selected_worker.name }}</h3><div class='small'>Separate restricted team member login only</div></div>
-  <details class='compact-details'>
-    <summary>Manage Team Member Portal Access</summary>
-    <form method='post' class='form-grid' style='margin-top:12px'>
-    <input type='hidden' name='action' value='update_portal'>
-    <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
-    {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-    <div><label>Team Member Portal Email</label><input name='portal_email' type='email' value='{{ selected_worker.email or "" }}' placeholder='teammember@email.com'></div>
-    <div><label>Portal Password</label><input name='portal_password' type='password' placeholder='Set or reset team member password'></div>
-    <div>
-      <label>Portal Access</label>
-      <label style='display:flex;gap:8px;align-items:center;margin-top:8px'><input type='checkbox' name='portal_access_enabled' value='1' {% if selected_worker.portal_access_enabled %}checked{% endif %}> Enabled</label>
-    </div>
-    <div><label>Team Member Login</label><div class='small' style='padding-top:10px'><a href='{{ worker_login_url }}' target='_blank'>Open Team Member Login Page</a></div></div>
-    <div style='grid-column:1/-1'>
-      <div class='small'>This team member portal is separate from administrator and business-owner logins. Team members only see time summary, pay stubs, messenger, time-off requests, and notices.</div>
-      <div class='small' style='margin-top:8px'>Enter the portal email and either set a password here or leave the password blank to send a first-time password setup email.</div>
-      <div class='small' style='margin-top:8px'><strong>Approval Status:</strong> {{ (selected_worker.portal_approval_status or 'approved')|replace('_',' ')|title }}{% if selected_worker.portal_requested_at %} · Requested {{ selected_worker.portal_requested_at }}{% endif %}{% if selected_worker.portal_approved_at %} · Approved {{ selected_worker.portal_approved_at }}{% endif %}</div>
-    </div>
-    <div><button type='submit'>Save Team Member Portal Access</button></div>
-  </form>
-  </details>
-</div>
-
-
-<div class='card' style='margin-top:16px'>
-  <div class='card-head'><h3>Policies & Notices</h3><div class='small'>Default team member guidance plus your custom business notices</div></div>
-  <div class='grid cards-2'>
-    <div>
-      <details class='compact-details'>
-        <summary>Add Business Policy / Notice</summary>
-        <form method='post' class='form-grid' style='margin-top:12px'>
-        <input type='hidden' name='action' value='add_notice'>
-        {% if selected_worker %}<input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>{% endif %}
-        {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-        <div style='grid-column:1/-1'><label>Title</label><input name='notice_title' maxlength='120' placeholder='Attendance, safety reminder, payroll notice' required></div>
-        <div style='grid-column:1/-1'><label>Notice / Policy Text</label><textarea name='notice_body' rows='5' placeholder='Enter the worker-facing policy or notice here.' required></textarea></div>
-        <div><button type='submit'>Add Policy / Notice</button></div>
-      </form>
-      <div class='small' style='margin-top:12px'>Team members can view the default workplace policies plus any active business notices you add here. They cannot edit them.</div>
-      </details>
-    </div>
-    <div>
-      <h4>Default General U.S. Workplace Topics</h4>
-      <ul class='simple-list'>
-        <li>Attendance and punctuality expectations</li>
-        <li>Respectful workplace behavior and anti-harassment notice</li>
-        <li>Safety, injury reporting, and timekeeping reminders</li>
-      </ul>
-      <div class='small'>These default notices appear automatically in the team member portal. Your custom notices below appear in a separate business section for team members.</div>
-    </div>
-  </div>
-
-  <div style='margin-top:16px'>
-    <h4>Custom Business Policies / Notices</h4>
-    {% if policy_notices %}
-    <div class='stack-list'>
-      {% for notice in policy_notices %}
-      <div class='stack-item'>
-        <form method='post' class='form-grid'>
-          <input type='hidden' name='action' value='edit_notice'>
-          <input type='hidden' name='notice_id' value='{{ notice.id }}'>
-          {% if selected_worker %}<input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>{% endif %}
-          {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-          <div style='grid-column:1/-1'><label>Title</label><input name='notice_title' maxlength='120' value='{{ notice.title }}' required></div>
-          <div style='grid-column:1/-1'><label>Notice / Policy Text</label><textarea name='notice_body' rows='4' required>{{ notice.body }}</textarea></div>
-          <div>
-            <label style='display:flex;gap:8px;align-items:center;margin-top:30px'>
-              <input type='checkbox' name='is_active' value='1' {% if notice.is_active %}checked{% endif %}> Visible to team members
-            </label>
-          </div>
-          <div class='small' style='padding-top:30px'>Updated {{ notice.updated_at or notice.created_at }}</div>
-          <div style='display:flex;gap:8px;align-items:flex-end'>
-            <button type='submit'>Save Notice</button>
-          </div>
-        </form>
-        <form method='post' style='margin-top:8px'>
-          <input type='hidden' name='action' value='delete_notice'>
-          <input type='hidden' name='notice_id' value='{{ notice.id }}'>
-          {% if selected_worker %}<input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>{% endif %}
-          {% if current_user.role=='admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
-          <button class='btn btn-danger' type='submit'>Delete Notice</button>
-        </form>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <p class='small'>No custom business policies or notices have been added yet.</p>
+    </details>
     {% endif %}
   </div>
-</div>
 
-
-
-{% if selected_worker.worker_type == 'W-2' %}
-<div class='card' style='margin-top:16px'>
-  <div class='card-head'><h3>Complete / Review W-4 · {{ selected_worker.name }}</h3><div class='stack-actions'><a class='btn btn-secondary btn-sm' href='{{ url_for("w4", worker_id=selected_worker.id) }}' target='_blank'>Open Printable W-4</a><a class='btn btn-secondary btn-sm' href='{{ url_for("w2", worker_id=selected_worker.id) }}' target='_blank'>Open W-2</a><a class='btn btn-secondary btn-sm' href='{{ florida_new_hire_reporting_url }}' target='_blank' rel='noopener'>Florida New-Hire</a></div></div>
-  <details class='compact-details'>
-    <summary>Open W-4 Answers</summary>
-    <form method='post' action='{{ url_for("save_worker_w4", worker_id=selected_worker.id) }}' class='form-grid' style='margin-top:12px'>
-    <div><label>1(a) Employee name</label><input value='{{ selected_worker.name }}' readonly></div>
-    <div><label>1(b) SSN</label><input value='{{ selected_worker.ssn }}' readonly></div>
-    <div><label>1(c) Filing Status</label><select name='filing_status'><option value='single' {% if answers and answers.filing_status=='single' %}selected{% endif %}>Single or Married filing separately</option><option value='married' {% if answers and answers.filing_status=='married' %}selected{% endif %}>Married filing jointly or Qualifying surviving spouse</option><option value='head' {% if answers and answers.filing_status=='head' %}selected{% endif %}>Head of household</option></select></div>
-    <div><label>Step 2 Multiple Jobs or Spouse Works</label><select name='multiple_jobs'><option value=''>No</option><option value='1' {% if answers and answers.multiple_jobs %}selected{% endif %}>Yes</option></select></div>
-    <div><label>Step 3 Qualifying children under 17</label><input name='qualifying_children' type='number' step='0.01' value='{{ answers.qualifying_children if answers else "" }}'></div>
-    <div><label>Step 3 Other dependents</label><input name='other_dependents' type='number' step='0.01' value='{{ answers.other_dependents if answers else "" }}'></div>
-    <div><label>Step 4(a) Other income</label><input name='other_income' type='number' step='0.01' value='{{ answers.other_income if answers else "" }}'></div>
-    <div><label>Step 4(b) Deductions</label><input name='deductions' type='number' step='0.01' value='{{ answers.deductions if answers else "" }}'></div>
-    <div><label>Step 4(c) Extra withholding</label><input name='extra_withholding' type='number' step='0.01' value='{{ answers.extra_withholding if answers else "" }}'></div>
-    <div><label>Signature Name</label><input name='signature_name' value='{{ answers.signature_name if answers else selected_worker.name }}'></div>
-    <div><label>Signed Date</label><input name='signed_date' type='date' value='{{ answers.signed_date if answers else today }}'></div>
-    <div style='grid-column:1/-1'><button>Save W-4 Answers</button></div>
-  </form>
-  </details>
-</div>
-{% else %}
-<div class='card' style='margin-top:16px'>
-  <div class='card-head'><h3>1099 Contractor Snapshot · {{ selected_worker.name }}</h3><div class='stack-actions'><a class='btn btn-secondary btn-sm' href='{{ url_for("form_1099", worker_id=selected_worker.id) }}' target='_blank'>Open 1099</a><a class='btn btn-secondary btn-sm' href='{{ url_for("subcontractor_agreement", worker_id=selected_worker.id) }}' target='_blank'>Open Agreement</a><a class='btn btn-secondary btn-sm' href='{{ florida_new_hire_reporting_url }}' target='_blank' rel='noopener'>Florida New-Hire</a></div></div>
-  <details class='compact-details' open>
-    <summary>Open Contractor Compliance</summary>
-    <div class='form-grid' style='margin-top:12px'>
-      <div><label>Legal Name on W-9</label><input value='{{ selected_worker.contractor_legal_name or selected_worker.name }}' readonly></div>
-      <div><label>TIN Type</label><input value='{{ selected_worker.contractor_tin_type|upper if selected_worker.contractor_tin_type else "" }}' readonly></div>
-      <div><label>Tax Classification</label><input value='{{ (selected_worker.contractor_tax_classification or "")|replace("_", " ")|title }}' readonly></div>
-      <div><label>W-9 Received</label><input value='{{ selected_worker.contractor_w9_received_date or "" }}' readonly></div>
-      <div style='grid-column:1/-1'><label>Scope of Work</label><textarea readonly>{{ selected_worker.contractor_scope_of_work or "" }}</textarea></div>
-      <div style='grid-column:1/-1'><label>Payment Terms</label><textarea readonly>{{ selected_worker.contractor_payment_terms or "" }}</textarea></div>
-    </div>
-  </details>
+  <div class='card'>
+    <div class='card-head'><h3>Delete Subcontractor</h3><span class='badge'>No payout history only</span></div>
+    <details class='compact-details'>
+      <summary>Delete Subcontractor Profile</summary>
+      <div class='small' style='margin:12px 0'>Delete is only allowed when no payout history exists. If payments exist, deactivate the subcontractor instead.</div>
+      <form method='post'>
+        {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
+        <input type='hidden' name='action' value='delete'>
+        <input type='hidden' name='worker_id' value='{{ selected_worker.id }}'>
+        <button class='btn btn-danger' type='submit'>Delete Subcontractor</button>
+      </form>
+    </details>
+  </div>
 </div>
 {% endif %}
-{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('form').forEach(function (form) {
+  document.querySelectorAll('.worker-profile-form').forEach(function (form) {
     var select = form.querySelector('.worker-payout-select');
     function updatePayoutFields() {
       if (!select) return;
@@ -287,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     function updateWorkerTypePanels() {
       var typeField = form.querySelector('.worker-type-select');
-      var workerType = typeField ? typeField.value : (form.querySelector('input[name="worker_type"]') || {}).value || 'W-2';
+      var workerType = typeField ? typeField.value : (form.querySelector('input[name="worker_type"]') || {}).value || '1099';
       form.querySelectorAll('.worker-type-group').forEach(function (group) {
         var show = group.classList.contains('worker-type-' + workerType);
         group.style.display = show ? '' : 'none';

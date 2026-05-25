@@ -185,12 +185,13 @@
         <a class='app-nav-link {% if request.endpoint=="business_payments_page" %}active{% endif %}' href='{{ url_for("business_payments_page", client_id=active_client.id) }}'>{{ tr('Billing') }}</a>
       </details>
 
-      <details class='app-nav-group nav-fold nav-tone-ops' {% if request.endpoint in ["ops_overview","ops_dispatch","ops_schedule","ops_team","ops_team_new","ops_subcontractor_new","ops_team_member","ops_availability","ops_activity"] %}open{% endif %}>
+      <details class='app-nav-group nav-fold nav-tone-ops' {% if request.endpoint in ["ops_overview","ops_dispatch","ops_schedule","ops_team","ops_team_new","ops_subcontractor_new","ops_team_member","workers","ops_availability","ops_activity"] %}open{% endif %}>
         <summary class='app-nav-group-label'>{{ tr('Operations') }}</summary>
         <a class='app-nav-link {% if request.endpoint=="ops_overview" %}active{% endif %}' href='{{ url_for("ops_overview", client_id=active_client.id) }}'>{{ tr('Jobs & Profit') }}</a>
         <a class='app-nav-link {% if request.endpoint=="ops_dispatch" %}active{% endif %}' href='{{ url_for("ops_dispatch", client_id=active_client.id) }}'>{{ tr('Dispatch') }}</a>
         <a class='app-nav-link {% if request.endpoint=="ops_schedule" %}active{% endif %}' href='{{ url_for("ops_schedule", client_id=active_client.id) }}'>{{ tr('Schedule') }}</a>
-        <a class='app-nav-link {% if request.endpoint in ["ops_team","ops_team_member"] %}active{% endif %}' href='{{ url_for("ops_team", client_id=active_client.id) }}'>{{ tr('Team') }}</a>
+        <a class='app-nav-link {% if request.endpoint in ["ops_team","ops_team_member"] %}active{% endif %}' href='{{ url_for("ops_team", client_id=active_client.id) }}'>Team Members</a>
+        <a class='app-nav-link {% if request.endpoint=="workers" %}active{% endif %}' href='{{ url_for("workers", client_id=active_client.id) }}'>Subcontractors</a>
         <a class='app-nav-link nav-sub-link {% if request.endpoint=="ops_team_new" %}active{% endif %}' href='{{ url_for("ops_team_new", client_id=active_client.id) }}'>Add Employee</a>
         <a class='app-nav-link nav-sub-link {% if request.endpoint=="ops_subcontractor_new" %}active{% endif %}' href='{{ url_for("ops_subcontractor_new", client_id=active_client.id) }}'>Add Subcontractor</a>
         <a class='app-nav-link {% if request.endpoint=="ops_availability" %}active{% endif %}' href='{{ url_for("ops_availability", client_id=active_client.id) }}'>{{ tr('Availability') }}</a>
@@ -271,12 +272,13 @@
           <a class='workspace-link {% if request.endpoint=="reports" %}active{% endif %}' href='{{ url_for("reports", client_id=active_client.id) }}'>{{ tr('Reports') }}</a>
           <a class='workspace-link {% if request.endpoint=="business_payments_page" %}active{% endif %}' href='{{ url_for("business_payments_page", client_id=active_client.id) }}'>{{ tr('Billing') }}</a>
         </details>
-        <details class='workspace-group nav-fold nav-tone-ops' {% if request.endpoint in ["ops_overview","ops_dispatch","ops_schedule","ops_team","ops_team_new","ops_subcontractor_new","ops_team_member","ops_availability","ops_activity"] %}open{% endif %}>
+        <details class='workspace-group nav-fold nav-tone-ops' {% if request.endpoint in ["ops_overview","ops_dispatch","ops_schedule","ops_team","ops_team_new","ops_subcontractor_new","ops_team_member","workers","ops_availability","ops_activity"] %}open{% endif %}>
           <summary class='workspace-group-label'>{{ tr('Operations') }}</summary>
           <a class='workspace-link {% if request.endpoint=="ops_overview" %}active{% endif %}' href='{{ url_for("ops_overview", client_id=active_client.id) }}'>{{ tr('Jobs & Profit') }}</a>
           <a class='workspace-link {% if request.endpoint=="ops_dispatch" %}active{% endif %}' href='{{ url_for("ops_dispatch", client_id=active_client.id) }}'>{{ tr('Dispatch') }}</a>
           <a class='workspace-link {% if request.endpoint=="ops_schedule" %}active{% endif %}' href='{{ url_for("ops_schedule", client_id=active_client.id) }}'>{{ tr('Schedule') }}</a>
-          <a class='workspace-link {% if request.endpoint in ["ops_team","ops_team_member"] %}active{% endif %}' href='{{ url_for("ops_team", client_id=active_client.id) }}'>{{ tr('Team') }}</a>
+          <a class='workspace-link {% if request.endpoint in ["ops_team","ops_team_member"] %}active{% endif %}' href='{{ url_for("ops_team", client_id=active_client.id) }}'>Team Members</a>
+          <a class='workspace-link {% if request.endpoint=="workers" %}active{% endif %}' href='{{ url_for("workers", client_id=active_client.id) }}'>Subcontractors</a>
           <a class='workspace-link nav-sub-link {% if request.endpoint=="ops_team_new" %}active{% endif %}' href='{{ url_for("ops_team_new", client_id=active_client.id) }}'>Add Employee</a>
           <a class='workspace-link nav-sub-link {% if request.endpoint=="ops_subcontractor_new" %}active{% endif %}' href='{{ url_for("ops_subcontractor_new", client_id=active_client.id) }}'>Add Subcontractor</a>
           <a class='workspace-link {% if request.endpoint=="ops_availability" %}active{% endif %}' href='{{ url_for("ops_availability", client_id=active_client.id) }}'>{{ tr('Availability') }}</a>

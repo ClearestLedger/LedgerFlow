@@ -2,26 +2,27 @@
 {% block body %}
 <div class='toolbar hero-toolbar'>
   <div>
-    <div class='page-kicker'>Team & Workers</div>
-    <div class='page-title'>Operations Team</div>
-    <div class='page-subtitle'>Keep employees and subcontractors visible in one directory while using separate onboarding flows for W-2 and 1099 records.</div>
+    <div class='page-kicker'>Team Members / Employees</div>
+    <div class='page-title'>Employees</div>
+    <div class='page-subtitle'>Manage W-2 employees here. 1099 subcontractors are kept on their own subcontractor-only page.</div>
   </div>
   <div class='stack-actions'>
     <a class='btn btn-secondary' href='{{ url_for("ops_availability", client_id=client_id) }}'>Availability</a>
-    <a class='btn btn-secondary' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
+    <a class='btn btn-secondary' href='{{ url_for("workers", client_id=client_id) }}'>Subcontractors</a>
     <a class='btn' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Employee</a>
   </div>
 </div>
 
 <div class='team-subnav'>
-  <a class='team-subnav-link active' href='{{ url_for("ops_team", client_id=client_id) }}'>Team Directory</a>
+  <a class='team-subnav-link active' href='{{ url_for("ops_team", client_id=client_id) }}'>Team Members / Employees</a>
+  <a class='team-subnav-link' href='{{ url_for("workers", client_id=client_id) }}'>Subcontractors</a>
   <a class='team-subnav-link' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Employee</a>
   <a class='team-subnav-link' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
 </div>
 
 <div class='grid cards-2 ops-jobs-layout'>
   <div class='card team-directory-card'>
-    <div class='card-head'><h3>Team Directory</h3><span class='badge'>{{ workers|length }}</span></div>
+    <div class='card-head'><h3>Employees Only</h3><span class='badge'>{{ workers|length }}</span></div>
     {% if workers %}
     <div class='ops-card-list'>
       {% for worker in workers %}
@@ -30,14 +31,14 @@
           <strong>{{ worker.name }}</strong>
           <span class='badge'>{{ worker.status or 'active' }}</span>
         </div>
-        <div class='small'>{{ worker.ops_role or worker.role_classification or 'Crew Member' }}</div>
+        <div class='small'>{{ worker.ops_role or worker.role_classification or 'Employee' }}</div>
         <div class='small'>Upcoming {{ worker.upcoming_assignments or 0 }} · Active {{ worker.active_assignments or 0 }}</div>
         <div class='small'>Portal {{ 'Enabled' if worker.portal_access_enabled else 'Off' }}{% if worker.crew_label %} · {{ worker.crew_label }}{% endif %}</div>
       </a>
       {% endfor %}
     </div>
     {% else %}
-    <div class='empty-state'><strong>No team members yet.</strong><span>Add the first worker to start dispatching jobs.</span></div>
+    <div class='empty-state'><strong>No employees yet.</strong><span>Add the first W-2 employee here. Subcontractors stay separate.</span></div>
     {% endif %}
   </div>
 
@@ -46,13 +47,13 @@
       <h3>Add Employee</h3>
       <div class='stack-actions'>
         <span class='badge'>Folded Setup</span>
-        <a class='btn btn-secondary btn-sm' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Subcontractor Form</a>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("workers", client_id=client_id) }}'>Subcontractors</a>
         <a class='btn btn-secondary btn-sm' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Full Employee Form</a>
       </div>
     </div>
     <details class='compact-details' {% if open_add_panel %}open{% endif %}>
       <summary>Add W-2 Employee</summary>
-      <div class='small' style='margin:12px 0 14px 0'>Use this folded panel for W-2 employee setup. Use the separate subcontractor form for 1099 contractors.</div>
+      <div class='small' style='margin:12px 0 14px 0'>Use this folded panel for W-2 employee setup only. Use the Subcontractors page for 1099 records.</div>
       <form method='post' class='form-grid'>
         {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
         <input type='hidden' name='action' value='create_worker'>
@@ -66,16 +67,16 @@
 
 <div class='card' style='margin-top:18px'>
   <div class='card-head'>
-    <h3>Team Information</h3>
+    <h3>Employee Information</h3>
     <span class='badge'>Full Screen View</span>
   </div>
   <details class='compact-details'>
-    <summary>Open Team Information</summary>
+    <summary>Open Employee Information</summary>
     <div class='team-callout'>
-      <p>Select a worker from the team directory or use the search box to open that team member in a full-screen view with folded edit, payroll, availability, and portal sections.</p>
+      <p>Select an employee from the team directory to open the full-screen employee view with edit, payroll, availability, and portal sections.</p>
       {% if workers %}
       <div class='stack-actions'>
-        <a class='btn btn-secondary btn-sm' href='{{ url_for("ops_team_member", client_id=client_id, worker_id=workers[0].id) }}'>Open a Team Member</a>
+        <a class='btn btn-secondary btn-sm' href='{{ url_for("ops_team_member", client_id=client_id, worker_id=workers[0].id) }}'>Open an Employee</a>
       </div>
       {% endif %}
     </div>

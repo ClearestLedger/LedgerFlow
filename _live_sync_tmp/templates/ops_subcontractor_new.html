@@ -7,13 +7,14 @@
     <div class='page-subtitle'>Separate onboarding for independent contractor records, W-9 support, insurance review, safety acknowledgement, and agreement signature.</div>
   </div>
   <div class='stack-actions'>
-    <a class='btn btn-secondary' href='{{ url_for("ops_team", client_id=client_id) }}'>Back to Team</a>
+    <a class='btn btn-secondary' href='{{ url_for("workers", client_id=client_id) }}'>Back to Subcontractors</a>
     <a class='btn btn-secondary' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Employee</a>
   </div>
 </div>
 
 <div class='team-subnav'>
-  <a class='team-subnav-link' href='{{ url_for("ops_team", client_id=client_id) }}'>Team Directory</a>
+  <a class='team-subnav-link' href='{{ url_for("ops_team", client_id=client_id) }}'>Team Members / Employees</a>
+  <a class='team-subnav-link' href='{{ url_for("workers", client_id=client_id) }}'>Subcontractors</a>
   <a class='team-subnav-link' href='{{ url_for("ops_team_new", client_id=client_id) }}'>Add Employee</a>
   <a class='team-subnav-link active' href='{{ url_for("ops_subcontractor_new", client_id=client_id) }}'>Add Subcontractor</a>
 </div>
@@ -152,7 +153,7 @@
   </div>
 
   <div style='margin-top:16px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap'>
-    <a class='btn btn-secondary' href='{{ url_for("ops_team", client_id=client_id) }}'>Cancel</a>
+    <a class='btn btn-secondary' href='{{ url_for("workers", client_id=client_id) }}'>Cancel</a>
     <button type='submit'>Save Subcontractor and Agreement</button>
   </div>
 </form>

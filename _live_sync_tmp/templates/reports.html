@@ -74,8 +74,8 @@
 </style>
 {% set report_labels = {
   'summary': tr('Summary'),
-  'workers': tr('Workers'),
-  'payments': tr('Payments'),
+  'workers': tr('Employee/Subcontractor Payouts'),
+  'payments': tr('Payment Ledger'),
   'invoices': tr('Invoices'),
   'gas': tr('Gas'),
   'materials': tr('Materials'),
@@ -91,8 +91,8 @@
   <div class='report-prime-content'>
     <div>
       <div class='report-prime-kicker'>{{ tr('Report Center') }} &middot; {{ tr('Payroll first') if report_type in payroll_report_types else tr('Finance first') }}</div>
-      <div class='report-prime-title'>{{ tr('See saved payroll before the tables.') if report_type in payroll_report_types else tr('See the money before the tables.') }}</div>
-      <div class='report-prime-subtitle'>{{ tr('These payroll views are built from saved worker payment records only, so employee totals stay tied to real payouts instead of customer invoices.') if report_type in payroll_report_types else tr('LedgerFlow turns the current business records into a fast owner view: revenue, profit, expenses, margin, and tax-readiness at the top of the page.') }}</div>
+      <div class='report-prime-title'>{{ tr('See saved payouts before the tables.') if report_type in payroll_report_types else tr('See the money before the tables.') }}</div>
+      <div class='report-prime-subtitle'>{{ tr('These payroll views are built from saved payout records only, with W-2 employees and 1099 subcontractors labeled separately instead of mixed into one team category.') if report_type in payroll_report_types else tr('LedgerFlow turns the current business records into a fast owner view: revenue, profit, expenses, margin, and tax-readiness at the top of the page.') }}</div>
       <div class='report-prime-cards'>
         {% if report_type in payroll_report_types %}
         <div class='report-prime-card'><span>{{ tr('Gross Payroll') }}</span><strong>${{ '%.2f'|format(worker_salary_report.totals.gross_total or 0) }}</strong></div>
@@ -137,7 +137,7 @@
       <span>&middot;</span>
       <span>{{ start_date or tr('Any start') }} {{ tr('to') }} {{ end_date or tr('Today') }}</span>
       <span>&middot;</span>
-      <span>{{ selected_worker.name if selected_worker else tr('All workers') }}</span>
+      <span>{{ selected_worker.name if selected_worker else tr('All employees and subcontractors') }}</span>
       {% if selected_invoice and report_type not in payroll_report_types %}<span>&middot; #{{ selected_invoice.job_number }} {{ selected_invoice.client_name }}</span>{% endif %}
     </span>
   </summary>
@@ -155,8 +155,8 @@
       </select>
       <label>{{ tr('From') }}</label><input type='date' name='start_date' value='{{ start_date }}'>
       <label>{{ tr('To') }}</label><input type='date' name='end_date' value='{{ end_date }}'>
-      <label>{{ tr('Worker') }}</label>
-      <select name='worker_id'><option value=''>{{ tr('All') }}</option>{% for w in workers %}<option value='{{ w.id }}' {% if worker_id==w.id %}selected{% endif %}>{{ w.name }}</option>{% endfor %}</select>
+      <label>{{ tr('Person') }}</label>
+      <select name='worker_id'><option value=''>{{ tr('All employees and subcontractors') }}</option>{% for w in workers %}<option value='{{ w.id }}' {% if worker_id==w.id %}selected{% endif %}>{{ w.name }} ({{ 'W-2 Employee' if w.worker_type == 'W-2' else '1099 Subcontractor' }})</option>{% endfor %}</select>
       {% if report_type not in payroll_report_types %}
       <label>{{ tr('Invoices') }}</label>
       <select name='invoice_id'><option value=''>{{ tr('All') }}</option>{% for i in invoices %}<option value='{{ i.id }}' {% if invoice_id==i.id %}selected{% endif %}>#{{ i.job_number }} &middot; {{ i.client_name }}</option>{% endfor %}</select>
@@ -258,19 +258,19 @@
 </div>
 
 <div class='grid cards-2'>
-  <div class='card'><h3>{{ tr('Tax Summary') }}</h3><div class='metric'>{{ tr('Gross Income') }}: ${{ '%.2f'|format(summary.gross_income) }}<br>{{ tr('Gas') }}: ${{ '%.2f'|format(summary.gas_total) }}<br>{{ tr('Materials') }}: ${{ '%.2f'|format(summary.materials_total) }}<br>{{ tr('Workers') }}: ${{ '%.2f'|format(summary.worker_total) }}<br>{{ tr('Mileage Deduction') }}: ${{ '%.2f'|format(summary.mileage_deduction) }}<br>{{ tr('Expenses') }}: ${{ '%.2f'|format(summary.total_expenses) }}<br>{{ tr('Operating Profit') }}: ${{ '%.2f'|format(summary.operating_profit) }}<br>{{ tr('Adjusted Profit') }}: ${{ '%.2f'|format(summary.adjusted_profit) }}<br>{{ tr('SE Tax') }}: ${{ '%.2f'|format(summary.self_employment_tax_estimate) }}<br>{{ tr('Total Est.') }}: ${{ '%.2f'|format(summary.federal_plus_se_estimate) }}</div></div>
-  <div class='card'><h3>{{ tr('Forms by Worker') }}</h3><table class='table'><tr><th>{{ tr('Worker') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Links') }}</th></tr>{% for w in workers %}<tr><td>{{ w.name }}</td><td>{{ w.worker_type }}</td><td><a href='{{ url_for("w4", worker_id=w.id) }}' target='_blank'>{{ tr('W-4') }}</a> &middot; <a href='{{ url_for("w2", worker_id=w.id) }}' target='_blank'>{{ tr('W-2') }}</a> &middot; <a href='{{ url_for("form_1099", worker_id=w.id) }}' target='_blank'>{{ tr('1099') }}</a></td></tr>{% endfor %}</table></div>
+  <div class='card'><h3>{{ tr('Tax Summary') }}</h3><div class='metric'>{{ tr('Gross Income') }}: ${{ '%.2f'|format(summary.gross_income) }}<br>{{ tr('Gas') }}: ${{ '%.2f'|format(summary.gas_total) }}<br>{{ tr('Materials') }}: ${{ '%.2f'|format(summary.materials_total) }}<br>{{ tr('Employee/Subcontractor Payouts') }}: ${{ '%.2f'|format(summary.worker_total) }}<br>{{ tr('Mileage Deduction') }}: ${{ '%.2f'|format(summary.mileage_deduction) }}<br>{{ tr('Expenses') }}: ${{ '%.2f'|format(summary.total_expenses) }}<br>{{ tr('Operating Profit') }}: ${{ '%.2f'|format(summary.operating_profit) }}<br>{{ tr('Adjusted Profit') }}: ${{ '%.2f'|format(summary.adjusted_profit) }}<br>{{ tr('SE Tax') }}: ${{ '%.2f'|format(summary.self_employment_tax_estimate) }}<br>{{ tr('Total Est.') }}: ${{ '%.2f'|format(summary.federal_plus_se_estimate) }}</div></div>
+  <div class='card'><h3>{{ tr('Forms by Category') }}</h3><table class='table'><tr><th>{{ tr('Person') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Links') }}</th></tr>{% for w in workers %}<tr><td>{{ w.name }}</td><td>{{ 'W-2 Employee' if w.worker_type == 'W-2' else '1099 Subcontractor' }}</td><td>{% if w.worker_type == 'W-2' %}<a href='{{ url_for("w4", worker_id=w.id) }}' target='_blank'>{{ tr('W-4') }}</a> &middot; <a href='{{ url_for("w2", worker_id=w.id) }}' target='_blank'>{{ tr('W-2') }}</a>{% else %}<a href='{{ url_for("form_1099", worker_id=w.id) }}' target='_blank'>{{ tr('1099') }}</a> &middot; <a href='{{ url_for("subcontractor_agreement", worker_id=w.id) }}' target='_blank'>Agreement</a>{% endif %}</td></tr>{% endfor %}</table></div>
 </div>
 <div class='card' style='margin-top:16px'>
-  <div class='card-head'><h3>{{ report_labels.get(report_type, report_type.title()) }} {{ tr('Report') }}</h3><div class='small'>{{ tr('Filtered by business/date/worker/invoice as selected above') }}</div></div>
+  <div class='card-head'><h3>{{ report_labels.get(report_type, report_type.title()) }} {{ tr('Report') }}</h3><div class='small'>{{ tr('Filtered by business, date, person, or invoice as selected above') }}</div></div>
   {% if report_type == 'summary' %}
     <div class='metric'>{{ tr('Use Print Current Report for this summary view.') }}</div>
   {% elif report_type == 'workers' %}
     <div class='card section-frame' style='margin-bottom:16px;border:1px solid #bfdbfe;background:#eff6ff'>
-      <div class='card-head'><h3>{{ tr('Worker Salary Report') }}</h3><span class='badge'>{{ tr('Payroll only') }}</span></div>
-      <div class='small' style='margin-bottom:10px'>{{ tr('This report is based only on saved worker payment records for the selected period. Customer invoices are not used in these worker salary totals.') }}</div>
+      <div class='card-head'><h3>{{ tr('Payout Report by Category') }}</h3><span class='badge'>{{ tr('Saved payouts only') }}</span></div>
+      <div class='small' style='margin-bottom:10px'>{{ tr('This report is based only on saved payout records for the selected period. Customer invoices are not used in these employee or subcontractor totals.') }}</div>
       <div class='summary-strip'>
-        <span class='summary-pill'>{{ tr('Workers in report') }}: {{ worker_salary_report.totals.worker_count or 0 }}</span>
+        <span class='summary-pill'>{{ tr('People in report') }}: {{ worker_salary_report.totals.worker_count or 0 }}</span>
         <span class='summary-pill'>{{ tr('Payments logged') }}: {{ worker_salary_report.totals.payment_count or 0 }}</span>
         <span class='summary-pill'>{{ tr('Gross payroll') }}: ${{ '%.2f'|format(worker_salary_report.totals.gross_total or 0) }}</span>
         <span class='summary-pill'>{{ tr('Net pay') }}: ${{ '%.2f'|format(worker_salary_report.totals.net_total or 0) }}</span>
@@ -297,21 +297,21 @@
             {% for payment in row.payment_rows %}
             <tr><td>{{ payment.payment_date }}</td><td>{{ worker_payment_method_labels.get(payment.payment_method or 'other', 'Other') }}</td><td>${{ '%.2f'|format(payment.amount or 0) }}</td><td>{{ payment.reference_number or '-' }}</td><td>{{ payment.note or '-' }}</td></tr>
             {% else %}
-            <tr><td colspan='5' class='small'>{{ tr('No worker payment records matched the selected employee/date filters.') }}</td></tr>
+            <tr><td colspan='5' class='small'>{{ tr('No payout records matched the selected person/date filters.') }}</td></tr>
             {% endfor %}
             <tr><th colspan='2'>{{ tr('Total') }}</th><th>${{ '%.2f'|format(row.recorded_payment_total or 0) }}</th><th colspan='2'>{{ row.salary_report_note }}</th></tr>
           </table>
         </div>
       </section>
       {% else %}
-      <div class='card'><div class='small'>{{ tr('No worker payment records matched the selected employee/date filters.') }}</div></div>
+      <div class='card'><div class='small'>{{ tr('No payout records matched the selected person/date filters.') }}</div></div>
       {% endfor %}
     </div>
     <div class='print-report-sheet report-printable-only'>
       <div class='card' style='margin-bottom:14px'>
         <h2 style='margin:0'>{{ client.business_name if client else tr('Business') }} · {{ tr('Worker Salary Report') }}</h2>
         <div class='small'>{{ tr('Selected Period') }}: {{ start_date or tr('Any start') }} {{ tr('to') }} {{ end_date or tr('Today') }}</div>
-        <div class='small'>{{ tr('This printable report is based only on saved worker payment records.') }}</div>
+        <div class='small'>{{ tr('This printable report is based only on saved payout records.') }}</div>
       </div>
       {% for row in worker_salary_report.rows %}
       <section class='worker-report-card'>
@@ -332,14 +332,14 @@
           {% for payment in row.payment_rows %}
           <tr><td>{{ payment.payment_date }}</td><td>{{ worker_payment_method_labels.get(payment.payment_method or 'other', 'Other') }}</td><td>${{ '%.2f'|format(payment.amount or 0) }}</td><td>{{ payment.reference_number or '-' }}</td></tr>
           {% else %}
-          <tr><td colspan='4' class='small'>{{ tr('No worker payment records matched the selected employee/date filters.') }}</td></tr>
+          <tr><td colspan='4' class='small'>{{ tr('No payout records matched the selected person/date filters.') }}</td></tr>
           {% endfor %}
         </table>
       </section>
       {% endfor %}
     </div>
   {% elif report_type == 'payments' %}
-    <table class='table'><tr><th>{{ tr('Date') }}</th><th>{{ tr('Worker') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Amount') }}</th><th>{{ tr('Note') }}</th></tr>{% for row in rows %}<tr><td>{{ row.payment_date }}</td><td>{{ row.worker_name }}</td><td>{{ row.worker_type }}</td><td>${{ '%.2f'|format(row.amount or 0) }}</td><td>{{ row.note }}</td></tr>{% endfor %}</table>
+    <table class='table'><tr><th>{{ tr('Date') }}</th><th>{{ tr('Person') }}</th><th>{{ tr('Type') }}</th><th>{{ tr('Amount') }}</th><th>{{ tr('Note') }}</th></tr>{% for row in rows %}<tr><td>{{ row.payment_date }}</td><td>{{ row.worker_name }}</td><td>{{ 'W-2 Employee' if row.worker_type == 'W-2' else '1099 Subcontractor' }}</td><td>${{ '%.2f'|format(row.amount or 0) }}</td><td>{{ row.note }}</td></tr>{% endfor %}</table>
   {% elif report_type == 'invoices' %}
     <table class='table'><tr><th>{{ tr('Job #') }}</th><th>{{ tr('Date') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Address') }}</th><th>{{ tr('Amount') }}</th></tr>{% for row in rows %}<tr><td>{{ row.job_number }}</td><td>{{ row.invoice_date }}</td><td>{{ row.client_name }}</td><td>{{ row.client_address }}</td><td>${{ '%.2f'|format(row.paid_amount or 0) }}</td></tr>{% endfor %}</table>
   {% elif report_type == 'gas' %}
@@ -418,7 +418,7 @@
       <div class='card-head'><h3>{{ tr('Insurance Audit Payroll') }}</h3><span class='badge'>{{ tr('Employee period report') }}</span></div>
       <div class='small' style='margin-bottom:10px'>{{ tr('This report organizes payroll by employee for the selected pay-date period. Insurance audit requirements vary by carrier and state, so this should be reviewed with the carrier or advisor before final submission.') }}</div>
       <div class='summary-strip'>
-        <span class='summary-pill'>{{ tr('Workers in report') }}: {{ insurance_audit_report.totals.employee_count or 0 }}</span>
+        <span class='summary-pill'>{{ tr('People in report') }}: {{ insurance_audit_report.totals.employee_count or 0 }}</span>
         <span class='summary-pill'>{{ tr('W-2 gross payroll') }}: ${{ '%.2f'|format(insurance_audit_report.totals.w2_gross_total or 0) }}</span>
         <span class='summary-pill'>{{ tr('1099 totals') }}: ${{ '%.2f'|format(insurance_audit_report.totals.contractor_gross_total or 0) }}</span>
         <span class='summary-pill'>{{ tr('Combined gross') }}: ${{ '%.2f'|format(insurance_audit_report.totals.combined_gross_total or 0) }}</span>

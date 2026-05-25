@@ -3422,7 +3422,8 @@ def quick_search_catalog(user=None, worker=None, active_client=None, current_mod
         quick_search_entry('Mileage', workspace_url('mileage'), current_language, description='Track mileage deductions and travel-based records.', category='Financial Core', aliases=('miles', 'mile', 'mileage', 'quilometragem', 'kilometraje')),
         quick_search_entry('Schedule', workspace_url('ops_schedule'), current_language, description='Open the business calendar and scheduled work view.', category='Operations', aliases=('calendar', 'agenda', 'calendario', 'appointments')),
         quick_search_entry('Dispatch', workspace_url('ops_dispatch'), current_language, description='Manage dispatch and active job coordination.', category='Operations', aliases=('dispatch', 'routing', 'rota', 'despacho')),
-        quick_search_entry('Team', workspace_url('ops_team'), current_language, description='Review team members, crew assignments, and labor visibility.', category='Operations', aliases=('team', 'workers', 'crew', 'equipe', 'equipo', 'team members')),
+        quick_search_entry('Team Members', workspace_url('ops_team'), current_language, description='Review W-2 employees, crew assignments, and employee labor visibility.', category='Operations', aliases=('team', 'employees', 'crew', 'equipe', 'equipo', 'team members')),
+        quick_search_entry('Subcontractors', workspace_url('workers'), current_language, description='Review 1099 subcontractor records, agreements, and payout context.', category='Operations', aliases=('subcontractors', 'contractors', '1099', 'w9', 'independent contractor')),
         quick_search_entry('Add Team Member', workspace_url('ops_team_new'), current_language, description='Open the full-screen employee setup view.', category='Operations', aliases=('add team member', 'new worker', 'create worker', 'new crew member', 'team setup', 'new employee')),
         quick_search_entry('Add Subcontractor', workspace_url('ops_subcontractor_new'), current_language, description='Open the 1099 subcontractor onboarding and agreement workflow.', category='Operations', aliases=('subcontractor', '1099', 'contractor', 'w9', 'independent contractor')),
         quick_search_entry('Availability', workspace_url('ops_availability'), current_language, description='Check worker availability and time-off context.', category='Operations', aliases=('availability', 'time off', 'disponibilidade', 'disponibilidad')),
@@ -3434,7 +3435,8 @@ def quick_search_catalog(user=None, worker=None, active_client=None, current_mod
         quick_search_entry('Help', workspace_url('help_center'), current_language, description='Send support questions or suggestions to the administrator.', category='Business Workspace', aliases=('help', 'support', 'ajuda', 'soporte')),
     ])
     with get_conn() as conn:
-        worker_rows = [dict(row) for row in ops_worker_rows(conn, client_id)]
+        worker_rows = [dict(row) for row in ops_worker_rows(conn, client_id, worker_type='W-2')]
+        subcontractor_rows = [dict(row) for row in ops_worker_rows(conn, client_id, worker_type='1099')]
     for worker_row in worker_rows:
         worker_name = (worker_row.get('name') or '').strip()
         if not worker_name:
@@ -3461,6 +3463,21 @@ def quick_search_catalog(user=None, worker=None, active_client=None, current_mod
                 context_label=active_client['business_name'],
             )
         )
+    for worker_row in subcontractor_rows:
+        worker_name = (worker_row.get('name') or '').strip()
+        if not worker_name:
+            continue
+        entries.append(
+            quick_search_entry(
+                f'Subcontractor - {worker_name}',
+                workspace_url('workers', worker_id=worker_row['id']),
+                current_language,
+                description=f'Open {worker_name} in the subcontractor-only record view.',
+                category='Operations',
+                aliases=(worker_name, f'subcontractor {worker_name}', f'contractor {worker_name}', '1099', 'w9'),
+                context_label=active_client['business_name'],
+            )
+        )
     if sales_enabled:
         entries.append(
             quick_search_entry('Clients & Sales', workspace_url('customer_sales'), current_language, description='Manage clients, recurring visits, sales workflow, and client profit visibility.', category='Sales Documents', aliases=('clients', 'client list', 'customers', 'sales', 'clientes', 'vendas', 'ventas', 'profit per client'))
@@ -3470,7 +3487,7 @@ def quick_search_catalog(user=None, worker=None, active_client=None, current_mod
         )
     if current_mode == 'business' and user['role'] == 'admin':
         entries.append(
-            quick_search_entry('Workers', workspace_url('workers'), current_language, description='Manage team member payroll, forms, and worker portal access.', category='Operations', aliases=('worker records', 'w2', '1099', 'payroll', 'workers', 'funcionarios'))
+            quick_search_entry('Subcontractors', workspace_url('workers'), current_language, description='Manage 1099 subcontractor profiles separately from team members.', category='Operations', aliases=('subcontractor records', '1099', 'contractors', 'w9', 'workers'))
         )
     return entries
 
@@ -4125,6 +4142,71 @@ def worker_is_w2(value_or_worker) -> bool:
     return normalize_worker_type(value) == 'W-2'
 
 
+def compact_person_identity(value: str | None) -> str:
+    return re.sub(r'[^a-z0-9]+', '', normalize_search_text(value))
+
+
+def compact_phone_identity(value: str | None) -> str:
+    return re.sub(r'\D+', '', str(value or ''))
+
+
+def validate_worker_category_uniqueness(
+    conn: sqlite3.Connection,
+    *,
+    client_id: int,
+    worker_type: str,
+    name: str = '',
+    email: str = '',
+    phone: str = '',
+    ssn: str = '',
+    exclude_worker_id: int | None = None,
+) -> None:
+    target_type = normalize_worker_type(worker_type)
+    target_label = 'team member / employee' if target_type == 'W-2' else 'subcontractor'
+    target_name = compact_person_identity(name)
+    target_email = normalize_email_address(email)
+    target_phone = compact_phone_identity(phone)
+    target_tax_id = compact_person_identity(ssn)
+    rows = safe_fetchall(
+        conn,
+        '''SELECT id, name, worker_type, email, phone, ssn, contractor_legal_name, contractor_business_name
+           FROM workers
+           WHERE client_id=?''',
+        (client_id,),
+    )
+    for row in rows:
+        row_id = int(row_value(row, 'id', 0) or 0)
+        if exclude_worker_id and row_id == int(exclude_worker_id):
+            continue
+        row_type = normalize_worker_type(row_value(row, 'worker_type', '1099'))
+        row_names = {
+            compact_person_identity(row_value(row, 'name', '')),
+            compact_person_identity(row_value(row, 'contractor_legal_name', '')),
+            compact_person_identity(row_value(row, 'contractor_business_name', '')),
+        }
+        matches = []
+        if target_email and target_email == normalize_email_address(row_value(row, 'email', '')):
+            matches.append('email')
+        if target_phone and len(target_phone) >= 7 and target_phone == compact_phone_identity(row_value(row, 'phone', '')):
+            matches.append('phone')
+        if target_tax_id and len(target_tax_id) >= 4 and target_tax_id == compact_person_identity(row_value(row, 'ssn', '')):
+            matches.append('tax ID')
+        if target_name and target_name in row_names:
+            matches.append('name')
+        if not matches:
+            continue
+        row_name = row_value(row, 'name', '') or name or 'This person'
+        if row_type != target_type:
+            existing_label = 'team member / employee' if row_type == 'W-2' else 'subcontractor'
+            raise ValueError(
+                f'{row_name} is already saved as a {existing_label}. '
+                f'The same person cannot be both a team member/employee and a subcontractor. '
+                f'Use the existing {existing_label} profile instead of creating a {target_label} duplicate.'
+            )
+        if any(match in {'email', 'phone', 'tax ID'} for match in matches):
+            raise ValueError(f'{row_name} already exists as a {target_label}. Update the existing profile instead of creating a duplicate.')
+
+
 def normalize_contractor_tin_type(value: str | None) -> str:
     allowed = {key for key, _ in contractor_tin_type_options()}
     cleaned = (value or '').strip().lower()
@@ -4200,17 +4282,26 @@ def create_contractor_onboarding_token(conn: sqlite3.Connection, worker_id: int,
 def create_subcontractor_invite_placeholder(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int | None, form) -> int:
     name = (form.get('name') or form.get('contractor_legal_name') or '').strip()
     email = normalize_email_address(form.get('email') or '')
+    phone = (form.get('phone') or '').strip()
     if not name:
         raise ValueError('Subcontractor name is required before sending the e-sign invite.')
     if not email:
         raise ValueError('Subcontractor email is required before sending the e-sign invite.')
+    validate_worker_category_uniqueness(
+        conn,
+        client_id=client_id,
+        worker_type='1099',
+        name=name,
+        email=email,
+        phone=phone,
+    )
     now_text = now_iso()
     payload = {
         'client_id': client_id,
         'name': name,
         'worker_type': '1099',
         'email': email,
-        'phone': (form.get('phone') or '').strip(),
+        'phone': phone,
         'preferred_language': normalize_language(form.get('preferred_language') or 'en'),
         'worker_role': (form.get('worker_role') or 'Subcontractor').strip(),
         'role_classification': (form.get('worker_role') or 'Subcontractor').strip(),
@@ -4760,6 +4851,8 @@ def client_access_issue_for_user(user) -> dict | None:
 
 def worker_portal_access_allowed(worker_row) -> bool:
     if not worker_row:
+        return False
+    if not worker_is_w2(worker_row):
         return False
     if (worker_row['status'] or 'active') != 'active':
         return False
@@ -9575,8 +9668,8 @@ def cpa_dashboard_summary(user):
         if ids:
             placeholders = ','.join('?' for _ in ids)
             business_logins = conn.execute(f"SELECT COUNT(*) v FROM users WHERE role='client' AND client_id IN ({placeholders})", tuple(ids)).fetchone()['v']
-            worker_portals = conn.execute(f"SELECT COUNT(*) v FROM workers WHERE COALESCE(portal_access_enabled,0)=1 AND client_id IN ({placeholders})", tuple(ids)).fetchone()['v']
-            pending_worker = conn.execute(f"SELECT COUNT(*) v FROM workers WHERE COALESCE(portal_access_enabled,0)=1 AND COALESCE(portal_approval_status,'approved')='pending' AND client_id IN ({placeholders})", tuple(ids)).fetchone()['v']
+            worker_portals = conn.execute(f"SELECT COUNT(*) v FROM workers WHERE worker_type='W-2' AND COALESCE(portal_access_enabled,0)=1 AND client_id IN ({placeholders})", tuple(ids)).fetchone()['v']
+            pending_worker = conn.execute(f"SELECT COUNT(*) v FROM workers WHERE worker_type='W-2' AND COALESCE(portal_access_enabled,0)=1 AND COALESCE(portal_approval_status,'approved')='pending' AND client_id IN ({placeholders})", tuple(ids)).fetchone()['v']
             new_login_notifications = conn.execute(f"SELECT COUNT(*) v FROM account_activity_log WHERE client_id IN ({placeholders})", tuple(ids)).fetchone()['v']
         else:
             business_logins = 0
@@ -10698,11 +10791,13 @@ def ops_owner_snapshot(conn: sqlite3.Connection, client_id: int):
     }
 
 
-def ops_worker_rows(conn: sqlite3.Connection, client_id: int):
+def ops_worker_rows(conn: sqlite3.Connection, client_id: int, worker_type: str | None = None):
     today_iso = date.today().isoformat()
+    type_clause = ' AND w.worker_type=?' if worker_type else ''
+    type_params = (normalize_worker_type(worker_type),) if worker_type else ()
     return safe_fetchall(
         conn,
-        '''SELECT
+        f'''SELECT
                w.*,
                COALESCE(NULLIF(w.worker_role, ''), NULLIF(w.role_classification, ''), 'Crew Member') AS ops_role,
                COUNT(DISTINCT CASE WHEN COALESCE(j.status, '') NOT IN ('completed', 'cancelled') AND substr(COALESCE(j.scheduled_start, ''), 1, 10) >= ? THEN j.id END) AS upcoming_assignments,
@@ -10713,10 +10808,10 @@ def ops_worker_rows(conn: sqlite3.Connection, client_id: int):
              ON ja.worker_id = w.id
             AND COALESCE(ja.status, 'assigned') <> 'removed'
            LEFT JOIN jobs j ON j.id = ja.job_id
-           WHERE w.client_id=?
+           WHERE w.client_id=?{type_clause}
            GROUP BY w.id
            ORDER BY CASE WHEN COALESCE(w.status, 'active')='active' THEN 0 ELSE 1 END, w.name''',
-        (today_iso, client_id),
+        (today_iso, client_id, *type_params),
     )
 
 
@@ -11250,6 +11345,19 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
     if not address:
         raise ValueError('Full mailing address is required.')
 
+    phone = field_text('phone')
+    email = field_text('email')
+    validate_worker_category_uniqueness(
+        conn,
+        client_id=client_id,
+        worker_type=worker_type,
+        name=name,
+        email=email,
+        phone=phone,
+        ssn=ssn,
+        exclude_worker_id=(int(row_value(existing, 'id', 0) or 0) if existing else None),
+    )
+
     if worker_type == 'W-2':
         if not hire_date:
             raise ValueError('Hire date is required for W-2 employees.')
@@ -11294,8 +11402,8 @@ def ops_save_worker_profile(conn: sqlite3.Connection, *, client_id: int, actor_u
         'address': address,
         'worker_role': worker_role,
         'role_classification': worker_role,
-        'phone': field_text('phone'),
-        'email': field_text('email'),
+        'phone': phone,
+        'email': email,
         'preferred_language': normalize_language(field_text('preferred_language', row_value(existing, 'preferred_language', 'en') if existing else 'en')),
         'hire_date': hire_date,
         'engagement_start_date': engagement_start_date,
@@ -15931,7 +16039,7 @@ def ops_team_client_id_from_request(user) -> int:
 def ops_team_context(conn: sqlite3.Connection, client_id: int, selected_worker_id: int | None = None) -> dict:
     workspace_warning = prepare_ops_workspace(conn, client_id)
     client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
-    workers = [dict(row) for row in ops_worker_rows(conn, client_id)]
+    workers = [dict(row) for row in ops_worker_rows(conn, client_id, worker_type='W-2')]
     if selected_worker_id and not any(row['id'] == selected_worker_id for row in workers):
         selected_worker_id = None
     selected_worker = next((row for row in workers if row['id'] == selected_worker_id), None)
@@ -15970,9 +16078,14 @@ def ops_team_handle_post_action(conn: sqlite3.Connection, *, client_id: int, use
     if workspace_warning:
         flash(workspace_warning, 'warning')
     if action in {'create_worker', 'update_worker'}:
-        existing = safe_fetchone(conn, 'SELECT * FROM workers WHERE id=? AND client_id=?', (selected_worker_id, client_id)) if action == 'update_worker' else None
+        existing = safe_fetchone(conn, "SELECT * FROM workers WHERE id=? AND client_id=? AND worker_type='W-2'", (selected_worker_id, client_id)) if action == 'update_worker' else None
+        if action == 'update_worker' and not existing:
+            flash('Team member not found. Subcontractors are managed separately.', 'error')
+            return None, 'ops_team'
+        form_data = request.form.copy()
+        form_data['worker_type'] = 'W-2'
         try:
-            selected_worker_id = ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=request.form, existing=existing)
+            selected_worker_id = ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=form_data, existing=existing)
             conn.commit()
             flash('Team member saved.', 'success')
             return selected_worker_id, 'ops_team_member'
@@ -16040,9 +16153,9 @@ def ops_team_handle_post_action(conn: sqlite3.Connection, *, client_id: int, use
             flash(f'Onboarding link was created, but email could not be sent: {exc}. Copy this secure link: {onboarding_url}', 'warning')
         return selected_worker_id, 'ops_team_member'
     if action == 'update_worker_portal':
-        worker = safe_fetchone(conn, 'SELECT * FROM workers WHERE id=? AND client_id=?', (selected_worker_id, client_id)) if selected_worker_id else None
+        worker = safe_fetchone(conn, "SELECT * FROM workers WHERE id=? AND client_id=? AND worker_type='W-2'", (selected_worker_id, client_id)) if selected_worker_id else None
         if not worker:
-            flash('Team member not found.', 'error')
+            flash('Team member not found. Subcontractors do not use the team member portal.', 'error')
             return None, 'ops_team'
         portal_email = request.form.get('portal_email', '').strip().lower()
         portal_password = request.form.get('portal_password', '').strip()
@@ -16262,7 +16375,7 @@ def ops_subcontractor_new():
                         )
                         conn.commit()
                         flash(f'Invitation link was created, but email could not be sent: {exc}. Copy this secure link: {onboarding_url}', 'warning')
-                    return redirect(url_for('ops_team_member', client_id=client_id, worker_id=worker_id))
+                    return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
                 except ValueError as exc:
                     conn.rollback()
                     flash(str(exc), 'error')
@@ -16278,7 +16391,7 @@ def ops_subcontractor_new():
                 worker_id = ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=form_data)
                 conn.commit()
                 flash('Subcontractor saved with 1099, W-9, insurance, and agreement acknowledgements.', 'success')
-                return redirect(url_for('ops_team_member', client_id=client_id, worker_id=worker_id))
+                return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
             except ValueError as exc:
                 conn.rollback()
                 flash(str(exc), 'error')
@@ -16302,8 +16415,14 @@ def ops_team_member(worker_id):
             target_worker_id, target_endpoint = ops_team_handle_post_action(conn, client_id=client_id, user=user, action=action)
         if target_endpoint == 'ops_team_new':
             return redirect(url_for('ops_team_new', client_id=client_id))
+        if target_endpoint == 'ops_team':
+            return redirect(url_for('ops_team', client_id=client_id))
         return redirect(url_for('ops_team_member', client_id=client_id, worker_id=target_worker_id or worker_id))
     with get_conn() as conn:
+        direct_worker = safe_fetchone(conn, 'SELECT id, worker_type FROM workers WHERE id=? AND client_id=?', (worker_id, client_id))
+        if direct_worker and not worker_is_w2(direct_worker):
+            flash('Subcontractors are managed on the Subcontractors page.', 'error')
+            return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
         team_context = ops_team_context(conn, client_id, worker_id)
     if not team_context['selected_worker']:
         flash('Team member not found.', 'error')
@@ -20573,148 +20692,56 @@ def workers():
         if request.method == 'POST':
             action = request.form.get('action', 'add')
             if action == 'add':
+                form_data = request.form.copy()
+                form_data['worker_type'] = '1099'
                 try:
-                    worker_id = ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=request.form)
+                    worker_id = ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=form_data)
                     conn.commit()
-                    flash('Worker saved.', 'success')
+                    flash('Subcontractor saved.', 'success')
                     return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
                 except ValueError as exc:
                     conn.rollback()
                     flash(str(exc), 'error')
                     return redirect(url_for('workers', client_id=client_id))
             worker_id = request.form.get('worker_id', type=int)
-            worker = conn.execute('SELECT * FROM workers WHERE id=? AND client_id=?', (worker_id, client_id)).fetchone() if worker_id else None
+            worker = conn.execute("SELECT * FROM workers WHERE id=? AND client_id=? AND worker_type='1099'", (worker_id, client_id)).fetchone() if worker_id else None
             if not worker:
                 abort(403)
             if action == 'edit':
+                form_data = request.form.copy()
+                form_data['worker_type'] = '1099'
                 try:
-                    ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=request.form, existing=worker)
+                    ops_save_worker_profile(conn, client_id=client_id, actor_user_id=user['id'], form=form_data, existing=worker)
                     conn.commit()
-                    flash('Worker updated.', 'success')
+                    flash('Subcontractor updated.', 'success')
                 except ValueError as exc:
                     conn.rollback()
                     flash(str(exc), 'error')
                 except sqlite3.Error:
                     conn.rollback()
-                    flash('Worker changes could not be saved.', 'error')
+                    flash('Subcontractor changes could not be saved.', 'error')
                 return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
             if action == 'terminate':
                 terminated_at = now_iso()
                 conn.execute('UPDATE workers SET status=?, termination_date=?, termination_cause=?, updated_at=?, updated_by_user_id=? WHERE id=?', ('terminated', request.form.get('termination_date', '').strip(), request.form.get('termination_cause', '').strip(), terminated_at, user['id'], worker_id))
                 log_worker_profile_history(conn, worker_id=worker_id, client_id=client_id, action='terminated', changed_by_user_id=user['id'])
                 conn.commit()
-                flash('Worker terminated.', 'success')
+                flash('Subcontractor deactivated.', 'success')
                 return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
             if action == 'reactivate':
                 reactivated_at = now_iso()
                 conn.execute('UPDATE workers SET status=?, termination_date=?, termination_cause=?, updated_at=?, updated_by_user_id=? WHERE id=?', ('active', '', '', reactivated_at, user['id'], worker_id))
                 log_worker_profile_history(conn, worker_id=worker_id, client_id=client_id, action='reactivated', changed_by_user_id=user['id'])
                 conn.commit()
-                flash('Worker reactivated.', 'success')
+                flash('Subcontractor reactivated.', 'success')
                 return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
             if action == 'update_portal':
-                portal_email = request.form.get('portal_email', '').strip().lower()
-                portal_password = request.form.get('portal_password', '').strip()
-                portal_enabled = 1 if request.form.get('portal_access_enabled') else 0
-                if portal_enabled and not portal_email:
-                    flash('Worker portal email is required when portal access is enabled.', 'error')
-                    return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
-                if portal_password and len(portal_password) < 4:
-                    flash('Worker portal password must be at least 4 characters.', 'error')
-                    return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
-                password_hash = worker['portal_password_hash'] or ''
-                if portal_password:
-                    password_hash = generate_password_hash(portal_password)
-                approval_status = 'approved'
-                requested_at = worker['portal_requested_at'] or ''
-                approved_at = worker['portal_approved_at'] or ''
-                approved_by = worker['portal_approved_by']
-                if portal_enabled:
-                    approval_status = 'approved'
-                    approved_at = datetime.now().isoformat(timespec='seconds')
-                    approved_by = user['id']
-                    if not requested_at:
-                        requested_at = approved_at
-                else:
-                    approval_status = 'disabled'
-                    approved_at = ''
-                    approved_by = None
-                target_portal_email = portal_email or worker['email']
-                portal_saved_at = now_iso()
-                conn.execute('UPDATE workers SET email=?, portal_access_enabled=?, portal_password_hash=?, portal_approval_status=?, portal_requested_at=?, portal_approved_at=?, portal_approved_by=?, updated_at=?, updated_by_user_id=? WHERE id=?', (target_portal_email, portal_enabled, password_hash, approval_status, requested_at, approved_at, approved_by, portal_saved_at, user['id'], worker_id))
-                client_row = conn.execute('SELECT business_name FROM clients WHERE id=?', (client_id,)).fetchone()
-                if portal_enabled:
-                    log_account_activity(conn, client_id=client_id, account_type='worker_portal', account_email=target_portal_email, account_name=worker['name'], created_by_user_id=user['id'], status='auto_approved', detail='Business created worker portal access and it was activated automatically.')
-                log_worker_profile_history(
-                    conn,
-                    worker_id=worker_id,
-                    client_id=client_id,
-                    action='portal_access_updated',
-                    changed_by_user_id=user['id'],
-                    detail=f"Portal access {'enabled' if portal_enabled else 'disabled'}.",
-                )
-                conn.commit()
-                welcome_sent = False
-                welcome_error = ''
-                setup_reset_sent = False
-                setup_reset_error = ''
-                if portal_enabled and approval_status == 'approved' and target_portal_email and not portal_password and smtp_email_ready():
-                    try:
-                        token = create_password_reset_request(
-                            conn,
-                            email=target_portal_email,
-                            account_kind='worker',
-                            account_id=worker_id,
-                            requester_ip=(request.headers.get('X-Forwarded-For', '') or request.remote_addr or ''),
-                            supersede_existing=True,
-                        )
-                        log_auth_activity(
-                            conn,
-                            client_id=client_id,
-                            actor=worker,
-                            account_type='password_reset',
-                            account_email=target_portal_email,
-                            account_name=worker['name'],
-                            status='requested',
-                            detail='Team member portal password setup or reset requested from the manager portal.',
-                        )
-                        conn.commit()
-                        reset_link = f"{configured_base_url()}{url_for('reset_password', token=token)}"
-                        send_password_reset_email(target_portal_email, reset_link, 'team member portal', account_type='worker')
-                        setup_reset_sent = True
-                    except Exception as e:
-                        setup_reset_error = str(e)[:200]
-                elif portal_enabled and approval_status == 'approved' and target_portal_email and portal_password and smtp_email_ready():
-                    try:
-                        send_welcome_email(
-                            target_portal_email,
-                            worker['name'],
-                            'worker',
-                            login_path='/worker-login',
-                            business_name=(client_row['business_name'] if client_row else '')
-                        )
-                        welcome_sent = True
-                    except Exception as e:
-                        welcome_error = str(e)[:200]
-                if portal_enabled and setup_reset_sent:
-                    flash('Worker portal access updated. Worker password setup email sent.', 'success')
-                elif portal_enabled and not portal_password and smtp_email_ready():
-                    flash(f'Worker portal access updated, but the worker password setup email failed: {setup_reset_error}', 'error')
-                elif portal_enabled and not portal_password:
-                    flash('Worker portal access updated. Use Forgot Password on the team member login page to create or reset the worker password.', 'success')
-                elif portal_enabled and welcome_sent:
-                    flash('Worker portal access updated and approved. Welcome email sent.', 'success')
-                elif portal_enabled and smtp_email_ready():
-                    flash(f'Worker portal access updated and approved, but welcome email failed: {welcome_error}', 'error')
-                elif portal_enabled:
-                    flash('Worker portal access updated and approved.', 'success')
-                else:
-                    flash('Worker portal access updated.', 'success')
+                flash('Team member portal access is only for W-2 employees. Subcontractors are managed separately.', 'error')
                 return redirect(url_for('workers', client_id=client_id, worker_id=worker_id))
             if action == 'delete':
                 has_payments = conn.execute('SELECT 1 FROM worker_payments WHERE worker_id=? LIMIT 1', (worker_id,)).fetchone()
                 if has_payments:
-                    flash('Worker has payment history and cannot be deleted. Terminate instead.', 'error')
+                    flash('Subcontractor has payout history and cannot be deleted. Deactivate instead.', 'error')
                 else:
                     log_worker_profile_history(conn, worker_id=worker_id, client_id=client_id, action='deleted', changed_by_user_id=user['id'], snapshot=worker)
                     conn.execute('DELETE FROM worker_time_off_requests WHERE worker_id=?', (worker_id,))
@@ -20723,49 +20750,9 @@ def workers():
                     conn.execute('DELETE FROM w4_answers WHERE worker_id=?', (worker_id,))
                     conn.execute('DELETE FROM workers WHERE id=?', (worker_id,))
                     conn.commit()
-                    flash('Worker deleted.', 'success')
+                    flash('Subcontractor deleted.', 'success')
                     return redirect(url_for('workers', client_id=client_id))
-            if action == 'add_notice':
-                title = request.form.get('notice_title', '').strip()
-                body = request.form.get('notice_body', '').strip()
-                if not title or not body:
-                    flash('Policy title and notice text are required.', 'error')
-                else:
-                    conn.execute(
-                        '''INSERT INTO worker_policy_notices (client_id, title, body, created_by_user_id, is_active)
-                           VALUES (?,?,?,?,1)''',
-                        (client_id, title[:120], body[:3000], user['id'])
-                    )
-                    conn.commit()
-                    flash('Business policy / notice added.', 'success')
-                return redirect(url_for('workers', client_id=client_id, worker_id=worker_id or request.args.get('worker_id', type=int) or ''))
-            if action == 'edit_notice':
-                notice_id = request.form.get('notice_id', type=int)
-                title = request.form.get('notice_title', '').strip()
-                body = request.form.get('notice_body', '').strip()
-                is_active = 1 if request.form.get('is_active') else 0
-                notice = conn.execute('SELECT * FROM worker_policy_notices WHERE id=? AND client_id=?', (notice_id, client_id)).fetchone() if notice_id else None
-                if not notice:
-                    flash('Policy / notice not found.', 'error')
-                elif not title or not body:
-                    flash('Policy title and notice text are required.', 'error')
-                else:
-                    conn.execute(
-                        '''UPDATE worker_policy_notices
-                           SET title=?, body=?, is_active=?, updated_at=CURRENT_TIMESTAMP
-                           WHERE id=? AND client_id=?''',
-                        (title[:120], body[:3000], is_active, notice_id, client_id)
-                    )
-                    conn.commit()
-                    flash('Business policy / notice updated.', 'success')
-                return redirect(url_for('workers', client_id=client_id, worker_id=worker_id or request.args.get('worker_id', type=int) or ''))
-            if action == 'delete_notice':
-                notice_id = request.form.get('notice_id', type=int)
-                conn.execute('DELETE FROM worker_policy_notices WHERE id=? AND client_id=?', (notice_id, client_id))
-                conn.commit()
-                flash('Business policy / notice removed.', 'success')
-                return redirect(url_for('workers', client_id=client_id, worker_id=worker_id or request.args.get('worker_id', type=int) or ''))
-        rows = conn.execute('SELECT * FROM workers WHERE client_id=? ORDER BY CASE WHEN status="active" THEN 0 WHEN status="terminated" THEN 1 ELSE 2 END, name', (client_id,)).fetchall()
+        rows = conn.execute("SELECT * FROM workers WHERE client_id=? AND worker_type='1099' ORDER BY CASE WHEN status='active' THEN 0 WHEN status='terminated' THEN 1 ELSE 2 END, name", (client_id,)).fetchall()
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
         selected_worker_id = request.args.get('worker_id', type=int) or (rows[0]['id'] if rows else None)
         selected_worker = conn.execute(
@@ -20773,24 +20760,21 @@ def workers():
                FROM workers w
                LEFT JOIN users creator ON creator.id = w.created_by_user_id
                LEFT JOIN users updater ON updater.id = w.updated_by_user_id
-               WHERE w.id=?''',
-            (selected_worker_id,)
+               WHERE w.id=? AND w.client_id=? AND w.worker_type='1099' ''',
+            (selected_worker_id, client_id)
         ).fetchone() if selected_worker_id else None
-        answers = conn.execute('SELECT * FROM w4_answers WHERE worker_id=?', (selected_worker_id,)).fetchone() if selected_worker_id else None
-        policy_notices = conn.execute('SELECT * FROM worker_policy_notices WHERE client_id=? ORDER BY updated_at DESC, id DESC', (client_id,)).fetchall()
     return render_template(
         'workers.html',
         workers=rows,
         client=client,
         client_id=client_id,
         selected_worker=selected_worker,
-        answers=answers,
-        worker_login_url=url_for('worker_login'),
-        policy_notices=policy_notices,
         worker_payout_preferences=worker_payout_preference_options(),
         contractor_tin_type_options=contractor_tin_type_options(),
         contractor_tax_classification_options=contractor_tax_classification_options(),
         contractor_workers_comp_status_options=contractor_workers_comp_status_options(),
+        today=date.today().isoformat(),
+        today_iso=date.today().isoformat(),
     )
 
 
