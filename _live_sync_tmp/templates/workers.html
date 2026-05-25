@@ -83,7 +83,79 @@
     </div>
   </div>
 
-  <details class='compact-details' open>
+  <details class='compact-details'>
+    <summary>Subcontractor Information</summary>
+    <div class='team-info-grid' style='margin-top:14px'>
+      <div class='team-info-card'>
+        <div class='small-label'>Status</div>
+        <strong>{{ (selected_worker.status or 'active')|replace('_',' ')|title }}</strong>
+        <span>1099 Subcontractor</span>
+      </div>
+      <div class='team-info-card'>
+        <div class='small-label'>Role</div>
+        <strong>{{ selected_worker.worker_role or selected_worker.role_classification or 'Subcontractor' }}</strong>
+        <span>{{ selected_worker.crew_label or 'No group saved yet' }}</span>
+      </div>
+      <div class='team-info-card'>
+        <div class='small-label'>Contact</div>
+        <strong>{{ selected_worker.phone or 'No phone saved' }}</strong>
+        <span>{{ selected_worker.email or 'No email saved' }}</span>
+      </div>
+      <div class='team-info-card'>
+        <div class='small-label'>Service Start</div>
+        <strong>{{ selected_worker.engagement_start_date or selected_worker.hire_date or 'Not set yet' }}</strong>
+        <span>{{ (selected_worker.payroll_frequency or 'monthly')|replace('_',' ')|title }} payout cadence</span>
+      </div>
+      <div class='team-info-card'>
+        <div class='small-label'>Payout Preference</div>
+        <strong>{{ (selected_worker.payout_preference or 'paper_check')|replace('_',' ')|title }}</strong>
+        <span>{% if selected_worker.deposit_bank_name %}{{ selected_worker.deposit_bank_name }}{% if selected_worker.deposit_account_last4 %} ending in {{ selected_worker.deposit_account_last4 }}{% endif %}{% elif selected_worker.zelle_contact %}{{ selected_worker.zelle_contact }}{% else %}Not configured yet{% endif %}</span>
+      </div>
+    </div>
+    <div class='team-callout' style='margin-top:14px'>
+      <p><strong>Address:</strong> {{ selected_worker.address or 'No mailing address saved yet.' }}</p>
+      {% if selected_worker.pay_notes %}<p style='margin-top:10px'><strong>Pay notes:</strong> {{ selected_worker.pay_notes }}</p>{% endif %}
+      {% if selected_worker.availability_baseline %}<p style='margin-top:10px'><strong>Availability notes:</strong> {{ selected_worker.availability_baseline }}</p>{% endif %}
+    </div>
+  </details>
+
+  <details class='compact-details'>
+    <summary>W-9, Agreement, and Insurance</summary>
+    <div class='team-info-grid' style='margin-top:14px'>
+      <div class='team-info-card'>
+        <div class='small-label'>Legal Name on W-9</div>
+        <strong>{{ selected_worker.contractor_legal_name or selected_worker.name }}</strong>
+        <span>{{ selected_worker.contractor_business_name or 'No DBA or business name saved' }}</span>
+      </div>
+      <div class='team-info-card'>
+        <div class='small-label'>Tax Classification</div>
+        <strong>{{ (selected_worker.contractor_tax_classification or 'not set')|replace('_',' ')|title }}</strong>
+        <span>TIN type: {{ (selected_worker.contractor_tin_type or 'not set')|upper }}</span>
+      </div>
+      <div class='team-info-card'>
+        <div class='small-label'>W-9</div>
+        <strong>{{ selected_worker.contractor_w9_received_date or 'Missing' }}</strong>
+        <span>Signed {{ selected_worker.contractor_w9_signed_date or selected_worker.contractor_w9_signature_date or 'not saved yet' }}</span>
+      </div>
+      <div class='team-info-card'>
+        <div class='small-label'>Agreement</div>
+        <strong>{{ selected_worker.contractor_agreement_effective_date or 'Not dated yet' }}</strong>
+        <span>Signed {{ selected_worker.contractor_agreement_signed_date or selected_worker.contractor_signature_date or 'not saved yet' }}</span>
+      </div>
+      <div class='team-info-card'>
+        <div class='small-label'>Workers Comp</div>
+        <strong>{{ (selected_worker.contractor_workers_comp_status or 'missing')|replace('_',' ')|title }}</strong>
+        <span>{% if selected_worker.contractor_workers_comp_policy_number %}Policy {{ selected_worker.contractor_workers_comp_policy_number }}{% elif selected_worker.contractor_workers_comp_exemption_number %}Exemption {{ selected_worker.contractor_workers_comp_exemption_number }}{% else %}Coverage or exemption proof not saved yet{% endif %}</span>
+      </div>
+    </div>
+    <div class='team-callout' style='margin-top:14px'>
+      <p><strong>Scope of work:</strong> {{ selected_worker.contractor_scope_of_work or 'No subcontractor scope saved yet.' }}</p>
+      <p style='margin-top:10px'><strong>Payment terms:</strong> {{ selected_worker.contractor_payment_terms or 'No contractor payment terms saved yet.' }}</p>
+      <p style='margin-top:10px'><strong>Insurance:</strong> {{ selected_worker.contractor_insurance_carrier or 'No insurance carrier saved' }}{% if selected_worker.contractor_policy_number %} | Policy {{ selected_worker.contractor_policy_number }}{% endif %}{% if selected_worker.contractor_policy_expiration %} | Expires {{ selected_worker.contractor_policy_expiration }}{% endif %}</p>
+    </div>
+  </details>
+
+  <details class='compact-details'>
     <summary>Edit Subcontractor Profile</summary>
     <form method='post' class='form-grid worker-profile-form' style='margin-top:12px'>
       {% if current_user.role == 'admin' %}<input type='hidden' name='client_id' value='{{ client_id }}'>{% endif %}
