@@ -13,6 +13,7 @@ import tempfile
 import zipfile
 import unicodedata
 import hmac
+import calendar
 from email.message import EmailMessage
 from email.utils import parseaddr
 from cryptography.fernet import Fernet
@@ -7555,8 +7556,38 @@ def init_db():
                 vendor_description TEXT NOT NULL,
                 category TEXT NOT NULL DEFAULT 'other',
                 amount REAL NOT NULL DEFAULT 0,
+                payment_method TEXT DEFAULT 'other',
+                reference_number TEXT DEFAULT '',
+                receipt_status TEXT DEFAULT 'not_attached',
+                deductible_status TEXT DEFAULT 'business',
+                recurring_expense_id INTEGER,
+                source_label TEXT DEFAULT 'manual',
                 note TEXT DEFAULT '',
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT '',
+                created_by_user_id INTEGER,
+                updated_by_user_id INTEGER,
+                FOREIGN KEY(client_id) REFERENCES clients(id)
+            );
+            CREATE TABLE IF NOT EXISTS recurring_expenses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id INTEGER NOT NULL,
+                vendor_description TEXT NOT NULL,
+                category TEXT NOT NULL DEFAULT 'other',
+                amount REAL NOT NULL DEFAULT 0,
+                frequency TEXT NOT NULL DEFAULT 'monthly',
+                start_date TEXT NOT NULL,
+                next_due_date TEXT NOT NULL,
+                end_date TEXT DEFAULT '',
+                payment_method TEXT DEFAULT 'other',
+                reference_number TEXT DEFAULT '',
+                receipt_status TEXT DEFAULT 'not_attached',
+                note TEXT DEFAULT '',
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT '',
+                created_by_user_id INTEGER,
+                updated_by_user_id INTEGER,
                 FOREIGN KEY(client_id) REFERENCES clients(id)
             );
             CREATE TABLE IF NOT EXISTS business_payment_items (
@@ -7904,6 +7935,23 @@ def init_db():
         ensure_column(conn, 'mileage_entries', 'travel_days', 'INTEGER NOT NULL DEFAULT 1')
         ensure_column(conn, 'mileage_entries', 'trip_type', "TEXT DEFAULT 'two_way'")
         ensure_column(conn, 'mileage_entries', 'round_trips', 'INTEGER NOT NULL DEFAULT 1')
+        ensure_column(conn, 'other_expenses_entries', 'payment_method', "TEXT DEFAULT 'other'")
+        ensure_column(conn, 'other_expenses_entries', 'reference_number', "TEXT DEFAULT ''")
+        ensure_column(conn, 'other_expenses_entries', 'receipt_status', "TEXT DEFAULT 'not_attached'")
+        ensure_column(conn, 'other_expenses_entries', 'deductible_status', "TEXT DEFAULT 'business'")
+        ensure_column(conn, 'other_expenses_entries', 'recurring_expense_id', 'INTEGER')
+        ensure_column(conn, 'other_expenses_entries', 'source_label', "TEXT DEFAULT 'manual'")
+        ensure_column(conn, 'other_expenses_entries', 'updated_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'other_expenses_entries', 'created_by_user_id', 'INTEGER')
+        ensure_column(conn, 'other_expenses_entries', 'updated_by_user_id', 'INTEGER')
+        ensure_column(conn, 'recurring_expenses', 'payment_method', "TEXT DEFAULT 'other'")
+        ensure_column(conn, 'recurring_expenses', 'reference_number', "TEXT DEFAULT ''")
+        ensure_column(conn, 'recurring_expenses', 'receipt_status', "TEXT DEFAULT 'not_attached'")
+        ensure_column(conn, 'recurring_expenses', 'note', "TEXT DEFAULT ''")
+        ensure_column(conn, 'recurring_expenses', 'is_active', 'INTEGER NOT NULL DEFAULT 1')
+        ensure_column(conn, 'recurring_expenses', 'updated_at', "TEXT DEFAULT ''")
+        ensure_column(conn, 'recurring_expenses', 'created_by_user_id', 'INTEGER')
+        ensure_column(conn, 'recurring_expenses', 'updated_by_user_id', 'INTEGER')
         ensure_column(conn, 'worker_policy_notices', 'is_active', 'INTEGER NOT NULL DEFAULT 1')
         ensure_column(conn, 'worker_policy_notices', 'updated_at', "TEXT DEFAULT CURRENT_TIMESTAMP")
         ensure_column(conn, 'users', 'last_seen_at', "TEXT DEFAULT ''")
@@ -14837,8 +14885,12 @@ def benefits_official_resource_links():
 
 def other_expense_categories():
     return [
+        'rent / lease',
+        'utilities',
         'food',
+        'meals',
         'fuel',
+        'vehicle',
         'repair',
         'insurance',
         'phone / internet',
@@ -14847,8 +14899,187 @@ def other_expense_categories():
         'subcontractors',
         'advertising',
         'software',
+        'bank / merchant fees',
+        'professional services',
+        'licenses / permits',
+        'taxes',
+        'office',
+        'travel',
         'other',
     ]
+
+
+def other_expense_payment_method_options():
+    return [
+        ('business_debit', 'Business debit card'),
+        ('business_credit', 'Business credit card'),
+        ('bank_transfer', 'Bank transfer / ACH'),
+        ('check', 'Check'),
+        ('cash', 'Cash'),
+        ('zelle', 'Zelle'),
+        ('venmo_cashapp', 'Venmo / Cash App'),
+        ('other', 'Other'),
+    ]
+
+
+def other_expense_receipt_status_options():
+    return [
+        ('attached', 'Receipt attached / on file'),
+        ('needed', 'Receipt needed'),
+        ('not_attached', 'Not attached'),
+        ('not_required', 'Not required'),
+    ]
+
+
+def recurring_expense_frequency_options():
+    return [
+        ('weekly', 'Weekly'),
+        ('biweekly', 'Every 2 weeks'),
+        ('monthly', 'Monthly'),
+        ('quarterly', 'Quarterly'),
+        ('annually', 'Annually'),
+    ]
+
+
+def normalize_other_expense_category(value: str | None) -> str:
+    cleaned = (value or 'other').strip().lower()
+    return cleaned if cleaned in other_expense_categories() else 'other'
+
+
+def normalize_other_expense_payment_method(value: str | None) -> str:
+    cleaned = (value or 'other').strip().lower()
+    allowed = {key for key, _label in other_expense_payment_method_options()}
+    return cleaned if cleaned in allowed else 'other'
+
+
+def normalize_other_expense_receipt_status(value: str | None) -> str:
+    cleaned = (value or 'not_attached').strip().lower()
+    allowed = {key for key, _label in other_expense_receipt_status_options()}
+    return cleaned if cleaned in allowed else 'not_attached'
+
+
+def normalize_recurring_expense_frequency(value: str | None) -> str:
+    cleaned = (value or 'monthly').strip().lower()
+    allowed = {key for key, _label in recurring_expense_frequency_options()}
+    return cleaned if cleaned in allowed else 'monthly'
+
+
+def add_months_to_date(value: date, months: int) -> date:
+    month_index = value.month - 1 + months
+    year = value.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(value.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
+def next_recurring_expense_date(value: date, frequency: str) -> date:
+    frequency = normalize_recurring_expense_frequency(frequency)
+    if frequency == 'weekly':
+        return value + timedelta(days=7)
+    if frequency == 'biweekly':
+        return value + timedelta(days=14)
+    if frequency == 'quarterly':
+        return add_months_to_date(value, 3)
+    if frequency == 'annually':
+        return add_months_to_date(value, 12)
+    return add_months_to_date(value, 1)
+
+
+def recurring_expense_due_dates(rule, through_date: date | None = None, *, include_future_once: bool = False) -> list[date]:
+    through = through_date or date.today()
+    next_due = parse_date(row_value(rule, 'next_due_date', '') or row_value(rule, 'start_date', '')) or through
+    end_date = parse_date(row_value(rule, 'end_date', '') or '')
+    frequency = normalize_recurring_expense_frequency(row_value(rule, 'frequency', 'monthly'))
+    if end_date and next_due > end_date:
+        return []
+    if next_due > through:
+        return [next_due] if include_future_once else []
+    dates: list[date] = []
+    cursor = next_due
+    for _ in range(120):
+        if cursor > through:
+            break
+        if end_date and cursor > end_date:
+            break
+        dates.append(cursor)
+        cursor = next_recurring_expense_date(cursor, frequency)
+    return dates
+
+
+def recurring_expense_next_after(rule, after_date: date) -> str:
+    frequency = normalize_recurring_expense_frequency(row_value(rule, 'frequency', 'monthly'))
+    cursor = parse_date(row_value(rule, 'next_due_date', '') or row_value(rule, 'start_date', '')) or after_date
+    while cursor <= after_date:
+        cursor = next_recurring_expense_date(cursor, frequency)
+    end_date = parse_date(row_value(rule, 'end_date', '') or '')
+    return '' if end_date and cursor > end_date else cursor.isoformat()
+
+
+def post_recurring_expense_occurrences(
+    conn: sqlite3.Connection,
+    *,
+    client_id: int,
+    actor_user_id: int | None,
+    rule_id: int | None = None,
+    through_date: date | None = None,
+    include_future_once: bool = False,
+) -> int:
+    through = through_date or date.today()
+    params: list = [client_id]
+    rule_clause = ''
+    if rule_id:
+        rule_clause = ' AND id=?'
+        params.append(rule_id)
+    rules = conn.execute(
+        f'''SELECT *
+            FROM recurring_expenses
+            WHERE client_id=? AND COALESCE(is_active,1)=1{rule_clause}
+            ORDER BY next_due_date, id''',
+        tuple(params),
+    ).fetchall()
+    posted_count = 0
+    for rule in rules:
+        due_dates = recurring_expense_due_dates(rule, through, include_future_once=include_future_once)
+        for due_date in due_dates:
+            existing = conn.execute(
+                'SELECT id FROM other_expenses_entries WHERE client_id=? AND recurring_expense_id=? AND expense_date=? LIMIT 1',
+                (client_id, rule['id'], due_date.isoformat()),
+            ).fetchone()
+            if existing:
+                continue
+            conn.execute(
+                '''INSERT INTO other_expenses_entries (
+                       client_id, expense_date, vendor_description, category, amount, payment_method,
+                       reference_number, receipt_status, deductible_status, recurring_expense_id,
+                       source_label, note, created_by_user_id, updated_at, updated_by_user_id
+                   ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                (
+                    client_id,
+                    due_date.isoformat(),
+                    row_value(rule, 'vendor_description', ''),
+                    normalize_other_expense_category(row_value(rule, 'category', 'other')),
+                    money(row_value(rule, 'amount', 0)),
+                    normalize_other_expense_payment_method(row_value(rule, 'payment_method', 'other')),
+                    row_value(rule, 'reference_number', ''),
+                    normalize_other_expense_receipt_status(row_value(rule, 'receipt_status', 'not_attached')),
+                    'business',
+                    rule['id'],
+                    'recurring',
+                    row_value(rule, 'note', ''),
+                    actor_user_id,
+                    now_iso(),
+                    actor_user_id,
+                ),
+            )
+            posted_count += 1
+        if due_dates:
+            last_date = max(due_dates)
+            next_due = recurring_expense_next_after(rule, last_date)
+            conn.execute(
+                'UPDATE recurring_expenses SET next_due_date=?, updated_at=?, updated_by_user_id=? WHERE id=? AND client_id=?',
+                (next_due, now_iso(), actor_user_id, rule['id'], client_id),
+            )
+    return posted_count
 
 
 def business_payment_statuses():
@@ -21069,26 +21300,132 @@ def other_expenses():
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
 
         if request.method == 'POST':
-            expense_date = request.form.get('expense_date', '').strip() or date.today().isoformat()
-            vendor_description = request.form.get('vendor_description', '').strip()
-            category = request.form.get('category', 'other').strip().lower()
-            amount = request.form.get('amount', type=float) or 0.0
-            note = request.form.get('note', '').strip()
+            action = (request.form.get('action') or 'add_expense').strip()
+            if action == 'add_expense':
+                expense_date = request.form.get('expense_date', '').strip() or date.today().isoformat()
+                vendor_description = request.form.get('vendor_description', '').strip()
+                category = normalize_other_expense_category(request.form.get('category'))
+                amount = request.form.get('amount', type=float) or 0.0
+                payment_method = normalize_other_expense_payment_method(request.form.get('payment_method'))
+                receipt_status = normalize_other_expense_receipt_status(request.form.get('receipt_status'))
+                reference_number = request.form.get('reference_number', '').strip()[:120]
+                note = request.form.get('note', '').strip()
 
-            if category not in other_expense_categories():
-                category = 'other'
-
-            if not vendor_description:
-                flash('Enter a vendor or description.', 'error')
-            elif amount <= 0:
-                flash('Enter an amount greater than zero.', 'error')
-            else:
+                if not parse_date(expense_date):
+                    flash('Enter a valid expense date.', 'error')
+                elif not vendor_description:
+                    flash('Enter a vendor or description.', 'error')
+                elif amount <= 0:
+                    flash('Enter an amount greater than zero.', 'error')
+                else:
+                    conn.execute(
+                        '''INSERT INTO other_expenses_entries (
+                               client_id, expense_date, vendor_description, category, amount,
+                               payment_method, reference_number, receipt_status, deductible_status,
+                               source_label, note, created_by_user_id, updated_at, updated_by_user_id
+                           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        (
+                            client_id,
+                            expense_date,
+                            vendor_description,
+                            category,
+                            money(amount),
+                            payment_method,
+                            reference_number,
+                            receipt_status,
+                            'business',
+                            'manual',
+                            note,
+                            user['id'],
+                            now_iso(),
+                            user['id'],
+                        ),
+                    )
+                    conn.commit()
+                    flash('Expense saved.', 'success')
+                    return redirect(url_for('other_expenses', client_id=client_id))
+            elif action == 'add_recurring_expense':
+                vendor_description = request.form.get('recurring_vendor_description', '').strip()
+                category = normalize_other_expense_category(request.form.get('recurring_category'))
+                amount = request.form.get('recurring_amount', type=float) or 0.0
+                frequency = normalize_recurring_expense_frequency(request.form.get('recurring_frequency'))
+                start_date = request.form.get('recurring_start_date', '').strip() or date.today().isoformat()
+                end_date = request.form.get('recurring_end_date', '').strip()
+                payment_method = normalize_other_expense_payment_method(request.form.get('recurring_payment_method'))
+                receipt_status = normalize_other_expense_receipt_status(request.form.get('recurring_receipt_status'))
+                reference_number = request.form.get('recurring_reference_number', '').strip()[:120]
+                note = request.form.get('recurring_note', '').strip()
+                parsed_start = parse_date(start_date)
+                parsed_end = parse_date(end_date) if end_date else None
+                if not vendor_description:
+                    flash('Enter a vendor or description for the recurring expense.', 'error')
+                elif amount <= 0:
+                    flash('Enter a recurring amount greater than zero.', 'error')
+                elif not parsed_start:
+                    flash('Enter a valid recurring start date.', 'error')
+                elif end_date and not parsed_end:
+                    flash('Enter a valid recurring end date or leave it blank.', 'error')
+                elif parsed_end and parsed_end < parsed_start:
+                    flash('Recurring end date cannot be before the start date.', 'error')
+                else:
+                    saved_at = now_iso()
+                    conn.execute(
+                        '''INSERT INTO recurring_expenses (
+                               client_id, vendor_description, category, amount, frequency,
+                               start_date, next_due_date, end_date, payment_method, reference_number,
+                               receipt_status, note, is_active, created_by_user_id, updated_at, updated_by_user_id
+                           ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+                        (
+                            client_id,
+                            vendor_description,
+                            category,
+                            money(amount),
+                            frequency,
+                            parsed_start.isoformat(),
+                            parsed_start.isoformat(),
+                            parsed_end.isoformat() if parsed_end else '',
+                            payment_method,
+                            reference_number,
+                            receipt_status,
+                            note,
+                            1,
+                            user['id'],
+                            saved_at,
+                            user['id'],
+                        ),
+                    )
+                    rule_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+                    posted = post_recurring_expense_occurrences(conn, client_id=client_id, actor_user_id=user['id'], rule_id=rule_id)
+                    conn.commit()
+                    if posted:
+                        flash(f'Recurring expense saved and {posted} due expense entr{"y" if posted == 1 else "ies"} posted.', 'success')
+                    else:
+                        flash('Recurring expense saved.', 'success')
+                    return redirect(url_for('other_expenses', client_id=client_id))
+            elif action == 'post_due_recurring':
+                posted = post_recurring_expense_occurrences(conn, client_id=client_id, actor_user_id=user['id'])
+                conn.commit()
+                flash(f'{posted} due recurring expense entr{"y" if posted == 1 else "ies"} posted.' if posted else 'No recurring expenses were due today.', 'success')
+                return redirect(url_for('other_expenses', client_id=client_id))
+            elif action == 'post_next_recurring':
+                rule_id = request.form.get('recurring_expense_id', type=int)
+                rule = conn.execute('SELECT id FROM recurring_expenses WHERE id=? AND client_id=?', (rule_id, client_id)).fetchone() if rule_id else None
+                if not rule:
+                    flash('Recurring expense not found.', 'error')
+                else:
+                    posted = post_recurring_expense_occurrences(conn, client_id=client_id, actor_user_id=user['id'], rule_id=rule_id, include_future_once=True)
+                    conn.commit()
+                    flash('Recurring expense posted.' if posted else 'That recurring expense was already posted for its next due date.', 'success')
+                    return redirect(url_for('other_expenses', client_id=client_id))
+            elif action in {'pause_recurring', 'resume_recurring'}:
+                rule_id = request.form.get('recurring_expense_id', type=int)
+                is_active = 0 if action == 'pause_recurring' else 1
                 conn.execute(
-                    'INSERT INTO other_expenses_entries (client_id, expense_date, vendor_description, category, amount, note) VALUES (?,?,?,?,?,?)',
-                    (client_id, expense_date, vendor_description, category, amount, note)
+                    'UPDATE recurring_expenses SET is_active=?, updated_at=?, updated_by_user_id=? WHERE id=? AND client_id=?',
+                    (is_active, now_iso(), user['id'], rule_id, client_id),
                 )
                 conn.commit()
-                flash('Expense saved.', 'success')
+                flash('Recurring expense paused.' if not is_active else 'Recurring expense resumed.', 'success')
                 return redirect(url_for('other_expenses', client_id=client_id))
 
         rows = conn.execute(
@@ -21099,16 +21436,48 @@ def other_expenses():
             'SELECT category, COUNT(*) entry_count, COALESCE(SUM(amount), 0) total_amount FROM other_expenses_entries WHERE client_id=? GROUP BY category ORDER BY LOWER(category)',
             (client_id,)
         ).fetchall()
+        recurring_rows = conn.execute(
+            '''SELECT re.*,
+                      (SELECT COUNT(*) FROM other_expenses_entries oe WHERE oe.recurring_expense_id=re.id) AS posted_entry_count
+               FROM recurring_expenses re
+               WHERE re.client_id=?
+               ORDER BY COALESCE(re.is_active,1) DESC, re.next_due_date, LOWER(re.vendor_description), re.id DESC''',
+            (client_id,),
+        ).fetchall()
 
     total_expenses = round(sum(float(row['amount'] or 0) for row in rows), 2)
+    receipt_needed_count = len([row for row in rows if (row['receipt_status'] or 'not_attached') in {'needed', 'not_attached'}])
+    recurring_due_count = sum(len(recurring_expense_due_dates(rule)) for rule in recurring_rows if int(rule['is_active'] or 0) == 1)
+    frequency_factor = {
+        'weekly': 52 / 12,
+        'biweekly': 26 / 12,
+        'monthly': 1,
+        'quarterly': 1 / 3,
+        'annually': 1 / 12,
+    }
+    projected_monthly_recurring = money(sum(
+        float(rule['amount'] or 0) * frequency_factor.get(normalize_recurring_expense_frequency(rule['frequency']), 1)
+        for rule in recurring_rows
+        if int(rule['is_active'] or 0) == 1
+    ))
     return render_template(
         'other_expenses.html',
         client=client,
         client_id=client_id,
         categories=other_expense_categories(),
+        payment_methods=other_expense_payment_method_options(),
+        receipt_status_options=other_expense_receipt_status_options(),
+        recurring_frequency_options=recurring_expense_frequency_options(),
+        payment_method_labels=dict(other_expense_payment_method_options()),
+        receipt_status_labels=dict(other_expense_receipt_status_options()),
+        recurring_frequency_labels=dict(recurring_expense_frequency_options()),
         expense_entries=rows,
         expense_summary=summary_rows,
+        recurring_expenses=recurring_rows,
         total_expenses=total_expenses,
+        receipt_needed_count=receipt_needed_count,
+        recurring_due_count=recurring_due_count,
+        projected_monthly_recurring=projected_monthly_recurring,
         today=date.today().isoformat(),
     )
 
