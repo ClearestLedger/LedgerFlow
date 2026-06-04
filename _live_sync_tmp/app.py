@@ -14570,6 +14570,217 @@ def invoice_subtotal(items: list[dict]) -> Decimal:
     return sum((Decimal(str(item['line_total'])) for item in items), Decimal('0.00')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 
+def customer_invoice_job_title(invoice_row, line_items) -> str:
+    invoice_number = row_value(invoice_row, 'job_number') or row_value(invoice_row, 'id')
+    first_description = ''
+    for item in line_items or []:
+        first_description = (row_value(item, 'description', '') or '').strip()
+        if first_description:
+            break
+    title = first_description or (row_value(invoice_row, 'invoice_title', '') or '').strip() or f'Customer Invoice #{invoice_number}'
+    if title.strip().lower() in {'invoice', 'service invoice', 'customer invoice'}:
+        customer_name = (row_value(invoice_row, 'client_name', '') or '').strip() or 'Customer'
+        title = f'Invoice #{invoice_number} - {customer_name}'
+    return title[:220]
+
+
+def customer_invoice_job_status(invoice_row) -> tuple[str, str, str]:
+    total_amount = money(row_value(invoice_row, 'invoice_total_amount', 0) or 0)
+    paid_amount = money(row_value(invoice_row, 'paid_amount', 0) or 0)
+    invoice_status = (row_value(invoice_row, 'invoice_status', '') or '').strip().lower()
+    invoice_date = (row_value(invoice_row, 'invoice_date', '') or '').strip()
+    if invoice_status == 'paid' or (total_amount > 0 and paid_amount >= total_amount):
+        completed_at = (
+            (row_value(invoice_row, 'customer_paid_at', '') or '').strip()
+            or (row_value(invoice_row, 'updated_at', '') or '').strip()
+            or invoice_date
+        )
+        return 'completed', 'completed', completed_at
+    if invoice_date:
+        return 'scheduled', 'not_started', ''
+    return 'unscheduled', 'not_started', ''
+
+
+def customer_invoice_line_summary(line_items) -> str:
+    descriptions = []
+    for item in line_items or []:
+        description = (row_value(item, 'description', '') or '').strip()
+        if description:
+            descriptions.append(description)
+    return '; '.join(descriptions)[:1000]
+
+
+def sync_customer_invoice_job(conn: sqlite3.Connection, *, client_id: int, invoice_id: int, actor_user_id=None) -> int | None:
+    invoice_row = conn.execute(
+        '''SELECT *
+           FROM invoices
+           WHERE id=? AND client_id=? AND COALESCE(record_kind,'income_record')='customer_invoice' ''',
+        (invoice_id, client_id),
+    ).fetchone()
+    if not invoice_row:
+        return None
+
+    ops_ensure_reference_data(conn, client_id)
+    service_type = conn.execute(
+        "SELECT id, name FROM service_types WHERE client_id=? AND lower(name)=lower('Custom') ORDER BY id LIMIT 1",
+        (client_id,),
+    ).fetchone()
+    line_items = invoice_line_items_for_ids(conn, [invoice_id]).get(invoice_id, [])
+    invoice_number = row_value(invoice_row, 'job_number') or invoice_id
+    customer_reference = f'Customer invoice #{invoice_number}'
+    existing_job = None
+    linked_job_id = row_value(invoice_row, 'linked_job_id')
+    if linked_job_id:
+        existing_job = conn.execute(
+            'SELECT * FROM jobs WHERE id=? AND client_id=?',
+            (linked_job_id, client_id),
+        ).fetchone()
+    if not existing_job:
+        existing_job = conn.execute(
+            'SELECT * FROM jobs WHERE client_id=? AND customer_reference=? ORDER BY id LIMIT 1',
+            (client_id, customer_reference),
+        ).fetchone()
+
+    title = customer_invoice_job_title(invoice_row, line_items)
+    service_address = (row_value(invoice_row, 'client_address', '') or '').strip()
+    customer_name = (row_value(invoice_row, 'client_name', '') or '').strip()
+    scheduled_start = (row_value(invoice_row, 'invoice_date', '') or '').strip()
+    revenue_amount = money(row_value(invoice_row, 'invoice_total_amount', 0) or row_value(invoice_row, 'paid_amount', 0) or 0)
+    status, progress_status, completed_at = customer_invoice_job_status(invoice_row)
+    notes_summary = customer_invoice_line_summary(line_items) or (row_value(invoice_row, 'notes', '') or '').strip() or title
+    location_id = ops_find_or_create_location(
+        conn,
+        client_id=client_id,
+        customer_contact_id=row_value(invoice_row, 'customer_contact_id'),
+        location_name=title,
+        address_line1=service_address,
+        location_notes=f'Auto-created from customer invoice #{invoice_number}.',
+    )
+    source_note = f'Auto-created from customer invoice #{invoice_number}. Source invoice ID {invoice_id}.'
+
+    if existing_job:
+        existing_status = (row_value(existing_job, 'status', '') or '').strip()
+        existing_progress = (row_value(existing_job, 'field_progress_status', '') or '').strip()
+        if status != 'completed' and existing_status not in {'', 'draft', 'unscheduled', 'scheduled'}:
+            status = existing_status
+        if progress_status != 'completed' and existing_progress not in {'', 'not_started'}:
+            progress_status = existing_progress
+        scheduled_start = scheduled_start or (row_value(existing_job, 'scheduled_start', '') or '').strip()
+        completed_at = completed_at or (row_value(existing_job, 'completed_at', '') or '').strip()
+        internal_notes = (row_value(existing_job, 'internal_notes', '') or '').strip() or source_note
+        conn.execute(
+            '''UPDATE jobs
+               SET customer_contact_id=?, service_location_id=COALESCE(?, service_location_id),
+                   service_type_id=COALESCE(service_type_id, ?), title=?, customer_name=?, customer_reference=?,
+                   service_type_name=CASE WHEN COALESCE(service_type_name,'')='' THEN ? ELSE service_type_name END,
+                   status=?, field_progress_status=?, service_address=?, scheduled_start=?, revenue_amount=?,
+                   notes_summary=?, internal_notes=?, completed_at=?, last_progress_at=?, updated_at=?, updated_by_user_id=?
+               WHERE id=? AND client_id=?''',
+            (
+                row_value(invoice_row, 'customer_contact_id'),
+                location_id,
+                service_type['id'] if service_type else None,
+                title,
+                customer_name,
+                customer_reference,
+                service_type['name'] if service_type else 'Custom',
+                status,
+                progress_status,
+                service_address,
+                scheduled_start,
+                revenue_amount,
+                notes_summary,
+                internal_notes,
+                completed_at,
+                completed_at if progress_status == 'completed' else (row_value(existing_job, 'last_progress_at', '') or '').strip(),
+                now_iso(),
+                actor_user_id,
+                existing_job['id'],
+                client_id,
+            ),
+        )
+        job_id = existing_job['id']
+        ops_log_activity(
+            conn,
+            client_id=client_id,
+            job_id=job_id,
+            actor_type='system',
+            actor_id=actor_user_id,
+            event_type='invoice_sync',
+            event_text=f'Synced customer invoice #{invoice_number} into this job.',
+        )
+    else:
+        conn.execute(
+            '''INSERT INTO jobs (
+                   client_id, customer_contact_id, service_location_id, service_type_id, template_id, created_by_user_id, updated_by_user_id,
+                   title, customer_name, customer_reference, service_type_name, priority, status, field_progress_status, tags,
+                   service_address, city, state, postal_code, scheduled_start, scheduled_end, estimated_duration_minutes,
+                   revenue_amount, materials_cost_amount, labor_cost_amount, other_cost_amount,
+                   notes_summary, internal_notes, dispatch_notes, completion_notes, recurrence_rule, is_recurring, cancellation_reason,
+                   issue_flag, requires_revisit, completed_at, last_progress_at, updated_at
+               ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
+            (
+                client_id,
+                row_value(invoice_row, 'customer_contact_id'),
+                location_id,
+                service_type['id'] if service_type else None,
+                None,
+                actor_user_id,
+                actor_user_id,
+                title,
+                customer_name,
+                customer_reference,
+                service_type['name'] if service_type else 'Custom',
+                'normal',
+                status,
+                progress_status,
+                'customer-invoice',
+                service_address,
+                '',
+                '',
+                '',
+                scheduled_start,
+                '',
+                0,
+                revenue_amount,
+                0.0,
+                0.0,
+                0.0,
+                notes_summary,
+                source_note,
+                '',
+                '',
+                '',
+                0,
+                '',
+                0,
+                0,
+                completed_at,
+                completed_at if progress_status == 'completed' else '',
+                now_iso(),
+            ),
+        )
+        job_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+        ops_log_activity(
+            conn,
+            client_id=client_id,
+            job_id=job_id,
+            actor_type='system',
+            actor_id=actor_user_id,
+            event_type='invoice_sync',
+            event_text=f'Created from customer invoice #{invoice_number}.',
+        )
+
+    conn.execute('UPDATE invoices SET linked_job_id=? WHERE id=? AND client_id=?', (job_id, invoice_id, client_id))
+    conn.execute(
+        '''UPDATE invoice_mileage_entries
+           SET job_id=?
+           WHERE invoice_id=? AND client_id=? AND COALESCE(job_id,0)=0''',
+        (job_id, invoice_id, client_id),
+    )
+    return job_id
+
+
 def convert_estimate_to_invoice_document(conn: sqlite3.Connection, estimate_row, line_items: list[sqlite3.Row], *, actor_user_id=None) -> int:
     next_job = conn.execute('SELECT COALESCE(MAX(job_number),0)+1 n FROM invoices WHERE client_id=?', (estimate_row['client_id'],)).fetchone()['n']
     token = generate_invoice_public_token()
@@ -14630,6 +14841,7 @@ def convert_estimate_to_invoice_document(conn: sqlite3.Connection, estimate_row,
                 item['line_total'],
             )
         )
+    sync_customer_invoice_job(conn, client_id=estimate_row['client_id'], invoice_id=invoice_id, actor_user_id=actor_user_id)
     conn.execute(
         '''UPDATE invoices
            SET invoice_status='converted', converted_invoice_id=?, payment_note=?, approved_at=CASE WHEN COALESCE(approved_at,'')='' THEN ? ELSE approved_at END
@@ -19889,6 +20101,7 @@ def invoices():
                             item['line_total'],
                         )
                     )
+                sync_customer_invoice_job(conn, client_id=client_id, invoice_id=invoice_id, actor_user_id=user['id'])
                 send_now = bool(request.form.get('send_now'))
                 if send_now:
                     view_link = public_invoice_url(token)
@@ -20117,6 +20330,7 @@ def invoices():
                         row['id'],
                     )
                 )
+                sync_customer_invoice_job(conn, client_id=client_id, invoice_id=row['id'], actor_user_id=user['id'])
                 conn.commit()
                 flash('Customer invoice marked paid.', 'success')
                 return redirect(url_for('invoices', client_id=client_id))
