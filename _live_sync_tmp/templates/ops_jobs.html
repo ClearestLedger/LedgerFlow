@@ -54,12 +54,12 @@
     <div><label>{{ tr('Status') }}</label><select name='status'><option value=''>{{ tr('All') }}</option>{% for value, label in job_status_options %}<option value='{{ value }}' {% if filters.status == value %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
     <div><label>{{ tr('Worker') }}</label><select name='worker_id'><option value=''>{{ tr('All') }}</option>{% for worker in workers %}<option value='{{ worker.id }}' {% if filters.worker_id == worker.id %}selected{% endif %}>{{ worker.name }}</option>{% endfor %}</select></div>
     <div><label>{{ tr('Service Type') }}</label><select name='service_type_id'><option value=''>{{ tr('All') }}</option>{% for row in service_types %}<option value='{{ row.id }}' {% if filters.service_type_id == row.id %}selected{% endif %}>{{ row.name }}</option>{% endfor %}</select></div>
-    <div><label>{{ tr('Search') }}</label><input name='search' value='{{ filters.search }}' placeholder='{{ tr("Job, customer, location, or tag") }}'></div>
+    <div><label>{{ tr('Search Jobs') }}</label><input name='search' value='{{ filters.search }}' placeholder='{{ tr("Job number, customer, address, service type, or tag") }}'></div>
     <div><button type='submit'>{{ tr('Filter Jobs') }}</button></div>
   </form>
 </div>
 
-<div class='grid cards-2 ops-jobs-layout'>
+<div class='ops-jobs-layout-full'>
   <div class='card section-frame' id='jobProfitForm'>
     <div class='card-head'>
       <h3>{% if selected_job %}{{ tr('Update Job') }}{% else %}{{ tr('Create Job') }}{% endif %}</h3>
@@ -128,30 +128,31 @@
   </div>
 
   <div class='card section-frame'>
-    <div class='card-head'>
-      <h3>{{ tr('Jobs Queue') }}</h3>
-      <span class='badge'>{{ jobs|length }}</span>
-    </div>
-    {% if jobs %}
-    <div class='scroll-x'>
-      <table class='table'>
-        <tr><th>{{ tr('Job') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Status') }}</th><th>{{ tr('Price / Revenue') }}</th><th>{{ tr('Other Costs') }}</th><th>{{ tr('Net Profit') }}</th><th>{{ tr('Profit Margin') }}</th></tr>
-        {% for job in jobs %}
-        <tr {% if selected_job and selected_job.id == job.id %}class='selected-row'{% endif %}>
-          <td><a href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id, status=filters.status, worker_id=filters.worker_id, service_type_id=filters.service_type_id, search=filters.search) }}'>{{ job.title }}</a><div class='small'>{{ job.service_type_label }}</div></td>
-          <td>{{ job.customer_name or '-' }}<div class='small'>{{ job.assigned_worker_names or tr('Unassigned') }}</div></td>
-          <td>{{ job.status|replace('_',' ')|title }}</td>
-          <td>${{ '%.2f'|format(job.revenue_amount or 0) }}</td>
-          <td>${{ '%.2f'|format(job.total_cost_amount or 0) }}</td>
-          <td class='{% if (job.net_profit_amount or 0) < 0 %}profit-danger-text{% else %}profit-good-text{% endif %}'>${{ '%.2f'|format(job.net_profit_amount or 0) }}</td>
-          <td>{{ '%.1f'|format(job.profit_margin_percent or 0) }}%</td>
-        </tr>
-        {% endfor %}
-      </table>
-    </div>
-    {% else %}
-    <div class='empty-state'><strong>{{ tr('No jobs match the current filters.') }}</strong><span>{{ tr('Clear filters or create a new job record.') }}</span></div>
-    {% endif %}
+    <details class='compact-details' {% if not jobs %}open{% endif %}>
+      <summary>{{ tr('Jobs Queue') }} · {{ jobs|length }} {{ tr('jobs') }}</summary>
+      {% if jobs %}
+      <div class='small' style='margin:12px 0'>{{ tr('Use the search filters above to find a job, then select its number or title to open the full editor.') }}</div>
+      <div class='scroll-x'>
+        <table class='table'>
+          <tr><th>#</th><th>{{ tr('Job') }}</th><th>{{ tr('Customer') }}</th><th>{{ tr('Status') }}</th><th>{{ tr('Price / Revenue') }}</th><th>{{ tr('Other Costs') }}</th><th>{{ tr('Net Profit') }}</th><th>{{ tr('Profit Margin') }}</th></tr>
+          {% for job in jobs %}
+          <tr {% if selected_job and selected_job.id == job.id %}class='selected-row'{% endif %}>
+            <td><a href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id, status=filters.status, worker_id=filters.worker_id, service_type_id=filters.service_type_id, search=filters.search) }}#jobProfitForm'>#{{ job.id }}</a></td>
+            <td><a href='{{ url_for("ops_jobs", client_id=client_id, job_id=job.id, status=filters.status, worker_id=filters.worker_id, service_type_id=filters.service_type_id, search=filters.search) }}#jobProfitForm'>{{ job.title }}</a><div class='small'>{{ job.service_type_label }}</div></td>
+            <td>{{ job.customer_name or '-' }}<div class='small'>{{ job.assigned_worker_names or tr('Unassigned') }}</div></td>
+            <td>{{ job.status|replace('_',' ')|title }}</td>
+            <td>${{ '%.2f'|format(job.revenue_amount or 0) }}</td>
+            <td>${{ '%.2f'|format(job.total_cost_amount or 0) }}</td>
+            <td class='{% if (job.net_profit_amount or 0) < 0 %}profit-danger-text{% else %}profit-good-text{% endif %}'>${{ '%.2f'|format(job.net_profit_amount or 0) }}</td>
+            <td>{{ '%.1f'|format(job.profit_margin_percent or 0) }}%</td>
+          </tr>
+          {% endfor %}
+        </table>
+      </div>
+      {% else %}
+      <div class='empty-state'><strong>{{ tr('No jobs match the current filters.') }}</strong><span>{{ tr('Clear filters or create a new job record.') }}</span></div>
+      {% endif %}
+    </details>
   </div>
 </div>
 
