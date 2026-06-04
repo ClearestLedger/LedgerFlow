@@ -49,6 +49,21 @@
 </div>
 
 <div class='card section-frame' style='margin-bottom:18px'>
+  <form method='get' class='form-grid ops-filter-grid' style='margin-bottom:14px'>
+    <input type='hidden' name='client_id' value='{{ client_id }}'>
+    <div style='grid-column:1 / -1'>
+      <label>{{ tr('Open Job') }}</label>
+      <select name='job_id' onchange='if (this.value) this.form.submit();'>
+        <option value=''>{{ tr('Choose a job to edit') }}</option>
+        {% for job in job_options %}
+        <option value='{{ job.id }}' {% if selected_job and selected_job.id == job.id %}selected{% endif %}>
+          #{{ job.id }} | {{ job.customer_name or job.title }}{% if job.title and job.customer_name %} | {{ job.title }}{% endif %}{% if job.full_service_address %} | {{ job.full_service_address }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div><button type='submit'>{{ tr('Open Job') }}</button></div>
+  </form>
   <form method='get' class='form-grid ops-filter-grid'>
     <input type='hidden' name='client_id' value='{{ client_id }}'>
     <div><label>{{ tr('Status') }}</label><select name='status'><option value=''>{{ tr('All') }}</option>{% for value, label in job_status_options %}<option value='{{ value }}' {% if filters.status == value %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
@@ -129,7 +144,7 @@
 
   <div class='card section-frame'>
     <details class='compact-details' {% if not jobs %}open{% endif %}>
-      <summary>{{ tr('Jobs Queue') }} · {{ jobs|length }} {{ tr('jobs') }}</summary>
+      <summary>{{ tr('Jobs Queue') }} - {{ jobs|length }} {{ tr('jobs') }}</summary>
       {% if jobs %}
       <div class='small' style='margin:12px 0'>{{ tr('Use the search filters above to find a job, then select its number or title to open the full editor.') }}</div>
       <div class='scroll-x'>

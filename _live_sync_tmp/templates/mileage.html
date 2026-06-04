@@ -47,7 +47,7 @@
         <div><label>To</label><input id='to_address' name='to_address' placeholder='Customer or job address'></div>
         <div><label>Trip Type</label><select id='trip_type' name='trip_type'><option value='two_way' selected>Two-way</option><option value='one_way'>One-way</option></select></div>
         <div><label>Round Trips Per Day</label><input id='round_trips' name='round_trips' type='number' min='1' step='1' value='1'></div>
-        <div><label>Travel Days</label><input id='travel_days_preview' type='text' value='1' readonly></div>
+        <div><label>Travel Days</label><input id='travel_days' name='travel_days' type='number' min='1' step='1' value='1'></div>
         <div><label>One-Way Miles</label><input id='one_way_miles' name='one_way_miles' type='number' min='0' step='0.01' placeholder='Leave blank to auto-calculate'></div>
         <div><label>Total Miles</label><input id='total_miles_preview' type='text' value='0.00' readonly></div>
         <div><label>Total Deduction</label><input id='deduction_preview' type='text' value='$0.00' readonly></div>
@@ -129,28 +129,64 @@
     var tripDate = document.getElementById('trip_date')?.value || '';
     var tripEndDateField = document.getElementById('trip_end_date');
     var tripEndDate = tripEndDateField?.value || tripDate;
-    var daysField = document.getElementById('travel_days_preview');
+    var daysField = document.getElementById('travel_days');
     var milesField = document.getElementById('total_miles_preview');
     var deductionField = document.getElementById('deduction_preview');
-    var travelDays = 1;
-    if (tripDate && tripEndDate) {
-      var start = new Date(tripDate + 'T00:00:00');
-      var finish = new Date(tripEndDate + 'T00:00:00');
-      if (!isNaN(start.getTime()) && !isNaN(finish.getTime())) {
-        if (finish < start) {
-          finish = start;
-          if (tripEndDateField) tripEndDateField.value = tripDate;
-        }
-        var diff = Math.floor((finish - start) / 86400000) + 1;
-        travelDays = Math.max(diff, 1);
-      }
-    }
+    var travelDays = Math.max(parseInt(daysField?.value || '1', 10) || 1, 1);
+    if (daysField) daysField.value = String(travelDays);
     var multiplier = tripType === 'one_way' ? 1 : 2;
     var totalMiles = oneWay * multiplier * roundTrips * travelDays;
     var deduction = totalMiles * {{ irs_mileage_rate|tojson }};
-    if (daysField) daysField.value = String(travelDays);
     if (milesField) milesField.value = totalMiles.toFixed(2);
     if (deductionField) deductionField.value = '$' + deduction.toFixed(2);
+  }
+
+  function dateToInputValue(dateValue) {
+    var yyyy = dateValue.getFullYear();
+    var mm = String(dateValue.getMonth() + 1).padStart(2, '0');
+    var dd = String(dateValue.getDate()).padStart(2, '0');
+    return yyyy + '-' + mm + '-' + dd;
+  }
+
+  function syncEndDateFromTravelDays() {
+    var tripDateField = document.getElementById('trip_date');
+    var tripEndDateField = document.getElementById('trip_end_date');
+    var daysField = document.getElementById('travel_days');
+    if (!tripDateField || !tripEndDateField || !daysField || !tripDateField.value) {
+      recalcMileage();
+      return;
+    }
+    var travelDays = Math.max(parseInt(daysField.value || '1', 10) || 1, 1);
+    daysField.value = String(travelDays);
+    var start = new Date(tripDateField.value + 'T00:00:00');
+    if (!isNaN(start.getTime())) {
+      var finish = new Date(start.getTime());
+      finish.setDate(start.getDate() + travelDays - 1);
+      tripEndDateField.value = dateToInputValue(finish);
+    }
+    recalcMileage();
+  }
+
+  function syncTravelDaysFromDates() {
+    var tripDate = document.getElementById('trip_date')?.value || '';
+    var tripEndDateField = document.getElementById('trip_end_date');
+    var tripEndDate = tripEndDateField?.value || tripDate;
+    var daysField = document.getElementById('travel_days');
+    if (!tripDate || !tripEndDate || !daysField) {
+      recalcMileage();
+      return;
+    }
+    var start = new Date(tripDate + 'T00:00:00');
+    var finish = new Date(tripEndDate + 'T00:00:00');
+    if (!isNaN(start.getTime()) && !isNaN(finish.getTime())) {
+      if (finish < start) {
+        finish = start;
+        if (tripEndDateField) tripEndDateField.value = tripDate;
+      }
+      var diff = Math.floor((finish - start) / 86400000) + 1;
+      daysField.value = String(Math.max(diff, 1));
+    }
+    recalcMileage();
   }
 
   var incomeSelect = document.getElementById('linked_income_record_id');
@@ -161,15 +197,28 @@
   if (jobSelect) {
     jobSelect.addEventListener('change', function() { syncMileageLinks(false); });
   }
-  ['one_way_miles', 'round_trips', 'trip_type', 'trip_date', 'trip_end_date'].forEach(function(id) {
+  ['one_way_miles', 'round_trips', 'trip_type'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) {
       el.addEventListener('input', recalcMileage);
       el.addEventListener('change', recalcMileage);
     }
   });
+  var travelDaysField = document.getElementById('travel_days');
+  if (travelDaysField) {
+    travelDaysField.addEventListener('input', syncEndDateFromTravelDays);
+    travelDaysField.addEventListener('change', syncEndDateFromTravelDays);
+  }
+  var tripDateField = document.getElementById('trip_date');
+  if (tripDateField) {
+    tripDateField.addEventListener('change', syncEndDateFromTravelDays);
+  }
+  var tripEndDateField = document.getElementById('trip_end_date');
+  if (tripEndDateField) {
+    tripEndDateField.addEventListener('change', syncTravelDaysFromDates);
+  }
   syncMileageLinks(true);
-  recalcMileage();
+  syncTravelDaysFromDates();
 })();
 </script>
 {% endblock %}

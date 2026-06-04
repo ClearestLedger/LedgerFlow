@@ -10695,9 +10695,17 @@ def ops_jobs_query(
         clauses.append('j.service_type_id=?')
         params.append(service_type_id)
     if search:
-        clauses.append('(lower(j.title) LIKE ? OR lower(COALESCE(j.customer_name, "")) LIKE ? OR lower(COALESCE(j.service_address, "")) LIKE ? OR lower(COALESCE(j.tags, "")) LIKE ?)')
+        clauses.append(
+            '''(CAST(j.id AS TEXT) LIKE ?
+                OR lower(j.title) LIKE ?
+                OR lower(COALESCE(j.customer_name, "")) LIKE ?
+                OR lower(COALESCE(j.service_address, "")) LIKE ?
+                OR lower(COALESCE(j.service_type_name, "")) LIKE ?
+                OR lower(COALESCE(j.customer_reference, "")) LIKE ?
+                OR lower(COALESCE(j.tags, "")) LIKE ?)'''
+        )
         term = f"%{search.strip().lower()}%"
-        params.extend([term, term, term, term])
+        params.extend([term, term, term, term, term, term, term])
     if date_from:
         clauses.append('substr(COALESCE(j.scheduled_start, ""), 1, 10) >= ?')
         params.append(date_from)
@@ -16264,6 +16272,7 @@ def ops_jobs():
         workspace_warning = prepare_ops_workspace(conn, client_id)
         client = safe_fetchone(conn, 'SELECT * FROM clients WHERE id=?', (client_id,))
         jobs = [dict(row) for row in ops_jobs_query(conn, client_id=client_id, status=status_filter, worker_id=worker_filter, service_type_id=service_type_filter, search=search)]
+        job_options = ops_job_reference_rows(conn, client_id)
         workers = ops_worker_rows(conn, client_id)
         customer_contacts = safe_fetchall(
             conn,
@@ -16287,6 +16296,7 @@ def ops_jobs():
         client=client,
         client_id=client_id,
         jobs=jobs,
+        job_options=job_options,
         workers=workers,
         customer_contacts=customer_contacts,
         service_types=service_types,
@@ -21452,9 +21462,14 @@ def mileage():
             round_trips = request.form.get('round_trips', type=int) or 1
             round_trips = max(round_trips, 1)
             travel_days = 1
+            requested_travel_days = request.form.get('travel_days', type=int)
+            if requested_travel_days:
+                travel_days = max(requested_travel_days, 1)
             trip_start_value = parse_date(trip_date)
             trip_end_value = parse_date(trip_end_date)
-            if trip_start_value and trip_end_value:
+            if requested_travel_days and trip_start_value:
+                trip_end_date = (trip_start_value + timedelta(days=travel_days - 1)).isoformat()
+            elif trip_start_value and trip_end_value:
                 if trip_end_value < trip_start_value:
                     trip_end_date = trip_date
                     trip_end_value = trip_start_value
