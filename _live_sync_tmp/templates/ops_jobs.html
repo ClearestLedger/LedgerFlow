@@ -89,6 +89,7 @@
         </select>
       </div>
       <div><label>{{ tr('Service Type') }}</label><select name='service_type_id'>{% for row in service_types %}<option value='{{ row.id }}' {% if (selected_job and selected_job.service_type_id == row.id) or (template_seed and template_seed.service_type_id == row.id) %}selected{% endif %}>{{ row.name }}</option>{% endfor %}</select></div>
+      <div><label>{{ tr('New Service Type') }}</label><input name='new_service_type_name' placeholder='Exterior Coating, Roof Wash, Deep Clean'></div>
       <div><label>{{ tr('Job Title') }}</label><input id='ops_job_title' name='title' required value='{{ selected_job.title if selected_job else (template_seed.default_title if template_seed else "") }}' placeholder='{{ tr("Move-out clean, trim hedges, paint foyer") }}'></div>
       <div><label>{{ tr('Customer') }}</label><input id='ops_job_customer_name' name='customer_name' value='{{ selected_job.customer_name if selected_job else "" }}'></div>
       <div><label>{{ tr('Priority') }}</label><select name='priority'>{% for value, label in priority_options %}<option value='{{ value }}' {% if (selected_job and selected_job.priority == value) or (not selected_job and template_seed and template_seed.default_priority == value) %}selected{% elif not selected_job and not template_seed and value == 'normal' %}selected{% endif %}>{{ tr(label) }}</option>{% endfor %}</select></div>
@@ -173,6 +174,10 @@
       <a class='welcome-link-card' href='{{ url_for("ops_schedule", client_id=client_id, customer_contact_id=selected_job.customer_contact_id or 0) }}'>
         <strong>{{ tr('Add this job to calendar') }}</strong>
         <span>{{ tr('Schedule') }}</span>
+      </a>
+      <a class='welcome-link-card' href='{{ url_for("mileage", client_id=client_id, prefill_job_id=selected_job.id) }}#addTripDetails'>
+        <strong>{{ tr('Record miles for this job') }}</strong>
+        <span>{{ tr('Mileage') }}</span>
       </a>
       {% if selected_job.customer_contact_id and premium_sales_access_enabled(client) %}
       <a class='welcome-link-card' href='{{ url_for("estimates", client_id=client_id, customer_contact_id=selected_job.customer_contact_id) }}#estimateForm'>

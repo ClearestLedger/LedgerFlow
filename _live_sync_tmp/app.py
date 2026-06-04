@@ -10370,6 +10370,46 @@ def ops_ensure_reference_data(conn: sqlite3.Connection, client_id: int):
             )
 
 
+def ops_find_or_create_service_type(
+    conn: sqlite3.Connection,
+    *,
+    client_id: int,
+    name: str,
+    default_duration_minutes: int = 120,
+    default_priority: str = 'normal',
+    default_crew_size: int = 1,
+) -> int | None:
+    cleaned_name = (name or '').strip()
+    if not cleaned_name:
+        return None
+    cleaned_name = re.sub(r'\s+', ' ', cleaned_name)[:120]
+    existing = conn.execute(
+        'SELECT id FROM service_types WHERE client_id=? AND lower(name)=lower(?) ORDER BY id LIMIT 1',
+        (client_id, cleaned_name),
+    ).fetchone()
+    if existing:
+        conn.execute('UPDATE service_types SET is_active=1, updated_at=? WHERE id=?', (now_iso(), existing['id']))
+        return existing['id']
+    conn.execute(
+        '''INSERT INTO service_types (
+               client_id, name, description, default_duration_minutes,
+               default_priority, default_crew_size, color_token, is_active, updated_at
+           ) VALUES (?,?,?,?,?,?,?,?,?)''',
+        (
+            client_id,
+            cleaned_name,
+            f'Custom service type for {cleaned_name}.',
+            max(int(default_duration_minutes or 120), 0),
+            normalize_ops_priority(default_priority),
+            max(int(default_crew_size or 1), 1),
+            '#72819A',
+            1,
+            now_iso(),
+        ),
+    )
+    return conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+
+
 def ops_find_or_create_location(
     conn: sqlite3.Connection,
     *,
@@ -11043,7 +11083,17 @@ def ops_save_job(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int
     title = (form.get('title', '') or '').strip()
     if not title:
         raise ValueError('Job title is required.')
+    estimated_duration_minutes = max(ops_int(form.get('estimated_duration_minutes'), 0) or 0, 0)
     service_type_id = ops_int(form.get('service_type_id'))
+    new_service_type_name = (form.get('new_service_type_name', '') or '').strip()
+    if new_service_type_name:
+        service_type_id = ops_find_or_create_service_type(
+            conn,
+            client_id=client_id,
+            name=new_service_type_name,
+            default_duration_minutes=estimated_duration_minutes or 120,
+            default_priority=form.get('priority') or 'normal',
+        )
     service_type = conn.execute(
         'SELECT * FROM service_types WHERE id=? AND client_id=?',
         (service_type_id, client_id),
@@ -11051,7 +11101,6 @@ def ops_save_job(conn: sqlite3.Connection, *, client_id: int, actor_user_id: int
     scheduled_date = (form.get('scheduled_date', '') or '').strip()
     start_time = (form.get('start_time', '') or '').strip()
     end_time = (form.get('end_time', '') or '').strip()
-    estimated_duration_minutes = max(ops_int(form.get('estimated_duration_minutes'), 0) or 0, 0)
     scheduled_start = ops_schedule_timestamp(scheduled_date, start_time)
     scheduled_end = ops_schedule_end(scheduled_date, start_time, end_time, estimated_duration_minutes)
     estimated_duration_minutes = ops_duration_minutes(scheduled_start, scheduled_end, estimated_duration_minutes)
