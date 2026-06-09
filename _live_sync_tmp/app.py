@@ -14239,6 +14239,69 @@ def upcoming_calendar_events(events, today_value: date, limit: int = 14):
     return upcoming[:limit]
 
 
+def business_dashboard_calendar_snapshot(conn: sqlite3.Connection, *, client_id: int, client_row) -> dict:
+    today_value = date.today()
+    years = {today_value.year, today_value.year + 1}
+    system_events = []
+    for year_value in sorted(years):
+        system_events.extend(national_holiday_events(year_value))
+        system_events.extend(irs_calendar_events(year_value))
+        system_events.extend(client_billing_calendar_events(client_id, client_row, year_value))
+
+    custom_rows = safe_fetchall(
+        conn,
+        '''SELECT reminder_type, reminder_date, note
+           FROM business_calendar_reminders
+           WHERE client_id=? AND reminder_date>=?
+           ORDER BY reminder_date ASC, id ASC
+           LIMIT 10''',
+        (client_id, today_value.isoformat()),
+    )
+    custom_events = [
+        _calendar_event(
+            date.fromisoformat(row['reminder_date']),
+            row['reminder_type'] or 'Reminder',
+            row['note'] or '',
+            tone='reminder',
+            source='business_reminder',
+        )
+        for row in custom_rows
+        if parse_date(row['reminder_date'])
+    ]
+
+    schedule_rows = safe_fetchall(
+        conn,
+        '''SELECT job_name, job_address, schedule_date, start_time, assigned_worker_names
+           FROM work_schedule_entries
+           WHERE client_id=? AND schedule_date>=?
+           ORDER BY schedule_date ASC,
+                    CASE WHEN COALESCE(start_time,'')='' THEN 1 ELSE 0 END,
+                    start_time ASC,
+                    id ASC
+           LIMIT 10''',
+        (client_id, today_value.isoformat()),
+    )
+    schedule_events = [
+        _calendar_event(
+            date.fromisoformat(row['schedule_date']),
+            row['job_name'] or 'Scheduled job',
+            ' - '.join(part for part in [row['start_time'] or '', row['assigned_worker_names'] or '', row['job_address'] or ''] if part),
+            tone='schedule',
+            source='schedule',
+        )
+        for row in schedule_rows
+        if parse_date(row['schedule_date'])
+    ]
+
+    all_events = system_events + custom_events + schedule_events
+    upcoming = upcoming_calendar_events(all_events, today_value, limit=8)
+    eftps_next = next((item for item in upcoming_calendar_events(system_events, today_value, limit=30) if 'EFTPS' in item['title']), None)
+    return {
+        'upcoming': upcoming,
+        'eftps_next': eftps_next,
+    }
+
+
 @app.route('/admin-calendar', methods=['GET', 'POST'])
 @admin_required
 def admin_calendar():
@@ -14324,6 +14387,7 @@ def admin_calendar():
 
 def business_reminder_types():
     return [
+        'EFTPS payment due',
         'Payroll day',
         'Invoice follow-up',
         'Insurance renewal',
@@ -15480,13 +15544,12 @@ def admin_tasks():
 @login_required
 def business_calendar():
     user = current_user()
-    if user['role'] == 'admin':
-        abort(403)
-
     client_id = selected_client_id(user, 'post' if request.method == 'POST' else 'get')
 
     with get_conn() as conn:
         client = conn.execute('SELECT * FROM clients WHERE id=?', (client_id,)).fetchone()
+        if not client or not allowed_client(user, client_id):
+            abort(403)
         ensure_recurring_schedule_entries(conn, client_id=client_id, actor_user_id=user['id'])
         conn.commit()
 
@@ -16122,6 +16185,7 @@ def dashboard():
             (client_id,),
         )
         owner_snapshot = ops_owner_snapshot(conn, client_id)
+        dashboard_calendar = business_dashboard_calendar_snapshot(conn, client_id=client_id, client_row=client)
     summary_data = client_summary(client_id)
     try:
         dashboard_graphics = report_graphics_snapshot(client_id, summary_data)
@@ -16145,6 +16209,8 @@ def dashboard():
         open_fee_guidance=open_fee_guidance(open_admin_fee_rows),
         review_request=latest_review_request(client_id),
         owner_snapshot=owner_snapshot,
+        dashboard_calendar=dashboard_calendar,
+        eftps_url=eftps_payment_url(),
         ops_workspace_warning=workspace_warning,
     )
 
